@@ -115,6 +115,15 @@ function maskMoneyInput(el){
   intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   el.value = intPart+','+cents;
 }
+function handleMoneyKeydown(event){
+  if(event.key !== 'Enter') return;
+  event.preventDefault();
+  event.target.blur(); // garante que onchange (que salva o valor) rode antes de pular
+  const td = event.target.closest('td');
+  const nextTd = td && td.nextElementSibling;
+  const nextInput = nextTd ? nextTd.querySelector('input') : null;
+  if(nextInput){ nextInput.focus(); nextInput.select(); }
+}
 
 const PADRAO_SEGQUI_HORAS = 9;
 const PADRAO_SEX_HORAS = 8;
@@ -440,12 +449,12 @@ function renderRendaTable(){
       return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:700;color:var(--slate-700)" title="Calculado a partir do Ponto PJ de ${mesOrigem}">${fmtMoney(val)}</td>`;
     }
     const val = state.users[u].income[mKey] || 0;
-    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)"></td>`;
+    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
   }).join('')}<td></td></tr>`;
 
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
     const val = (state.users[u].incomeExtra && state.users[u].incomeExtra[mKey]) || 0;
-    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncomeExtra('${u}','${mKey}', this.value)"></td>`;
+    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncomeExtra('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
   }).join('')}<td></td></tr>`;
 
   const dizimoRow = (u!=='davi') ? '' : `<tr><td class="row-label" style="color:var(--slate-500)">Dízimo (10%)</td>${months.map(mKey=>{
@@ -458,7 +467,7 @@ function renderRendaTable(){
     : cartoes.map(c=>{
       return `<tr class="cartao-row"><td class="row-label">${c.nome}</td>${months.map(mKey=>{
         const val = (c.gastos||{})[mKey] || 0;
-        return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)"></td>`;
+        return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
       }).join('')}<td><span class="cartao-actions"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span></td></tr>`;
     }).join(''));
 
