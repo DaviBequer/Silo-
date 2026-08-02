@@ -2,7 +2,7 @@
   "name": "Siloé - Finanças Pessoais",
   "short_name": "Siloé",
   "description": "Controle financeiro pessoal e ponto PJ",
-  "start_url": "./siloe.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
