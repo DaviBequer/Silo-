@@ -1,0 +1,25 @@
+{
+  "name": "Siloé - Finanças Pessoais",
+  "short_name": "Siloé",
+  "description": "Controle financeiro pessoal e ponto PJ",
+  "start_url": "./siloe.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F5F4",
+  "theme_color": "#1B4332",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
