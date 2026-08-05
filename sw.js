@@ -1,4 +1,4 @@
-const CACHE_NAME = 'siloe-cache-v17';
+const CACHE_NAME = 'siloe-cache-v18';
 const ARQUIVOS = [
   './index.html',
   './style.css',

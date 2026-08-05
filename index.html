@@ -114,7 +114,7 @@
     <div class="gasto-grid" id="grid-futuro"></div>
   </div>
   <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><button class="btn btn-sm btn-outline" onclick="openCartaoTrackerModal()">+ Add</button></div>
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><button class="btn btn-sm btn-outline" onclick="openCartaoCardModal()">+ Cartão</button></div>
     <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
   </div>
 
@@ -249,32 +249,66 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalCartaoTracker">
+<div class="modal-overlay" id="modalCartaoCard">
   <div class="modal">
     <div class="modal-header">
-      <h3 id="modalCartaoTrackerTitle">Adicionar Cartão</h3>
-      <button class="modal-close" onclick="closeModal('modalCartaoTracker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <h3 id="modalCartaoCardTitle">Novo Cartão</h3>
+      <button class="modal-close" onclick="closeModal('modalCartaoCard')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
-    <input type="hidden" id="cartaoTrackerId">
+    <input type="hidden" id="cartaoCardId">
     <div class="field full">
       <label>Nome do Cartão</label>
-      <input type="text" id="cartaoTrackerNome" placeholder="Ex: Nubank">
+      <input type="text" id="cartaoCardNome" placeholder="Ex: Nubank">
+    </div>
+    <div class="field">
+      <label>Dia de Fechamento</label>
+      <input type="number" id="cartaoCardFechamento" min="1" max="31" placeholder="Ex: 20">
+    </div>
+    <div class="field">
+      <label>Dia de Vencimento</label>
+      <input type="number" id="cartaoCardVencimento" min="1" max="31" placeholder="Ex: 27">
+    </div>
+    <div class="field full">
+      <label>Limite</label>
+      <div class="input-money"><input type="text" id="cartaoCardLimite" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCartaoCard')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCartaoCard()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCompraTracker">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCompraTrackerTitle">Nova Compra</h3>
+      <button class="modal-close" onclick="closeModal('modalCompraTracker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="compraTrackerId">
+    <div class="field full">
+      <label>Nome da Compra</label>
+      <input type="text" id="compraTrackerNome" placeholder="Ex: Tênis">
+    </div>
+    <div class="field full">
+      <label>Cartão</label>
+      <select id="compraTrackerCartaoId"></select>
     </div>
     <div class="field">
       <label>Valor Total</label>
-      <div class="input-money"><input type="text" id="cartaoTrackerValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+      <div class="input-money"><input type="text" id="compraTrackerValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
     </div>
     <div class="field">
       <label>Parcelas</label>
-      <input type="number" id="cartaoTrackerParcelas" min="1" value="1">
+      <input type="number" id="compraTrackerParcelas" min="1" value="1">
     </div>
     <div class="field full">
       <label>Mês da 1ª parcela</label>
-      <select id="cartaoTrackerMesInicio"></select>
+      <select id="compraTrackerMesInicio"></select>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-outline btn-block" onclick="closeModal('modalCartaoTracker')">Cancelar</button>
-      <button class="btn btn-block" onclick="salvarCartaoTracker()">Salvar</button>
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCompraTracker')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCompraTracker()">Salvar</button>
     </div>
   </div>
 </div>

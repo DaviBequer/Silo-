@@ -23,7 +23,8 @@ function novoEstado(){
       cris:{ income:{}, incomeExtra:{}, saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } }
     },
     paid:{},
-    cartaoTrackers:[],
+    cartoesTracker:[],
+    comprasTracker:[],
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
   };
 }
@@ -52,7 +53,8 @@ function carregar(){
       });
       if(!state.ponto) state.ponto = { valorHora:0, padraoHoras:8, days:{} };
       if(!state.ponto.days) state.ponto.days = {};
-      if(!state.cartaoTrackers) state.cartaoTrackers = [];
+      if(!state.cartoesTracker) state.cartoesTracker = [];
+      if(!state.comprasTracker) state.comprasTracker = [];
       delete state.config;
     }
   }catch(e){ /* sem dados salvos ainda */ }
@@ -575,7 +577,7 @@ function renderGastoGrid(cat){
 }
 
 /* ================= CARTÕES DE CRÉDITO — RASTREADOR (visual, não entra em nenhum cálculo) ================= */
-function cartaoTrackerCalc(item){
+function compraTrackerCalc(item){
   const total = Number(item.valorTotal)||0;
   const parcelas = Math.max(1, Number(item.parcelas)||1);
   const valorParcela = total/parcelas;
@@ -595,82 +597,178 @@ function cartaoTrackerCalc(item){
   const restam = parcelas - pagas;
   const mesFim = item.mesInicio ? meses[parcelas-1] : null;
   const percentPago = parcelas>0 ? Math.round((pagas/parcelas)*100) : 0;
-  return { total, parcelas, valorParcela, parcelaAtual, pagas, restam, mesFim, percentPago, status };
+  const restante = valorParcela*restam;
+  return { total, parcelas, valorParcela, parcelaAtual, pagas, restam, mesFim, percentPago, status, restante };
+}
+function popularSelectCartoes(selectId, selecionado){
+  const el = document.getElementById(selectId);
+  if(!el) return;
+  const cartoes = state.cartoesTracker || [];
+  el.innerHTML = cartoes.length
+    ? cartoes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')
+    : '<option value="">Cadastre um cartão primeiro</option>';
+  if(selecionado) el.value = selecionado;
 }
 function renderCartaoTrackerList(){
   const list = document.getElementById('cartaoTrackerList');
   if(!list) return;
-  const items = state.cartaoTrackers || [];
-  if(items.length === 0){
-    list.innerHTML = `<div class="empty-state"><div class="title">Nenhum cartão cadastrado</div><div class="desc">Toque em Add pra acompanhar suas parcelas</div></div>`;
+  const cartoes = state.cartoesTracker || [];
+  if(cartoes.length === 0){
+    list.innerHTML = `<div class="empty-state"><div class="title">Nenhum cartão cadastrado</div><div class="desc">Toque em "+ Cartão" pra começar</div></div>`;
     return;
   }
-  list.innerHTML = items.map(item=>{
-    const c = cartaoTrackerCalc(item);
-    let metaTxt;
-    if(c.status === 'futuro') metaTxt = 'Começa em ' + monthLabel(item.mesInicio);
-    else if(c.status === 'concluido') metaTxt = 'Quitado';
-    else if(c.status === 'sem-inicio') metaTxt = 'Defina o mês de início';
-    else metaTxt = `Faltam ${c.restam} ${c.restam===1?'mês':'meses'} · termina em ${monthLabel(c.mesFim)}`;
-    const parcelaTxt = c.status==='sem-inicio' ? '—' : `${c.parcelaAtual}ª de ${c.parcelas}`;
-    return `<div class="cartao-tracker-item">
+  list.innerHTML = cartoes.map(cartao=>{
+    const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
+    const usado = compras.reduce((s,item)=>{
+      const c = compraTrackerCalc(item);
+      return s + (c.status==='concluido' ? 0 : c.restante);
+    },0);
+    const limite = Number(cartao.limite)||0;
+    const disponivel = Math.max(0, limite - usado);
+    const percentUsado = limite>0 ? Math.min(100, Math.round((usado/limite)*100)) : 0;
+
+    const comprasHtml = compras.length === 0
+      ? `<div class="ct-sem-compra">Nenhuma compra lançada</div>`
+      : compras.map(item=>{
+        const c = compraTrackerCalc(item);
+        let metaTxt;
+        if(c.status === 'futuro') metaTxt = 'Começa em ' + monthLabel(item.mesInicio);
+        else if(c.status === 'concluido') metaTxt = 'Quitada';
+        else if(c.status === 'sem-inicio') metaTxt = 'Defina o mês de início';
+        else metaTxt = `Faltam ${c.restam} ${c.restam===1?'mês':'meses'} · termina em ${monthLabel(c.mesFim)}`;
+        const parcelaTxt = c.status==='sem-inicio' ? '—' : `${c.parcelaAtual}ª de ${c.parcelas}`;
+        return `<div class="compra-tracker-item">
+          <div class="ct-top">
+            <div class="ct-nome">${item.nome}</div>
+            <div class="ct-actions">
+              <button class="btn-icon-sm" onclick="openCompraTrackerModal('${cartao.id}','${item.id}')">${ICON_EDIT}</button>
+              <button class="btn-icon-sm" onclick="excluirCompraTracker('${item.id}')">${ICON_TRASH}</button>
+            </div>
+          </div>
+          <div class="ct-row">
+            <span class="ct-parcela">${parcelaTxt} · ${fmtMoney(c.valorParcela)}/mês</span>
+            <span class="ct-total">Total ${fmtMoney(c.total)}</span>
+          </div>
+          <div class="ct-bar"><div class="ct-bar-fill" style="width:${c.percentPago}%"></div></div>
+          <div class="ct-meta">${metaTxt}</div>
+        </div>`;
+      }).join('');
+
+    return `<div class="cartao-card-item">
       <div class="ct-top">
-        <div class="ct-nome">${item.nome}</div>
+        <div class="ct-nome-cartao">${cartao.nome}</div>
         <div class="ct-actions">
-          <button class="btn-icon-sm" onclick="openCartaoTrackerModal('${item.id}')">${ICON_EDIT}</button>
-          <button class="btn-icon-sm" onclick="excluirCartaoTracker('${item.id}')">${ICON_TRASH}</button>
+          <button class="btn-icon-sm" onclick="openCartaoCardModal('${cartao.id}')">${ICON_EDIT}</button>
+          <button class="btn-icon-sm" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
         </div>
       </div>
-      <div class="ct-row">
-        <span class="ct-parcela">${parcelaTxt} · ${fmtMoney(c.valorParcela)}/mês</span>
-        <span class="ct-total">Total ${fmtMoney(c.total)}</span>
+      <div class="ct-datas">Fecha dia ${cartao.fechamento||'—'} · vence dia ${cartao.vencimento||'—'}</div>
+      <div class="ct-row" style="margin-top:8px">
+        <span class="ct-parcela">Usado ${fmtMoney(usado)}</span>
+        <span class="ct-total">Disponível ${fmtMoney(disponivel)} de ${fmtMoney(limite)}</span>
       </div>
-      <div class="ct-bar"><div class="ct-bar-fill" style="width:${c.percentPago}%"></div></div>
-      <div class="ct-meta">${metaTxt}</div>
+      <div class="ct-bar"><div class="ct-bar-fill limite" style="width:${percentUsado}%"></div></div>
+      <div class="compras-do-cartao">${comprasHtml}</div>
+      <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="openCompraTrackerModal('${cartao.id}')">+ Compra neste cartão</button>
     </div>`;
   }).join('');
 }
-function openCartaoTrackerModal(id){
-  popularSelectMes('cartaoTrackerMesInicio');
-  document.getElementById('cartaoTrackerId').value = id || '';
-  document.getElementById('modalCartaoTrackerTitle').textContent = id ? 'Editar Cartão' : 'Adicionar Cartão';
+
+/* --- Cartão (fechamento/vencimento/limite) --- */
+function openCartaoCardModal(id){
+  document.getElementById('cartaoCardId').value = id || '';
+  document.getElementById('modalCartaoCardTitle').textContent = id ? 'Editar Cartão' : 'Novo Cartão';
   if(id){
-    const item = (state.cartaoTrackers||[]).find(i=>i.id===id);
+    const item = (state.cartoesTracker||[]).find(i=>i.id===id);
     if(item){
-      document.getElementById('cartaoTrackerNome').value = item.nome;
-      document.getElementById('cartaoTrackerValor').value = (item.valorTotal||0).toFixed(2).replace('.',',');
-      document.getElementById('cartaoTrackerParcelas').value = item.parcelas || 1;
-      document.getElementById('cartaoTrackerMesInicio').value = item.mesInicio || '';
+      document.getElementById('cartaoCardNome').value = item.nome;
+      document.getElementById('cartaoCardFechamento').value = item.fechamento || '';
+      document.getElementById('cartaoCardVencimento').value = item.vencimento || '';
+      document.getElementById('cartaoCardLimite').value = (item.limite||0).toFixed(2).replace('.',',');
     }
   }else{
-    document.getElementById('cartaoTrackerNome').value = '';
-    document.getElementById('cartaoTrackerValor').value = '';
-    document.getElementById('cartaoTrackerParcelas').value = 1;
-    document.getElementById('cartaoTrackerMesInicio').value = mesFinanceiroAtual();
+    document.getElementById('cartaoCardNome').value = '';
+    document.getElementById('cartaoCardFechamento').value = '';
+    document.getElementById('cartaoCardVencimento').value = '';
+    document.getElementById('cartaoCardLimite').value = '';
   }
-  document.getElementById('modalCartaoTracker').classList.add('active');
+  document.getElementById('modalCartaoCard').classList.add('active');
 }
-function salvarCartaoTracker(){
-  const id = document.getElementById('cartaoTrackerId').value;
-  const nome = document.getElementById('cartaoTrackerNome').value.trim();
-  const valorTotal = parseMoney(document.getElementById('cartaoTrackerValor').value);
-  const parcelas = Math.max(1, parseInt(document.getElementById('cartaoTrackerParcelas').value) || 1);
-  const mesInicio = document.getElementById('cartaoTrackerMesInicio').value || null;
+function salvarCartaoCard(){
+  const id = document.getElementById('cartaoCardId').value;
+  const nome = document.getElementById('cartaoCardNome').value.trim();
+  const fechamento = Math.min(31, Math.max(1, parseInt(document.getElementById('cartaoCardFechamento').value) || 1));
+  const vencimento = Math.min(31, Math.max(1, parseInt(document.getElementById('cartaoCardVencimento').value) || 1));
+  const limite = parseMoney(document.getElementById('cartaoCardLimite').value);
   if(!nome){ showToast('Digite o nome do cartão'); return; }
-  if(!state.cartaoTrackers) state.cartaoTrackers = [];
+  if(!state.cartoesTracker) state.cartoesTracker = [];
   if(id){
-    const item = state.cartaoTrackers.find(i=>i.id===id);
-    if(item) Object.assign(item, { nome, valorTotal, parcelas, mesInicio });
+    const item = state.cartoesTracker.find(i=>i.id===id);
+    if(item) Object.assign(item, { nome, fechamento, vencimento, limite });
   } else {
-    state.cartaoTrackers.push({ id: 'ct'+Date.now(), nome, valorTotal, parcelas, mesInicio });
+    state.cartoesTracker.push({ id: 'crd'+Date.now(), nome, fechamento, vencimento, limite });
   }
   persist();
-  closeModal('modalCartaoTracker');
+  closeModal('modalCartaoCard');
   renderCartaoTrackerList();
   showToast('Cartão salvo');
 }
-function excluirCartaoTracker(id){
-  state.cartaoTrackers = (state.cartaoTrackers||[]).filter(i=>i.id!==id);
+function excluirCartaoCard(id){
+  const temCompras = (state.comprasTracker||[]).some(c=>c.cartaoId===id);
+  if(temCompras && !confirm('Este cartão tem compras lançadas. Excluir o cartão também vai excluir todas as compras dele. Continuar?')) return;
+  state.cartoesTracker = (state.cartoesTracker||[]).filter(i=>i.id!==id);
+  state.comprasTracker = (state.comprasTracker||[]).filter(c=>c.cartaoId!==id);
+  persist();
+  renderCartaoTrackerList();
+}
+
+/* --- Compra (parcelamento vinculado a um cartão) --- */
+function openCompraTrackerModal(cartaoId, compraId){
+  if(!(state.cartoesTracker||[]).length){ showToast('Cadastre um cartão primeiro'); return; }
+  popularSelectMes('compraTrackerMesInicio');
+  popularSelectCartoes('compraTrackerCartaoId', cartaoId);
+  document.getElementById('compraTrackerId').value = compraId || '';
+  document.getElementById('modalCompraTrackerTitle').textContent = compraId ? 'Editar Compra' : 'Nova Compra';
+  if(compraId){
+    const item = (state.comprasTracker||[]).find(i=>i.id===compraId);
+    if(item){
+      document.getElementById('compraTrackerNome').value = item.nome;
+      document.getElementById('compraTrackerCartaoId').value = item.cartaoId;
+      document.getElementById('compraTrackerValor').value = (item.valorTotal||0).toFixed(2).replace('.',',');
+      document.getElementById('compraTrackerParcelas').value = item.parcelas || 1;
+      document.getElementById('compraTrackerMesInicio').value = item.mesInicio || '';
+    }
+  }else{
+    document.getElementById('compraTrackerNome').value = '';
+    document.getElementById('compraTrackerValor').value = '';
+    document.getElementById('compraTrackerParcelas').value = 1;
+    document.getElementById('compraTrackerMesInicio').value = mesFinanceiroAtual();
+  }
+  document.getElementById('modalCompraTracker').classList.add('active');
+}
+function salvarCompraTracker(){
+  const id = document.getElementById('compraTrackerId').value;
+  const nome = document.getElementById('compraTrackerNome').value.trim();
+  const cartaoId = document.getElementById('compraTrackerCartaoId').value;
+  const valorTotal = parseMoney(document.getElementById('compraTrackerValor').value);
+  const parcelas = Math.max(1, parseInt(document.getElementById('compraTrackerParcelas').value) || 1);
+  const mesInicio = document.getElementById('compraTrackerMesInicio').value || null;
+  if(!nome){ showToast('Digite o nome da compra'); return; }
+  if(!cartaoId){ showToast('Selecione o cartão'); return; }
+  if(!state.comprasTracker) state.comprasTracker = [];
+  if(id){
+    const item = state.comprasTracker.find(i=>i.id===id);
+    if(item) Object.assign(item, { nome, cartaoId, valorTotal, parcelas, mesInicio });
+  } else {
+    state.comprasTracker.push({ id: 'cp'+Date.now(), nome, cartaoId, valorTotal, parcelas, mesInicio });
+  }
+  persist();
+  closeModal('modalCompraTracker');
+  renderCartaoTrackerList();
+  showToast('Compra salva');
+}
+function excluirCompraTracker(id){
+  state.comprasTracker = (state.comprasTracker||[]).filter(i=>i.id!==id);
   persist();
   renderCartaoTrackerList();
 }
