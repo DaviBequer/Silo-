@@ -63,6 +63,11 @@
   <div class="user-section" id="panoUserSection"></div>
 
   <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Resumo</div></div>
+    <div id="sumarioPanorama" class="summary-grid"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Contas a Pagar — <span id="contasMesLabel"></span></div></div>
     <div class="checklist" id="contasChecklist"></div>
   </div>
@@ -309,6 +314,29 @@
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalCompraTracker')">Cancelar</button>
       <button class="btn btn-block" onclick="salvarCompraTracker()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCredoVista">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCredoVistaTitle">Crédito à Vista</h3>
+      <button class="modal-close" onclick="closeModal('modalCredoVista')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="credoVistaCartaoId">
+    <input type="hidden" id="credoVistaId">
+    <div class="field full">
+      <label>Descrição</label>
+      <input type="text" id="credoVistaDescricao" placeholder="Ex: Cinema">
+    </div>
+    <div class="field full">
+      <label>Valor</label>
+      <div class="input-money"><input type="text" id="credoVistaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCredoVista')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCredoVista()">Salvar</button>
     </div>
   </div>
 </div>

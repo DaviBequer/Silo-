@@ -55,6 +55,9 @@ function carregar(){
       if(!state.ponto.days) state.ponto.days = {};
       if(!state.cartoesTracker) state.cartoesTracker = [];
       if(!state.comprasTracker) state.comprasTracker = [];
+      // migração: garantir campos novos
+      (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; });
+      (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
     }
   }catch(e){ /* sem dados salvos ainda */ }
@@ -104,7 +107,7 @@ function popularSelectMes(selectId){
   const valorAtual = el.value;
   const base = keyToDate(todayKey());
   let html = '<option value="">Selecione...</option>';
-  for(let i=-12;i<=24;i++){
+  for(let i=-36;i<=24;i++){
     const d = new Date(base.getFullYear(), base.getMonth()+i, 1);
     const key = monthKey(d);
     html += `<option value="${key}">${MES_NOMES_LONGOS[d.getMonth()]} de ${d.getFullYear()}</option>`;
@@ -301,6 +304,22 @@ function renderPanorama(){
 
   document.getElementById('contasMesLabel').textContent = monthLabel(state.focusMonth);
   renderChecklist();
+  renderSumarioPanorama();
+}
+
+function renderSumarioPanorama(){
+  const summary = document.getElementById('sumarioPanorama');
+  if(!summary) return;
+  const mKeyAtual = state.focusMonth;
+  const rendaTotal = (incomeForMonth('davi', mKeyAtual) || 0) + (incomeForMonth('cris', mKeyAtual) || 0);
+  const gastoTotal = (expensesForMonth('davi', mKeyAtual) || 0) + (expensesForMonth('cris', mKeyAtual) || 0);
+  const totalCartoes = (state.cartoesTracker||[]).reduce((s,c)=>{
+    const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
+    const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
+    return s + usado;
+  },0);
+  const dizimo = (state.users.davi.income[mKeyAtual] || 0) * 0.1;
+  summary.innerHTML = `<div class="summary-row"><span>Renda Total</span><span class="summary-value">${fmtMoney(rendaTotal)}</span></div><div class="summary-row"><span>Gasto Total</span><span class="summary-value">${fmtMoney(gastoTotal)}</span></div><div class="summary-row"><span>Cartões</span><span class="summary-value">${fmtMoney(totalCartoes)}</span></div><div class="summary-row"><span>Dízimo (visual)</span><span class="summary-value">${fmtMoney(dizimo)}</span></div>`;
 }
 
 function renderPanoPonto(){
@@ -620,9 +639,10 @@ function renderCartaoTrackerList(){
   list.innerHTML = cartoes.map(cartao=>{
     const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
     const usado = compras.reduce((s,item)=>{
+      if(item.pago) return s; // pago não entra no cálculo
       const c = compraTrackerCalc(item);
       return s + (c.status==='concluido' ? 0 : c.restante);
-    },0);
+    },0) + (cartao.credoVista?.reduce((s,v)=>s+Number(v.valor||0), 0) || 0);
     const limite = Number(cartao.limite)||0;
     const disponivel = Math.max(0, limite - usado);
     const percentUsado = limite>0 ? Math.min(100, Math.round((usado/limite)*100)) : 0;
@@ -637,10 +657,12 @@ function renderCartaoTrackerList(){
         else if(c.status === 'sem-inicio') metaTxt = 'Defina o mês de início';
         else metaTxt = `Faltam ${c.restam} ${c.restam===1?'mês':'meses'} · termina em ${monthLabel(c.mesFim)}`;
         const parcelaTxt = c.status==='sem-inicio' ? '—' : `${c.parcelaAtual}ª de ${c.parcelas}`;
-        return `<div class="compra-tracker-item">
+        const pagoClass = item.pago ? ' pago' : '';
+        return `<div class="compra-tracker-item${pagoClass}">
           <div class="ct-top">
-            <div class="ct-nome">${item.nome}</div>
+            <div class="ct-nome${pagoClass}">${item.nome}</div>
             <div class="ct-actions">
+              <button class="btn-icon-sm" title="Marcar como ${item.pago?'pendente':'pago'}" onclick="toggleCompraPago('${item.id}')" style="color:${item.pago?'var(--green)':'var(--slate-400)'}">${item.pago?'✓':'◯'}</button>
               <button class="btn-icon-sm" onclick="openCompraTrackerModal('${cartao.id}','${item.id}')">${ICON_EDIT}</button>
               <button class="btn-icon-sm" onclick="excluirCompraTracker('${item.id}')">${ICON_TRASH}</button>
             </div>
@@ -669,7 +691,11 @@ function renderCartaoTrackerList(){
       </div>
       <div class="ct-bar"><div class="ct-bar-fill limite" style="width:${percentUsado}%"></div></div>
       <div class="compras-do-cartao">${comprasHtml}</div>
-      <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="openCompraTrackerModal('${cartao.id}')">+ Compra neste cartão</button>
+      <div class="credo-vista-list">
+        ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item"><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
+      </div>
+      <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="openCompraTrackerModal('${cartao.id}')">+ Compra parcelada</button>
+      <button class="btn btn-sm btn-outline" style="width:100%;margin-top:6px" onclick="openCredoVistaModal('${cartao.id}')">+ Crédito à vista</button>
     </div>`;
   }).join('');
 }
@@ -767,10 +793,65 @@ function salvarCompraTracker(){
   renderCartaoTrackerList();
   showToast('Compra salva');
 }
+function toggleCompraPago(id){
+  const item = (state.comprasTracker||[]).find(i=>i.id===id);
+  if(item){
+    item.pago = !item.pago;
+    persist();
+    renderCartaoTrackerList();
+    renderPanorama();
+  }
+}
+function openCredoVistaModal(cartaoId, credoId){
+  document.getElementById('credoVistaCartaoId').value = cartaoId;
+  document.getElementById('credoVistaId').value = credoId || '';
+  document.getElementById('modalCredoVistaTitle').textContent = credoId ? 'Editar Crédito à Vista' : 'Crédito à Vista';
+  if(credoId){
+    const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+    const item = cartao?.credoVista?.find(cv=>cv.id===credoId);
+    if(item){
+      document.getElementById('credoVistaDescricao').value = item.descricao || '';
+      document.getElementById('credoVistaValor').value = (item.valor||0).toFixed(2).replace('.',',');
+    }
+  }else{
+    document.getElementById('credoVistaDescricao').value = '';
+    document.getElementById('credoVistaValor').value = '';
+  }
+  document.getElementById('modalCredoVista').classList.add('active');
+}
+function salvarCredoVista(){
+  const cartaoId = document.getElementById('credoVistaCartaoId').value;
+  const credoId = document.getElementById('credoVistaId').value;
+  const descricao = document.getElementById('credoVistaDescricao').value.trim();
+  const valor = parseMoney(document.getElementById('credoVistaValor').value);
+  if(!valor){ showToast('Digite o valor'); return; }
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  if(!cartao){ showToast('Cartão não encontrado'); return; }
+  if(!cartao.credoVista) cartao.credoVista = [];
+  if(credoId){
+    const item = cartao.credoVista.find(cv=>cv.id===credoId);
+    if(item) Object.assign(item, { descricao, valor });
+  } else {
+    cartao.credoVista.push({ id: 'cv'+Date.now(), descricao, valor });
+  }
+  persist();
+  closeModal('modalCredoVista');
+  renderCartaoTrackerList();
+  renderPanorama();
+  showToast('Crédito salvo');
+}
+function excluirCredoVista(cartaoId, credoId){
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  if(cartao) cartao.credoVista = (cartao.credoVista||[]).filter(cv=>cv.id!==credoId);
+  persist();
+  renderCartaoTrackerList();
+  renderPanorama();
+}
 function excluirCompraTracker(id){
   state.comprasTracker = (state.comprasTracker||[]).filter(i=>i.id!==id);
   persist();
   renderCartaoTrackerList();
+  renderPanorama();
 }
 
 /* ================= CARTÕES DE CRÉDITO ================= */
