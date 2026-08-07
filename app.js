@@ -278,7 +278,6 @@ let simuladorMetas = [];
 function openSimuladorModal(){
   simuladorMetas = [];
   document.getElementById('simuladorMetasForm').reset();
-  document.getElementById('simuladorMetasLista').innerHTML = '';
   popularSelectMes('simMetaMes');
   renderSimulador();
   document.getElementById('modalSimulador').classList.add('active');
