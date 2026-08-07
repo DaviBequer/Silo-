@@ -62,6 +62,12 @@
 
   <div class="user-section" id="panoUserSection"></div>
 
+  <div class="card" style="background:linear-gradient(135deg,var(--primary-light),var(--slate-50));border:2px solid var(--primary);text-align:center;padding:24px">
+    <div style="font-size:16px;font-weight:900;color:var(--primary);margin-bottom:12px">💡 Planeje Suas Compras Futuras</div>
+    <div style="font-size:13px;color:var(--slate-700);margin-bottom:16px">Simule como suas metas afetariam seu orçamento</div>
+    <button class="btn" onclick="openSimuladorModal()">Gerar Orçamento</button>
+  </div>
+
   <div class="card">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Resumo</div></div>
     <div id="sumarioPanorama" class="summary-grid"></div>
@@ -352,6 +358,54 @@
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalConcluirMes')">Cancelar</button>
       <button class="btn btn-block" onclick="confirmarConcluirMes()">Concluir Mês</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalSimulador">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📊 Gerar Orçamento</h3>
+      <button class="modal-close" onclick="closeSimulador()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+
+    <div class="simulador-painel">
+      <h4>💰 Situação Atual</h4>
+      <div id="simPainelAtual"></div>
+    </div>
+
+    <div class="simulador-painel">
+      <h4>➕ Adicionar Metas</h4>
+      <form id="simuladorMetasForm" onsubmit="return false">
+        <div class="field full">
+          <label>Nome da Compra</label>
+          <input type="text" id="simMetaNome" placeholder="Ex: Máquina de Lavar">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="field" style="margin-bottom:0">
+            <label>Valor Total</label>
+            <div class="input-money"><input type="text" id="simMetaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Parcelas</label>
+            <input type="number" id="simMetaParcelas" min="1" value="1">
+          </div>
+        </div>
+        <div class="field full">
+          <label>Mês de Início</label>
+          <select id="simMetaMes"></select>
+        </div>
+      </form>
+      <button class="btn btn-block" style="margin-top:12px" onclick="adicionarMetaSimulador()">+ Adicionar Meta</button>
+    </div>
+
+    <div class="simulador-painel" id="simMetasLista" style="background:var(--card);border:1px solid var(--slate-200)"></div>
+
+    <div id="simPainelSimulacao"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeSimulador()">Descartar</button>
+      <button class="btn btn-block" id="btnSalvarMetas" onclick="salvarMetas()">Salvar Metas</button>
     </div>
   </div>
 </div>

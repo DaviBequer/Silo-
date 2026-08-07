@@ -25,6 +25,7 @@ function novoEstado(){
     paid:{},
     cartoesTracker:[],
     comprasTracker:[],
+    metas:[],
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
   };
 }
@@ -55,6 +56,7 @@ function carregar(){
       if(!state.ponto.days) state.ponto.days = {};
       if(!state.cartoesTracker) state.cartoesTracker = [];
       if(!state.comprasTracker) state.comprasTracker = [];
+      if(!state.metas) state.metas = [];
       // migração: garantir campos novos
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
@@ -270,6 +272,154 @@ function getPanoWindowMonths(){
 }
 
 /* ================= RENDER: PANORAMA ================= */
+/* ================= PLANEJADOR DE METAS / SIMULADOR ================= */
+let simuladorMetas = [];
+
+function openSimuladorModal(){
+  simuladorMetas = [];
+  document.getElementById('simuladorMetasForm').reset();
+  document.getElementById('simuladorMetasLista').innerHTML = '';
+  popularSelectMes('simMetaMes');
+  renderSimulador();
+  document.getElementById('modalSimulador').classList.add('active');
+}
+
+function closeSimulador(){
+  document.getElementById('modalSimulador').classList.remove('active');
+  simuladorMetas = [];
+}
+
+function adicionarMetaSimulador(){
+  const nome = document.getElementById('simMetaNome').value.trim();
+  const valor = parseMoney(document.getElementById('simMetaValor').value);
+  const parcelas = Math.max(1, parseInt(document.getElementById('simMetaParcelas').value) || 1);
+  const mes = document.getElementById('simMetaMes').value;
+  
+  if(!nome){ showToast('Digite o nome da meta'); return; }
+  if(!valor){ showToast('Digite o valor'); return; }
+  if(!mes){ showToast('Selecione o mês'); return; }
+  
+  simuladorMetas.push({
+    id: 'meta_'+Date.now(),
+    nome, valor, parcelas, mes
+  });
+  
+  document.getElementById('simMetaNome').value = '';
+  document.getElementById('simMetaValor').value = '';
+  document.getElementById('simMetaParcelas').value = '1';
+  
+  renderSimulador();
+}
+
+function removerMetaSimulador(id){
+  simuladorMetas = simuladorMetas.filter(m=>m.id!==id);
+  renderSimulador();
+}
+
+function calcularImpactoSimulador(){
+  const mKeyAtual = mesFinanceiroAtual();
+  const rendaTotal = (incomeForMonth('davi', mKeyAtual) || 0) + (incomeForMonth('cris', mKeyAtual) || 0);
+  const gastoTotal = (expensesForMonth('davi', mKeyAtual) || 0) + (expensesForMonth('cris', mKeyAtual) || 0);
+  const saldoPrevisto = rendaTotal - gastoTotal;
+  const totalCartoes = (state.cartoesTracker||[]).reduce((s,c)=>{
+    const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
+    const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
+    return s + usado;
+  },0);
+  
+  let totalMetas = 0;
+  let impactoPorMes = {};
+  simuladorMetas.forEach(meta=>{
+    totalMetas += meta.valor;
+    const valorMes = meta.valor / meta.parcelas;
+    for(let i=0;i<meta.parcelas;i++){
+      const mes = addMonths(meta.mes, i);
+      impactoPorMes[mes] = (impactoPorMes[mes] || 0) + valorMes;
+    }
+  });
+  
+  const impactoMesAtual = impactoPorMes[mKeyAtual] || 0;
+  const saldoApos = saldoPrevisto - impactoMesAtual;
+  
+  return { rendaTotal, gastoTotal, saldoPrevisto, totalCartoes, totalMetas, impactoMesAtual, saldoApos, simuladorMetas };
+}
+
+function renderSimulador(){
+  const calc = calcularImpactoSimulador();
+  
+  // Painel Situação Atual
+  const painelAtual = `
+    <div class="simulador-linha">
+      <span class="label">Saldo Disponível</span>
+      <span class="valor">${fmtMoney(state.users.davi.saldoAtual + state.users.cris.saldoAtual)}</span>
+    </div>
+    <div class="simulador-linha">
+      <span class="label">Receita (${monthLabel(mesFinanceiroAtual())})</span>
+      <span class="valor">${fmtMoney(calc.rendaTotal)}</span>
+    </div>
+    <div class="simulador-linha">
+      <span class="label">Gastos (${monthLabel(mesFinanceiroAtual())})</span>
+      <span class="valor">${fmtMoney(calc.gastoTotal)}</span>
+    </div>
+    <div class="simulador-linha">
+      <span class="label">Saldo Previsto</span>
+      <span class="valor" style="color:${calc.saldoPrevisto>=0?'var(--success)':'var(--danger)'}">${fmtMoney(calc.saldoPrevisto)}</span>
+    </div>
+    <div class="simulador-linha">
+      <span class="label">Cartões (abertos)</span>
+      <span class="valor">${fmtMoney(calc.totalCartoes)}</span>
+    </div>
+  `;
+  document.getElementById('simPainelAtual').innerHTML = painelAtual;
+  
+  // Lista de metas
+  const listaHtml = simuladorMetas.length === 0
+    ? '<div style="text-align:center;padding:20px;color:var(--slate-500)">Nenhuma meta adicionada ainda</div>'
+    : simuladorMetas.map(meta => `
+      <div class="simulador-meta-item">
+        <div class="nome">${meta.nome}</div>
+        <div class="info">
+          <div style="margin-bottom:6px">R$ ${fmtMoney(meta.valor)} em ${meta.parcelas}x = R$ ${fmtMoney(meta.valor/meta.parcelas)}/mês</div>
+          <div style="font-size:11px;color:var(--slate-500)">Começa em ${monthLabel(meta.mes)}</div>
+        </div>
+        <button class="btn btn-sm btn-outline btn-remove" onclick="removerMetaSimulador('${meta.id}')">Remover</button>
+      </div>
+    `).join('');
+  document.getElementById('simMetasLista').innerHTML = listaHtml;
+  
+  // Simulação de impacto
+  let simulacaoHtml = '';
+  if(simuladorMetas.length > 0){
+    simulacaoHtml = `
+      <div class="simulador-painel">
+        <h4>📊 Impacto das Metas</h4>
+        <div class="simulador-linha">
+          <span class="label">Total em Metas</span>
+          <span class="valor">${fmtMoney(calc.totalMetas)}</span>
+        </div>
+        <div class="simulador-linha">
+          <span class="label">Impacto em ${monthLabel(mesFinanceiroAtual())}</span>
+          <span class="valor">${fmtMoney(calc.impactoMesAtual)}</span>
+        </div>
+        <div class="simulador-linha">
+          <span class="label">Saldo Após Compras</span>
+          <span class="valor" style="color:${calc.saldoApos>=0?'var(--success)':'var(--danger)'};font-weight:900">${fmtMoney(calc.saldoApos)}</span>
+        </div>
+        ${calc.saldoApos<0 ? `<div class="simulador-alerta">⚠️ Atenção: Você não tem saldo suficiente em ${monthLabel(mesFinanceiroAtual())} para essas compras!</div>` : ''}
+      </div>
+    `;
+  }
+  document.getElementById('simPainelSimulacao').innerHTML = simulacaoHtml;
+}
+
+function salvarMetas(){
+  if(simuladorMetas.length === 0){ showToast('Adicione pelo menos uma meta'); return; }
+  state.metas = [...state.metas, ...simuladorMetas];
+  persist();
+  closeSimulador();
+  showToast('Metas salvas com sucesso!');
+}
+
 function renderAll(){ renderPanorama(); renderPlanner(); renderPonto(); }
 
 function renderPanorama(){
