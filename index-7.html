@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1B4332">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Siloé">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Siloé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo" id="headerLogoWrap" onclick="triggerLogoUpload()" style="cursor:pointer" title="Toque para escolher uma logo do seu dispositivo">
+      <img id="headerLogoImg" src="icon-192.png" alt="Siloé" style="width:100%;height:100%;object-fit:cover;border-radius:12px" onerror="this.style.display='none'; document.getElementById('headerLogoFallback').style.display='flex';">
+      <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
+    </div>
+    <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="onLogoFileSelected(event)">
+    <div>
+      <div class="header-title">Siloé</div>
+      <div class="header-sub">Finanças Pessoais</div>
+    </div>
+  </div>
+  <button class="header-btn" onclick="openConcluirMesModal()" title="Concluir mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+</div>
+
+<!-- PANORAMA -->
+<div class="aba active" id="aba-panorama">
+
+  <div class="card card-flat">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Acumulado</div></div>
+    <div class="pano-nav">
+      <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)">◀</button>
+      <div class="pano-nav-label" id="panoWindowLabel"></div>
+      <button class="pano-nav-btn" onclick="shiftPanoWindow(1)">▶</button>
+    </div>
+    <table class="compact-table" id="acumTable">
+      <thead>
+        <tr><th style="text-align:left;padding-left:8px">Mês</th><th>Sobra</th><th>Acumulado</th></tr>
+      </thead>
+      <tbody id="acumTableBody"></tbody>
+    </table>
+    <div id="trendChartWrap" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Ponto PJ</div></div>
+    <div class="summary-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="summary-item"><div class="label" style="font-size:11px;color:var(--slate-500);text-transform:uppercase;font-weight:700">Total de Horas</div><div class="value" id="panoPontoHoras" style="font-size:20px;font-weight:800">00:00</div></div>
+      <div class="summary-item"><div class="label" style="font-size:11px;color:var(--slate-500);text-transform:uppercase;font-weight:700">Valor a Receber</div><div class="value" id="panoPontoValor" style="font-size:20px;font-weight:800">R$ 0,00</div></div>
+    </div>
+    <div class="meta" id="panoPontoComparativo" style="margin-top:10px;color:var(--slate-500)"></div>
+  </div>
+
+  <div class="user-section" id="panoUserSection"></div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Resumo</div></div>
+    <div id="sumarioPanorama" class="summary-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Contas a Pagar — <span id="contasMesLabel"></span></div></div>
+    <div class="checklist" id="contasChecklist"></div>
+  </div>
+
+</div>
+
+<!-- PLANNER -->
+<div class="aba" id="aba-planner">
+
+  <div class="user-tabs">
+    <button class="user-tab active" id="tabDavi" onclick="switchUser('davi')">Davi</button>
+    <button class="user-tab cris" id="tabCris" onclick="switchUser('cris')">Cris</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Saldo Atual</div></div>
+    <div class="field">
+      <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
+    </div>
+  </div>
+
+  <div class="card card-flat">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><button class="btn btn-sm btn-outline" id="btnAddCartao" onclick="openCartaoModal()">+ Cartão</button></div>
+    <div class="ponto-table-wrap">
+      <table class="money-table">
+        <thead id="rendaTableThead"></thead>
+        <tbody id="rendaTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Moradia</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('moradia')">+ Add</button></div>
+    <div class="gasto-grid" id="grid-moradia"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M9 21h6"/></svg>Assinaturas</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('assinatura')">+ Add</button></div>
+    <div class="gasto-grid" id="grid-assinatura"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6"/></svg>Fixos</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('fixo')">+ Add</button></div>
+    <div class="gasto-grid" id="grid-fixo"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3 10h18"/></svg>Contas Futuras</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('futuro')">+ Add</button></div>
+    <div class="gasto-grid" id="grid-futuro"></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><button class="btn btn-sm btn-outline" onclick="openCartaoCardModal()">+ Cartão</button></div>
+    <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
+  </div>
+
+</div>
+
+<!-- PONTO PJ -->
+<div class="aba" id="aba-ponto">
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Ponto PJ</div></div>
+
+    <div class="ponto-compare" id="pontoCompareStrip"></div>
+
+    <div class="ponto-mes-nav">
+      <button onclick="pontoNavMes(-1)">◀</button>
+      <div class="mes-label" id="pontoMesLabel"></div>
+      <button onclick="pontoNavMes(1)">▶</button>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Valor da Hora</label>
+      <input type="text" id="pontoValorHora" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this); onValorHoraInput(this)">
+    </div>
+    <div class="ponto-table-wrap">
+      <table class="ponto-table">
+        <thead>
+          <tr><th>Dia</th><th>Entrada</th><th>Almoço</th><th>Volta</th><th>Saída</th><th>Extra</th><th>Total</th><th>Ação</th></tr>
+        </thead>
+        <tbody id="pontoTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="ponto-summary">
+      <div class="summary-grid">
+        <div class="summary-item"><div class="label">Total de Horas</div><div class="value" id="pontoTotalHoras">00:00</div></div>
+        <div class="summary-item"><div class="label">Valor a Receber</div><div class="value" id="pontoValorReceber">R$ 0,00</div></div>
+      </div>
+      <div class="comparacao">
+        <div><div class="comp-label">Padrão</div><div class="comp-value" id="pontoPadrao">00:00</div></div>
+        <div><div class="comp-label">Diferença</div><div class="comp-value" id="pontoDiferenca">00:00</div></div>
+        <div><div class="comp-label">Impacto</div><div class="comp-value" id="pontoImpacto">R$ 0,00</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="switchAba('panorama')" data-aba="panorama"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Panorama</span></button>
+  <button class="nav-item" onclick="switchAba('planner')" data-aba="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Planner</span></button>
+  <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span>Ponto PJ</span></button>
+</nav>
+
+<!-- MODAL GASTO -->
+<div class="modal-overlay" id="modalGasto">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalGastoTitle">Adicionar Gasto</h3>
+      <button class="modal-close" onclick="closeModal('modalGasto')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Descrição</label>
+        <input type="text" id="gastoDesc" placeholder="Ex: Aluguel">
+      </div>
+      <div class="field" id="gastoValorWrap">
+        <label>Valor</label>
+        <div class="input-money"><input type="text" id="gastoValor" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this)"></div>
+      </div>
+      <div class="field" id="gastoDiaWrap">
+        <label>Dia Vencimento</label>
+        <input type="number" id="gastoDia" placeholder="10" min="1" max="31">
+      </div>
+      <div class="field" id="gastoMesInicioSimplesWrap">
+        <label>A partir do mês</label>
+        <select id="gastoMesInicioSimples"></select>
+      </div>
+
+      <!-- campos exclusivos de Contas Futuras -->
+      <div class="field full" id="gastoRecorrenteWrap" style="display:none">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px">
+          <input type="checkbox" id="gastoRecorrente" style="width:20px;height:20px;accent-color:var(--primary)" onchange="onGastoRecorrenteChange()">
+          Recorrente (repete todo mês, sem data para acabar)
+        </label>
+      </div>
+      <div class="field" id="gastoMesInicioWrap" style="display:none">
+        <label id="gastoMesInicioLabel">A partir do mês</label>
+        <select id="gastoMesInicio" onchange="onGastoMesInicioChange()"></select>
+      </div>
+      <div class="field" id="gastoParcelasWrap" style="display:none">
+        <label>Quantas parcelas</label>
+        <input type="number" id="gastoParcelas" min="1" value="1" oninput="onGastoParcelasChange()">
+      </div>
+      <div class="field full" id="gastoReplicarWrap" style="display:none">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px">
+          <input type="checkbox" id="gastoReplicar" checked style="width:20px;height:20px;accent-color:var(--primary)" onchange="onGastoReplicarChange()">
+          Replicar o mesmo valor em todas as parcelas
+        </label>
+      </div>
+      <div class="field full" id="gastoParcelasValoresWrap" style="display:none">
+        <label>Valor de cada parcela</label>
+        <div id="gastoParcelasValores" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
+      <input type="hidden" id="gastoCat">
+      <input type="hidden" id="gastoId">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalGasto')">Cancelar</button>
+      <button class="btn btn-block" onclick="saveGasto()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL CARTAO -->
+<div class="modal-overlay" id="modalCartao">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCartaoTitle">Novo Cartão</h3>
+      <button class="modal-close" onclick="closeModal('modalCartao')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome do Cartão</label>
+      <input type="text" id="cartaoNome" placeholder="Ex: Nubank">
+    </div>
+    <input type="hidden" id="cartaoId">
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCartao')">Cancelar</button>
+      <button class="btn btn-block" onclick="saveCartao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCartaoCard">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCartaoCardTitle">Novo Cartão</h3>
+      <button class="modal-close" onclick="closeModal('modalCartaoCard')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="cartaoCardId">
+    <div class="field full">
+      <label>Nome do Cartão</label>
+      <input type="text" id="cartaoCardNome" placeholder="Ex: Nubank">
+    </div>
+    <div class="field">
+      <label>Dia de Fechamento</label>
+      <input type="number" id="cartaoCardFechamento" min="1" max="31" placeholder="Ex: 20">
+    </div>
+    <div class="field">
+      <label>Dia de Vencimento</label>
+      <input type="number" id="cartaoCardVencimento" min="1" max="31" placeholder="Ex: 27">
+    </div>
+    <div class="field full">
+      <label>Limite</label>
+      <div class="input-money"><input type="text" id="cartaoCardLimite" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCartaoCard')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCartaoCard()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCompraTracker">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCompraTrackerTitle">Nova Compra</h3>
+      <button class="modal-close" onclick="closeModal('modalCompraTracker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="compraTrackerId">
+    <div class="field full">
+      <label>Nome da Compra</label>
+      <input type="text" id="compraTrackerNome" placeholder="Ex: Tênis">
+    </div>
+    <div class="field full">
+      <label>Cartão</label>
+      <select id="compraTrackerCartaoId"></select>
+    </div>
+    <div class="field">
+      <label>Valor Total</label>
+      <div class="input-money"><input type="text" id="compraTrackerValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="field">
+      <label>Parcelas</label>
+      <input type="number" id="compraTrackerParcelas" min="1" value="1">
+    </div>
+    <div class="field full">
+      <label>Mês da 1ª parcela</label>
+      <select id="compraTrackerMesInicio"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCompraTracker')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCompraTracker()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCredoVista">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCredoVistaTitle">Crédito à Vista</h3>
+      <button class="modal-close" onclick="closeModal('modalCredoVista')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="credoVistaCartaoId">
+    <input type="hidden" id="credoVistaId">
+    <div class="field full">
+      <label>Descrição</label>
+      <input type="text" id="credoVistaDescricao" placeholder="Ex: Cinema">
+    </div>
+    <div class="field full">
+      <label>Valor</label>
+      <div class="input-money"><input type="text" id="credoVistaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCredoVista')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCredoVista()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalConcluirMes">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Concluir Mês</h3>
+      <button class="modal-close" onclick="closeModal('modalConcluirMes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="concluirMesInfo"></div>
+    <div id="concluirMesAviso" class="check-item urgent" style="display:none;margin-top:12px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalConcluirMes')">Cancelar</button>
+      <button class="btn btn-block" onclick="confirmarConcluirMes()">Concluir Mês</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
