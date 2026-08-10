@@ -1,5 +1,5 @@
 :root{
---primary:#4A90C2;--primary-dark:#2E6690;--primary-light:#EAF3FA;
+--primary:#6B4A32;--primary-dark:#4A3222;--primary-light:#F0E8E1;
 --success:#1B7A43;--success-dark:#0F5C30;--success-light:#E5F4EB;
 --warning:#C17A54;--warning-light:#F5E9E1;
 --danger:#8B3232;--danger-light:#F6E8E8;
@@ -21,7 +21,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 /* HEADER */
 .header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:var(--pad-md) var(--pad);position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:space-between}
 .header-brand{display:flex;align-items:center;gap:var(--gap-md)}
-.header-logo{width:48px;height:48px;border-radius:12px;background:rgba(46,102,144,.3);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;transition:transform var(--duration) var(--ease);box-shadow:inset 0 2px 8px rgba(0,0,0,.2)}
+.header-logo{width:48px;height:48px;border-radius:12px;background:rgba(74,50,34,.3);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;transition:transform var(--duration) var(--ease);box-shadow:inset 0 2px 8px rgba(0,0,0,.2)}
 .header-logo:hover{transform:scale(1.05)}
 .header-title{font-size:22px;font-weight:800;letter-spacing:-.4px}
 .header-sub{font-size:10px;opacity:.75;font-weight:600;letter-spacing:1px;text-transform:uppercase}
@@ -84,7 +84,17 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .user-card .u-sobra.negative{color:var(--danger)}
 
 /* CHECKLIST (Contas a Pagar) */
-.checklist{display:flex;flex-direction:column;gap:var(--gap-sm)}
+.checklist{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap-sm)}
+.check-item-compact{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-xs);background:var(--slate-50);border:1px solid var(--slate-200);transition:all var(--duration) var(--ease)}
+.check-item-compact:hover{background:var(--slate-100)}
+.check-item-compact.paid{opacity:.55;background:var(--slate-100)}
+.check-item-compact.paid .desc{text-decoration:line-through}
+.check-item-compact input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--success);flex-shrink:0}
+.check-item-compact .info{flex:1;min-width:0}
+.check-item-compact .desc{font-size:12px;font-weight:700;color:var(--slate-800);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.check-item-compact .meta{font-size:10px;color:var(--slate-500);margin-top:2px}
+.user-tag{font-weight:800;text-transform:uppercase;font-size:9px;letter-spacing:.3px;padding:1px 5px;border-radius:4px;background:var(--slate-200);color:var(--slate-700)}
+.user-tag.cris{background:var(--lavender-light,#EFE7F0);color:var(--lavender)}
 .check-item{display:flex;align-items:center;gap:var(--gap-md);padding:var(--pad-sm) var(--pad-md);border-radius:var(--radius-sm);background:var(--slate-50);border-left:4px solid var(--primary);transition:all var(--duration) var(--ease)}
 .check-item:hover{background:var(--slate-100)}
 .check-item.urgent{border-left-color:var(--warning);background:var(--warning-light)}
@@ -275,3 +285,47 @@ body{padding-bottom:0}
 .bottom-nav{position:sticky;top:0;bottom:auto;border-top:none;border-bottom:2px solid var(--slate-150);justify-content:center;gap:var(--gap-md)}
 .nav-item{flex:0 0 auto;min-width:120px}
 }
+
+/* SUMMARY LIST (Resumo do Panorama, agora vertical) */
+.summary-list{display:flex;flex-direction:column;gap:8px}
+
+/* CHECKBOX FIELD (Recorrente / Replicar) */
+.checkbox-field{display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:var(--slate-700);cursor:pointer}
+.checkbox-field input[type=checkbox]{width:20px;height:20px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
+
+/* MONTH PICKER (calendário customizado) */
+.month-picker{position:relative}
+.month-picker-btn{width:100%;padding:11px 13px;border:1.5px solid var(--slate-200);border-radius:var(--radius-sm);font-size:14px;background:var(--slate-50);color:var(--text);text-align:left;cursor:pointer;font-family:inherit;font-weight:600;transition:all var(--duration) var(--ease)}
+.month-picker-btn:hover{border-color:var(--primary)}
+.month-picker-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);border:1px solid var(--slate-200);padding:var(--pad-sm);z-index:50}
+.month-picker-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.month-picker-nav button{background:var(--slate-100);border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--slate-700);font-size:16px;font-weight:700}
+.month-picker-nav button:hover{background:var(--primary);color:#fff}
+.month-picker-nav span{font-size:14px;font-weight:800;color:var(--slate-800)}
+.month-picker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.month-picker-cell{padding:10px 4px;border-radius:var(--radius-xs);border:1.5px solid var(--slate-200);background:var(--slate-50);cursor:pointer;font-size:12px;font-weight:700;color:var(--slate-700);text-align:center;transition:all var(--duration) var(--ease);font-family:inherit}
+.month-picker-cell:hover{border-color:var(--primary);background:var(--primary-light)}
+.month-picker-cell.current{border-color:var(--primary);color:var(--primary)}
+.month-picker-cell.selected{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* COMPARATIVO DE MESES (Simulador) */
+.comparativo-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+.comparativo-card{min-width:135px;scroll-snap-align:start;background:var(--card);border-radius:var(--radius-sm);padding:12px;border:2px solid var(--slate-200)}
+.comparativo-card.atual{border-color:var(--primary);background:var(--primary-light)}
+.comparativo-card .cc-mes{font-size:11px;font-weight:800;color:var(--slate-700);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;text-align:center}
+.comparativo-card .cc-linha{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:var(--slate-600);font-weight:600}
+.comparativo-card .cc-linha span:last-child{font-weight:800;color:var(--slate-800)}
+.comparativo-card .cc-impacto span:last-child{color:var(--warning)}
+.comparativo-card .cc-final{border-top:1px solid var(--slate-200);margin-top:4px;padding-top:6px;font-weight:800}
+
+/* TAREFAS */
+.tarefa-categoria-header{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--slate-500);margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--slate-150)}
+.tarefa-categoria-header:first-child{margin-top:0}
+.tarefa-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius-sm);background:var(--slate-50);border:1px solid var(--slate-200);margin-bottom:6px;transition:all var(--duration) var(--ease)}
+.tarefa-item:hover{background:var(--slate-100)}
+.tarefa-item.feita{opacity:.55}
+.tarefa-item.feita .nome{text-decoration:line-through}
+.tarefa-item input[type=checkbox]{width:20px;height:20px;accent-color:var(--success);cursor:pointer;flex-shrink:0}
+.tarefa-item .info{flex:1;min-width:0}
+.tarefa-item .nome{font-size:13px;font-weight:700;color:var(--slate-800)}
+.tarefa-item .desc{font-size:11px;color:var(--slate-500);margin-top:2px}

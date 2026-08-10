@@ -26,6 +26,8 @@ function novoEstado(){
     cartoesTracker:[],
     comprasTracker:[],
     metas:[],
+    tarefas:[],
+    tarefaCategorias:[],
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
   };
 }
@@ -57,6 +59,8 @@ function carregar(){
       if(!state.cartoesTracker) state.cartoesTracker = [];
       if(!state.comprasTracker) state.comprasTracker = [];
       if(!state.metas) state.metas = [];
+      if(!state.tarefas) state.tarefas = [];
+      if(!state.tarefaCategorias) state.tarefaCategorias = [];
       // migração: garantir campos novos
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
@@ -121,7 +125,7 @@ function daysInMonth(key){ const d=keyToDate(key); return new Date(d.getFullYear
 function todayKey(){ return mesAtualRef; }
 function mesFinanceiroAtual(){ return addMonths(todayKey(), 1); } // Planner/Panorama sempre operam 1 mês à frente (trabalhou em X, recebe/paga em X+1)
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '('+fmtMoney(Math.abs(v))+')'; }
+function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }
 function parseMoney(str){
   if(!str) return 0;
   const cleaned = String(str).replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
@@ -217,7 +221,7 @@ function incomeForMonth(user, mKey){
 }
 function dizimoForMonth(user, mKey){
   if(user !== 'davi') return 0;
-  const base = rendaBaseForMonth(user, mKey) + ((state.users[user].incomeExtra||{})[mKey] || 0);
+  const base = rendaBaseForMonth(user, mKey);
   return base * DIZIMO_PERCENT;
 }
 function futuroValorNoMes(item, mKey){
@@ -275,10 +279,48 @@ function getPanoWindowMonths(){
 /* ================= PLANEJADOR DE METAS / SIMULADOR ================= */
 let simuladorMetas = [];
 
+const monthPickers = {};
+function createMonthPicker(pickerId, hiddenInputId, defaultKey){
+  monthPickers[pickerId] = { year: keyToDate(defaultKey).getFullYear(), hiddenInputId };
+  document.getElementById(hiddenInputId).value = defaultKey;
+  document.getElementById(pickerId+'Btn').textContent = monthLabel(defaultKey);
+  document.getElementById(pickerId+'Panel').style.display = 'none';
+}
+function toggleMonthPicker(pickerId){
+  const panel = document.getElementById(pickerId+'Panel');
+  const isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen) renderMonthPickerGrid(pickerId);
+}
+function shiftPickerYear(pickerId, delta){
+  monthPickers[pickerId].year += delta;
+  renderMonthPickerGrid(pickerId);
+}
+function renderMonthPickerGrid(pickerId){
+  const st = monthPickers[pickerId];
+  const hiddenVal = document.getElementById(st.hiddenInputId).value;
+  document.getElementById(pickerId+'Year').textContent = st.year;
+  const grid = document.getElementById(pickerId+'Grid');
+  const hoje = mesFinanceiroAtual();
+  let html = '';
+  for(let m=0;m<12;m++){
+    const key = st.year+'-'+String(m+1).padStart(2,'0');
+    const isSelected = key === hiddenVal;
+    const isCurrent = key === hoje;
+    html += `<button type="button" class="month-picker-cell ${isSelected?'selected':''} ${isCurrent?'current':''}" onclick="selectPickerMonth('${pickerId}','${key}')">${MES_NOMES_LONGOS[m].slice(0,3)}</button>`;
+  }
+  grid.innerHTML = html;
+}
+function selectPickerMonth(pickerId, key){
+  document.getElementById(monthPickers[pickerId].hiddenInputId).value = key;
+  document.getElementById(pickerId+'Btn').textContent = monthLabel(key);
+  document.getElementById(pickerId+'Panel').style.display = 'none';
+}
+
 function openSimuladorModal(){
   simuladorMetas = [];
   document.getElementById('simuladorMetasForm').reset();
-  popularSelectMes('simMetaMes');
+  createMonthPicker('simMetaMesPicker', 'simMetaMes', mesFinanceiroAtual());
   renderSimulador();
   document.getElementById('modalSimulador').classList.add('active');
 }
@@ -315,6 +357,40 @@ function removerMetaSimulador(id){
   renderSimulador();
 }
 
+function excluirMetaSalva(id){
+  state.metas = (state.metas||[]).filter(m=>m.id!==id);
+  persist();
+  renderSimulador();
+  showToast('Meta removida');
+}
+
+function impactoMetasNoMes(mKey){
+  let impacto = 0;
+  const todasMetas = [...simuladorMetas, ...(state.metas||[])];
+  todasMetas.forEach(meta=>{
+    const valorMes = meta.valor / meta.parcelas;
+    for(let i=0;i<meta.parcelas;i++){
+      if(addMonths(meta.mes, i) === mKey) impacto += valorMes;
+    }
+  });
+  return impacto;
+}
+
+function calcularComparativoMeses(nMeses){
+  const hoje = mesFinanceiroAtual();
+  const meses = [];
+  for(let i=0;i<nMeses;i++){
+    const mKey = addMonths(hoje, i);
+    const renda = (incomeForMonth('davi', mKey) || 0) + (incomeForMonth('cris', mKey) || 0);
+    const gasto = (expensesForMonth('davi', mKey) || 0) + (expensesForMonth('cris', mKey) || 0);
+    const sobra = renda - gasto;
+    const impacto = impactoMetasNoMes(mKey);
+    const saldoFinal = sobra - impacto;
+    meses.push({ mKey, label: monthLabel(mKey), renda, gasto, sobra, impacto, saldoFinal });
+  }
+  return meses;
+}
+
 function calcularImpactoSimulador(){
   const mKeyAtual = mesFinanceiroAtual();
   const rendaTotal = (incomeForMonth('davi', mKeyAtual) || 0) + (incomeForMonth('cris', mKeyAtual) || 0);
@@ -325,28 +401,12 @@ function calcularImpactoSimulador(){
     const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
     return s + usado;
   },0);
-  
-  let totalMetas = 0;
-  let impactoPorMes = {};
-  simuladorMetas.forEach(meta=>{
-    totalMetas += meta.valor;
-    const valorMes = meta.valor / meta.parcelas;
-    for(let i=0;i<meta.parcelas;i++){
-      const mes = addMonths(meta.mes, i);
-      impactoPorMes[mes] = (impactoPorMes[mes] || 0) + valorMes;
-    }
-  });
-  
-  const impactoMesAtual = impactoPorMes[mKeyAtual] || 0;
-  const saldoApos = saldoPrevisto - impactoMesAtual;
-  
-  return { rendaTotal, gastoTotal, saldoPrevisto, totalCartoes, totalMetas, impactoMesAtual, saldoApos, simuladorMetas };
+  return { rendaTotal, gastoTotal, saldoPrevisto, totalCartoes };
 }
 
 function renderSimulador(){
   const calc = calcularImpactoSimulador();
   
-  // Painel Situação Atual
   const painelAtual = `
     <div class="simulador-linha">
       <span class="label">Saldo Disponível</span>
@@ -362,7 +422,7 @@ function renderSimulador(){
     </div>
     <div class="simulador-linha">
       <span class="label">Saldo Previsto</span>
-      <span class="valor" style="color:${calc.saldoPrevisto>=0?'var(--success)':'var(--danger)'}">${fmtMoney(calc.saldoPrevisto)}</span>
+      <span class="valor" style="color:${calc.saldoPrevisto>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(calc.saldoPrevisto)}</span>
     </div>
     <div class="simulador-linha">
       <span class="label">Cartões (abertos)</span>
@@ -371,51 +431,69 @@ function renderSimulador(){
   `;
   document.getElementById('simPainelAtual').innerHTML = painelAtual;
   
-  // Lista de metas
+  // Lista de metas sendo montadas nesta sessão
   const listaHtml = simuladorMetas.length === 0
-    ? '<div style="text-align:center;padding:20px;color:var(--slate-500)">Nenhuma meta adicionada ainda</div>'
+    ? '<div style="text-align:center;padding:16px;color:var(--slate-500);font-size:12px">Nenhuma meta adicionada ainda</div>'
     : simuladorMetas.map(meta => `
       <div class="simulador-meta-item">
         <div class="nome">${meta.nome}</div>
         <div class="info">
-          <div style="margin-bottom:6px">R$ ${fmtMoney(meta.valor)} em ${meta.parcelas}x = R$ ${fmtMoney(meta.valor/meta.parcelas)}/mês</div>
+          <div style="margin-bottom:4px">${fmtMoney(meta.valor)} em ${meta.parcelas}x = ${fmtMoney(meta.valor/meta.parcelas)}/mês</div>
           <div style="font-size:11px;color:var(--slate-500)">Começa em ${monthLabel(meta.mes)}</div>
         </div>
         <button class="btn btn-sm btn-outline btn-remove" onclick="removerMetaSimulador('${meta.id}')">Remover</button>
       </div>
     `).join('');
   document.getElementById('simMetasLista').innerHTML = listaHtml;
-  
-  // Simulação de impacto
-  let simulacaoHtml = '';
-  if(simuladorMetas.length > 0){
-    simulacaoHtml = `
-      <div class="simulador-painel">
-        <h4>📊 Impacto das Metas</h4>
-        <div class="simulador-linha">
-          <span class="label">Total em Metas</span>
-          <span class="valor">${fmtMoney(calc.totalMetas)}</span>
+
+  // Metas já salvas anteriormente
+  const salvasWrap = document.getElementById('simMetasSalvas');
+  if(salvasWrap){
+    const salvas = state.metas || [];
+    salvasWrap.innerHTML = salvas.length === 0 ? '' : `<h4 style="margin-top:0">💾 Metas Salvas</h4>` + salvas.map(meta => `
+      <div class="simulador-meta-item">
+        <div class="nome">${meta.nome}</div>
+        <div class="info">
+          <div style="margin-bottom:4px">${fmtMoney(meta.valor)} em ${meta.parcelas}x = ${fmtMoney(meta.valor/meta.parcelas)}/mês</div>
+          <div style="font-size:11px;color:var(--slate-500)">Começa em ${monthLabel(meta.mes)}</div>
         </div>
-        <div class="simulador-linha">
-          <span class="label">Impacto em ${monthLabel(mesFinanceiroAtual())}</span>
-          <span class="valor">${fmtMoney(calc.impactoMesAtual)}</span>
-        </div>
-        <div class="simulador-linha">
-          <span class="label">Saldo Após Compras</span>
-          <span class="valor" style="color:${calc.saldoApos>=0?'var(--success)':'var(--danger)'};font-weight:900">${fmtMoney(calc.saldoApos)}</span>
-        </div>
-        ${calc.saldoApos<0 ? `<div class="simulador-alerta">⚠️ Atenção: Você não tem saldo suficiente em ${monthLabel(mesFinanceiroAtual())} para essas compras!</div>` : ''}
+        <button class="btn btn-sm btn-outline btn-remove" onclick="excluirMetaSalva('${meta.id}')">Excluir</button>
       </div>
-    `;
+    `).join('');
   }
-  document.getElementById('simPainelSimulacao').innerHTML = simulacaoHtml;
+  
+  // Comparativo lado a lado dos próximos meses
+  const comparativo = calcularComparativoMeses(6);
+  const comparativoHtml = `
+    <div class="simulador-painel">
+      <h4>📊 Comparativo dos Próximos Meses</h4>
+      <div class="comparativo-scroll">
+        ${comparativo.map(m => `
+          <div class="comparativo-card ${m.mKey===mesFinanceiroAtual()?'atual':''}">
+            <div class="cc-mes">${m.label}</div>
+            <div class="cc-linha"><span>Renda</span><span>${fmtMoney(m.renda)}</span></div>
+            <div class="cc-linha"><span>Gasto</span><span>${fmtMoney(m.gasto)}</span></div>
+            <div class="cc-linha"><span>Sobra</span><span style="color:${m.sobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(m.sobra)}</span></div>
+            ${m.impacto>0?`<div class="cc-linha cc-impacto"><span>Metas</span><span>-${fmtMoney(m.impacto)}</span></div>`:''}
+            <div class="cc-linha cc-final"><span>Final</span><span style="color:${m.saldoFinal>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(m.saldoFinal)}</span></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  
+  const primeiroMesComImpacto = comparativo.find(m=>m.saldoFinal<0);
+  const alertaHtml = primeiroMesComImpacto ? `<div class="simulador-alerta">⚠️ Atenção: Saldo ficaria negativo em ${primeiroMesComImpacto.label}!</div>` : '';
+  
+  document.getElementById('simPainelSimulacao').innerHTML = comparativoHtml + alertaHtml;
 }
 
 function salvarMetas(){
   if(simuladorMetas.length === 0){ showToast('Adicione pelo menos uma meta'); return; }
-  state.metas = [...state.metas, ...simuladorMetas];
+  state.metas = [...(state.metas||[]), ...simuladorMetas];
   persist();
-  closeSimulador();
+  simuladorMetas = [];
+  renderSimulador();
   showToast('Metas salvas com sucesso!');
 }
 
@@ -447,7 +525,7 @@ function renderPanorama(){
       <div class="u-row"><span class="lbl">Receita</span><span class="u-receita">${fmtMoney(receita)}</span></div>
       <div class="u-row"><span class="lbl">Gastos</span><span class="u-gastos">${fmtMoney(gastos)}</span></div>
       ${gastosComparativo}
-      <div class="u-sobra ${sobra>=0?'positive':'negative'}"><span class="lbl">Sobra</span><span>${fmtMoney(sobra)}</span></div>
+      <div class="u-sobra ${sobra>=0?'positive':'negative'}"><span class="lbl">Sobra</span><span>${fmtMoneySigned(sobra)}</span></div>
     </div>`;
   }).join('');
 
@@ -456,19 +534,52 @@ function renderPanorama(){
   renderSumarioPanorama();
 }
 
+function categoryTotalForMonth(cat, mKey){
+  let total = 0;
+  ['davi','cris'].forEach(user=>{
+    const ex = state.users[user].expenses;
+    if(cat==='futuro'){
+      ex.futuro.forEach(item=>{
+        const v = futuroValorNoMes(item, mKey);
+        if(v<=0) return;
+        const paidKey = mKey+'_'+user+'_futuro_'+item.id;
+        if(state.paid[paidKey]) return;
+        total += v;
+      });
+    } else {
+      ex[cat].forEach(item=>{
+        if(item.mesInicio && mKey < item.mesInicio) return;
+        const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
+        if(state.paid[paidKey]) return;
+        total += Number(item.valor)||0;
+      });
+    }
+  });
+  return total;
+}
 function renderSumarioPanorama(){
   const summary = document.getElementById('sumarioPanorama');
   if(!summary) return;
   const mKeyAtual = state.focusMonth;
   const rendaTotal = (incomeForMonth('davi', mKeyAtual) || 0) + (incomeForMonth('cris', mKeyAtual) || 0);
-  const gastoTotal = (expensesForMonth('davi', mKeyAtual) || 0) + (expensesForMonth('cris', mKeyAtual) || 0);
   const totalCartoes = (state.cartoesTracker||[]).reduce((s,c)=>{
     const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
     const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
     return s + usado;
   },0);
-  const dizimo = (state.users.davi.income[mKeyAtual] || 0) * 0.1;
-  summary.innerHTML = `<div class="summary-row"><span>Renda Total</span><span class="summary-value">${fmtMoney(rendaTotal)}</span></div><div class="summary-row"><span>Gasto Total</span><span class="summary-value">${fmtMoney(gastoTotal)}</span></div><div class="summary-row"><span>Cartões</span><span class="summary-value">${fmtMoney(totalCartoes)}</span></div><div class="summary-row"><span>Dízimo (visual)</span><span class="summary-value">${fmtMoney(dizimo)}</span></div>`;
+  const moradia = categoryTotalForMonth('moradia', mKeyAtual);
+  const assinatura = categoryTotalForMonth('assinatura', mKeyAtual);
+  const fixo = categoryTotalForMonth('fixo', mKeyAtual);
+  const futuro = categoryTotalForMonth('futuro', mKeyAtual);
+  document.getElementById('sumarioPanoramaMes').textContent = monthLabel(mKeyAtual);
+  summary.innerHTML = `
+    <div class="summary-row"><span>Renda Total</span><span class="summary-value">${fmtMoney(rendaTotal)}</span></div>
+    <div class="summary-row"><span>Moradia</span><span class="summary-value">${fmtMoney(moradia)}</span></div>
+    <div class="summary-row"><span>Fixos</span><span class="summary-value">${fmtMoney(fixo)}</span></div>
+    <div class="summary-row"><span>Assinaturas</span><span class="summary-value">${fmtMoney(assinatura)}</span></div>
+    <div class="summary-row"><span>Contas Futuras</span><span class="summary-value">${fmtMoney(futuro)}</span></div>
+    <div class="summary-row"><span>Cartões</span><span class="summary-value">${fmtMoney(totalCartoes)}</span></div>
+  `;
 }
 
 function renderPanoPonto(){
@@ -512,14 +623,17 @@ function renderTrendChart(months){
 
 function renderAcumTable(months){
   let acumulado = 0;
+  const hoje = mesFinanceiroAtual();
   const rows = months.map(mKey=>{
     const sobra = saldoHouseholdForMonth(mKey);
     acumulado += sobra;
     const isSelected = mKey === state.focusMonth;
+    const isHoje = mKey === hoje;
+    const acumuladoTxt = isHoje ? '—' : `<span style="color:${acumulado>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(acumulado)}</span>`;
     return `<tr class="${isSelected?'selected-row':''}" onclick="selectFocusMonth('${mKey}')" style="cursor:pointer">
       <td class="row-label">${monthLabel(mKey)}${isSelected?' •':''}</td>
-      <td style="font-weight:700">${sobra>=0?fmtMoney(sobra):'('+fmtMoney(Math.abs(sobra))+')'}</td>
-      <td style="font-weight:800">${acumulado>=0?fmtMoney(acumulado):'('+fmtMoney(Math.abs(acumulado))+')'}</td>
+      <td style="font-weight:700;color:${sobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobra)}</td>
+      <td style="font-weight:800">${acumuladoTxt}</td>
     </tr>`;
   }).join('');
   document.getElementById('acumTableBody').innerHTML = rows;
@@ -574,9 +688,6 @@ function contasEmAbertoNoMes(mKey){
 }
 function renderChecklist(){
   const mKey = state.focusMonth;
-  const isRealCurrentMonth = mKey === mesFinanceiroAtual();
-  const today = new Date();
-  const todayDay = today.getDate();
   const items = getContasDoMes(mKey);
 
   const list = document.getElementById('contasChecklist');
@@ -584,18 +695,19 @@ function renderChecklist(){
     list.innerHTML = `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Planner</div></div>`;
     return;
   }
+  // ordenar: usuário (davi primeiro), depois valor decrescente
+  items.sort((a,b)=>{
+    if(a.user !== b.user) return a.user === 'davi' ? -1 : 1;
+    return (b.valor||0) - (a.valor||0);
+  });
   list.innerHTML = items.map(it=>{
     const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
     const isPaid = !!state.paid[paidKey];
-    let cls = '';
-    if(isPaid) cls='paid';
-    else if(isRealCurrentMonth && it.dia < todayDay) cls='overdue';
-    else if(isRealCurrentMonth && it.dia - todayDay <= 3 && it.dia - todayDay >= 0) cls='urgent';
-    return `<div class="check-item ${cls}">
+    return `<div class="check-item-compact ${isPaid?'paid':''}">
       <input type="checkbox" ${isPaid?'checked':''} onchange="togglePaid('${paidKey}')">
       <div class="info">
-        <div class="desc">${it.desc} <span class="badge ${it.user==='davi'?'blue':'lavender'}">${it.user}</span></div>
-        <div class="meta">Vence dia ${it.dia} · ${fmtMoney(it.valor)}</div>
+        <div class="desc">${it.desc}</div>
+        <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia} · ${fmtMoney(it.valor)}</div>
       </div>
     </div>`;
   }).join('');
@@ -607,6 +719,81 @@ function togglePaid(paidKey){
 }
 
 /* ================= RENDER: PLANNER ================= */
+/* ================= LISTA DE TAREFAS (isolado, visual apenas) ================= */
+function openTarefasModal(){
+  renderTarefasModal();
+  document.getElementById('modalTarefas').classList.add('active');
+}
+function novaTarefaCategoria(nome){
+  if(!nome) return null;
+  let cat = (state.tarefaCategorias||[]).find(c=>c.nome.toLowerCase()===nome.toLowerCase());
+  if(!cat){
+    cat = { id:'cat'+Date.now(), nome };
+    state.tarefaCategorias.push(cat);
+  }
+  return cat.id;
+}
+function salvarTarefa(){
+  const nome = document.getElementById('tarefaNome').value.trim();
+  const desc = document.getElementById('tarefaDesc').value.trim();
+  const catInput = document.getElementById('tarefaCategoria').value.trim();
+  if(!nome){ showToast('Digite o nome da tarefa'); return; }
+  const categoriaId = catInput ? novaTarefaCategoria(catInput) : null;
+  state.tarefas.push({ id:'tf'+Date.now(), nome, desc, categoriaId, feita:false });
+  persist();
+  document.getElementById('tarefaNome').value = '';
+  document.getElementById('tarefaDesc').value = '';
+  document.getElementById('tarefaCategoria').value = '';
+  renderTarefasModal();
+}
+function toggleTarefa(id){
+  const t = state.tarefas.find(t=>t.id===id);
+  if(t){ t.feita = !t.feita; persist(); renderTarefasModal(); }
+}
+function excluirTarefa(id){
+  state.tarefas = state.tarefas.filter(t=>t.id!==id);
+  persist();
+  renderTarefasModal();
+}
+function excluirTarefaCategoria(id){
+  state.tarefaCategorias = state.tarefaCategorias.filter(c=>c.id!==id);
+  state.tarefas.forEach(t=>{ if(t.categoriaId===id) t.categoriaId=null; });
+  persist();
+  renderTarefasModal();
+}
+function renderTarefasModal(){
+  const wrap = document.getElementById('tarefasLista');
+  if(!wrap) return;
+  const tarefas = state.tarefas || [];
+  if(tarefas.length === 0){
+    wrap.innerHTML = `<div class="empty-state"><div class="title">Nenhuma tarefa ainda</div><div class="desc">Adicione sua primeira tarefa acima</div></div>`;
+    return;
+  }
+  const grupos = {};
+  tarefas.forEach(t=>{
+    const key = t.categoriaId || '_sem';
+    if(!grupos[key]) grupos[key] = [];
+    grupos[key].push(t);
+  });
+  let html = '';
+  Object.keys(grupos).forEach(key=>{
+    const cat = key==='_sem' ? null : (state.tarefaCategorias||[]).find(c=>c.id===key);
+    const catNome = cat ? cat.nome : 'Sem categoria';
+    html += `<div class="tarefa-categoria-header"><span>${catNome}</span>${cat?`<button class="btn-icon-sm" onclick="excluirTarefaCategoria('${cat.id}')">${ICON_TRASH}</button>`:''}</div>`;
+    html += grupos[key].map(t=>`
+      <div class="tarefa-item ${t.feita?'feita':''}">
+        <input type="checkbox" ${t.feita?'checked':''} onchange="toggleTarefa('${t.id}')">
+        <div class="info">
+          <div class="nome">${t.nome}</div>
+          ${t.desc?`<div class="desc">${t.desc}</div>`:''}
+        </div>
+        <button class="btn-icon-sm" onclick="excluirTarefa('${t.id}')">${ICON_TRASH}</button>
+      </div>
+    `).join('');
+  });
+  wrap.innerHTML = html;
+}
+
 function renderPlanner(){
   const u = state.currentUser;
   document.getElementById('saldoAtualInput').value = state.users[u].saldoAtual ? state.users[u].saldoAtual.toFixed(2).replace('.',',') : '';
@@ -629,7 +816,7 @@ function renderRendaTable(){
     return `<th class="${isCurrent?'current-col':''}">${monthLabel(mKey)}${isCurrent?'<small>Atual</small>':''}</th>`;
   }).join('')}<th>Ações</th></tr>`;
 
-  const rendaRow = `<tr><td class="row-label">Renda${u==='davi'?' <span style="font-weight:500;color:var(--slate-400);font-size:9px;text-transform:none">(auto)</span>':''}</td>${months.map(mKey=>{
+  const rendaRow = `<tr><td class="row-label">Renda</td>${months.map(mKey=>{
     if(u==='davi'){
       const val = rendaBaseForMonth(u, mKey);
       const mesOrigem = monthLabel(addMonths(mKey,-1));
@@ -660,7 +847,7 @@ function renderRendaTable(){
 
   const sobraRow = `<tr class="total-row"><td class="row-label">Sobra estimada</td>${months.map(mKey=>{
     const s = saldoForMonth(u, mKey);
-    return `<td class="${mKey===hoje?'current-col':''}"><span class="total-value">${s>=0?fmtMoney(s):'('+fmtMoney(Math.abs(s))+')'}</span></td>`;
+    return `<td class="${mKey===hoje?'current-col':''}"><span class="total-value" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></td>`;
   }).join('')}<td></td></tr>`;
 
   document.getElementById('rendaTableThead').innerHTML = thead;

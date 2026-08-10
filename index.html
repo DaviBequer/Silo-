@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#4A90C2">
+<meta name="theme-color" content="#6B4A32">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Siloé">
@@ -69,8 +69,8 @@
   </div>
 
   <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Resumo</div></div>
-    <div id="sumarioPanorama" class="summary-grid"></div>
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Resumo — <span id="sumarioPanoramaMes"></span></div></div>
+    <div id="sumarioPanorama" class="summary-list"></div>
   </div>
 
   <div class="card">
@@ -89,7 +89,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Saldo Atual</div></div>
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Saldo Atual</div><button class="btn-icon-sm" onclick="openTarefasModal()" title="Lista de Tarefas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button></div>
     <div class="field">
       <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
     </div>
@@ -199,29 +199,29 @@
         <input type="number" id="gastoDia" placeholder="10" min="1" max="31">
       </div>
       <div class="field" id="gastoMesInicioSimplesWrap">
-        <label>A partir do mês</label>
+        <label>A partir de</label>
         <select id="gastoMesInicioSimples"></select>
       </div>
 
       <!-- campos exclusivos de Contas Futuras -->
       <div class="field full" id="gastoRecorrenteWrap" style="display:none">
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px">
-          <input type="checkbox" id="gastoRecorrente" style="width:20px;height:20px;accent-color:var(--primary)" onchange="onGastoRecorrenteChange()">
-          Recorrente (repete todo mês, sem data para acabar)
+        <label class="checkbox-field">
+          <input type="checkbox" id="gastoRecorrente" onchange="onGastoRecorrenteChange()">
+          <span>Recorrente</span>
         </label>
       </div>
       <div class="field" id="gastoMesInicioWrap" style="display:none">
-        <label id="gastoMesInicioLabel">A partir do mês</label>
+        <label id="gastoMesInicioLabel">Mês</label>
         <select id="gastoMesInicio" onchange="onGastoMesInicioChange()"></select>
       </div>
       <div class="field" id="gastoParcelasWrap" style="display:none">
-        <label>Quantas parcelas</label>
+        <label>Parcelas</label>
         <input type="number" id="gastoParcelas" min="1" value="1" oninput="onGastoParcelasChange()">
       </div>
       <div class="field full" id="gastoReplicarWrap" style="display:none">
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px">
-          <input type="checkbox" id="gastoReplicar" checked style="width:20px;height:20px;accent-color:var(--primary)" onchange="onGastoReplicarChange()">
-          Replicar o mesmo valor em todas as parcelas
+        <label class="checkbox-field">
+          <input type="checkbox" id="gastoReplicar" checked onchange="onGastoReplicarChange()">
+          <span>Replicar valor em todas as parcelas</span>
         </label>
       </div>
       <div class="field full" id="gastoParcelasValoresWrap" style="display:none">
@@ -362,6 +362,29 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalTarefas">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📋 Lista de Tarefas</h3>
+      <button class="modal-close" onclick="closeModal('modalTarefas')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome da Tarefa</label>
+      <input type="text" id="tarefaNome" placeholder="Ex: Comprar mantimentos">
+    </div>
+    <div class="field full">
+      <label>Descrição (opcional)</label>
+      <input type="text" id="tarefaDesc" placeholder="Detalhes da tarefa">
+    </div>
+    <div class="field full">
+      <label>Categoria (opcional)</label>
+      <input type="text" id="tarefaCategoria" placeholder="Ex: Casa, Trabalho...">
+    </div>
+    <button class="btn btn-block" style="margin-top:8px" onclick="salvarTarefa()">+ Adicionar Tarefa</button>
+    <div id="tarefasLista" style="margin-top:20px"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalSimulador">
   <div class="modal">
     <div class="modal-header">
@@ -393,13 +416,25 @@
         </div>
         <div class="field full">
           <label>Mês de Início</label>
-          <select id="simMetaMes"></select>
+          <div class="month-picker">
+            <button type="button" class="month-picker-btn" id="simMetaMesPickerBtn" onclick="toggleMonthPicker('simMetaMesPicker')">Selecione o mês</button>
+            <div class="month-picker-panel" id="simMetaMesPickerPanel" style="display:none">
+              <div class="month-picker-nav">
+                <button type="button" onclick="shiftPickerYear('simMetaMesPicker',-1)">‹</button>
+                <span id="simMetaMesPickerYear"></span>
+                <button type="button" onclick="shiftPickerYear('simMetaMesPicker',1)">›</button>
+              </div>
+              <div class="month-picker-grid" id="simMetaMesPickerGrid"></div>
+            </div>
+          </div>
+          <input type="hidden" id="simMetaMes">
         </div>
       </form>
       <button class="btn btn-block" style="margin-top:12px" onclick="adicionarMetaSimulador()">+ Adicionar Meta</button>
     </div>
 
     <div class="simulador-painel" id="simMetasLista" style="background:var(--card);border:1px solid var(--slate-200)"></div>
+    <div class="simulador-painel" id="simMetasSalvas" style="background:var(--card);border:1px solid var(--slate-200)"></div>
 
     <div id="simPainelSimulacao"></div>
 
