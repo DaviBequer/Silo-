@@ -186,6 +186,11 @@ function aplicarLogoSalva(){
 const ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
 const ICON_BAN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg>';
+const ICON_SAVE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
+const ICON_CHART = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
+const ICON_ALERT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+const ICON_WALLET = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>';
+const ICON_TREND = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
 
 /* ================= NAVEGAÇÃO DE ABAS ================= */
 function switchAba(aba){
@@ -451,7 +456,7 @@ function renderSimulador(){
   const salvasWrap = document.getElementById('simMetasSalvas');
   if(salvasWrap){
     const salvas = state.metas || [];
-    salvasWrap.innerHTML = salvas.length === 0 ? '' : `<h4 style="margin-top:0">💾 Metas Salvas</h4>` + salvas.map(meta => `
+    salvasWrap.innerHTML = salvas.length === 0 ? '' : `<h4 style="margin-top:0">${ICON_SAVE}Metas Salvas</h4>` + salvas.map(meta => `
       <div class="simulador-meta-item">
         <div class="nome">${meta.nome}</div>
         <div class="info">
@@ -467,7 +472,7 @@ function renderSimulador(){
   const comparativo = calcularComparativoMeses(6);
   const comparativoHtml = `
     <div class="simulador-painel">
-      <h4>📊 Comparativo dos Próximos Meses</h4>
+      <h4>${ICON_CHART}Comparativo dos Próximos Meses</h4>
       <div class="comparativo-scroll">
         ${comparativo.map(m => `
           <div class="comparativo-card ${m.mKey===mesFinanceiroAtual()?'atual':''}">
@@ -484,7 +489,7 @@ function renderSimulador(){
   `;
   
   const primeiroMesComImpacto = comparativo.find(m=>m.saldoFinal<0);
-  const alertaHtml = primeiroMesComImpacto ? `<div class="simulador-alerta">⚠️ Atenção: Saldo ficaria negativo em ${primeiroMesComImpacto.label}!</div>` : '';
+  const alertaHtml = primeiroMesComImpacto ? `<div class="simulador-alerta">${ICON_ALERT}Atenção: Saldo ficaria negativo em ${primeiroMesComImpacto.label}!</div>` : '';
   
   document.getElementById('simPainelSimulacao').innerHTML = comparativoHtml + alertaHtml;
 }
@@ -685,12 +690,12 @@ function abrirDetalheAcumulado(mKey){
 
   const modalContent = `
     <div class="simulador-painel">
-      <h4>💰 Composição de ${monthLabel(mKey)}</h4>
+      <h4>${ICON_WALLET}Composição de ${monthLabel(mKey)}</h4>
       ${composicaoHtml}
       <div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900;font-size:14px">Sobra Total do Mês</span><span class="valor" style="font-weight:900;font-size:16px;color:${sobraTotal>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobraTotal)}</span></div>
     </div>
     <div class="simulador-painel">
-      <h4>📈 Como chegou no Acumulado ${mKey===hoje?'':('('+monthLabel(mesesAteAqui[0])+' até '+monthLabel(mKey)+')')}</h4>
+      <h4>${ICON_TREND}Como chegou no Acumulado ${mKey===hoje?'':('('+monthLabel(mesesAteAqui[0])+' até '+monthLabel(mKey)+')')}</h4>
       ${mKey===hoje ? '<div style="font-size:12px;color:var(--slate-500)">O mês atual não tem acumulado — ainda não há mês anterior pra somar.</div>' : acumuladoHtml}
       ${mKey!==hoje ? `<div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900">Acumulado Final</span><span class="valor" style="font-weight:900;font-size:15px;color:${rodante>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(rodante)}</span></div>` : ''}
     </div>
@@ -1149,7 +1154,7 @@ function renderCartaoTrackerList(){
           <div class="ct-top">
             <div class="ct-nome${pagoClass}">${item.nome}</div>
             <div class="ct-actions">
-              <button class="btn-icon-sm" title="Marcar como ${item.pago?'pendente':'pago'}" onclick="toggleCompraPago('${item.id}')" style="color:${item.pago?'var(--green)':'var(--slate-400)'}">${item.pago?'✓':'◯'}</button>
+              <button class="btn-icon-sm" title="Marcar como ${item.pago?'pendente':'pago'}" onclick="toggleCompraPago('${item.id}')" style="color:${item.pago?'var(--success)':'var(--slate-400)'}">${item.pago?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>'}</button>
               <button class="btn-icon-sm" onclick="openCompraTrackerModal('${cartao.id}','${item.id}')">${ICON_EDIT}</button>
               <button class="btn-icon-sm" onclick="excluirCompraTracker('${item.id}')">${ICON_TRASH}</button>
             </div>
@@ -1719,7 +1724,7 @@ function openConcluirMesModal(){
   const avisoEl = document.getElementById('concluirMesAviso');
   if(abertas > 0){
     avisoEl.style.display = 'block';
-    avisoEl.textContent = `⚠ Ainda há ${abertas} conta${abertas>1?'s':''} em aberto em ${monthLabel(mesContasAtual)}. Você pode concluir mesmo assim.`;
+    avisoEl.innerHTML = `${ICON_ALERT}Ainda há ${abertas} conta${abertas>1?'s':''} em aberto em ${monthLabel(mesContasAtual)}. Você pode concluir mesmo assim.`;
   } else {
     avisoEl.style.display = 'none';
   }

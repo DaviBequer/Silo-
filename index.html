@@ -62,10 +62,10 @@
 
   <div class="user-section" id="panoUserSection"></div>
 
-  <div class="card" style="background:linear-gradient(135deg,var(--primary-light),var(--slate-50));border:2px solid var(--primary);text-align:center;padding:20px;margin-bottom:12px">
-    <div style="font-size:16px;font-weight:900;color:var(--primary);margin-bottom:10px">💡 Planeje Suas Compras Futuras</div>
-    <div style="font-size:13px;color:var(--slate-700);margin-bottom:14px">Simule como suas metas afetariam seu orçamento</div>
-    <button class="btn" onclick="openSimuladorModal()">Gerar Orçamento</button>
+  <div class="card" style="background:linear-gradient(160deg,var(--dark),var(--dark-2));text-align:center;padding:24px;margin-bottom:var(--gap);position:relative;overflow:hidden;box-shadow:var(--shadow-lg)">
+    <div class="hero-inline-title" style="color:#fff;justify-content:center;position:relative;z-index:1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>Planeje Suas Compras Futuras</div>
+    <div style="font-size:12.5px;color:rgba(255,255,255,.55);margin-bottom:16px;position:relative;z-index:1">Simule como suas metas afetariam seu orçamento</div>
+    <button class="btn" style="background:var(--primary);position:relative;z-index:1" onclick="openSimuladorModal()">Gerar Orçamento</button>
   </div>
 
   <div class="card">
@@ -365,7 +365,7 @@
 <div class="fullpage" id="pageTarefas">
   <div class="fullpage-header">
     <button class="header-btn" onclick="closeTarefasPage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div class="fullpage-title">📋 Lista de Tarefas</div>
+    <div class="fullpage-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><path d="M9 12l2 2 4-4"/></svg>Lista de Tarefas</div>
     <div style="width:40px"></div>
   </div>
   <div class="fullpage-content">
@@ -401,17 +401,17 @@
 <div class="modal-overlay" id="modalSimulador">
   <div class="modal">
     <div class="modal-header">
-      <h3>📊 Gerar Orçamento</h3>
+      <h3><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Gerar Orçamento</h3>
       <button class="modal-close" onclick="closeSimulador()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
 
     <div class="simulador-painel">
-      <h4>💰 Situação Atual</h4>
+      <h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>Situação Atual</h4>
       <div id="simPainelAtual"></div>
     </div>
 
     <div class="simulador-painel">
-      <h4>➕ Adicionar Metas</h4>
+      <h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar Metas</h4>
       <form id="simuladorMetasForm" onsubmit="return false">
         <div class="field full">
           <label>Nome da Compra</label>
