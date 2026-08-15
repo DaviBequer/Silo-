@@ -61,6 +61,7 @@ function carregar(){
       if(!state.metas) state.metas = [];
       if(!state.tarefas) state.tarefas = [];
       if(!state.tarefaCategorias) state.tarefaCategorias = [];
+      (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
       // migração: garantir campos novos
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
@@ -621,6 +622,84 @@ function renderTrendChart(months){
   </svg>`;
 }
 
+function expenseBreakdownForMonth(user, mKey){
+  const ex = state.users[user].expenses;
+  const breakdown = { moradia:0, assinatura:0, fixo:0, futuro:0, cartao:0, dizimo:0 };
+  ['moradia','assinatura','fixo'].forEach(cat=>{
+    ex[cat].forEach(item=>{
+      if(item.mesInicio && mKey < item.mesInicio) return;
+      const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
+      if(state.paid[paidKey]) return;
+      breakdown[cat] += Number(item.valor)||0;
+    });
+  });
+  ex.futuro.forEach(item=>{
+    const v = futuroValorNoMes(item, mKey);
+    if(v<=0) return;
+    const paidKey = mKey+'_'+user+'_futuro_'+item.id;
+    if(state.paid[paidKey]) return;
+    breakdown.futuro += v;
+  });
+  (state.users[user].cartoes||[]).forEach(c=>{ breakdown.cartao += Number((c.gastos||{})[mKey]) || 0; });
+  breakdown.dizimo = dizimoForMonth(user, mKey);
+  breakdown.total = breakdown.moradia + breakdown.assinatura + breakdown.fixo + breakdown.futuro + breakdown.cartao + breakdown.dizimo;
+  return breakdown;
+}
+
+function abrirDetalheAcumulado(mKey){
+  const months = getPanoWindowMonths();
+  const idx = months.indexOf(mKey);
+  const mesesAteAqui = idx >= 0 ? months.slice(0, idx+1) : [mKey];
+  const hoje = mesFinanceiroAtual();
+
+  // Composição do mês selecionado
+  let composicaoHtml = '';
+  ['davi','cris'].forEach(user=>{
+    const renda = incomeForMonth(user, mKey);
+    const bd = expenseBreakdownForMonth(user, mKey);
+    composicaoHtml += `
+      <div class="detalhe-usuario">
+        <div class="detalhe-usuario-nome">${user==='davi'?'Davi':'Cris'}</div>
+        <div class="simulador-linha"><span class="label">Renda</span><span class="valor" style="color:var(--success)">${fmtMoney(renda)}</span></div>
+        ${bd.moradia>0?`<div class="simulador-linha"><span class="label">Moradia</span><span class="valor">-${fmtMoney(bd.moradia)}</span></div>`:''}
+        ${bd.fixo>0?`<div class="simulador-linha"><span class="label">Fixos</span><span class="valor">-${fmtMoney(bd.fixo)}</span></div>`:''}
+        ${bd.assinatura>0?`<div class="simulador-linha"><span class="label">Assinaturas</span><span class="valor">-${fmtMoney(bd.assinatura)}</span></div>`:''}
+        ${bd.futuro>0?`<div class="simulador-linha"><span class="label">Contas Futuras</span><span class="valor">-${fmtMoney(bd.futuro)}</span></div>`:''}
+        ${bd.cartao>0?`<div class="simulador-linha"><span class="label">Cartão</span><span class="valor">-${fmtMoney(bd.cartao)}</span></div>`:''}
+        ${bd.dizimo>0?`<div class="simulador-linha"><span class="label">Dízimo</span><span class="valor">-${fmtMoney(bd.dizimo)}</span></div>`:''}
+        <div class="simulador-linha" style="border-top:2px solid var(--slate-200);margin-top:4px;padding-top:8px"><span class="label" style="font-weight:800">Sobra ${user==='davi'?'Davi':'Cris'}</span><span class="valor" style="font-weight:900">${fmtMoneySigned(renda-bd.total)}</span></div>
+      </div>
+    `;
+  });
+  const sobraTotal = saldoHouseholdForMonth(mKey);
+
+  // Como chegou no acumulado
+  let acumuladoHtml = '';
+  let rodante = 0;
+  mesesAteAqui.forEach(m=>{
+    const s = saldoHouseholdForMonth(m);
+    rodante += s;
+    const isAtual = m===mKey;
+    acumuladoHtml += `<div class="simulador-linha ${isAtual?'':''}" style="${isAtual?'font-weight:900':''}"><span class="label">${monthLabel(m)}</span><span class="valor" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></div>`;
+  });
+
+  const modalContent = `
+    <div class="simulador-painel">
+      <h4>💰 Composição de ${monthLabel(mKey)}</h4>
+      ${composicaoHtml}
+      <div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900;font-size:14px">Sobra Total do Mês</span><span class="valor" style="font-weight:900;font-size:16px;color:${sobraTotal>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobraTotal)}</span></div>
+    </div>
+    <div class="simulador-painel">
+      <h4>📈 Como chegou no Acumulado ${mKey===hoje?'':('('+monthLabel(mesesAteAqui[0])+' até '+monthLabel(mKey)+')')}</h4>
+      ${mKey===hoje ? '<div style="font-size:12px;color:var(--slate-500)">O mês atual não tem acumulado — ainda não há mês anterior pra somar.</div>' : acumuladoHtml}
+      ${mKey!==hoje ? `<div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900">Acumulado Final</span><span class="valor" style="font-weight:900;font-size:15px;color:${rodante>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(rodante)}</span></div>` : ''}
+    </div>
+  `;
+  document.getElementById('detalheAcumuladoTitulo').textContent = monthLabel(mKey);
+  document.getElementById('detalheAcumuladoConteudo').innerHTML = modalContent;
+  document.getElementById('modalDetalheAcumulado').classList.add('active');
+}
+
 function renderAcumTable(months){
   let acumulado = 0;
   const hoje = mesFinanceiroAtual();
@@ -630,7 +709,7 @@ function renderAcumTable(months){
     const isSelected = mKey === state.focusMonth;
     const isHoje = mKey === hoje;
     const acumuladoTxt = isHoje ? '—' : `<span style="color:${acumulado>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(acumulado)}</span>`;
-    return `<tr class="${isSelected?'selected-row':''}" onclick="selectFocusMonth('${mKey}')" style="cursor:pointer">
+    return `<tr class="${isSelected?'selected-row':''}" onclick="selectFocusMonth('${mKey}');abrirDetalheAcumulado('${mKey}')" style="cursor:pointer">
       <td class="row-label">${monthLabel(mKey)}${isSelected?' •':''}</td>
       <td style="font-weight:700;color:${sobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobra)}</td>
       <td style="font-weight:800">${acumuladoTxt}</td>
@@ -714,15 +793,23 @@ function renderChecklist(){
 }
 function togglePaid(paidKey){
   state.paid[paidKey] = !state.paid[paidKey];
-  renderChecklist();
   persist();
+  renderPanorama();
 }
 
 /* ================= RENDER: PLANNER ================= */
 /* ================= LISTA DE TAREFAS (isolado, visual apenas) ================= */
+let tarefaTimerInterval = null;
+
 function openTarefasModal(){
+  document.getElementById('pageTarefas').classList.add('active');
   renderTarefasModal();
-  document.getElementById('modalTarefas').classList.add('active');
+  if(tarefaTimerInterval) clearInterval(tarefaTimerInterval);
+  tarefaTimerInterval = setInterval(tickTarefaTimers, 1000);
+}
+function closeTarefasPage(){
+  document.getElementById('pageTarefas').classList.remove('active');
+  if(tarefaTimerInterval){ clearInterval(tarefaTimerInterval); tarefaTimerInterval = null; }
 }
 function novaTarefaCategoria(nome){
   if(!nome) return null;
@@ -739,7 +826,7 @@ function salvarTarefa(){
   const catInput = document.getElementById('tarefaCategoria').value.trim();
   if(!nome){ showToast('Digite o nome da tarefa'); return; }
   const categoriaId = catInput ? novaTarefaCategoria(catInput) : null;
-  state.tarefas.push({ id:'tf'+Date.now(), nome, desc, categoriaId, feita:false });
+  state.tarefas.push({ id:'tf'+Date.now(), nome, desc, categoriaId, feita:false, tempoGasto:0, timerStart:null });
   persist();
   document.getElementById('tarefaNome').value = '';
   document.getElementById('tarefaDesc').value = '';
@@ -761,12 +848,68 @@ function excluirTarefaCategoria(id){
   persist();
   renderTarefasModal();
 }
+function iniciarTarefaTimer(id){
+  const t = state.tarefas.find(t=>t.id===id);
+  if(t && !t.timerStart){ t.timerStart = Date.now(); persist(); renderTarefasModal(); }
+}
+function pararTarefaTimer(id){
+  const t = state.tarefas.find(t=>t.id===id);
+  if(t && t.timerStart){
+    t.tempoGasto = (t.tempoGasto||0) + Math.floor((Date.now()-t.timerStart)/1000);
+    t.timerStart = null;
+    persist();
+    renderTarefasModal();
+  }
+}
+function tickTarefaTimers(){
+  (state.tarefas||[]).forEach(t=>{
+    if(t.timerStart){
+      const el = document.getElementById('timerDisplay-'+t.id);
+      if(el){
+        const total = (t.tempoGasto||0) + Math.floor((Date.now()-t.timerStart)/1000);
+        el.textContent = formatTempoTarefa(total);
+      }
+    }
+  });
+}
+function formatTempoTarefa(totalSegundos){
+  const h = Math.floor(totalSegundos/3600);
+  const m = Math.floor((totalSegundos%3600)/60);
+  const s = totalSegundos%60;
+  if(h>0) return `${h}h ${String(m).padStart(2,'0')}m`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
 function renderTarefasModal(){
   const wrap = document.getElementById('tarefasLista');
   if(!wrap) return;
   const tarefas = state.tarefas || [];
+
+  // Dashboard
+  const totalTarefas = tarefas.length;
+  const finalizadas = tarefas.filter(t=>t.feita).length;
+  const percentConcluido = totalTarefas>0 ? Math.round((finalizadas/totalTarefas)*100) : 0;
+  const contagemPorCategoria = {};
+  tarefas.forEach(t=>{
+    const catNome = t.categoriaId ? ((state.tarefaCategorias||[]).find(c=>c.id===t.categoriaId)?.nome || 'Sem categoria') : 'Sem categoria';
+    contagemPorCategoria[catNome] = (contagemPorCategoria[catNome]||0) + 1;
+  });
+  const dashboard = `
+    <div class="tarefas-dashboard">
+      <div class="td-stats">
+        <div class="td-stat"><div class="td-num">${totalTarefas}</div><div class="td-lbl">Total</div></div>
+        <div class="td-stat"><div class="td-num">${finalizadas}</div><div class="td-lbl">Concluídas</div></div>
+        <div class="td-stat"><div class="td-num">${totalTarefas-finalizadas}</div><div class="td-lbl">Pendentes</div></div>
+      </div>
+      <div class="td-progress-wrap">
+        <div class="td-progress-label"><span>Progresso Geral</span><span>${percentConcluido}%</span></div>
+        <div class="td-progress-bar"><div class="td-progress-fill" style="width:${percentConcluido}%"></div></div>
+      </div>
+      ${Object.keys(contagemPorCategoria).length>0 ? `<div class="td-categorias">${Object.entries(contagemPorCategoria).map(([nome,qtd])=>`<span class="td-cat-badge">${nome}: ${qtd}</span>`).join('')}</div>` : ''}
+    </div>
+  `;
+
   if(tarefas.length === 0){
-    wrap.innerHTML = `<div class="empty-state"><div class="title">Nenhuma tarefa ainda</div><div class="desc">Adicione sua primeira tarefa acima</div></div>`;
+    wrap.innerHTML = dashboard + `<div class="empty-state"><div class="title">Nenhuma tarefa ainda</div><div class="desc">Adicione sua primeira tarefa acima</div></div>`;
     return;
   }
   const grupos = {};
@@ -775,21 +918,29 @@ function renderTarefasModal(){
     if(!grupos[key]) grupos[key] = [];
     grupos[key].push(t);
   });
-  let html = '';
+  let html = dashboard;
   Object.keys(grupos).forEach(key=>{
     const cat = key==='_sem' ? null : (state.tarefaCategorias||[]).find(c=>c.id===key);
     const catNome = cat ? cat.nome : 'Sem categoria';
     html += `<div class="tarefa-categoria-header"><span>${catNome}</span>${cat?`<button class="btn-icon-sm" onclick="excluirTarefaCategoria('${cat.id}')">${ICON_TRASH}</button>`:''}</div>`;
-    html += grupos[key].map(t=>`
+    html += grupos[key].map(t=>{
+      const tempoAtual = (t.tempoGasto||0) + (t.timerStart ? Math.floor((Date.now()-t.timerStart)/1000) : 0);
+      return `
       <div class="tarefa-item ${t.feita?'feita':''}">
         <input type="checkbox" ${t.feita?'checked':''} onchange="toggleTarefa('${t.id}')">
         <div class="info">
           <div class="nome">${t.nome}</div>
           ${t.desc?`<div class="desc">${t.desc}</div>`:''}
+          <div class="tarefa-timer-row">
+            <span class="tarefa-timer-display" id="timerDisplay-${t.id}">${formatTempoTarefa(tempoAtual)}</span>
+            ${t.timerStart
+              ? `<button class="btn-sm-timer stop" onclick="pararTarefaTimer('${t.id}')">⏸ Parar</button>`
+              : `<button class="btn-sm-timer start" onclick="iniciarTarefaTimer('${t.id}')">▶ Iniciar</button>`}
+          </div>
         </div>
         <button class="btn-icon-sm" onclick="excluirTarefa('${t.id}')">${ICON_TRASH}</button>
       </div>
-    `).join('');
+    `;}).join('');
   });
   wrap.innerHTML = html;
 }

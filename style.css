@@ -1,5 +1,5 @@
 :root{
---primary:#6B4A32;--primary-dark:#4A3222;--primary-light:#F0E8E1;
+--primary:#3D6FF5;--primary-dark:#1E3FAD;--primary-light:#E8EEFF;
 --success:#1B7A43;--success-dark:#0F5C30;--success-light:#E5F4EB;
 --warning:#C17A54;--warning-light:#F5E9E1;
 --danger:#8B3232;--danger-light:#F6E8E8;
@@ -21,7 +21,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 /* HEADER */
 .header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:var(--pad-md) var(--pad);position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:space-between}
 .header-brand{display:flex;align-items:center;gap:var(--gap-md)}
-.header-logo{width:48px;height:48px;border-radius:12px;background:rgba(74,50,34,.3);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;transition:transform var(--duration) var(--ease);box-shadow:inset 0 2px 8px rgba(0,0,0,.2)}
+.header-logo{width:48px;height:48px;border-radius:12px;background:rgba(30,63,173,.3);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;transition:transform var(--duration) var(--ease);box-shadow:inset 0 2px 8px rgba(0,0,0,.2)}
 .header-logo:hover{transform:scale(1.05)}
 .header-title{font-size:22px;font-weight:800;letter-spacing:-.4px}
 .header-sub{font-size:10px;opacity:.75;font-weight:600;letter-spacing:1px;text-transform:uppercase}
@@ -84,15 +84,15 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .user-card .u-sobra.negative{color:var(--danger)}
 
 /* CHECKLIST (Contas a Pagar) */
-.checklist{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap-sm)}
-.check-item-compact{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-xs);background:var(--slate-50);border:1px solid var(--slate-200);transition:all var(--duration) var(--ease)}
+.checklist{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--gap-sm)}
+.check-item-compact{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-xs);background:var(--slate-50);border:1px solid var(--slate-200);transition:all var(--duration) var(--ease);min-width:0;max-width:100%}
 .check-item-compact:hover{background:var(--slate-100)}
 .check-item-compact.paid{opacity:.55;background:var(--slate-100)}
 .check-item-compact.paid .desc{text-decoration:line-through}
 .check-item-compact input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--success);flex-shrink:0}
-.check-item-compact .info{flex:1;min-width:0}
-.check-item-compact .desc{font-size:12px;font-weight:700;color:var(--slate-800);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.check-item-compact .meta{font-size:10px;color:var(--slate-500);margin-top:2px}
+.check-item-compact .info{flex:1;min-width:0;max-width:100%;overflow:hidden}
+.check-item-compact .desc{font-size:11px;font-weight:700;color:var(--slate-800);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
+.check-item-compact .meta{font-size:9px;color:var(--slate-500);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .user-tag{font-weight:800;text-transform:uppercase;font-size:9px;letter-spacing:.3px;padding:1px 5px;border-radius:4px;background:var(--slate-200);color:var(--slate-700)}
 .user-tag.cris{background:var(--lavender-light,#EFE7F0);color:var(--lavender)}
 .check-item{display:flex;align-items:center;gap:var(--gap-md);padding:var(--pad-sm) var(--pad-md);border-radius:var(--radius-sm);background:var(--slate-50);border-left:4px solid var(--primary);transition:all var(--duration) var(--ease)}
@@ -329,3 +329,39 @@ body{padding-bottom:0}
 .tarefa-item .info{flex:1;min-width:0}
 .tarefa-item .nome{font-size:13px;font-weight:700;color:var(--slate-800)}
 .tarefa-item .desc{font-size:11px;color:var(--slate-500);margin-top:2px}
+
+/* FULLPAGE (Lista de Tarefas em tela cheia) */
+.fullpage{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column}
+.fullpage.active{display:flex}
+.fullpage-header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:var(--pad-md) var(--pad);display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-md);flex-shrink:0}
+.fullpage-header .header-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:40px;height:40px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--duration) var(--ease)}
+.fullpage-header .header-btn:hover{background:rgba(255,255,255,.25)}
+.fullpage-title{font-size:17px;font-weight:800}
+.fullpage-content{flex:1;overflow-y:auto;padding:var(--pad-md);animation:fadeIn .3s var(--ease)}
+
+/* DASHBOARD DE TAREFAS */
+.tarefas-dashboard{background:var(--card);border-radius:var(--radius-md);padding:var(--pad-md);margin-bottom:var(--gap);box-shadow:var(--shadow-md);border:1px solid var(--slate-150)}
+.td-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:var(--gap-md)}
+.td-stat{text-align:center;padding:10px 4px;background:var(--slate-50);border-radius:var(--radius-sm)}
+.td-num{font-size:22px;font-weight:900;color:var(--primary)}
+.td-lbl{font-size:10px;color:var(--slate-500);font-weight:700;text-transform:uppercase;margin-top:2px}
+.td-progress-wrap{margin-top:8px}
+.td-progress-label{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--slate-700);margin-bottom:6px}
+.td-progress-bar{height:10px;border-radius:8px;background:var(--slate-200);overflow:hidden}
+.td-progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-dark));border-radius:8px;transition:width .4s var(--ease)}
+.td-categorias{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--gap-md)}
+.td-cat-badge{font-size:11px;font-weight:700;padding:5px 10px;border-radius:14px;background:var(--primary-light);color:var(--primary-dark)}
+
+/* TIMER DE TAREFA */
+.tarefa-timer-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.tarefa-timer-display{font-size:12px;font-weight:800;color:var(--slate-700);font-variant-numeric:tabular-nums;background:var(--slate-100);padding:2px 8px;border-radius:6px}
+.btn-sm-timer{border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all var(--duration) var(--ease)}
+.btn-sm-timer.start{background:var(--success-light);color:var(--success)}
+.btn-sm-timer.start:hover{background:var(--success);color:#fff}
+.btn-sm-timer.stop{background:var(--danger-light);color:var(--danger)}
+.btn-sm-timer.stop:hover{background:var(--danger);color:#fff}
+
+/* DETALHE ACUMULADO */
+.detalhe-usuario{margin-bottom:var(--gap-md);padding-bottom:var(--gap-md);border-bottom:1px solid var(--slate-150)}
+.detalhe-usuario:last-of-type{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.detalhe-usuario-nome{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--primary);margin-bottom:6px}

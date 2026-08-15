@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#6B4A32">
+<meta name="theme-color" content="#3D6FF5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Siloé">
@@ -362,26 +362,39 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalTarefas">
+<div class="fullpage" id="pageTarefas">
+  <div class="fullpage-header">
+    <button class="header-btn" onclick="closeTarefasPage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title">📋 Lista de Tarefas</div>
+    <div style="width:40px"></div>
+  </div>
+  <div class="fullpage-content">
+    <div class="card">
+      <div class="field full">
+        <label>Nome da Tarefa</label>
+        <input type="text" id="tarefaNome" placeholder="Ex: Comprar mantimentos">
+      </div>
+      <div class="field full">
+        <label>Descrição (opcional)</label>
+        <input type="text" id="tarefaDesc" placeholder="Detalhes da tarefa">
+      </div>
+      <div class="field full">
+        <label>Categoria (opcional)</label>
+        <input type="text" id="tarefaCategoria" placeholder="Ex: Casa, Trabalho...">
+      </div>
+      <button class="btn btn-block" onclick="salvarTarefa()">+ Adicionar Tarefa</button>
+    </div>
+    <div id="tarefasLista"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDetalheAcumulado">
   <div class="modal">
     <div class="modal-header">
-      <h3>📋 Lista de Tarefas</h3>
-      <button class="modal-close" onclick="closeModal('modalTarefas')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+      <h3 id="detalheAcumuladoTitulo">Detalhamento</h3>
+      <button class="modal-close" onclick="closeModal('modalDetalheAcumulado')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
-    <div class="field full">
-      <label>Nome da Tarefa</label>
-      <input type="text" id="tarefaNome" placeholder="Ex: Comprar mantimentos">
-    </div>
-    <div class="field full">
-      <label>Descrição (opcional)</label>
-      <input type="text" id="tarefaDesc" placeholder="Detalhes da tarefa">
-    </div>
-    <div class="field full">
-      <label>Categoria (opcional)</label>
-      <input type="text" id="tarefaCategoria" placeholder="Ex: Casa, Trabalho...">
-    </div>
-    <button class="btn btn-block" style="margin-top:8px" onclick="salvarTarefa()">+ Adicionar Tarefa</button>
-    <div id="tarefasLista" style="margin-top:20px"></div>
+    <div id="detalheAcumuladoConteudo"></div>
   </div>
 </div>
 
