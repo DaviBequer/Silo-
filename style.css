@@ -305,6 +305,8 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .comparativo-card .cc-impacto span:last-child{color:var(--warning)}
 .comparativo-card .cc-final{border-top:1px solid var(--slate-150);margin-top:4px;padding-top:6px;font-weight:700}
 .comparativo-card.atual .cc-final{border-top-color:rgba(255,255,255,.15)}
+.comparativo-card .cc-acumulado span:last-child{color:var(--primary)!important;font-weight:800}
+.comparativo-card.atual .cc-acumulado span:last-child{color:#fff!important}
 
 /* TAREFAS */
 .tarefa-categoria-header{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--slate-400);margin:18px 0 8px}
@@ -366,3 +368,12 @@ body{padding-bottom:0}
 .bottom-nav{position:sticky;top:0;bottom:auto;border-top:none;border-bottom:1px solid var(--slate-150);justify-content:center;gap:var(--gap-md)}
 .nav-item{flex:0 0 auto;min-width:120px}
 }
+
+.trend-legend{display:flex;justify-content:center;gap:18px;margin-top:6px}
+.trend-legend span{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--slate-500);font-weight:600}
+.trend-legend i{width:9px;height:9px;display:inline-block;border-radius:2px}
+
+.accordion-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;font-family:inherit}
+.accordion-toggle-label{font-size:12px;font-weight:700;color:var(--slate-600);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center}
+.accordion-chevron{color:var(--slate-400);transition:transform var(--duration) var(--ease);flex-shrink:0}
+.accordion-body{margin-top:var(--gap-md);animation:fadeIn .2s var(--ease)}

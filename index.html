@@ -200,7 +200,18 @@
       </div>
       <div class="field" id="gastoMesInicioSimplesWrap">
         <label>A partir de</label>
-        <select id="gastoMesInicioSimples"></select>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="gastoMesInicioSimplesPickerBtn" onclick="toggleMonthPicker('gastoMesInicioSimplesPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="gastoMesInicioSimplesPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioSimplesPicker',-1)">‹</button>
+              <span id="gastoMesInicioSimplesPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioSimplesPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="gastoMesInicioSimplesPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="gastoMesInicioSimples">
       </div>
 
       <!-- campos exclusivos de Contas Futuras -->
@@ -212,7 +223,18 @@
       </div>
       <div class="field" id="gastoMesInicioWrap" style="display:none">
         <label id="gastoMesInicioLabel">Mês</label>
-        <select id="gastoMesInicio" onchange="onGastoMesInicioChange()"></select>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="gastoMesInicioPickerBtn" onclick="toggleMonthPicker('gastoMesInicioPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="gastoMesInicioPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioPicker',-1)">‹</button>
+              <span id="gastoMesInicioPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="gastoMesInicioPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="gastoMesInicio">
       </div>
       <div class="field" id="gastoParcelasWrap" style="display:none">
         <label>Parcelas</label>
@@ -315,7 +337,18 @@
     </div>
     <div class="field full">
       <label>Mês da 1ª parcela</label>
-      <select id="compraTrackerMesInicio"></select>
+      <div class="month-picker">
+        <button type="button" class="month-picker-btn" id="compraTrackerMesInicioPickerBtn" onclick="toggleMonthPicker('compraTrackerMesInicioPicker')">Selecione o mês</button>
+        <div class="month-picker-panel" id="compraTrackerMesInicioPickerPanel" style="display:none">
+          <div class="month-picker-nav">
+            <button type="button" onclick="shiftPickerYear('compraTrackerMesInicioPicker',-1)">‹</button>
+            <span id="compraTrackerMesInicioPickerYear"></span>
+            <button type="button" onclick="shiftPickerYear('compraTrackerMesInicioPicker',1)">›</button>
+          </div>
+          <div class="month-picker-grid" id="compraTrackerMesInicioPickerGrid"></div>
+        </div>
+      </div>
+      <input type="hidden" id="compraTrackerMesInicio">
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalCompraTracker')">Cancelar</button>
@@ -411,7 +444,11 @@
     </div>
 
     <div class="simulador-painel">
-      <h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar Metas</h4>
+      <button type="button" class="accordion-toggle" onclick="toggleAccordion('addMetaAccordion')">
+        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar Metas</span>
+        <svg id="addMetaAccordionChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-body" id="addMetaAccordion" style="display:none">
       <form id="simuladorMetasForm" onsubmit="return false">
         <div class="field full">
           <label>Nome da Compra</label>
@@ -444,6 +481,7 @@
         </div>
       </form>
       <button class="btn btn-block" style="margin-top:12px" onclick="adicionarMetaSimulador()">+ Adicionar Meta</button>
+      </div>
     </div>
 
     <div class="simulador-painel" id="simMetasLista" style="background:var(--card);border:1px solid var(--slate-200)"></div>

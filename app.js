@@ -286,11 +286,19 @@ function getPanoWindowMonths(){
 let simuladorMetas = [];
 
 const monthPickers = {};
-function createMonthPicker(pickerId, hiddenInputId, defaultKey){
-  monthPickers[pickerId] = { year: keyToDate(defaultKey).getFullYear(), hiddenInputId };
-  document.getElementById(hiddenInputId).value = defaultKey;
-  document.getElementById(pickerId+'Btn').textContent = monthLabel(defaultKey);
+function createMonthPicker(pickerId, hiddenInputId, defaultKey, onChange){
+  const key = defaultKey || mesFinanceiroAtual();
+  monthPickers[pickerId] = { year: keyToDate(key).getFullYear(), hiddenInputId, onChange };
+  document.getElementById(hiddenInputId).value = defaultKey || '';
+  document.getElementById(pickerId+'Btn').textContent = defaultKey ? monthLabel(defaultKey) : 'Selecione o mês';
   document.getElementById(pickerId+'Panel').style.display = 'none';
+}
+function toggleAccordion(bodyId){
+  const body = document.getElementById(bodyId);
+  const chevron = document.getElementById(bodyId+'Chevron');
+  const isOpen = body.style.display === 'block';
+  body.style.display = isOpen ? 'none' : 'block';
+  if(chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 function toggleMonthPicker(pickerId){
   const panel = document.getElementById(pickerId+'Panel');
@@ -321,11 +329,14 @@ function selectPickerMonth(pickerId, key){
   document.getElementById(monthPickers[pickerId].hiddenInputId).value = key;
   document.getElementById(pickerId+'Btn').textContent = monthLabel(key);
   document.getElementById(pickerId+'Panel').style.display = 'none';
+  if(monthPickers[pickerId].onChange) monthPickers[pickerId].onChange();
 }
 
 function openSimuladorModal(){
   simuladorMetas = [];
   document.getElementById('simuladorMetasForm').reset();
+  document.getElementById('addMetaAccordion').style.display = 'none';
+  document.getElementById('addMetaAccordionChevron').style.transform = 'rotate(0deg)';
   createMonthPicker('simMetaMesPicker', 'simMetaMes', mesFinanceiroAtual());
   renderSimulador();
   document.getElementById('modalSimulador').classList.add('active');
@@ -385,6 +396,7 @@ function impactoMetasNoMes(mKey){
 function calcularComparativoMeses(nMeses){
   const hoje = mesFinanceiroAtual();
   const meses = [];
+  let acumulado = 0;
   for(let i=0;i<nMeses;i++){
     const mKey = addMonths(hoje, i);
     const renda = (incomeForMonth('davi', mKey) || 0) + (incomeForMonth('cris', mKey) || 0);
@@ -392,7 +404,8 @@ function calcularComparativoMeses(nMeses){
     const sobra = renda - gasto;
     const impacto = impactoMetasNoMes(mKey);
     const saldoFinal = sobra - impacto;
-    meses.push({ mKey, label: monthLabel(mKey), renda, gasto, sobra, impacto, saldoFinal });
+    if(i>0) acumulado += saldoFinal;
+    meses.push({ mKey, label: monthLabel(mKey), renda, gasto, sobra, impacto, saldoFinal, acumulado: i===0 ? null : acumulado });
   }
   return meses;
 }
@@ -482,6 +495,7 @@ function renderSimulador(){
             <div class="cc-linha"><span>Sobra</span><span style="color:${m.sobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(m.sobra)}</span></div>
             ${m.impacto>0?`<div class="cc-linha cc-impacto"><span>Metas</span><span>-${fmtMoney(m.impacto)}</span></div>`:''}
             <div class="cc-linha cc-final"><span>Final</span><span style="color:${m.saldoFinal>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(m.saldoFinal)}</span></div>
+            <div class="cc-linha cc-acumulado"><span>Acumulado</span><span>${m.acumulado===null?'—':fmtMoneySigned(m.acumulado)}</span></div>
           </div>
         `).join('')}
       </div>
@@ -607,24 +621,54 @@ function renderTrendChart(months){
   const wrap = document.getElementById('trendChartWrap');
   if(!wrap) return;
   let acumulado = 0;
-  const valores = months.map(mKey=>{ acumulado += saldoHouseholdForMonth(mKey); return acumulado; });
-  const w = 320, h = 110, pad = 8;
-  const min = Math.min(0, ...valores), max = Math.max(0, ...valores);
+  const sobras = months.map(mKey=> saldoHouseholdForMonth(mKey));
+  const acumulados = sobras.map(s=>{ acumulado += s; return acumulado; });
+
+  const w = 320, h = 170, padL = 8, padR = 8, padTop = 14, padBottom = 26;
+  const plotH = h - padTop - padBottom;
+  const allVals = [...sobras, ...acumulados, 0];
+  const min = Math.min(...allVals), max = Math.max(...allVals);
   const range = (max-min) || 1;
-  const stepX = (w-pad*2) / (months.length-1 || 1);
-  const pts = valores.map((v,i)=>{
-    const x = pad + i*stepX;
-    const y = h-pad - ((v-min)/range)*(h-pad*2);
+  const scaleY = v => padTop + plotH - ((v-min)/range)*plotH;
+  const zeroY = scaleY(0);
+
+  const stepX = (w-padL-padR) / months.length;
+  const barW = Math.min(22, stepX*0.42);
+
+  const bars = sobras.map((s,i)=>{
+    const cx = padL + stepX*i + stepX/2;
+    const y1 = scaleY(Math.max(0,s));
+    const y2 = scaleY(Math.min(0,s));
+    const cor = s>=0 ? 'var(--success)' : 'var(--danger)';
+    return `<rect x="${(cx-barW/2).toFixed(1)}" y="${y1.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1,(y2-y1)).toFixed(1)}" rx="3" fill="${cor}" opacity="0.85"><title>${monthLabel(months[i])} · Sobra: ${fmtMoneySigned(s)}</title></rect>`;
+  }).join('');
+
+  const linePts = acumulados.map((v,i)=>{
+    const x = padL + stepX*i + stepX/2;
+    const y = scaleY(v);
     return [x,y];
   });
-  const pathD = pts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-  const zeroY = h-pad - ((0-min)/range)*(h-pad*2);
-  const circles = pts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="var(--primary-dark)"><title>${monthLabel(months[i])}: ${fmtMoney(valores[i])}</title></circle>`).join('');
-  wrap.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block">
-    <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w-pad}" y2="${zeroY.toFixed(1)}" stroke="var(--slate-300)" stroke-width="1" stroke-dasharray="3,3"/>
-    <path d="${pathD}" fill="none" stroke="var(--primary-dark)" stroke-width="2"/>
-    ${circles}
-  </svg>`;
+  const pathD = linePts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const circles = linePts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--primary)" stroke="#fff" stroke-width="1.5"><title>${monthLabel(months[i])} · Acumulado: ${fmtMoneySigned(acumulados[i])}</title></circle>`).join('');
+
+  const labels = months.map((m,i)=>{
+    const cx = padL + stepX*i + stepX/2;
+    return `<text x="${cx.toFixed(1)}" y="${h-8}" font-size="9" fill="var(--slate-400)" text-anchor="middle" font-weight="600">${monthLabel(m).slice(0,3)}</text>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block">
+      <line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${w-padR}" y2="${zeroY.toFixed(1)}" stroke="var(--slate-200)" stroke-width="1"/>
+      ${bars}
+      <path d="${pathD}" fill="none" stroke="var(--primary)" stroke-width="2"/>
+      ${circles}
+      ${labels}
+    </svg>
+    <div class="trend-legend">
+      <span><i style="background:var(--success)"></i>Sobra do mês</span>
+      <span><i style="background:var(--primary);border-radius:50%"></i>Acumulado</span>
+    </div>
+  `;
 }
 
 function expenseBreakdownForMonth(user, mKey){
@@ -1243,7 +1287,6 @@ function excluirCartaoCard(id){
 /* --- Compra (parcelamento vinculado a um cartão) --- */
 function openCompraTrackerModal(cartaoId, compraId){
   if(!(state.cartoesTracker||[]).length){ showToast('Cadastre um cartão primeiro'); return; }
-  popularSelectMes('compraTrackerMesInicio');
   popularSelectCartoes('compraTrackerCartaoId', cartaoId);
   document.getElementById('compraTrackerId').value = compraId || '';
   document.getElementById('modalCompraTrackerTitle').textContent = compraId ? 'Editar Compra' : 'Nova Compra';
@@ -1254,13 +1297,13 @@ function openCompraTrackerModal(cartaoId, compraId){
       document.getElementById('compraTrackerCartaoId').value = item.cartaoId;
       document.getElementById('compraTrackerValor').value = (item.valorTotal||0).toFixed(2).replace('.',',');
       document.getElementById('compraTrackerParcelas').value = item.parcelas || 1;
-      document.getElementById('compraTrackerMesInicio').value = item.mesInicio || '';
+      createMonthPicker('compraTrackerMesInicioPicker', 'compraTrackerMesInicio', item.mesInicio || null);
     }
   }else{
     document.getElementById('compraTrackerNome').value = '';
     document.getElementById('compraTrackerValor').value = '';
     document.getElementById('compraTrackerParcelas').value = 1;
-    document.getElementById('compraTrackerMesInicio').value = mesFinanceiroAtual();
+    createMonthPicker('compraTrackerMesInicioPicker', 'compraTrackerMesInicio', mesFinanceiroAtual());
   }
   document.getElementById('modalCompraTracker').classList.add('active');
 }
@@ -1463,8 +1506,6 @@ function renderParcelasValoresInputs(existingValores){
 }
 
 function openGastoModal(cat, id){
-  popularSelectMes('gastoMesInicioSimples');
-  popularSelectMes('gastoMesInicio');
   document.getElementById('gastoCat').value = cat;
   document.getElementById('gastoId').value = id || '';
   document.getElementById('modalGastoTitle').textContent = id ? 'Editar Gasto' : 'Adicionar Gasto';
@@ -1475,25 +1516,27 @@ function openGastoModal(cat, id){
       document.getElementById('gastoDesc').value = item.desc;
       document.getElementById('gastoValor').value = (item.valor||0).toFixed(2).replace('.',',');
       document.getElementById('gastoDia').value = item.dia || '';
-      document.getElementById('gastoMesInicioSimples').value = item.mesInicio || '';
+      createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', item.mesInicio || null);
 
       if(cat==='futuro'){
         const isLegado = item.mes !== undefined && item.recorrente === undefined && item.parcelas === undefined;
         document.getElementById('gastoRecorrente').checked = !!item.recorrente;
-        document.getElementById('gastoMesInicio').value = isLegado ? (item.mes||'') : (item.mesInicio||'');
+        createMonthPicker('gastoMesInicioPicker', 'gastoMesInicio', isLegado ? (item.mes||null) : (item.mesInicio||null), onGastoMesInicioChange);
         document.getElementById('gastoParcelas').value = item.parcelas || 1;
         document.getElementById('gastoReplicar').checked = item.replicar !== false;
         updateGastoFieldsVisibility();
         if(item.replicar === false) renderParcelasValoresInputs(item.valores);
+      } else {
+        createMonthPicker('gastoMesInicioPicker', 'gastoMesInicio', null, onGastoMesInicioChange);
       }
     }
   }else{
     document.getElementById('gastoDesc').value = '';
     document.getElementById('gastoValor').value = '';
     document.getElementById('gastoDia').value = '';
-    document.getElementById('gastoMesInicioSimples').value = '';
+    createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', null);
     document.getElementById('gastoRecorrente').checked = false;
-    document.getElementById('gastoMesInicio').value = mesFinanceiroAtual();
+    createMonthPicker('gastoMesInicioPicker', 'gastoMesInicio', mesFinanceiroAtual(), onGastoMesInicioChange);
     document.getElementById('gastoParcelas').value = 1;
     document.getElementById('gastoReplicar').checked = true;
   }
