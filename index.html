@@ -96,36 +96,44 @@
   </div>
 
   <div class="card card-flat">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><button class="btn btn-sm btn-outline" id="btnAddCartao" onclick="openCartaoModal()">+ Cartão</button></div>
-    <div class="ponto-table-wrap">
-      <table class="money-table">
-        <thead id="rendaTableThead"></thead>
-        <tbody id="rendaTableBody"></tbody>
-      </table>
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><button class="section-add" id="btnAddCartao" onclick="openCartaoModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
+    <div id="fluxoMensalWrap"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Moradia</div>
+      <button class="section-add" onclick="openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
+    <div id="grid-moradia"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Assinaturas</div>
+      <button class="section-add" onclick="openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-assinatura"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Fixos</div>
+      <button class="section-add" onclick="openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-fixo"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Contas Futuras</div>
+      <button class="section-add" onclick="openGastoModal('futuro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-futuro"></div>
   </div>
 
   <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Moradia</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('moradia')">+ Add</button></div>
-    <div class="gasto-grid" id="grid-moradia"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M9 21h6"/></svg>Assinaturas</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('assinatura')">+ Add</button></div>
-    <div class="gasto-grid" id="grid-assinatura"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6"/></svg>Fixos</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('fixo')">+ Add</button></div>
-    <div class="gasto-grid" id="grid-fixo"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3 10h18"/></svg>Contas Futuras</div><button class="btn btn-sm btn-outline" onclick="openGastoModal('futuro')">+ Add</button></div>
-    <div class="gasto-grid" id="grid-futuro"></div>
-  </div>
-  <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><button class="btn btn-sm btn-outline" onclick="openCartaoCardModal()">+ Cartão</button></div>
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><button class="section-add" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
     <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
   </div>
 
@@ -148,14 +156,7 @@
       <label>Valor da Hora</label>
       <input type="text" id="pontoValorHora" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this); onValorHoraInput(this)">
     </div>
-    <div class="ponto-table-wrap">
-      <table class="ponto-table">
-        <thead>
-          <tr><th>Dia</th><th>Entrada</th><th>Almoço</th><th>Volta</th><th>Saída</th><th>Extra</th><th>Total</th><th>Ação</th></tr>
-        </thead>
-        <tbody id="pontoTbody"></tbody>
-      </table>
-    </div>
+    <div id="pontoDiasLista" class="ponto-dias-lista"></div>
 
     <div class="ponto-summary">
       <div class="summary-grid">

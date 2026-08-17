@@ -147,9 +147,9 @@ function handleMoneyKeydown(event){
   if(event.key !== 'Enter') return;
   event.preventDefault();
   event.target.blur(); // garante que onchange (que salva o valor) rode antes de pular
-  const td = event.target.closest('td');
-  const nextTd = td && td.nextElementSibling;
-  const nextInput = nextTd ? nextTd.querySelector('input') : null;
+  const col = event.target.closest('.fluxo-mes-col');
+  const nextCol = col && col.nextElementSibling;
+  const nextInput = nextCol ? nextCol.querySelector('input') : null;
   if(nextInput){ nextInput.focus(); nextInput.select(); }
 }
 
@@ -987,7 +987,7 @@ function renderTarefasModal(){
               : `<button class="btn-sm-timer start" onclick="iniciarTarefaTimer('${t.id}')">▶ Iniciar</button>`}
           </div>
         </div>
-        <button class="btn-icon-sm" onclick="excluirTarefa('${t.id}')">${ICON_TRASH}</button>
+        <button class="btn-icon-sm tarefa-del" onclick="excluirTarefa('${t.id}')">${ICON_TRASH}</button>
       </div>
     `;}).join('');
   });
@@ -1011,47 +1011,82 @@ function renderRendaTable(){
   const cartoes = (u==='davi') ? (state.users[u].cartoes || []) : [];
   const hoje = mesFinanceiroAtual();
 
-  const thead = `<tr><th style="text-align:left;padding-left:10px">Categoria</th>${months.map(mKey=>{
-    const isCurrent = mKey===hoje;
-    return `<th class="${isCurrent?'current-col':''}">${monthLabel(mKey)}${isCurrent?'<small>Atual</small>':''}</th>`;
-  }).join('')}<th>Ações</th></tr>`;
+  function mesesCols(valueFn, inputFn){
+    return months.map(mKey=>{
+      const isCurrent = mKey===hoje;
+      const label = monthLabel(mKey).slice(0,3);
+      const inner = inputFn ? inputFn(mKey) : `<div class="fm-static">${valueFn(mKey)}</div>`;
+      return `<div class="fluxo-mes-col ${isCurrent?'atual':''}">
+        <div class="fm-label">${label}${isCurrent?'<br><small>atual</small>':''}</div>
+        ${inner}
+      </div>`;
+    }).join('');
+  }
 
-  const rendaRow = `<tr><td class="row-label">Renda</td>${months.map(mKey=>{
-    if(u==='davi'){
-      const val = rendaBaseForMonth(u, mKey);
-      const mesOrigem = monthLabel(addMonths(mKey,-1));
-      return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:700;color:var(--slate-700)" title="Calculado a partir do Ponto PJ de ${mesOrigem}">${fmtMoney(val)}</td>`;
+  let html = '';
+
+  // Renda
+  html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Renda</div><div class="fluxo-meses-scroll" data-row="renda">${
+    mesesCols(null, mKey=>{
+      if(u==='davi'){
+        const val = rendaBaseForMonth(u, mKey);
+        return `<div class="fm-static">${fmtMoney(val)}</div>`;
+      }
+      const val = state.users[u].income[mKey] || 0;
+      return `<input class="fm-input" type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)">`;
+    })
+  }</div></div>`;
+
+  // Extra
+  html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Extra</div><div class="fluxo-meses-scroll" data-row="extra">${
+    mesesCols(null, mKey=>{
+      const val = (state.users[u].incomeExtra && state.users[u].incomeExtra[mKey]) || 0;
+      return `<input class="fm-input" type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncomeExtra('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)">`;
+    })
+  }</div></div>`;
+
+  // Dízimo (só davi)
+  if(u==='davi'){
+    html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Dízimo (10%)</div><div class="fluxo-meses-scroll">${
+      mesesCols(mKey=>fmtMoney(dizimoForMonth(u, mKey)))
+    }</div></div>`;
+  }
+
+  // Cartões (só davi)
+  if(u==='davi'){
+    if(cartoes.length === 0){
+      html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Cartões</div><div class="empty-state"><div class="desc">Nenhum cartão cadastrado — toque em + acima</div></div></div>`;
+    } else {
+      cartoes.forEach(c=>{
+        html += `<div class="fluxo-categoria">
+          <div class="fluxo-categoria-titulo" style="display:flex;justify-content:space-between;align-items:center">
+            <span>${c.nome}</span>
+            <span class="lr-actions" style="opacity:.5"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span>
+          </div>
+          <div class="fluxo-meses-scroll" data-row="cartao-${c.id}">${
+            mesesCols(null, mKey=>{
+              const val = (c.gastos||{})[mKey] || 0;
+              return `<input class="fm-input" type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)">`;
+            })
+          }</div>
+        </div>`;
+      });
     }
-    const val = state.users[u].income[mKey] || 0;
-    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
-  }).join('')}<td></td></tr>`;
+  }
 
-  const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
-    const val = (state.users[u].incomeExtra && state.users[u].incomeExtra[mKey]) || 0;
-    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncomeExtra('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
-  }).join('')}<td></td></tr>`;
+  // Sobra estimada
+  html += `<div class="fluxo-categoria fluxo-sobra-row"><div class="fluxo-categoria-titulo">Sobra Estimada</div><div class="fluxo-meses-scroll">${
+    months.map(mKey=>{
+      const isCurrent = mKey===hoje;
+      const s = saldoForMonth(u, mKey);
+      return `<div class="fluxo-mes-col ${isCurrent?'atual':''}">
+        <div class="fm-label">${monthLabel(mKey).slice(0,3)}${isCurrent?'<br><small>atual</small>':''}</div>
+        <div class="fm-static" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</div>
+      </div>`;
+    }).join('')
+  }</div></div>`;
 
-  const dizimoRow = (u!=='davi') ? '' : `<tr><td class="row-label" style="color:var(--slate-500)">Dízimo (10%)</td>${months.map(mKey=>{
-    const val = dizimoForMonth(u, mKey);
-    return `<td class="${mKey===hoje?'current-col':''}" style="color:var(--slate-500);font-weight:600">${fmtMoney(val)}</td>`;
-  }).join('')}<td></td></tr>`;
-
-  const cartaoRows = (u!=='davi') ? '' : (cartoes.length === 0
-    ? `<tr><td class="row-label" style="color:var(--slate-400);font-weight:500" colspan="${months.length+2}">Nenhum cartão cadastrado — toque em "+ Cartão" acima</td></tr>`
-    : cartoes.map(c=>{
-      return `<tr class="cartao-row"><td class="row-label">${c.nome}</td>${months.map(mKey=>{
-        const val = (c.gastos||{})[mKey] || 0;
-        return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
-      }).join('')}<td><span class="cartao-actions"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span></td></tr>`;
-    }).join(''));
-
-  const sobraRow = `<tr class="total-row"><td class="row-label">Sobra estimada</td>${months.map(mKey=>{
-    const s = saldoForMonth(u, mKey);
-    return `<td class="${mKey===hoje?'current-col':''}"><span class="total-value" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></td>`;
-  }).join('')}<td></td></tr>`;
-
-  document.getElementById('rendaTableThead').innerHTML = thead;
-  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + cartaoRows + sobraRow;
+  document.getElementById('fluxoMensalWrap').innerHTML = html;
 }
 
 function setIncome(user, mKey, valStr){
@@ -1107,23 +1142,23 @@ function renderGastoGrid(cat){
   const items = state.users[u].expenses[cat];
   const grid = document.getElementById('grid-'+cat);
   if(!items || items.length===0){
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="title">Nada por aqui</div><div class="desc">Toque em Add para incluir um gasto</div></div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="title">Nada por aqui</div><div class="desc">Toque em + para incluir um gasto</div></div>`;
     return;
   }
   grid.innerHTML = items.map(item=>{
-    const metaTxt = cat==='futuro' ? futuroDescricaoMeta(item) : ('Vence dia '+(item.dia||1)+(item.mesInicio?' · a partir de '+monthLabel(item.mesInicio):''));
+    const metaTxt = cat==='futuro' ? futuroDescricaoMeta(item) : ('dia '+(item.dia||1)+(item.mesInicio?' · a partir de '+monthLabel(item.mesInicio):''));
     const valorTxt = cat==='futuro'
       ? (item.recorrente || (item.parcelas||1)<=1 || item.replicar!==false
           ? fmtMoney(item.valor)
           : 'Variável')
       : fmtMoney(item.valor);
-    return `<div class="gasto-item ${cat}">
-      <div class="top-row">
-        <div class="desc">${item.desc}</div>
-        <div class="valor">${valorTxt}</div>
+    return `<div class="list-row">
+      <div class="lr-info">
+        <div class="lr-desc">${item.desc}</div>
+        <div class="lr-meta">${metaTxt}</div>
       </div>
-      <div class="meta">${metaTxt}</div>
-      <div class="actions">
+      <div class="lr-value">${valorTxt}</div>
+      <div class="lr-actions">
         <button class="btn-icon-sm" onclick="editGasto('${cat}','${item.id}')">${ICON_EDIT}</button>
         <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
       </div>
@@ -1220,20 +1255,25 @@ function renderCartaoTrackerList(){
           <button class="btn-icon-sm" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
         </div>
       </div>
-      <div class="ct-datas">Fecha dia ${cartao.fechamento||'—'} · vence dia ${cartao.vencimento||'—'}</div>
-      <div class="ct-row" style="margin-top:8px">
-        <span class="ct-parcela">Usado ${fmtMoney(usado)}</span>
-        <span class="ct-total">Disponível ${fmtMoney(disponivel)} de ${fmtMoney(limite)}</span>
+      <div class="ct-disponivel-lbl">Disponível</div>
+      <div class="ct-disponivel-val">${fmtMoney(disponivel)}</div>
+      <div class="ct-bar"><div class="ct-bar-fill" style="width:${percentUsado}%"></div></div>
+      <div class="ct-foot"><span>Fechamento dia ${cartao.fechamento||'—'}</span><span>Total ${fmtMoney(limite)}</span></div>
+      <div class="ct-toggle-compras" onclick="toggleCartaoDetalhes('${cartao.id}')">Ver detalhes</div>
+      <div class="compras-do-cartao" id="cartaoDetalhes-${cartao.id}">
+        ${comprasHtml}
+        <div class="credo-vista-list">
+          ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item"><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
+        </div>
+        <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="openCompraTrackerModal('${cartao.id}')">+ Compra parcelada</button>
+        <button class="btn btn-sm btn-outline" style="width:100%;margin-top:6px" onclick="openCredoVistaModal('${cartao.id}')">+ Crédito à vista</button>
       </div>
-      <div class="ct-bar"><div class="ct-bar-fill limite" style="width:${percentUsado}%"></div></div>
-      <div class="compras-do-cartao">${comprasHtml}</div>
-      <div class="credo-vista-list">
-        ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item"><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
-      </div>
-      <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="openCompraTrackerModal('${cartao.id}')">+ Compra parcelada</button>
-      <button class="btn btn-sm btn-outline" style="width:100%;margin-top:6px" onclick="openCredoVistaModal('${cartao.id}')">+ Crédito à vista</button>
     </div>`;
   }).join('');
+}
+function toggleCartaoDetalhes(cartaoId){
+  const el = document.getElementById('cartaoDetalhes-'+cartaoId);
+  if(el) el.classList.toggle('expanded');
 }
 
 /* --- Cartão (fechamento/vencimento/limite) --- */
@@ -1670,7 +1710,7 @@ function renderPonto(){
   document.getElementById('pontoValorHora').value = state.ponto.valorHora ? state.ponto.valorHora.toFixed(2).replace('.',',') : '';
 
   const totalDias = daysInMonth(mKey);
-  const tbody = document.getElementById('pontoTbody');
+  const lista = document.getElementById('pontoDiasLista');
   let rows = '';
   for(let dia=1; dia<=totalDias; dia++){
     const d = getDia(mKey, dia);
@@ -1678,28 +1718,35 @@ function renderPonto(){
     const isWeekend = dateObj.getDay()===0 || dateObj.getDay()===6;
     const total = dayTotalMinutes(d);
     const extraVal = d.extra ? String(Math.floor(d.extra/60)).padStart(2,'0')+':'+String(d.extra%60).padStart(2,'0') : '';
-    rows += `<tr class="${isWeekend?'weekend':''} ${d.extra?'hora-extra-row':''}">
-      <td class="dia-cell">${String(dia).padStart(2,'0')}<small>${DIA_SEMANA[dateObj.getDay()]}</small></td>
-      <td>${tempoCellHtml(dia,'entrada',d.entrada)}</td>
-      <td>${tempoCellHtml(dia,'almocoSaida',d.almocoSaida)}</td>
-      <td>${tempoCellHtml(dia,'almocoVolta',d.almocoVolta)}</td>
-      <td>${tempoCellHtml(dia,'saida',d.saida)}</td>
-      <td><input type="text" class="extra-input" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)"></td>
-      <td class="dia-total ${total===0?'zero':''}">${minToHoursLabel(total)}</td>
-      <td><button class="btn-icon-sm" onclick="zerarDia(${dia})" title="Não trabalhei">${ICON_BAN}</button></td>
-    </tr>`;
+    rows += `<div class="ponto-dia-row ${isWeekend?'weekend':''}">
+      <div class="pd-head">
+        <div class="pd-data">${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="pd-total ${total===0?'zero':''}">${minToHoursLabel(total)}</div>
+          <button class="btn-icon-sm" onclick="zerarDia(${dia})" title="Não trabalhei">${ICON_BAN}</button>
+        </div>
+      </div>
+      <div class="ponto-horarios-grid">
+        <div class="ph-item"><div class="ph-lbl">Entrada</div><input type="time" value="${d.entrada||''}" onchange="setTempoDireto(${dia},'entrada',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Almoço</div><input type="time" value="${d.almocoSaida||''}" onchange="setTempoDireto(${dia},'almocoSaida',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Volta</div><input type="time" value="${d.almocoVolta||''}" onchange="setTempoDireto(${dia},'almocoVolta',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Saída</div><input type="time" value="${d.saida||''}" onchange="setTempoDireto(${dia},'saida',this.value)"></div>
+      </div>
+      <div class="ponto-extra-row">
+        <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)"></div>
+      </div>
+    </div>`;
   }
-  tbody.innerHTML = rows;
+  lista.innerHTML = rows;
   renderPontoSummary();
 }
 
-function tempoCellHtml(dia, campo, valor){
-  const modifiedClass = valor ? 'modified' : '';
-  return `<div class="tempo-cell">
-    <button class="arrow-btn" onclick="adjustTempo(${dia},'${campo}',-1)">◀</button>
-    <span class="tempo-val ${modifiedClass}">${valor || '--:--'}</span>
-    <button class="arrow-btn" onclick="adjustTempo(${dia},'${campo}',1)">▶</button>
-  </div>`;
+function setTempoDireto(dia, campo, valStr){
+  const mKey = pontoMonthKeyAtual();
+  const d = getDia(mKey, dia);
+  d[campo] = valStr || null;
+  renderPonto();
+  persist();
 }
 
 function computePontoMes(mKey){
