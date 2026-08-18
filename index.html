@@ -97,7 +97,12 @@
 
   <div class="card card-flat">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><button class="section-add" id="btnAddCartao" onclick="openCartaoModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
-    <div id="fluxoMensalWrap"></div>
+    <div class="ponto-table-wrap">
+      <table class="money-table">
+        <thead id="rendaTableThead"></thead>
+        <tbody id="rendaTableBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="section">
@@ -180,6 +185,43 @@
 </nav>
 
 <!-- MODAL GASTO -->
+<div class="modal-overlay" id="modalEditarConta">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="editarContaTitulo">Conta</h3>
+      <button class="modal-close" onclick="closeEditarConta()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px">
+      <div id="editarContaLogoPreview"></div>
+      <div style="display:flex;gap:8px">
+        <label class="btn btn-sm btn-outline" style="cursor:pointer">
+          Escolher logo
+          <input type="file" accept="image/*" style="display:none" onchange="onContaLogoSelected(event)">
+        </label>
+        <button class="btn btn-sm btn-outline" onclick="removerContaLogo()">Remover</button>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Valor Total</label>
+      <div id="editarContaValorTotal" style="font-size:20px;font-weight:800;color:var(--text)"></div>
+    </div>
+    <div class="field full">
+      <label>Valor Pago (parcial)</label>
+      <div class="input-money"><input type="text" id="editarContaValorPago" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="field full">
+      <label class="checkbox-field">
+        <input type="checkbox" id="editarContaPagaCheck">
+        <span>Marcar como paga integralmente</span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeEditarConta()">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarPagamentoConta()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalGasto">
   <div class="modal">
     <div class="modal-header">

@@ -23,6 +23,7 @@ function novoEstado(){
       cris:{ income:{}, incomeExtra:{}, saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } }
     },
     paid:{},
+    pagamentosParciais:{},
     cartoesTracker:[],
     comprasTracker:[],
     metas:[],
@@ -59,6 +60,7 @@ function carregar(){
       if(!state.cartoesTracker) state.cartoesTracker = [];
       if(!state.comprasTracker) state.comprasTracker = [];
       if(!state.metas) state.metas = [];
+      if(!state.pagamentosParciais) state.pagamentosParciais = {};
       if(!state.tarefas) state.tarefas = [];
       if(!state.tarefaCategorias) state.tarefaCategorias = [];
       (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
@@ -146,10 +148,10 @@ function maskMoneyInput(el){
 function handleMoneyKeydown(event){
   if(event.key !== 'Enter') return;
   event.preventDefault();
-  event.target.blur(); // garante que onchange (que salva o valor) rode antes de pular
-  const col = event.target.closest('.fluxo-mes-col');
-  const nextCol = col && col.nextElementSibling;
-  const nextInput = nextCol ? nextCol.querySelector('input') : null;
+  event.target.blur();
+  const td = event.target.closest('td');
+  const nextTd = td && td.nextElementSibling;
+  const nextInput = nextTd ? nextTd.querySelector('input') : null;
   if(nextInput){ nextInput.focus(); nextInput.select(); }
 }
 
@@ -794,14 +796,14 @@ function getContasDoMes(mKey){
     ['moradia','assinatura','fixo'].forEach(cat=>{
       state.users[u].expenses[cat].forEach(item=>{
         if(item.mesInicio && mKey < item.mesInicio) return;
-        items.push({ user:u, cat, id:item.id, desc:item.desc, valor:item.valor, dia:item.dia||1 });
+        items.push({ user:u, cat, id:item.id, desc:item.desc, valor:item.valor, dia:item.dia||1, logoUrl:item.logoUrl||null });
       });
     });
     state.users[u].expenses.futuro.forEach(item=>{
       const v = futuroValorNoMes(item, mKey);
       if(v > 0){
         const p = futuroParcelaNoMes(item, mKey);
-        items.push({ user:u, cat:'futuro', id:item.id, desc:item.desc + (p?' ('+p.atual+'/'+p.total+')':''), valor:v, dia:item.dia||1 });
+        items.push({ user:u, cat:'futuro', id:item.id, desc:item.desc + (p?' ('+p.atual+'/'+p.total+')':''), valor:v, dia:item.dia||1, logoUrl:item.logoUrl||null });
       }
     });
   });
@@ -831,19 +833,103 @@ function renderChecklist(){
   list.innerHTML = items.map(it=>{
     const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
     const isPaid = !!state.paid[paidKey];
-    return `<div class="check-item-compact ${isPaid?'paid':''}">
-      <input type="checkbox" ${isPaid?'checked':''} onchange="togglePaid('${paidKey}')">
+    const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
+    const isParcial = !isPaid && valorPago > 0;
+    const logo = it.logoUrl
+      ? `<img src="${it.logoUrl}" class="conta-logo">`
+      : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
+    return `<div class="check-item-compact ${isPaid?'paid':''}" onclick="abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')">
+      ${logo}
+      <input type="checkbox" ${isPaid?'checked':''} onclick="event.stopPropagation()" onchange="togglePaid('${paidKey}')">
       <div class="info">
         <div class="desc">${it.desc}</div>
-        <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia} · ${fmtMoney(it.valor)}</div>
+        <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia} · ${fmtMoney(it.valor)}${isParcial?` <span style="color:var(--warning);font-weight:700">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
       </div>
     </div>`;
   }).join('');
 }
 function togglePaid(paidKey){
   state.paid[paidKey] = !state.paid[paidKey];
+  if(state.paid[paidKey] && state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
   persist();
   renderPanorama();
+}
+
+function getGastoItemRef(user, cat, id){
+  return state.users[user].expenses[cat].find(i=>i.id===id);
+}
+
+let editandoConta = null;
+function abrirEditarConta(paidKey, user, cat, id, mKey){
+  const item = getGastoItemRef(user, cat, id);
+  if(!item) return;
+  editandoConta = { paidKey, user, cat, id, mKey };
+  const valorTotal = cat==='futuro' ? futuroValorNoMes(item, mKey) : item.valor;
+  const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
+  const isPaid = !!state.paid[paidKey];
+
+  document.getElementById('editarContaTitulo').textContent = item.desc;
+  document.getElementById('editarContaValorTotal').textContent = fmtMoney(valorTotal);
+  document.getElementById('editarContaValorPago').value = valorPago ? valorPago.toFixed(2).replace('.',',') : '';
+  document.getElementById('editarContaLogoPreview').innerHTML = item.logoUrl
+    ? `<img src="${item.logoUrl}" class="conta-logo-grande">`
+    : `<div class="conta-logo-grande conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`;
+  document.getElementById('editarContaPagaCheck').checked = isPaid;
+  document.getElementById('modalEditarConta').classList.add('active');
+}
+function closeEditarConta(){
+  document.getElementById('modalEditarConta').classList.remove('active');
+  editandoConta = null;
+}
+function onContaLogoSelected(event){
+  const file = event.target.files[0];
+  if(!file || !editandoConta) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const item = getGastoItemRef(editandoConta.user, editandoConta.cat, editandoConta.id);
+    if(item){
+      item.logoUrl = e.target.result;
+      persist();
+      document.getElementById('editarContaLogoPreview').innerHTML = `<img src="${item.logoUrl}" class="conta-logo-grande">`;
+      renderChecklist();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+function removerContaLogo(){
+  if(!editandoConta) return;
+  const item = getGastoItemRef(editandoConta.user, editandoConta.cat, editandoConta.id);
+  if(item){
+    delete item.logoUrl;
+    persist();
+    document.getElementById('editarContaLogoPreview').innerHTML = `<div class="conta-logo-grande conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`;
+    renderChecklist();
+  }
+}
+function salvarPagamentoConta(){
+  if(!editandoConta) return;
+  const { paidKey, user, cat, id, mKey } = editandoConta;
+  const item = getGastoItemRef(user, cat, id);
+  if(!item) return;
+  const valorTotal = cat==='futuro' ? futuroValorNoMes(item, mKey) : item.valor;
+  const valorPago = parseMoney(document.getElementById('editarContaValorPago').value);
+  const pagaIntegral = document.getElementById('editarContaPagaCheck').checked;
+
+  if(!state.pagamentosParciais) state.pagamentosParciais = {};
+  if(pagaIntegral || valorPago >= valorTotal){
+    state.paid[paidKey] = true;
+    delete state.pagamentosParciais[paidKey];
+  } else if(valorPago > 0){
+    state.paid[paidKey] = false;
+    state.pagamentosParciais[paidKey] = valorPago;
+  } else {
+    state.paid[paidKey] = false;
+    delete state.pagamentosParciais[paidKey];
+  }
+  persist();
+  closeEditarConta();
+  renderPanorama();
+  showToast('Conta atualizada');
 }
 
 /* ================= RENDER: PLANNER ================= */
@@ -1011,82 +1097,46 @@ function renderRendaTable(){
   const cartoes = (u==='davi') ? (state.users[u].cartoes || []) : [];
   const hoje = mesFinanceiroAtual();
 
-  function mesesCols(valueFn, inputFn){
-    return months.map(mKey=>{
-      const isCurrent = mKey===hoje;
-      const label = monthLabel(mKey).slice(0,3);
-      const inner = inputFn ? inputFn(mKey) : `<div class="fm-static">${valueFn(mKey)}</div>`;
-      return `<div class="fluxo-mes-col ${isCurrent?'atual':''}">
-        <div class="fm-label">${label}${isCurrent?'<br><small>atual</small>':''}</div>
-        ${inner}
-      </div>`;
-    }).join('');
-  }
+  const thead = `<tr><th style="text-align:left;padding-left:10px">Categoria</th>${months.map(mKey=>{
+    const isCurrent = mKey===hoje;
+    return `<th class="${isCurrent?'current-col':''}">${monthLabel(mKey).slice(0,3)}${isCurrent?'<small>atual</small>':''}</th>`;
+  }).join('')}<th></th></tr>`;
 
-  let html = '';
-
-  // Renda
-  html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Renda</div><div class="fluxo-meses-scroll" data-row="renda">${
-    mesesCols(null, mKey=>{
-      if(u==='davi'){
-        const val = rendaBaseForMonth(u, mKey);
-        return `<div class="fm-static">${fmtMoney(val)}</div>`;
-      }
-      const val = state.users[u].income[mKey] || 0;
-      return `<input class="fm-input" type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)">`;
-    })
-  }</div></div>`;
-
-  // Extra
-  html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Extra</div><div class="fluxo-meses-scroll" data-row="extra">${
-    mesesCols(null, mKey=>{
-      const val = (state.users[u].incomeExtra && state.users[u].incomeExtra[mKey]) || 0;
-      return `<input class="fm-input" type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncomeExtra('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)">`;
-    })
-  }</div></div>`;
-
-  // Dízimo (só davi)
-  if(u==='davi'){
-    html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Dízimo (10%)</div><div class="fluxo-meses-scroll">${
-      mesesCols(mKey=>fmtMoney(dizimoForMonth(u, mKey)))
-    }</div></div>`;
-  }
-
-  // Cartões (só davi)
-  if(u==='davi'){
-    if(cartoes.length === 0){
-      html += `<div class="fluxo-categoria"><div class="fluxo-categoria-titulo">Cartões</div><div class="empty-state"><div class="desc">Nenhum cartão cadastrado — toque em + acima</div></div></div>`;
-    } else {
-      cartoes.forEach(c=>{
-        html += `<div class="fluxo-categoria">
-          <div class="fluxo-categoria-titulo" style="display:flex;justify-content:space-between;align-items:center">
-            <span>${c.nome}</span>
-            <span class="lr-actions" style="opacity:.5"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span>
-          </div>
-          <div class="fluxo-meses-scroll" data-row="cartao-${c.id}">${
-            mesesCols(null, mKey=>{
-              const val = (c.gastos||{})[mKey] || 0;
-              return `<input class="fm-input" type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)">`;
-            })
-          }</div>
-        </div>`;
-      });
+  const rendaRow = `<tr><td class="row-label">Renda</td>${months.map(mKey=>{
+    if(u==='davi'){
+      const val = rendaBaseForMonth(u, mKey);
+      return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:700">${fmtMoney(val)}</td>`;
     }
-  }
+    const val = state.users[u].income[mKey] || 0;
+    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
+  }).join('')}<td></td></tr>`;
 
-  // Sobra estimada
-  html += `<div class="fluxo-categoria fluxo-sobra-row"><div class="fluxo-categoria-titulo">Sobra Estimada</div><div class="fluxo-meses-scroll">${
-    months.map(mKey=>{
-      const isCurrent = mKey===hoje;
-      const s = saldoForMonth(u, mKey);
-      return `<div class="fluxo-mes-col ${isCurrent?'atual':''}">
-        <div class="fm-label">${monthLabel(mKey).slice(0,3)}${isCurrent?'<br><small>atual</small>':''}</div>
-        <div class="fm-static" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</div>
-      </div>`;
-    }).join('')
-  }</div></div>`;
+  const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
+    const val = (state.users[u].incomeExtra && state.users[u].incomeExtra[mKey]) || 0;
+    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncomeExtra('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
+  }).join('')}<td></td></tr>`;
 
-  document.getElementById('fluxoMensalWrap').innerHTML = html;
+  const dizimoRow = (u!=='davi') ? '' : `<tr><td class="row-label" style="color:var(--text-faint)">Dízimo</td>${months.map(mKey=>{
+    const val = dizimoForMonth(u, mKey);
+    return `<td class="${mKey===hoje?'current-col':''}" style="color:var(--text-faint);font-weight:600">${fmtMoney(val)}</td>`;
+  }).join('')}<td></td></tr>`;
+
+  const cartaoRows = (u!=='davi') ? '' : (cartoes.length === 0
+    ? `<tr><td class="row-label" style="color:var(--text-faint);font-weight:500" colspan="${months.length+2}">Nenhum cartão — toque em + acima</td></tr>`
+    : cartoes.map(c=>{
+      return `<tr class="cartao-row"><td class="row-label">${c.nome}</td>${months.map(mKey=>{
+        const val = (c.gastos||{})[mKey] || 0;
+        return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
+      }).join('')}<td><span class="cartao-actions"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span></td></tr>`;
+    }).join(''));
+
+  const sobraRow = `<tr class="total-row"><td class="row-label">Sobra estimada</td>${months.map(mKey=>{
+    const s = saldoForMonth(u, mKey);
+    return `<td class="${mKey===hoje?'current-col':''}"><span class="total-value" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></td>`;
+  }).join('')}<td></td></tr>`;
+
+  document.getElementById('rendaTableThead').innerHTML = thead;
+  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + cartaoRows + sobraRow;
 }
 
 function setIncome(user, mKey, valStr){
