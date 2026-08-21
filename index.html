@@ -62,10 +62,10 @@
 
   <div class="user-section" id="panoUserSection"></div>
 
-  <div class="card" style="background:linear-gradient(160deg,var(--dark),var(--dark-2));text-align:center;padding:24px;margin-bottom:var(--gap);position:relative;overflow:hidden;box-shadow:var(--shadow-lg)">
-    <div class="hero-inline-title" style="color:#fff;justify-content:center;position:relative;z-index:1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>Planeje Suas Compras Futuras</div>
-    <div style="font-size:12.5px;color:rgba(255,255,255,.55);margin-bottom:16px;position:relative;z-index:1">Simule como suas metas afetariam seu orçamento</div>
-    <button class="btn" style="background:var(--primary);position:relative;z-index:1" onclick="openSimuladorModal()">Gerar Orçamento</button>
+  <div class="card" style="background:linear-gradient(160deg,var(--primary),var(--primary-dim));text-align:center;padding:24px;margin-bottom:var(--gap);position:relative;overflow:hidden;box-shadow:var(--shadow-lg)">
+    <div class="hero-inline-title" style="color:#fff;justify-content:center;position:relative;z-index:1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>Planeje Suas Compras Futuras</div>
+    <div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-bottom:16px;position:relative;z-index:1">Simule como suas metas afetariam seu orçamento</div>
+    <button class="btn" style="background:#fff;color:var(--primary);position:relative;z-index:1" onclick="openSimuladorModal()">Gerar Orçamento</button>
   </div>
 
   <div class="card">
@@ -89,10 +89,11 @@
   </div>
 
   <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Saldo Atual</div><button class="btn-icon-sm" onclick="openTarefasModal()" title="Lista de Tarefas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button></div>
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Saldo Atual</div><div style="display:flex;gap:4px"><button class="btn-icon-sm" onclick="openReservaModal()" title="Reserva"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M12 11V7a4 4 0 0 1 8 0v1"/><circle cx="12" cy="16" r="1.5"/></svg></button><button class="btn-icon-sm" onclick="openTarefasModal()" title="Lista de Tarefas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button></div></div>
     <div class="field">
       <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
     </div>
+    <div class="reserva-badge" id="reservaBadge" style="display:none" onclick="openReservaModal()"></div>
   </div>
 
   <div class="card card-flat">
@@ -150,6 +151,18 @@
   <div class="card">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Ponto PJ</div></div>
 
+    <div class="ponto-summary">
+      <div class="summary-grid">
+        <div class="summary-item"><div class="label">Total de Horas</div><div class="value" id="pontoTotalHoras">00:00</div></div>
+        <div class="summary-item"><div class="label">Valor a Receber</div><div class="value" id="pontoValorReceber">R$ 0,00</div></div>
+      </div>
+      <div class="comparacao">
+        <div><div class="comp-label">Padrão</div><div class="comp-value" id="pontoPadrao">00:00</div></div>
+        <div><div class="comp-label">Diferença</div><div class="comp-value" id="pontoDiferenca">00:00</div></div>
+        <div><div class="comp-label">Impacto</div><div class="comp-value" id="pontoImpacto">R$ 0,00</div></div>
+      </div>
+    </div>
+
     <div class="ponto-compare" id="pontoCompareStrip"></div>
 
     <div class="ponto-mes-nav">
@@ -162,18 +175,6 @@
       <input type="text" id="pontoValorHora" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this); onValorHoraInput(this)">
     </div>
     <div id="pontoDiasLista" class="ponto-dias-lista"></div>
-
-    <div class="ponto-summary">
-      <div class="summary-grid">
-        <div class="summary-item"><div class="label">Total de Horas</div><div class="value" id="pontoTotalHoras">00:00</div></div>
-        <div class="summary-item"><div class="label">Valor a Receber</div><div class="value" id="pontoValorReceber">R$ 0,00</div></div>
-      </div>
-      <div class="comparacao">
-        <div><div class="comp-label">Padrão</div><div class="comp-value" id="pontoPadrao">00:00</div></div>
-        <div><div class="comp-label">Diferença</div><div class="comp-value" id="pontoDiferenca">00:00</div></div>
-        <div><div class="comp-label">Impacto</div><div class="comp-value" id="pontoImpacto">R$ 0,00</div></div>
-      </div>
-    </div>
   </div>
 
 </div>
@@ -228,10 +229,21 @@
       <h3 id="modalGastoTitle">Adicionar Gasto</h3>
       <button class="modal-close" onclick="closeModal('modalGasto')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div id="gastoLogoPreview"></div>
+      <div style="flex:1;display:flex;gap:6px">
+        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Logo<input type="file" accept="image/*" style="display:none" onchange="onGastoLogoSelected(event)"></label>
+        <button type="button" class="btn btn-sm btn-outline" onclick="removerGastoLogo()">Remover</button>
+      </div>
+    </div>
     <div class="form-grid">
       <div class="field full">
         <label>Descrição</label>
         <input type="text" id="gastoDesc" placeholder="Ex: Aluguel">
+      </div>
+      <div class="field full">
+        <label>Descrição breve (opcional)</label>
+        <input type="text" id="gastoDescricaoBreve" placeholder="Ex: conta de luz da casa" style="font-size:12px">
       </div>
       <div class="field" id="gastoValorWrap">
         <label>Valor</label>
@@ -362,9 +374,20 @@
       <button class="modal-close" onclick="closeModal('modalCompraTracker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <input type="hidden" id="compraTrackerId">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div id="compraTrackerLogoPreview"></div>
+      <div style="flex:1;display:flex;gap:6px">
+        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Logo<input type="file" accept="image/*" style="display:none" onchange="onCompraTrackerLogoSelected(event)"></label>
+        <button type="button" class="btn btn-sm btn-outline" onclick="removerCompraTrackerLogo()">Remover</button>
+      </div>
+    </div>
     <div class="field full">
       <label>Nome da Compra</label>
       <input type="text" id="compraTrackerNome" placeholder="Ex: Tênis">
+    </div>
+    <div class="field full">
+      <label>Descrição breve (opcional)</label>
+      <input type="text" id="compraTrackerDescricao" placeholder="Ex: compra de aniversário" style="font-size:12px">
     </div>
     <div class="field full">
       <label>Cartão</label>
@@ -434,6 +457,24 @@
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalConcluirMes')">Cancelar</button>
       <button class="btn btn-block" onclick="confirmarConcluirMes()">Concluir Mês</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReserva">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Reserva</h3>
+      <button class="modal-close" onclick="closeModal('modalReserva')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="caption" style="margin-bottom:12px">Dinheiro que está na conta mas não entra no saldo disponível — só pra controle visual.</div>
+    <div class="field full">
+      <label>Valor Reservado</label>
+      <div class="input-money"><input type="text" id="reservaValorInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalReserva')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarReserva()">Salvar</button>
     </div>
   </div>
 </div>

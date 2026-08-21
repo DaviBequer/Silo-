@@ -24,6 +24,7 @@ function novoEstado(){
     },
     paid:{},
     pagamentosParciais:{},
+    reserva:0,
     cartoesTracker:[],
     comprasTracker:[],
     metas:[],
@@ -61,6 +62,7 @@ function carregar(){
       if(!state.comprasTracker) state.comprasTracker = [];
       if(!state.metas) state.metas = [];
       if(!state.pagamentosParciais) state.pagamentosParciais = {};
+      if(state.reserva === undefined) state.reserva = 0;
       if(!state.tarefas) state.tarefas = [];
       if(!state.tarefaCategorias) state.tarefaCategorias = [];
       (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
@@ -110,6 +112,8 @@ function keyToDate(key){ const [y,m]=key.split('-').map(Number); return new Date
 function addMonths(key, n){ const d=keyToDate(key); d.setMonth(d.getMonth()+n); return monthKey(d); }
 function monthLabel(key){ const d=keyToDate(key); return MES_NOMES[d.getMonth()]+' '+d.getFullYear(); }
 function monthLabelLong(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+' de '+d.getFullYear(); }
+function monthLabelExtensoCurto(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+'/'+String(d.getFullYear()).slice(-2); }
+function monthLabelExtenso(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+'/'+d.getFullYear(); }
 function popularSelectMes(selectId){
   const el = document.getElementById(selectId);
   if(!el) return;
@@ -144,6 +148,12 @@ function maskMoneyInput(el){
   let intPart = digits.slice(0,-2).replace(/^0+(?=\d)/,'');
   intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   el.value = intPart+','+cents;
+}
+function maskTempoInput(el){
+  let digits = el.value.replace(/\D/g,'').slice(0,4);
+  if(digits.length<=2){ el.value = digits; return; }
+  let h = digits.slice(0,-2), m = digits.slice(-2);
+  el.value = h+':'+m;
 }
 function handleMoneyKeydown(event){
   if(event.key !== 'Enter') return;
@@ -292,7 +302,7 @@ function createMonthPicker(pickerId, hiddenInputId, defaultKey, onChange){
   const key = defaultKey || mesFinanceiroAtual();
   monthPickers[pickerId] = { year: keyToDate(key).getFullYear(), hiddenInputId, onChange };
   document.getElementById(hiddenInputId).value = defaultKey || '';
-  document.getElementById(pickerId+'Btn').textContent = defaultKey ? monthLabel(defaultKey) : 'Selecione o mês';
+  document.getElementById(pickerId+'Btn').textContent = defaultKey ? monthLabelExtenso(defaultKey) : 'Selecione o mês';
   document.getElementById(pickerId+'Panel').style.display = 'none';
 }
 function toggleAccordion(bodyId){
@@ -306,7 +316,10 @@ function toggleMonthPicker(pickerId){
   const panel = document.getElementById(pickerId+'Panel');
   const isOpen = panel.style.display === 'block';
   panel.style.display = isOpen ? 'none' : 'block';
-  if(!isOpen) renderMonthPickerGrid(pickerId);
+  if(!isOpen){
+    renderMonthPickerGrid(pickerId);
+    setTimeout(()=>{ panel.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 50);
+  }
 }
 function shiftPickerYear(pickerId, delta){
   monthPickers[pickerId].year += delta;
@@ -329,7 +342,7 @@ function renderMonthPickerGrid(pickerId){
 }
 function selectPickerMonth(pickerId, key){
   document.getElementById(monthPickers[pickerId].hiddenInputId).value = key;
-  document.getElementById(pickerId+'Btn').textContent = monthLabel(key);
+  document.getElementById(pickerId+'Btn').textContent = monthLabelExtenso(key);
   document.getElementById(pickerId+'Panel').style.display = 'none';
   if(monthPickers[pickerId].onChange) monthPickers[pickerId].onChange();
 }
@@ -544,8 +557,8 @@ function renderPanorama(){
       `<div class="meta" style="margin-top:2px;color:${diffGastos>0?'var(--slate-700)':'var(--slate-500)'}">${diffGastos>=0?'▲':'▼'} ${Math.abs(pctGastos).toFixed(0)}% (${fmtMoneySigned(diffGastos)}) vs mês anterior</div>`;
     return `<div class="user-card ${u==='cris'?'cris':''}">
       <div class="u-name">${u==='davi'?'Davi':'Cris'}</div>
-      <div class="u-row"><span class="lbl">Receita</span><span class="u-receita">${fmtMoney(receita)}</span></div>
-      <div class="u-row"><span class="lbl">Gastos</span><span class="u-gastos">${fmtMoney(gastos)}</span></div>
+      <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Receita</span><span class="u-receita">${fmtMoney(receita)}</span></div>
+      <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Gastos</span><span class="u-gastos">${fmtMoney(gastos)}</span></div>
       ${gastosComparativo}
       <div class="u-sobra ${sobra>=0?'positive':'negative'}"><span class="lbl">Sobra</span><span>${fmtMoneySigned(sobra)}</span></div>
     </div>`;
@@ -731,22 +744,22 @@ function abrirDetalheAcumulado(mKey){
     const s = saldoHouseholdForMonth(m);
     rodante += s;
     const isAtual = m===mKey;
-    acumuladoHtml += `<div class="simulador-linha ${isAtual?'':''}" style="${isAtual?'font-weight:900':''}"><span class="label">${monthLabel(m)}</span><span class="valor" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></div>`;
+    acumuladoHtml += `<div class="simulador-linha ${isAtual?'':''}" style="${isAtual?'font-weight:900':''}"><span class="label">${monthLabelExtensoCurto(m)}</span><span class="valor" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></div>`;
   });
 
   const modalContent = `
     <div class="simulador-painel">
-      <h4>${ICON_WALLET}Composição de ${monthLabel(mKey)}</h4>
+      <h4>${ICON_WALLET}Composição de ${monthLabelExtensoCurto(mKey)}</h4>
       ${composicaoHtml}
       <div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900;font-size:14px">Sobra Total do Mês</span><span class="valor" style="font-weight:900;font-size:16px;color:${sobraTotal>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobraTotal)}</span></div>
     </div>
     <div class="simulador-painel">
-      <h4>${ICON_TREND}Como chegou no Acumulado ${mKey===hoje?'':('('+monthLabel(mesesAteAqui[0])+' até '+monthLabel(mKey)+')')}</h4>
+      <h4>${ICON_TREND}Como chegou no Acumulado ${mKey===hoje?'':('('+monthLabelExtensoCurto(mesesAteAqui[0])+' até '+monthLabelExtensoCurto(mKey)+')')}</h4>
       ${mKey===hoje ? '<div style="font-size:12px;color:var(--slate-500)">O mês atual não tem acumulado — ainda não há mês anterior pra somar.</div>' : acumuladoHtml}
       ${mKey!==hoje ? `<div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900">Acumulado Final</span><span class="valor" style="font-weight:900;font-size:15px;color:${rodante>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(rodante)}</span></div>` : ''}
     </div>
   `;
-  document.getElementById('detalheAcumuladoTitulo').textContent = monthLabel(mKey);
+  document.getElementById('detalheAcumuladoTitulo').textContent = monthLabelExtensoCurto(mKey);
   document.getElementById('detalheAcumuladoConteudo').innerHTML = modalContent;
   document.getElementById('modalDetalheAcumulado').classList.add('active');
 }
@@ -1088,6 +1101,7 @@ function renderPlanner(){
   renderRendaTable();
   ['moradia','assinatura','fixo','futuro'].forEach(cat=> renderGastoGrid(cat));
   renderCartaoTrackerList();
+  renderReservaBadge();
 }
 
 function renderRendaTable(){
@@ -1163,6 +1177,28 @@ function setSaldoAtual(valStr){
   persist();
 }
 
+function openReservaModal(){
+  document.getElementById('reservaValorInput').value = state.reserva ? state.reserva.toFixed(2).replace('.',',') : '';
+  document.getElementById('modalReserva').classList.add('active');
+}
+function salvarReserva(){
+  state.reserva = parseMoney(document.getElementById('reservaValorInput').value);
+  persist();
+  closeModal('modalReserva');
+  renderReservaBadge();
+  showToast('Reserva atualizada');
+}
+function renderReservaBadge(){
+  const el = document.getElementById('reservaBadge');
+  if(!el) return;
+  if(state.reserva && state.reserva > 0){
+    el.style.display = 'flex';
+    el.innerHTML = `<span>Reservado</span><b>${fmtMoney(state.reserva)}</b>`;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 function futuroParcelaAtual(item){
   if(item.recorrente) return null;
   const parcelas = item.parcelas || 1;
@@ -1202,9 +1238,14 @@ function renderGastoGrid(cat){
           ? fmtMoney(item.valor)
           : 'Variável')
       : fmtMoney(item.valor);
+    const logo = item.logoUrl
+      ? `<img src="${item.logoUrl}" class="conta-logo">`
+      : `<div class="conta-logo conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`;
     return `<div class="list-row">
+      ${logo}
       <div class="lr-info">
         <div class="lr-desc">${item.desc}</div>
+        ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
         <div class="lr-meta">${metaTxt}</div>
       </div>
       <div class="lr-value">${valorTxt}</div>
@@ -1279,9 +1320,18 @@ function renderCartaoTrackerList(){
         else metaTxt = `Faltam ${c.restam} ${c.restam===1?'mês':'meses'} · termina em ${monthLabel(c.mesFim)}`;
         const parcelaTxt = c.status==='sem-inicio' ? '—' : `${c.parcelaAtual}ª de ${c.parcelas}`;
         const pagoClass = item.pago ? ' pago' : '';
+        const compraLogo = item.logoUrl
+          ? `<img src="${item.logoUrl}" class="conta-logo-sm">`
+          : `<div class="conta-logo-sm conta-logo-placeholder">${item.nome.charAt(0).toUpperCase()}</div>`;
         return `<div class="compra-tracker-item${pagoClass}">
           <div class="ct-top">
-            <div class="ct-nome${pagoClass}">${item.nome}</div>
+            <div style="display:flex;align-items:center;gap:8px;min-width:0">
+              ${compraLogo}
+              <div style="min-width:0">
+                <div class="ct-nome${pagoClass}">${item.nome}</div>
+                ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
+              </div>
+            </div>
             <div class="ct-actions">
               <button class="btn-icon-sm" title="Marcar como ${item.pago?'pendente':'pago'}" onclick="toggleCompraPago('${item.id}')" style="color:${item.pago?'var(--success)':'var(--slate-400)'}">${item.pago?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>'}</button>
               <button class="btn-icon-sm" onclick="openCompraTrackerModal('${cartao.id}','${item.id}')">${ICON_EDIT}</button>
@@ -1308,7 +1358,7 @@ function renderCartaoTrackerList(){
       <div class="ct-disponivel-lbl">Disponível</div>
       <div class="ct-disponivel-val">${fmtMoney(disponivel)}</div>
       <div class="ct-bar"><div class="ct-bar-fill" style="width:${percentUsado}%"></div></div>
-      <div class="ct-foot"><span>Fechamento dia ${cartao.fechamento||'—'}</span><span>Total ${fmtMoney(limite)}</span></div>
+      <div class="ct-foot"><span>Gasto ${fmtMoney(usado)}</span><span>Fecha dia ${cartao.fechamento||'—'} · Total ${fmtMoney(limite)}</span></div>
       <div class="ct-toggle-compras" onclick="toggleCartaoDetalhes('${cartao.id}')">Ver detalhes</div>
       <div class="compras-do-cartao" id="cartaoDetalhes-${cartao.id}">
         ${comprasHtml}
@@ -1375,6 +1425,26 @@ function excluirCartaoCard(id){
 }
 
 /* --- Compra (parcelamento vinculado a um cartão) --- */
+let compraTrackerLogoUrlAtual = null;
+function renderCompraTrackerLogoPreview(){
+  const el = document.getElementById('compraTrackerLogoPreview');
+  const nome = document.getElementById('compraTrackerNome').value || '?';
+  el.innerHTML = compraTrackerLogoUrlAtual
+    ? `<img src="${compraTrackerLogoUrlAtual}" class="conta-logo-grande">`
+    : `<div class="conta-logo-grande conta-logo-placeholder">${nome.charAt(0).toUpperCase()}</div>`;
+}
+function onCompraTrackerLogoSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{ compraTrackerLogoUrlAtual = e.target.result; renderCompraTrackerLogoPreview(); };
+  reader.readAsDataURL(file);
+}
+function removerCompraTrackerLogo(){
+  compraTrackerLogoUrlAtual = null;
+  renderCompraTrackerLogoPreview();
+}
+
 function openCompraTrackerModal(cartaoId, compraId){
   if(!(state.cartoesTracker||[]).length){ showToast('Cadastre um cartão primeiro'); return; }
   popularSelectCartoes('compraTrackerCartaoId', cartaoId);
@@ -1384,6 +1454,8 @@ function openCompraTrackerModal(cartaoId, compraId){
     const item = (state.comprasTracker||[]).find(i=>i.id===compraId);
     if(item){
       document.getElementById('compraTrackerNome').value = item.nome;
+      document.getElementById('compraTrackerDescricao').value = item.descricao || '';
+      compraTrackerLogoUrlAtual = item.logoUrl || null;
       document.getElementById('compraTrackerCartaoId').value = item.cartaoId;
       document.getElementById('compraTrackerValor').value = (item.valorTotal||0).toFixed(2).replace('.',',');
       document.getElementById('compraTrackerParcelas').value = item.parcelas || 1;
@@ -1391,15 +1463,20 @@ function openCompraTrackerModal(cartaoId, compraId){
     }
   }else{
     document.getElementById('compraTrackerNome').value = '';
+    document.getElementById('compraTrackerDescricao').value = '';
+    compraTrackerLogoUrlAtual = null;
     document.getElementById('compraTrackerValor').value = '';
     document.getElementById('compraTrackerParcelas').value = 1;
     createMonthPicker('compraTrackerMesInicioPicker', 'compraTrackerMesInicio', mesFinanceiroAtual());
   }
+  renderCompraTrackerLogoPreview();
   document.getElementById('modalCompraTracker').classList.add('active');
 }
 function salvarCompraTracker(){
   const id = document.getElementById('compraTrackerId').value;
   const nome = document.getElementById('compraTrackerNome').value.trim();
+  const descricao = document.getElementById('compraTrackerDescricao').value.trim();
+  const logoUrl = compraTrackerLogoUrlAtual;
   const cartaoId = document.getElementById('compraTrackerCartaoId').value;
   const valorTotal = parseMoney(document.getElementById('compraTrackerValor').value);
   const parcelas = Math.max(1, parseInt(document.getElementById('compraTrackerParcelas').value) || 1);
@@ -1409,9 +1486,9 @@ function salvarCompraTracker(){
   if(!state.comprasTracker) state.comprasTracker = [];
   if(id){
     const item = state.comprasTracker.find(i=>i.id===id);
-    if(item) Object.assign(item, { nome, cartaoId, valorTotal, parcelas, mesInicio });
+    if(item) Object.assign(item, { nome, descricao, logoUrl, cartaoId, valorTotal, parcelas, mesInicio });
   } else {
-    state.comprasTracker.push({ id: 'cp'+Date.now(), nome, cartaoId, valorTotal, parcelas, mesInicio });
+    state.comprasTracker.push({ id: 'cp'+Date.now(), nome, descricao, logoUrl, cartaoId, valorTotal, parcelas, mesInicio });
   }
   persist();
   closeModal('modalCompraTracker');
@@ -1595,6 +1672,26 @@ function renderParcelasValoresInputs(existingValores){
   container.innerHTML = html;
 }
 
+let gastoLogoUrlAtual = null;
+function renderGastoLogoPreview(){
+  const el = document.getElementById('gastoLogoPreview');
+  const desc = document.getElementById('gastoDesc').value || '?';
+  el.innerHTML = gastoLogoUrlAtual
+    ? `<img src="${gastoLogoUrlAtual}" class="conta-logo-grande">`
+    : `<div class="conta-logo-grande conta-logo-placeholder">${desc.charAt(0).toUpperCase()}</div>`;
+}
+function onGastoLogoSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{ gastoLogoUrlAtual = e.target.result; renderGastoLogoPreview(); };
+  reader.readAsDataURL(file);
+}
+function removerGastoLogo(){
+  gastoLogoUrlAtual = null;
+  renderGastoLogoPreview();
+}
+
 function openGastoModal(cat, id){
   document.getElementById('gastoCat').value = cat;
   document.getElementById('gastoId').value = id || '';
@@ -1604,6 +1701,8 @@ function openGastoModal(cat, id){
     const item = state.users[state.currentUser].expenses[cat].find(i=>i.id===id);
     if(item){
       document.getElementById('gastoDesc').value = item.desc;
+      document.getElementById('gastoDescricaoBreve').value = item.descricao || '';
+      gastoLogoUrlAtual = item.logoUrl || null;
       document.getElementById('gastoValor').value = (item.valor||0).toFixed(2).replace('.',',');
       document.getElementById('gastoDia').value = item.dia || '';
       createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', item.mesInicio || null);
@@ -1622,6 +1721,8 @@ function openGastoModal(cat, id){
     }
   }else{
     document.getElementById('gastoDesc').value = '';
+    document.getElementById('gastoDescricaoBreve').value = '';
+    gastoLogoUrlAtual = null;
     document.getElementById('gastoValor').value = '';
     document.getElementById('gastoDia').value = '';
     createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', null);
@@ -1630,6 +1731,7 @@ function openGastoModal(cat, id){
     document.getElementById('gastoParcelas').value = 1;
     document.getElementById('gastoReplicar').checked = true;
   }
+  renderGastoLogoPreview();
   updateGastoFieldsVisibility();
   document.getElementById('modalGasto').classList.add('active');
 }
@@ -1638,6 +1740,8 @@ function saveGasto(){
   const cat = document.getElementById('gastoCat').value;
   const id = document.getElementById('gastoId').value;
   const desc = document.getElementById('gastoDesc').value.trim();
+  const descricao = document.getElementById('gastoDescricaoBreve').value.trim();
+  const logoUrl = gastoLogoUrlAtual;
   const dia = Math.min(31, Math.max(1, parseInt(document.getElementById('gastoDia').value) || 1));
 
   if(!desc){ showToast('Digite uma descrição'); return; }
@@ -1655,11 +1759,11 @@ function saveGasto(){
         valores[inp.dataset.mes] = parseMoney(inp.value);
       });
     }
-    novo = { desc, recorrente, mesInicio, parcelas, replicar, valor, valores };
+    novo = { desc, descricao, logoUrl, recorrente, mesInicio, parcelas, replicar, valor, valores };
   }else{
     const valor = parseMoney(document.getElementById('gastoValor').value);
     const mesInicio = document.getElementById('gastoMesInicioSimples').value || null;
-    novo = { desc, valor, dia, mesInicio };
+    novo = { desc, descricao, logoUrl, valor, dia, mesInicio };
   }
 
   const list = state.users[state.currentUser].expenses[cat];
@@ -1777,10 +1881,10 @@ function renderPonto(){
         </div>
       </div>
       <div class="ponto-horarios-grid">
-        <div class="ph-item"><div class="ph-lbl">Entrada</div><input type="time" value="${d.entrada||''}" onchange="setTempoDireto(${dia},'entrada',this.value)"></div>
-        <div class="ph-item"><div class="ph-lbl">Almoço</div><input type="time" value="${d.almocoSaida||''}" onchange="setTempoDireto(${dia},'almocoSaida',this.value)"></div>
-        <div class="ph-item"><div class="ph-lbl">Volta</div><input type="time" value="${d.almocoVolta||''}" onchange="setTempoDireto(${dia},'almocoVolta',this.value)"></div>
-        <div class="ph-item"><div class="ph-lbl">Saída</div><input type="time" value="${d.saida||''}" onchange="setTempoDireto(${dia},'saida',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Entrada</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.entrada||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'entrada',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Almoço</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.almocoSaida||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'almocoSaida',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Volta</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.almocoVolta||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'almocoVolta',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Saída</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.saida||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'saida',this.value)"></div>
       </div>
       <div class="ponto-extra-row">
         <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)"></div>
