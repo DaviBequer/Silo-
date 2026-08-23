@@ -30,6 +30,8 @@ function novoEstado(){
     metas:[],
     tarefas:[],
     tarefaCategorias:[],
+    receitas:[],
+    receitaCategorias:[],
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
   };
 }
@@ -63,6 +65,8 @@ function carregar(){
       if(!state.metas) state.metas = [];
       if(!state.pagamentosParciais) state.pagamentosParciais = {};
       if(state.reserva === undefined) state.reserva = 0;
+      if(!state.receitas) state.receitas = [];
+      if(!state.receitaCategorias) state.receitaCategorias = [];
       if(!state.tarefas) state.tarefas = [];
       if(!state.tarefaCategorias) state.tarefaCategorias = [];
       (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
@@ -212,6 +216,7 @@ function switchAba(aba){
   if(aba==='ponto') renderPonto();
   if(aba==='planner') renderPlanner();
   if(aba==='panorama') renderPanorama();
+  if(aba==='receitas') renderReceitas();
 }
 function switchUser(user){
   state.currentUser = user;
@@ -2006,6 +2011,173 @@ carregar();
 aplicarLogoSalva();
 
 /* ================= PWA: registro do service worker ================= */
+/* ================= RECEITAS ================= */
+let receitaFotoUrlAtual = null;
+let receitaFiltroCategoria = null;
+
+function renderReceitas(){
+  renderReceitaCatChips();
+  renderReceitaLista();
+}
+
+function renderReceitaCatChips(){
+  const el = document.getElementById('receitaCatChips');
+  const cats = state.receitaCategorias || [];
+  let html = `<button class="cat-chip${receitaFiltroCategoria===null?' active':''}" onclick="filtrarReceitaCategoria(null)">Todas</button>`;
+  cats.forEach(c=>{
+    html += `<button class="cat-chip${receitaFiltroCategoria===c.id?' active':''}" onclick="filtrarReceitaCategoria('${c.id}')">${c.nome}<span class="cat-chip-del" onclick="event.stopPropagation();excluirReceitaCategoria('${c.id}')">×</span></button>`;
+  });
+  el.innerHTML = html;
+}
+function filtrarReceitaCategoria(id){
+  receitaFiltroCategoria = id;
+  renderReceitas();
+}
+function excluirReceitaCategoria(id){
+  if(!confirm('Excluir esta categoria? As receitas dela ficarão sem categoria.')) return;
+  state.receitaCategorias = (state.receitaCategorias||[]).filter(c=>c.id!==id);
+  (state.receitas||[]).forEach(r=>{ if(r.categoriaId===id) r.categoriaId=null; });
+  if(receitaFiltroCategoria===id) receitaFiltroCategoria=null;
+  persist();
+  renderReceitas();
+}
+
+function renderReceitaLista(){
+  const el = document.getElementById('receitaLista');
+  let list = state.receitas || [];
+  if(receitaFiltroCategoria!==null){
+    list = list.filter(r=> receitaFiltroCategoria==='_sem' ? !r.categoriaId : r.categoriaId===receitaFiltroCategoria);
+  }
+  list = [...list].sort((a,b)=> (b.criadoEm||0) - (a.criadoEm||0));
+  if(!list.length){
+    el.innerHTML = `<div class="empty-state">Nenhuma receita ainda. Toque no + pra adicionar.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(r=>{
+    const cat = r.categoriaId ? (state.receitaCategorias||[]).find(c=>c.id===r.categoriaId) : null;
+    const dataTxt = r.criadoEm ? new Date(r.criadoEm).toLocaleDateString('pt-BR') : '';
+    const foto = r.fotoUrl
+      ? `<img src="${r.fotoUrl}" class="receita-foto">`
+      : `<div class="receita-foto receita-foto-placeholder">${r.nome.charAt(0).toUpperCase()}</div>`;
+    const descCurta = (r.descricao||'').slice(0,70) + ((r.descricao||'').length>70?'…':'');
+    return `<div class="receita-card" onclick="abrirVerReceita('${r.id}')">
+      ${foto}
+      <div class="receita-info">
+        <div class="receita-nome">${r.nome}</div>
+        ${descCurta?`<div class="receita-desc">${descCurta}</div>`:''}
+        <div class="receita-meta">${cat?`<span class="receita-cat-badge">${cat.nome}</span>`:''}${dataTxt?`<span>${dataTxt}</span>`:''}</div>
+      </div>
+      <div class="receita-actions" onclick="event.stopPropagation()">
+        <button class="btn-icon-sm" onclick="openReceitaModal('${r.id}')">${ICON_EDIT}</button>
+        <button class="btn-icon-sm" onclick="excluirReceita('${r.id}')">${ICON_TRASH}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function popularReceitaCategoriaSelect(selectedId){
+  const sel = document.getElementById('receitaCategoriaSelect');
+  const cats = state.receitaCategorias || [];
+  sel.innerHTML = '<option value="">Sem categoria</option>' + cats.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  sel.value = selectedId || '';
+}
+
+function renderReceitaFotoPreview(){
+  const el = document.getElementById('receitaFotoPreview');
+  const nome = document.getElementById('receitaNome').value || '?';
+  el.innerHTML = receitaFotoUrlAtual
+    ? `<img src="${receitaFotoUrlAtual}" class="conta-logo-grande">`
+    : `<div class="conta-logo-grande conta-logo-placeholder">${nome.charAt(0).toUpperCase()}</div>`;
+}
+function onReceitaFotoSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{ receitaFotoUrlAtual = e.target.result; renderReceitaFotoPreview(); };
+  reader.readAsDataURL(file);
+}
+function removerReceitaFoto(){
+  receitaFotoUrlAtual = null;
+  renderReceitaFotoPreview();
+}
+
+function openReceitaModal(id){
+  document.getElementById('receitaId').value = id || '';
+  document.getElementById('modalReceitaTitle').textContent = id ? 'Editar Receita' : 'Nova Receita';
+  if(id){
+    const r = (state.receitas||[]).find(r=>r.id===id);
+    if(r){
+      document.getElementById('receitaNome').value = r.nome;
+      document.getElementById('receitaDescricao').value = r.descricao || '';
+      receitaFotoUrlAtual = r.fotoUrl || null;
+      popularReceitaCategoriaSelect(r.categoriaId);
+    }
+  }else{
+    document.getElementById('receitaNome').value = '';
+    document.getElementById('receitaDescricao').value = '';
+    receitaFotoUrlAtual = null;
+    popularReceitaCategoriaSelect(null);
+  }
+  renderReceitaFotoPreview();
+  document.getElementById('modalReceita').classList.add('active');
+}
+function salvarReceita(){
+  const id = document.getElementById('receitaId').value;
+  const nome = document.getElementById('receitaNome').value.trim();
+  const descricao = document.getElementById('receitaDescricao').value.trim();
+  const categoriaId = document.getElementById('receitaCategoriaSelect').value || null;
+  const fotoUrl = receitaFotoUrlAtual;
+  if(!nome){ showToast('Digite o nome da receita'); return; }
+  if(!state.receitas) state.receitas = [];
+  if(id){
+    const r = state.receitas.find(r=>r.id===id);
+    if(r) Object.assign(r, { nome, descricao, categoriaId, fotoUrl });
+  }else{
+    state.receitas.push({ id:'rc'+Date.now(), nome, descricao, categoriaId, fotoUrl, criadoEm: Date.now() });
+  }
+  persist();
+  closeModal('modalReceita');
+  renderReceitas();
+  showToast('Receita salva');
+}
+function excluirReceita(id){
+  if(!confirm('Excluir esta receita?')) return;
+  state.receitas = (state.receitas||[]).filter(r=>r.id!==id);
+  persist();
+  renderReceitas();
+}
+function abrirVerReceita(id){
+  const r = (state.receitas||[]).find(r=>r.id===id);
+  if(!r) return;
+  const cat = r.categoriaId ? (state.receitaCategorias||[]).find(c=>c.id===r.categoriaId) : null;
+  const dataTxt = r.criadoEm ? new Date(r.criadoEm).toLocaleDateString('pt-BR') : '';
+  const foto = r.fotoUrl ? `<img src="${r.fotoUrl}" class="receita-foto-grande">` : '';
+  document.getElementById('verReceitaNome').textContent = r.nome;
+  document.getElementById('verReceitaConteudo').innerHTML = `
+    ${foto}
+    <div class="receita-meta" style="margin:10px 0">${cat?`<span class="receita-cat-badge">${cat.nome}</span>`:''}${dataTxt?`<span>${dataTxt}</span>`:''}</div>
+    <div style="white-space:pre-wrap;font-size:13.5px;color:var(--text-dim);line-height:1.5">${r.descricao||'Sem descrição.'}</div>
+  `;
+  document.getElementById('modalVerReceita').classList.add('active');
+}
+
+function openReceitaCategoriaModal(){
+  document.getElementById('receitaCategoriaNome').value = '';
+  document.getElementById('modalReceitaCategoria').classList.add('active');
+}
+function salvarReceitaCategoria(){
+  const nome = document.getElementById('receitaCategoriaNome').value.trim();
+  if(!nome){ showToast('Digite o nome da categoria'); return; }
+  if(!state.receitaCategorias) state.receitaCategorias = [];
+  const existe = state.receitaCategorias.find(c=>c.nome.toLowerCase()===nome.toLowerCase());
+  if(existe){ showToast('Essa categoria já existe'); return; }
+  state.receitaCategorias.push({ id:'rcat'+Date.now(), nome });
+  persist();
+  closeModal('modalReceitaCategoria');
+  renderReceitas();
+  showToast('Categoria criada');
+}
+
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw.js').catch(e=> console.error('Erro ao registrar service worker', e));

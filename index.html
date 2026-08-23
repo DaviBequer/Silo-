@@ -179,10 +179,24 @@
 
 </div>
 
+<div class="aba" id="aba-receitas">
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg>Receitas</div><button class="btn-icon-sm" onclick="openReceitaModal()" title="Nova Receita"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button></div>
+
+    <div class="receita-cat-chips" id="receitaCatChips"></div>
+    <button class="btn btn-sm btn-outline btn-block" style="margin-bottom:14px" onclick="openReceitaCategoriaModal()">+ Nova Categoria</button>
+
+    <div id="receitaLista" class="receita-lista"></div>
+  </div>
+
+</div>
+
 <nav class="bottom-nav">
   <button class="nav-item active" onclick="switchAba('panorama')" data-aba="panorama"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Panorama</span></button>
   <button class="nav-item" onclick="switchAba('planner')" data-aba="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Planner</span></button>
   <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span>Ponto PJ</span></button>
+  <button class="nav-item" onclick="switchAba('receitas')" data-aba="receitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg><span>Receitas</span></button>
 </nav>
 
 <!-- MODAL GASTO -->
@@ -476,6 +490,66 @@
       <button class="btn btn-outline btn-block" onclick="closeModal('modalReserva')">Cancelar</button>
       <button class="btn btn-block" onclick="salvarReserva()">Salvar</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReceitaCategoria">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nova Categoria</h3>
+      <button class="modal-close" onclick="closeModal('modalReceitaCategoria')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome da Categoria</label>
+      <input type="text" id="receitaCategoriaNome" placeholder="Ex: Sobremesa, Salgado, Bebida...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalReceitaCategoria')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarReceitaCategoria()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReceita">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalReceitaTitle">Nova Receita</h3>
+      <button class="modal-close" onclick="closeModal('modalReceita')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="receitaId">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div id="receitaFotoPreview"></div>
+      <div style="flex:1;display:flex;gap:6px">
+        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Foto<input type="file" accept="image/*" style="display:none" onchange="onReceitaFotoSelected(event)"></label>
+        <button type="button" class="btn btn-sm btn-outline" onclick="removerReceitaFoto()">Remover</button>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Nome da Receita</label>
+      <input type="text" id="receitaNome" placeholder="Ex: Bolo de Cenoura">
+    </div>
+    <div class="field full">
+      <label>Categoria</label>
+      <select id="receitaCategoriaSelect"><option value="">Sem categoria</option></select>
+    </div>
+    <div class="field full">
+      <label>Descrição / Modo de Preparo</label>
+      <textarea id="receitaDescricao" rows="5" placeholder="Ingredientes, modo de preparo, observações..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalReceita')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarReceita()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalVerReceita">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="verReceitaNome">Receita</h3>
+      <button class="modal-close" onclick="closeModal('modalVerReceita')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="verReceitaConteudo"></div>
   </div>
 </div>
 

@@ -389,3 +389,24 @@ body{padding-bottom:0}
 
 .reserva-badge{display:flex;justify-content:space-between;align-items:center;margin-top:var(--s2);padding:var(--s2) var(--s3);border-radius:var(--radius-sm);background:var(--warning-tint);cursor:pointer;font-size:11.5px;color:var(--text-dim);font-weight:600}
 .reserva-badge b{color:var(--text);font-weight:800;font-size:13px}
+
+/* RECEITAS */
+.receita-cat-chips{display:flex;gap:var(--s2);overflow-x:auto;margin-bottom:var(--s3);scrollbar-width:none;-ms-overflow-style:none}
+.receita-cat-chips::-webkit-scrollbar{display:none;height:0}
+.cat-chip{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--card-2);border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--text-dim);cursor:pointer;white-space:nowrap;transition:all var(--dur) var(--ease)}
+.cat-chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.cat-chip-del{margin-left:2px;opacity:.6;font-weight:900;padding:0 2px}
+.cat-chip-del:hover{opacity:1}
+
+.receita-lista{display:flex;flex-direction:column;gap:var(--s2)}
+.receita-card{display:flex;align-items:center;gap:12px;padding:var(--s3);border-radius:var(--radius-md);background:var(--card-2);cursor:pointer;transition:background var(--dur) var(--ease)}
+.receita-card:active{background:var(--primary-tint)}
+.receita-foto{width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0}
+.receita-foto-placeholder{display:flex;align-items:center;justify-content:center;background:var(--primary-tint);color:var(--primary);font-weight:800;font-size:20px}
+.receita-foto-grande{width:100%;max-height:220px;object-fit:cover;border-radius:var(--radius-md);margin-bottom:var(--s2)}
+.receita-info{flex:1;min-width:0}
+.receita-nome{font-weight:800;font-size:14px;color:var(--text)}
+.receita-desc{font-size:11.5px;color:var(--text-faint);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.receita-meta{display:flex;gap:8px;align-items:center;margin-top:4px;font-size:10.5px;color:var(--text-faint)}
+.receita-cat-badge{background:var(--primary-tint);color:var(--primary);font-weight:700;padding:2px 8px;border-radius:999px;font-size:9.5px;text-transform:uppercase;letter-spacing:.3px}
+.receita-actions{display:flex;gap:2px;flex-shrink:0}
