@@ -32,6 +32,8 @@ function novoEstado(){
     tarefaCategorias:[],
     receitas:[],
     receitaCategorias:[],
+    semanaOffset:0,
+    semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
   };
 }
@@ -67,6 +69,23 @@ function carregar(){
       if(state.reserva === undefined) state.reserva = 0;
       if(!state.receitas) state.receitas = [];
       if(!state.receitaCategorias) state.receitaCategorias = [];
+      if(state.semanaOffset === undefined) state.semanaOffset = 0;
+      if(!state.semanaAgenda) state.semanaAgenda = {};
+      state.receitas.forEach(r=>{
+        if(r.favorito === undefined) r.favorito = false;
+        if(!r.passos){
+          r.passos = r.descricao ? [r.descricao] : [];
+          r.observacoes = r.observacoes || '';
+        }
+        if(r.ingredientes && r.ingredientes.length && typeof r.ingredientes[0] === 'string'){
+          r.ingredientes = r.ingredientes.map(txt=>({ nome: txt, quantidade:'', unidade:'' }));
+        }
+        if(!r.ingredientes) r.ingredientes = [];
+        if(r.tempo === undefined) r.tempo = '';
+        if(r.porcoes === undefined) r.porcoes = '';
+        if(r.dificuldade === undefined) r.dificuldade = '';
+        if(r.cor === undefined) r.cor = '';
+      });
       if(!state.tarefas) state.tarefas = [];
       if(!state.tarefaCategorias) state.tarefaCategorias = [];
       (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
@@ -201,6 +220,11 @@ function aplicarLogoSalva(){
 /* ================= ÍCONES SVG (sem emoji) ================= */
 const ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+const ICON_PRATO = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>';
+const ICON_RECEITA_EMPTY = '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg>';
+const ICON_CLOCK_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
+const ICON_PORCOES_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+const ICON_DUPLICATE_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_BAN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg>';
 const ICON_SAVE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
 const ICON_CHART = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
@@ -956,6 +980,7 @@ let tarefaTimerInterval = null;
 
 function openTarefasModal(){
   document.getElementById('pageTarefas').classList.add('active');
+  switchTarefasSubtab('tarefas');
   renderTarefasModal();
   if(tarefaTimerInterval) clearInterval(tarefaTimerInterval);
   tarefaTimerInterval = setInterval(tickTarefaTimers, 1000);
@@ -963,6 +988,13 @@ function openTarefasModal(){
 function closeTarefasPage(){
   document.getElementById('pageTarefas').classList.remove('active');
   if(tarefaTimerInterval){ clearInterval(tarefaTimerInterval); tarefaTimerInterval = null; }
+}
+function switchTarefasSubtab(tab){
+  document.getElementById('subtabTarefas').style.display = tab==='tarefas' ? '' : 'none';
+  document.getElementById('subtabSemana').style.display = tab==='semana' ? '' : 'none';
+  document.getElementById('subtabBtnTarefas').classList.toggle('active', tab==='tarefas');
+  document.getElementById('subtabBtnSemana').classList.toggle('active', tab==='semana');
+  if(tab==='semana') renderSemana();
 }
 function novaTarefaCategoria(nome){
   if(!nome) return null;
@@ -2013,70 +2045,283 @@ aplicarLogoSalva();
 /* ================= PWA: registro do service worker ================= */
 /* ================= RECEITAS ================= */
 let receitaFotoUrlAtual = null;
-let receitaFiltroCategoria = null;
+let receitaFiltroAtivo = 'todas';
+let receitaSearchQuery = '';
+let receitaCategoriaSelecionada = null;
+let receitaDificuldadeSelecionada = '';
+let receitaCorSelecionada = '';
+let receitaDetalheAtualId = null;
+let receitaChecklistState = {};
+const RECEITA_CORES = ['#820AD1','#E0342B','#DB8B18','#1C9D5B','#0EA5E9','#7B5FA6'];
 
+/* ---------- TELA PRINCIPAL ---------- */
 function renderReceitas(){
-  renderReceitaCatChips();
-  renderReceitaLista();
+  renderReceitaFilterChips();
+  renderReceitaGrid();
 }
 
-function renderReceitaCatChips(){
-  const el = document.getElementById('receitaCatChips');
+function renderReceitaFilterChips(){
+  const el = document.getElementById('receitaFilterChips');
   const cats = state.receitaCategorias || [];
-  let html = `<button class="cat-chip${receitaFiltroCategoria===null?' active':''}" onclick="filtrarReceitaCategoria(null)">Todas</button>`;
+  let html = '';
+  html += chipReceitaFiltro('todas', 'Todas');
+  html += chipReceitaFiltro('favoritos', 'Favoritos');
+  html += chipReceitaFiltro('recentes', 'Recentes');
   cats.forEach(c=>{
-    html += `<button class="cat-chip${receitaFiltroCategoria===c.id?' active':''}" onclick="filtrarReceitaCategoria('${c.id}')">${c.nome}<span class="cat-chip-del" onclick="event.stopPropagation();excluirReceitaCategoria('${c.id}')">×</span></button>`;
+    html += `<button class="filter-chip${receitaFiltroAtivo===c.id?' active':''}" onclick="selecionarReceitaFiltro('${c.id}')">${c.nome}<span class="filter-chip-del" onclick="event.stopPropagation();excluirReceitaCategoria('${c.id}')">×</span></button>`;
   });
+  html += `<button class="filter-chip filter-chip-add" onclick="openReceitaCategoriaModal()">+ Categoria</button>`;
   el.innerHTML = html;
 }
-function filtrarReceitaCategoria(id){
-  receitaFiltroCategoria = id;
+function chipReceitaFiltro(val, label){
+  return `<button class="filter-chip${receitaFiltroAtivo===val?' active':''}" onclick="selecionarReceitaFiltro('${val}')">${label}</button>`;
+}
+function selecionarReceitaFiltro(val){
+  receitaFiltroAtivo = val;
   renderReceitas();
 }
 function excluirReceitaCategoria(id){
   if(!confirm('Excluir esta categoria? As receitas dela ficarão sem categoria.')) return;
   state.receitaCategorias = (state.receitaCategorias||[]).filter(c=>c.id!==id);
   (state.receitas||[]).forEach(r=>{ if(r.categoriaId===id) r.categoriaId=null; });
-  if(receitaFiltroCategoria===id) receitaFiltroCategoria=null;
+  if(receitaFiltroAtivo===id) receitaFiltroAtivo='todas';
   persist();
   renderReceitas();
 }
-
-function renderReceitaLista(){
-  const el = document.getElementById('receitaLista');
+function onReceitaSearchInput(val){
+  receitaSearchQuery = val.trim().toLowerCase();
+  document.getElementById('receitaSearchClear').style.display = receitaSearchQuery ? 'block' : 'none';
+  renderReceitaGrid();
+}
+function limparReceitaSearch(){
+  receitaSearchQuery = '';
+  document.getElementById('receitaSearchInput').value = '';
+  document.getElementById('receitaSearchClear').style.display = 'none';
+  renderReceitaGrid();
+}
+function getReceitasFiltradas(){
   let list = state.receitas || [];
-  if(receitaFiltroCategoria!==null){
-    list = list.filter(r=> receitaFiltroCategoria==='_sem' ? !r.categoriaId : r.categoriaId===receitaFiltroCategoria);
+  if(receitaFiltroAtivo === 'favoritos'){
+    list = list.filter(r=>r.favorito);
+  } else if(receitaFiltroAtivo === 'recentes'){
+    list = [...list].sort((a,b)=>(b.atualizadoEm||b.criadoEm||0)-(a.atualizadoEm||a.criadoEm||0)).slice(0,8);
+  } else if(receitaFiltroAtivo !== 'todas'){
+    list = list.filter(r=>r.categoriaId===receitaFiltroAtivo);
   }
-  list = [...list].sort((a,b)=> (b.criadoEm||0) - (a.criadoEm||0));
-  if(!list.length){
-    el.innerHTML = `<div class="empty-state">Nenhuma receita ainda. Toque no + pra adicionar.</div>`;
-    return;
+  if(receitaSearchQuery){
+    list = list.filter(r=>{
+      const cat = r.categoriaId ? (state.receitaCategorias||[]).find(c=>c.id===r.categoriaId) : null;
+      const alvo = [r.nome, cat?cat.nome:'', ...(r.ingredientes||[]).map(i=>i.nome)].join(' ').toLowerCase();
+      return alvo.includes(receitaSearchQuery);
+    });
   }
-  el.innerHTML = list.map(r=>{
-    const cat = r.categoriaId ? (state.receitaCategorias||[]).find(c=>c.id===r.categoriaId) : null;
-    const dataTxt = r.criadoEm ? new Date(r.criadoEm).toLocaleDateString('pt-BR') : '';
-    const foto = r.fotoUrl
-      ? `<img src="${r.fotoUrl}" class="receita-foto">`
-      : `<div class="receita-foto receita-foto-placeholder">${r.nome.charAt(0).toUpperCase()}</div>`;
-    const descCurta = (r.descricao||'').slice(0,70) + ((r.descricao||'').length>70?'…':'');
-    return `<div class="receita-card" onclick="abrirVerReceita('${r.id}')">
-      ${foto}
-      <div class="receita-info">
-        <div class="receita-nome">${r.nome}</div>
-        ${descCurta?`<div class="receita-desc">${descCurta}</div>`:''}
-        <div class="receita-meta">${cat?`<span class="receita-cat-badge">${cat.nome}</span>`:''}${dataTxt?`<span>${dataTxt}</span>`:''}</div>
-      </div>
-      <div class="receita-actions" onclick="event.stopPropagation()">
-        <button class="btn-icon-sm" onclick="openReceitaModal('${r.id}')">${ICON_EDIT}</button>
-        <button class="btn-icon-sm" onclick="excluirReceita('${r.id}')">${ICON_TRASH}</button>
-      </div>
-    </div>`;
-  }).join('');
+  if(receitaFiltroAtivo !== 'recentes'){
+    list = [...list].sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0));
+  }
+  return list;
 }
 
-let receitaCategoriaSelecionada = null;
+function renderReceitaGrid(){
+  const el = document.getElementById('receitaGrid');
+  const list = getReceitasFiltradas();
+  if(!list.length){
+    const msg = receitaSearchQuery ? 'Nenhuma receita encontrada.' : (state.receitas||[]).length ? 'Nenhuma receita nesse filtro.' : null;
+    if(msg){
+      el.innerHTML = `<div class="receita-empty"><div class="receita-empty-icon">${ICON_RECEITA_EMPTY}</div><div class="receita-empty-title">${msg}</div></div>`;
+    }else{
+      el.innerHTML = `<div class="receita-empty"><div class="receita-empty-icon">${ICON_RECEITA_EMPTY}</div><div class="receita-empty-title">Seu livro de receitas está vazio</div><div class="receita-empty-sub">Guarde suas receitas favoritas com fotos, ingredientes e modo de preparo.</div><button class="btn" onclick="openReceitaModal()">Criar primeira receita</button></div>`;
+    }
+    return;
+  }
+  el.innerHTML = list.map(r=>receitaCardHtml(r)).join('');
+}
 
+function receitaCardHtml(r){
+  const cat = r.categoriaId ? (state.receitaCategorias||[]).find(c=>c.id===r.categoriaId) : null;
+  const dataTxt = (r.atualizadoEm||r.criadoEm) ? new Date(r.atualizadoEm||r.criadoEm).toLocaleDateString('pt-BR') : '';
+  const foto = r.fotoUrl
+    ? `<img src="${r.fotoUrl}" class="receita-card-img" loading="lazy">`
+    : `<div class="receita-card-img receita-card-img-placeholder" style="${r.cor?`background:${r.cor}22`:''}">${ICON_PRATO}</div>`;
+  return `<div class="receita-card" onclick="abrirReceitaDetalhe('${r.id}')">
+    <div class="receita-card-media">
+      ${foto}
+      <button class="receita-card-fav${r.favorito?' active':''}" onclick="event.stopPropagation();toggleFavoritoReceita('${r.id}')" aria-label="Favoritar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="${r.favorito?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </button>
+      ${cat?`<span class="receita-card-cat">${cat.nome}</span>`:''}
+    </div>
+    <div class="receita-card-body">
+      <div class="receita-card-nome">${r.nome}</div>
+      <div class="receita-card-meta">
+        ${r.tempo?`<span>${ICON_CLOCK_SM}${r.tempo}</span>`:''}
+        ${r.porcoes?`<span>${ICON_PORCOES_SM}${r.porcoes} porções</span>`:''}
+      </div>
+      ${dataTxt?`<div class="receita-card-data">Editado em ${dataTxt}</div>`:''}
+    </div>
+    <div class="receita-card-menu-wrap" onclick="event.stopPropagation()">
+      <button class="receita-card-menu-btn" onclick="toggleReceitaCardMenu('${r.id}', event)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="5" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="12" cy="19" r="1.1"/></svg></button>
+      <div class="receita-card-menu" id="receitaCardMenu-${r.id}" style="display:none">
+        <button onclick="openReceitaModal('${r.id}')">${ICON_EDIT} Editar</button>
+        <button onclick="duplicarReceita('${r.id}')">${ICON_DUPLICATE_SM} Duplicar</button>
+        <button onclick="excluirReceita('${r.id}')" style="color:var(--danger)">${ICON_TRASH} Excluir</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleReceitaCardMenu(id, event){
+  event.stopPropagation();
+  document.querySelectorAll('.receita-card-menu').forEach(m=>{ if(m.id !== 'receitaCardMenu-'+id) m.style.display='none'; });
+  const menu = document.getElementById('receitaCardMenu-'+id);
+  menu.style.display = menu.style.display==='block' ? 'none' : 'block';
+}
+document.addEventListener('click', ()=>{ document.querySelectorAll('.receita-card-menu').forEach(m=>m.style.display='none'); });
+
+function toggleFavoritoReceita(id){
+  const r = (state.receitas||[]).find(r=>r.id===id);
+  if(!r) return;
+  r.favorito = !r.favorito;
+  vibrar();
+  persist();
+  renderReceitaGrid();
+  if(receitaDetalheAtualId === id) renderReceitaDetalheConteudo(r);
+}
+function vibrar(ms){
+  if(navigator.vibrate){ try{ navigator.vibrate(ms||12); }catch(e){} }
+}
+
+function duplicarReceita(id){
+  const r = (state.receitas||[]).find(r=>r.id===id);
+  if(!r) return;
+  const copia = JSON.parse(JSON.stringify(r));
+  copia.id = 'rc'+Date.now();
+  copia.nome = r.nome + ' (cópia)';
+  copia.favorito = false;
+  copia.criadoEm = Date.now();
+  copia.atualizadoEm = Date.now();
+  state.receitas.push(copia);
+  persist();
+  renderReceitas();
+  showToast('Receita duplicada');
+}
+function excluirReceita(id){
+  if(!confirm('Excluir esta receita?')) return;
+  state.receitas = (state.receitas||[]).filter(r=>r.id!==id);
+  persist();
+  renderReceitas();
+  showToast('Receita removida');
+}
+
+/* ---------- DETALHES (fullpage) ---------- */
+function abrirReceitaDetalhe(id){
+  const r = (state.receitas||[]).find(r=>r.id===id);
+  if(!r) return;
+  receitaDetalheAtualId = id;
+  renderReceitaDetalheConteudo(r);
+  document.getElementById('receitaDetalheHeaderTitle').textContent = r.nome;
+  document.getElementById('pageReceitaDetalhe').classList.add('active');
+  document.getElementById('receitaDetalheMenuDropdown').style.display = 'none';
+}
+function closeReceitaDetalhe(){
+  document.getElementById('pageReceitaDetalhe').classList.remove('active');
+  receitaDetalheAtualId = null;
+}
+function toggleReceitaDetalheMenu(){
+  const el = document.getElementById('receitaDetalheMenuDropdown');
+  el.style.display = el.style.display==='block' ? 'none' : 'block';
+}
+function renderReceitaDetalheConteudo(r){
+  const cat = r.categoriaId ? (state.receitaCategorias||[]).find(c=>c.id===r.categoriaId) : null;
+  const dificuldadeLbl = {facil:'Fácil',media:'Média',dificil:'Difícil'}[r.dificuldade] || '';
+  const heroStyle = r.fotoUrl ? `background-image:url('${r.fotoUrl}')` : `background:${r.cor||'var(--primary)'}`;
+
+  const ingredientesHtml = (r.ingredientes && r.ingredientes.length)
+    ? r.ingredientes.map((ing,i)=>{
+        const checked = !!receitaChecklistState[r.id+':'+i];
+        const txt = [ing.quantidade, ing.unidade, ing.nome].filter(Boolean).join(' ');
+        return `<div class="receita-check-item${checked?' checked':''}" onclick="toggleIngredienteCheck('${r.id}',${i})">
+          <div class="receita-check-box">${checked?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+          <span>${txt}</span>
+        </div>`;
+      }).join('')
+    : '<div class="receita-detalhe-vazio">Nenhum ingrediente adicionado.</div>';
+
+  const passosHtml = (r.passos && r.passos.filter(p=>p.trim()).length)
+    ? r.passos.filter(p=>p.trim()).map((p,i)=>`<div class="receita-passo-item"><div class="receita-passo-num">${i+1}</div><div class="receita-passo-txt">${p}</div></div>`).join('')
+    : '<div class="receita-detalhe-vazio">Nenhum passo adicionado.</div>';
+
+  document.getElementById('receitaDetalheConteudo').innerHTML = `
+    <div class="receita-hero" style="${heroStyle}">
+      <div class="receita-hero-gradient"></div>
+      <button class="receita-hero-fav${r.favorito?' active':''}" onclick="toggleFavoritoReceita('${r.id}')">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="${r.favorito?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </button>
+      <div class="receita-hero-info">
+        ${cat?`<span class="receita-hero-cat">${cat.nome}</span>`:''}
+        <div class="receita-hero-nome">${r.nome}</div>
+        <div class="receita-hero-meta">
+          ${r.tempo?`<span>${ICON_CLOCK_SM}${r.tempo}</span>`:''}
+          ${r.porcoes?`<span>${ICON_PORCOES_SM}${r.porcoes} porções</span>`:''}
+          ${dificuldadeLbl?`<span class="dif-badge dif-${r.dificuldade}">${dificuldadeLbl}</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="receita-detalhe-body">
+      <div class="receita-view-section-title">Ingredientes</div>
+      <div class="receita-check-lista">${ingredientesHtml}</div>
+
+      <div class="receita-view-section-title">Modo de Preparo</div>
+      <div class="receita-passos-view">${passosHtml}</div>
+
+      ${r.observacoes ? `<div class="receita-view-section-title">Observações</div><div class="receita-obs-view">${r.observacoes}</div>` : ''}
+
+      <div class="receita-detalhe-actions">
+        <button class="btn btn-outline" onclick="openReceitaModal('${r.id}')">${ICON_EDIT} Editar</button>
+        <button class="btn btn-outline" onclick="excluirReceitaAtual()" style="color:var(--danger);border-color:var(--danger)">${ICON_TRASH} Excluir</button>
+      </div>
+    </div>
+  `;
+}
+function toggleIngredienteCheck(recId, idx){
+  const key = recId+':'+idx;
+  receitaChecklistState[key] = !receitaChecklistState[key];
+  vibrar(8);
+  const r = (state.receitas||[]).find(r=>r.id===recId);
+  if(r) renderReceitaDetalheConteudo(r);
+}
+function compartilharReceitaAtual(){
+  const r = (state.receitas||[]).find(r=>r.id===receitaDetalheAtualId);
+  if(!r) return;
+  document.getElementById('receitaDetalheMenuDropdown').style.display = 'none';
+  const ingTxt = (r.ingredientes||[]).map(i=>'• '+[i.quantidade,i.unidade,i.nome].filter(Boolean).join(' ')).join('\n');
+  const passosTxt = (r.passos||[]).filter(p=>p.trim()).map((p,i)=>(i+1)+'. '+p).join('\n');
+  const texto = `${r.nome}\n\nIngredientes:\n${ingTxt}\n\nModo de Preparo:\n${passosTxt}`;
+  if(navigator.share){
+    navigator.share({ title: r.nome, text: texto }).catch(()=>{});
+  }else if(navigator.clipboard){
+    navigator.clipboard.writeText(texto).then(()=>showToast('Receita copiada'));
+  }else{
+    showToast('Compartilhamento não suportado neste dispositivo');
+  }
+}
+function duplicarReceitaAtual(){
+  if(!receitaDetalheAtualId) return;
+  document.getElementById('receitaDetalheMenuDropdown').style.display = 'none';
+  duplicarReceita(receitaDetalheAtualId);
+  closeReceitaDetalhe();
+}
+function excluirReceitaAtual(){
+  if(!receitaDetalheAtualId) return;
+  document.getElementById('receitaDetalheMenuDropdown').style.display = 'none';
+  if(!confirm('Excluir esta receita?')) return;
+  state.receitas = (state.receitas||[]).filter(r=>r.id!==receitaDetalheAtualId);
+  persist();
+  closeReceitaDetalhe();
+  renderReceitas();
+  showToast('Receita removida');
+}
+
+/* ---------- CATEGORIA (seletor customizado) ---------- */
 function toggleReceitaCatPicker(){
   const panel = document.getElementById('receitaCatPickerPanel');
   const isOpen = panel.style.display === 'block';
@@ -2115,131 +2360,6 @@ function criarCategoriaInline(){
   selecionarReceitaCategoria(cat.id);
   renderReceitaCatPickerGrid();
 }
-
-function renderReceitaFotoPreview(){
-  const el = document.getElementById('receitaFotoPreview');
-  const nome = document.getElementById('receitaNome').value || '?';
-  el.innerHTML = receitaFotoUrlAtual
-    ? `<img src="${receitaFotoUrlAtual}" class="conta-logo-grande">`
-    : `<div class="conta-logo-grande conta-logo-placeholder">${nome.charAt(0).toUpperCase()}</div>`;
-}
-function onReceitaFotoSelected(event){
-  const file = event.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{ receitaFotoUrlAtual = e.target.result; renderReceitaFotoPreview(); };
-  reader.readAsDataURL(file);
-}
-function removerReceitaFoto(){
-  receitaFotoUrlAtual = null;
-  renderReceitaFotoPreview();
-}
-
-/* Ingredientes dinâmicos */
-function renderIngredientesCampos(valores){
-  const lista = document.getElementById('receitaIngredientesLista');
-  const vals = (valores && valores.length) ? valores : ['', '', ''];
-  lista.innerHTML = vals.map((v,i)=>`
-    <div class="receita-ing-row">
-      <div class="receita-ing-num">${i+1}</div>
-      <input type="text" class="receita-ing-input" placeholder="Ex: 2 xícaras de farinha" value="${(v||'').replace(/"/g,'&quot;')}">
-      <button type="button" class="btn-icon-sm" onclick="removerIngredienteCampo(this)">${ICON_TRASH}</button>
-    </div>
-  `).join('');
-}
-function addIngredienteCampo(){
-  const lista = document.getElementById('receitaIngredientesLista');
-  const n = lista.children.length + 1;
-  const row = document.createElement('div');
-  row.className = 'receita-ing-row';
-  row.innerHTML = `<div class="receita-ing-num">${n}</div><input type="text" class="receita-ing-input" placeholder="Ex: 1 pitada de sal"><button type="button" class="btn-icon-sm" onclick="removerIngredienteCampo(this)">${ICON_TRASH}</button>`;
-  lista.appendChild(row);
-  row.querySelector('input').focus();
-}
-function removerIngredienteCampo(btn){
-  const row = btn.closest('.receita-ing-row');
-  row.remove();
-  document.querySelectorAll('#receitaIngredientesLista .receita-ing-num').forEach((el,i)=>{ el.textContent = i+1; });
-}
-function coletarIngredientes(){
-  return Array.from(document.querySelectorAll('#receitaIngredientesLista .receita-ing-input'))
-    .map(inp=>inp.value.trim())
-    .filter(v=>v.length>0);
-}
-
-function openReceitaModal(id){
-  document.getElementById('receitaId').value = id || '';
-  document.getElementById('modalReceitaTitle').textContent = id ? 'Editar Receita' : 'Nova Receita';
-  document.getElementById('receitaCatPickerPanel').style.display = 'none';
-  document.getElementById('receitaCatNovaInput').value = '';
-  if(id){
-    const r = (state.receitas||[]).find(r=>r.id===id);
-    if(r){
-      document.getElementById('receitaNome').value = r.nome;
-      document.getElementById('receitaDescricao').value = r.descricao || '';
-      receitaFotoUrlAtual = r.fotoUrl || null;
-      selecionarReceitaCategoria(r.categoriaId || null);
-      renderIngredientesCampos(r.ingredientes || []);
-    }
-  }else{
-    document.getElementById('receitaNome').value = '';
-    document.getElementById('receitaDescricao').value = '';
-    receitaFotoUrlAtual = null;
-    selecionarReceitaCategoria(null);
-    renderIngredientesCampos([]);
-  }
-  renderReceitaFotoPreview();
-  document.getElementById('modalReceita').classList.add('active');
-}
-function salvarReceita(){
-  const id = document.getElementById('receitaId').value;
-  const nome = document.getElementById('receitaNome').value.trim();
-  const descricao = document.getElementById('receitaDescricao').value.trim();
-  const categoriaId = document.getElementById('receitaCategoriaSelect').value || null;
-  const fotoUrl = receitaFotoUrlAtual;
-  const ingredientes = coletarIngredientes();
-  if(!nome){ showToast('Digite o nome da receita'); return; }
-  if(!state.receitas) state.receitas = [];
-  if(id){
-    const r = state.receitas.find(r=>r.id===id);
-    if(r) Object.assign(r, { nome, descricao, categoriaId, fotoUrl, ingredientes });
-  }else{
-    state.receitas.push({ id:'rc'+Date.now(), nome, descricao, categoriaId, fotoUrl, ingredientes, criadoEm: Date.now() });
-  }
-  persist();
-  closeModal('modalReceita');
-  renderReceitas();
-  showToast('Receita salva');
-}
-function excluirReceita(id){
-  if(!confirm('Excluir esta receita?')) return;
-  state.receitas = (state.receitas||[]).filter(r=>r.id!==id);
-  persist();
-  renderReceitas();
-}
-function abrirVerReceita(id){
-  const r = (state.receitas||[]).find(r=>r.id===id);
-  if(!r) return;
-  const cat = r.categoriaId ? (state.receitaCategorias||[]).find(c=>c.id===r.categoriaId) : null;
-  const dataTxt = r.criadoEm ? new Date(r.criadoEm).toLocaleDateString('pt-BR') : '';
-  const foto = r.fotoUrl ? `<img src="${r.fotoUrl}" class="receita-foto-grande">` : '';
-  const ingredientesHtml = (r.ingredientes && r.ingredientes.length)
-    ? `<div class="receita-view-section-title">Ingredientes</div><div class="receita-ing-view">${r.ingredientes.map((ing,i)=>`<div class="receita-ing-view-item"><div class="receita-ing-num">${i+1}</div>${ing}</div>`).join('')}</div>`
-    : '';
-  const preparoHtml = r.descricao
-    ? `<div class="receita-view-section-title">Modo de Preparo</div><div style="white-space:pre-wrap;font-size:13.5px;color:var(--text-dim);line-height:1.6">${r.descricao}</div>`
-    : '';
-  document.getElementById('verReceitaNome').textContent = r.nome;
-  document.getElementById('verReceitaConteudo').innerHTML = `
-    ${foto}
-    <div class="receita-meta" style="margin:10px 0">${cat?`<span class="receita-cat-badge">${cat.nome}</span>`:''}${dataTxt?`<span>${dataTxt}</span>`:''}</div>
-    ${ingredientesHtml}
-    ${preparoHtml}
-    ${!ingredientesHtml && !preparoHtml ? '<div style="font-size:13px;color:var(--text-faint)">Sem ingredientes ou modo de preparo.</div>' : ''}
-  `;
-  document.getElementById('modalVerReceita').classList.add('active');
-}
-
 function openReceitaCategoriaModal(){
   document.getElementById('receitaCategoriaNome').value = '';
   document.getElementById('modalReceitaCategoria').classList.add('active');
@@ -2255,6 +2375,338 @@ function salvarReceitaCategoria(){
   closeModal('modalReceitaCategoria');
   renderReceitas();
   showToast('Categoria criada');
+}
+
+/* ---------- FOTO (com compressão) ---------- */
+function renderReceitaFotoPreview(){
+  const el = document.getElementById('receitaFotoPreview');
+  el.innerHTML = receitaFotoUrlAtual
+    ? `<img src="${receitaFotoUrlAtual}">`
+    : `<div class="receita-form-foto-placeholder">${ICON_PRATO}<span>Adicionar foto</span></div>`;
+}
+function onReceitaFotoSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  comprimirImagem(file, 900, 0.8).then(dataUrl=>{
+    receitaFotoUrlAtual = dataUrl;
+    renderReceitaFotoPreview();
+  });
+  event.target.value = '';
+}
+function removerReceitaFoto(){
+  receitaFotoUrlAtual = null;
+  renderReceitaFotoPreview();
+}
+function comprimirImagem(file, maxDim, qualidade){
+  return new Promise(resolve=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){
+          if(w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', qualidade));
+      };
+      img.onerror = ()=> resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- INGREDIENTES (quantidade + unidade + nome) ---------- */
+function ingredienteRowHtml(ing, i){
+  const q = (ing && ing.quantidade || '').toString().replace(/"/g,'&quot;');
+  const u = (ing && ing.unidade || '').toString().replace(/"/g,'&quot;');
+  const n = (ing && ing.nome || '').toString().replace(/"/g,'&quot;');
+  return `<div class="receita-ing-row">
+    <div class="receita-ing-num">${i+1}</div>
+    <input type="text" class="receita-ing-qtd" placeholder="Qtd" value="${q}">
+    <input type="text" class="receita-ing-un" placeholder="Unid." value="${u}">
+    <input type="text" class="receita-ing-nome" placeholder="Ingrediente" value="${n}">
+    <button type="button" class="btn-icon-sm" onclick="removerIngredienteCampo(this)">${ICON_TRASH}</button>
+  </div>`;
+}
+function renderIngredientesCampos(valores){
+  const lista = document.getElementById('receitaIngredientesLista');
+  const vals = (valores && valores.length) ? valores : [{},{},{}];
+  lista.innerHTML = vals.map((v,i)=>ingredienteRowHtml(v,i)).join('');
+}
+function addIngredienteCampo(){
+  const lista = document.getElementById('receitaIngredientesLista');
+  const n = lista.children.length;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = ingredienteRowHtml({}, n);
+  const row = wrap.firstElementChild;
+  lista.appendChild(row);
+  row.querySelector('.receita-ing-qtd').focus();
+}
+function removerIngredienteCampo(btn){
+  const row = btn.closest('.receita-ing-row');
+  row.remove();
+  document.querySelectorAll('#receitaIngredientesLista .receita-ing-num').forEach((el,i)=>{ el.textContent = i+1; });
+}
+function coletarIngredientes(){
+  return Array.from(document.querySelectorAll('#receitaIngredientesLista .receita-ing-row')).map(row=>({
+    quantidade: row.querySelector('.receita-ing-qtd').value.trim(),
+    unidade: row.querySelector('.receita-ing-un').value.trim(),
+    nome: row.querySelector('.receita-ing-nome').value.trim()
+  })).filter(i=>i.nome || i.quantidade || i.unidade);
+}
+
+/* ---------- MODO DE PREPARO (passos) ---------- */
+function passoRowHtml(txt, i){
+  const v = (txt||'').replace(/"/g,'&quot;');
+  return `<div class="receita-passo-row">
+    <div class="receita-passo-num">${i+1}</div>
+    <textarea class="receita-passo-input" rows="2" placeholder="Descreva o passo ${i+1}...">${txt||''}</textarea>
+    <button type="button" class="btn-icon-sm" onclick="removerPassoCampo(this)">${ICON_TRASH}</button>
+  </div>`;
+}
+function renderPassosCampos(valores){
+  const lista = document.getElementById('receitaPassosLista');
+  const vals = (valores && valores.length) ? valores : ['', ''];
+  lista.innerHTML = vals.map((v,i)=>passoRowHtml(v,i)).join('');
+}
+function addPassoCampo(){
+  const lista = document.getElementById('receitaPassosLista');
+  const n = lista.children.length;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = passoRowHtml('', n);
+  const row = wrap.firstElementChild;
+  lista.appendChild(row);
+  row.querySelector('.receita-passo-input').focus();
+}
+function removerPassoCampo(btn){
+  const row = btn.closest('.receita-passo-row');
+  row.remove();
+  document.querySelectorAll('#receitaPassosLista .receita-passo-num').forEach((el,i)=>{ el.textContent = i+1; });
+}
+function coletarPassos(){
+  return Array.from(document.querySelectorAll('#receitaPassosLista .receita-passo-input'))
+    .map(t=>t.value.trim());
+}
+
+/* ---------- DIFICULDADE E COR ---------- */
+function selecionarDificuldade(val){
+  receitaDificuldadeSelecionada = receitaDificuldadeSelecionada===val ? '' : val;
+  document.getElementById('receitaDificuldade').value = receitaDificuldadeSelecionada;
+  document.querySelectorAll('#receitaDificuldadeChips .dif-chip').forEach(el=>{
+    el.classList.toggle('active', el.dataset.val === receitaDificuldadeSelecionada);
+  });
+}
+function renderCorChips(){
+  const el = document.getElementById('receitaCorChips');
+  el.innerHTML = RECEITA_CORES.map(c=>`<button type="button" class="cor-chip${receitaCorSelecionada===c?' selected':''}" style="background:${c}" onclick="selecionarCor('${c}')"></button>`).join('')
+    + `<button type="button" class="cor-chip cor-chip-none${receitaCorSelecionada===''?' selected':''}" onclick="selecionarCor('')">✕</button>`;
+}
+function selecionarCor(val){
+  receitaCorSelecionada = val;
+  document.getElementById('receitaCor').value = val;
+  renderCorChips();
+}
+function toggleReceitaFormFavorito(){
+  const btn = document.getElementById('receitaFormFavBtn');
+  const ativo = btn.classList.toggle('active');
+  btn.querySelector('svg').setAttribute('fill', ativo ? 'currentColor' : 'none');
+}
+
+/* ---------- FORMULÁRIO (fullpage assistente) ---------- */
+function openReceitaModal(id){
+  document.getElementById('receitaId').value = id || '';
+  document.getElementById('receitaFormTitulo').textContent = id ? 'Editar Receita' : 'Nova Receita';
+  document.getElementById('receitaCatPickerPanel').style.display = 'none';
+  document.getElementById('receitaCatNovaInput').value = '';
+  const favBtn = document.getElementById('receitaFormFavBtn');
+
+  if(id){
+    const r = (state.receitas||[]).find(r=>r.id===id);
+    if(r){
+      document.getElementById('receitaNome').value = r.nome;
+      document.getElementById('receitaTempo').value = r.tempo || '';
+      document.getElementById('receitaPorcoes').value = r.porcoes || '';
+      document.getElementById('receitaObservacoes').value = r.observacoes || '';
+      receitaFotoUrlAtual = r.fotoUrl || null;
+      selecionarReceitaCategoria(r.categoriaId || null);
+      renderIngredientesCampos(r.ingredientes || []);
+      renderPassosCampos(r.passos || []);
+      receitaDificuldadeSelecionada = r.dificuldade || '';
+      document.getElementById('receitaDificuldade').value = receitaDificuldadeSelecionada;
+      document.querySelectorAll('#receitaDificuldadeChips .dif-chip').forEach(el=>{
+        el.classList.toggle('active', el.dataset.val === receitaDificuldadeSelecionada);
+      });
+      receitaCorSelecionada = r.cor || '';
+      favBtn.classList.toggle('active', !!r.favorito);
+      favBtn.querySelector('svg').setAttribute('fill', r.favorito ? 'currentColor' : 'none');
+    }
+  }else{
+    document.getElementById('receitaNome').value = '';
+    document.getElementById('receitaTempo').value = '';
+    document.getElementById('receitaPorcoes').value = '';
+    document.getElementById('receitaObservacoes').value = '';
+    receitaFotoUrlAtual = null;
+    selecionarReceitaCategoria(null);
+    renderIngredientesCampos([]);
+    renderPassosCampos([]);
+    receitaDificuldadeSelecionada = '';
+    document.getElementById('receitaDificuldade').value = '';
+    document.querySelectorAll('#receitaDificuldadeChips .dif-chip').forEach(el=>el.classList.remove('active'));
+    receitaCorSelecionada = '';
+    favBtn.classList.remove('active');
+    favBtn.querySelector('svg').setAttribute('fill', 'none');
+  }
+  renderReceitaFotoPreview();
+  renderCorChips();
+  document.getElementById('pageReceitaForm').classList.add('active');
+}
+function closeReceitaForm(){
+  document.getElementById('pageReceitaForm').classList.remove('active');
+}
+function salvarReceita(){
+  const id = document.getElementById('receitaId').value;
+  const nome = document.getElementById('receitaNome').value.trim();
+  const categoriaId = document.getElementById('receitaCategoriaSelect').value || null;
+  const tempo = document.getElementById('receitaTempo').value.trim();
+  const porcoes = document.getElementById('receitaPorcoes').value.trim();
+  const dificuldade = document.getElementById('receitaDificuldade').value || '';
+  const cor = document.getElementById('receitaCor').value || '';
+  const observacoes = document.getElementById('receitaObservacoes').value.trim();
+  const fotoUrl = receitaFotoUrlAtual;
+  const ingredientes = coletarIngredientes();
+  const passos = coletarPassos();
+  const favorito = document.getElementById('receitaFormFavBtn').classList.contains('active');
+  if(!nome){ showToast('Digite o nome da receita'); return; }
+  if(!state.receitas) state.receitas = [];
+  if(id){
+    const r = state.receitas.find(r=>r.id===id);
+    if(r) Object.assign(r, { nome, categoriaId, tempo, porcoes, dificuldade, cor, observacoes, fotoUrl, ingredientes, passos, favorito, atualizadoEm: Date.now() });
+  }else{
+    state.receitas.push({ id:'rc'+Date.now(), nome, categoriaId, tempo, porcoes, dificuldade, cor, observacoes, fotoUrl, ingredientes, passos, favorito, criadoEm: Date.now(), atualizadoEm: Date.now() });
+  }
+  persist();
+  closeReceitaForm();
+  renderReceitas();
+  showToast('Receita salva');
+}
+/* ================= SEMANA (Bullet Journal) ================= */
+const DIAS_SEMANA_NOMES = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+const PERIODOS_SEMANA = [
+  { key:'manha', label:'Manhã', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>' },
+  { key:'tarde', label:'Tarde', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v1"/><path d="M18.4 5.6l-.7.7"/><path d="M21 12h-1"/><path d="M4 12H3"/><path d="M6.3 6.3l-.7-.7"/><path d="M17 20H7a5 5 0 0 1 10 0Z"/></svg>' },
+  { key:'noite', label:'Noite', icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>' }
+];
+
+function fmtDateKeyLocal(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function getSemanaDates(offset){
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  const dow = now.getDay();
+  const diffToMonday = (dow===0) ? -6 : (1-dow);
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday + offset*7);
+  const dates = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate()+i);
+    dates.push(d);
+  }
+  return dates;
+}
+function navSemana(delta){
+  state.semanaOffset = (state.semanaOffset||0) + delta;
+  persist();
+  renderSemana();
+}
+function renderSemana(){
+  const dates = getSemanaDates(state.semanaOffset||0);
+  const hojeKey = fmtDateKeyLocal(new Date());
+  const primeiro = dates[0], ultimo = dates[6];
+  const lbl = primeiro.getMonth()===ultimo.getMonth()
+    ? `${primeiro.getDate()} – ${ultimo.getDate()} ${MES_NOMES[primeiro.getMonth()]} ${ultimo.getFullYear()}`
+    : `${primeiro.getDate()} ${MES_NOMES[primeiro.getMonth()]} – ${ultimo.getDate()} ${MES_NOMES[ultimo.getMonth()]} ${ultimo.getFullYear()}`;
+  document.getElementById('semanaLabel').textContent = lbl;
+
+  const html = dates.map((d,i)=>{
+    const key = fmtDateKeyLocal(d);
+    const isHoje = key === hojeKey;
+    const dia = state.semanaAgenda[key] || {};
+    const periodosHtml = PERIODOS_SEMANA.map(p=>{
+      const itens = dia[p.key] || [];
+      const itensHtml = itens.length
+        ? itens.map(it=>`
+          <div class="semana-item${it.feito?' feito':''}">
+            <div class="semana-item-check" onclick="toggleSemanaItem('${key}','${p.key}','${it.id}')">${it.feito?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+            <span onclick="toggleSemanaItem('${key}','${p.key}','${it.id}')">${it.texto}</span>
+            <button class="semana-item-del" onclick="excluirSemanaItem('${key}','${p.key}','${it.id}')">×</button>
+          </div>`).join('')
+        : '';
+      return `<div class="semana-periodo">
+        <div class="semana-periodo-head">
+          <span class="semana-periodo-lbl">${p.icon}${p.label}</span>
+          <button class="semana-periodo-add" onclick="openSemanaItemModal('${key}','${p.key}')">+</button>
+        </div>
+        <div class="semana-periodo-itens">${itensHtml}</div>
+      </div>`;
+    }).join('');
+    return `<div class="semana-dia${isHoje?' hoje':''}">
+      <div class="semana-dia-head"><span class="semana-dia-nome">${DIAS_SEMANA_NOMES[i]}</span><span class="semana-dia-num">${d.getDate()}</span></div>
+      ${periodosHtml}
+    </div>`;
+  }).join('');
+  document.getElementById('semanaDiasLista').innerHTML = html;
+}
+function openSemanaItemModal(diaKey, periodo, itemId){
+  document.getElementById('semanaItemDiaKey').value = diaKey;
+  document.getElementById('semanaItemPeriodo').value = periodo;
+  document.getElementById('semanaItemId').value = itemId || '';
+  document.getElementById('semanaItemTexto').value = '';
+  if(itemId){
+    const dia = state.semanaAgenda[diaKey] || {};
+    const item = (dia[periodo]||[]).find(i=>i.id===itemId);
+    if(item) document.getElementById('semanaItemTexto').value = item.texto;
+  }
+  document.getElementById('modalSemanaItem').classList.add('active');
+}
+function salvarSemanaItem(){
+  const diaKey = document.getElementById('semanaItemDiaKey').value;
+  const periodo = document.getElementById('semanaItemPeriodo').value;
+  const itemId = document.getElementById('semanaItemId').value;
+  const texto = document.getElementById('semanaItemTexto').value.trim();
+  if(!texto){ showToast('Digite uma descrição'); return; }
+  if(!state.semanaAgenda[diaKey]) state.semanaAgenda[diaKey] = {};
+  if(!state.semanaAgenda[diaKey][periodo]) state.semanaAgenda[diaKey][periodo] = [];
+  const lista = state.semanaAgenda[diaKey][periodo];
+  if(itemId){
+    const item = lista.find(i=>i.id===itemId);
+    if(item) item.texto = texto;
+  }else{
+    lista.push({ id:'sm'+Date.now(), texto, feito:false });
+  }
+  persist();
+  closeModal('modalSemanaItem');
+  renderSemana();
+}
+function toggleSemanaItem(diaKey, periodo, itemId){
+  const item = (state.semanaAgenda[diaKey]?.[periodo]||[]).find(i=>i.id===itemId);
+  if(!item) return;
+  item.feito = !item.feito;
+  persist();
+  renderSemana();
+}
+function excluirSemanaItem(diaKey, periodo, itemId){
+  if(!state.semanaAgenda[diaKey] || !state.semanaAgenda[diaKey][periodo]) return;
+  state.semanaAgenda[diaKey][periodo] = state.semanaAgenda[diaKey][periodo].filter(i=>i.id!==itemId);
+  persist();
+  renderSemana();
 }
 
 if('serviceWorker' in navigator){
