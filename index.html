@@ -704,6 +704,71 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalDetalheCategoria">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="detalheCategoriaTitulo">Categoria</h3>
+      <button class="modal-close" onclick="closeModal('modalDetalheCategoria')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="detalheCategoriaConteudo"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRendaExtra">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Renda Extra — <span id="rendaExtraModalUsuario"></span></h3>
+      <button class="modal-close" onclick="closeRendaExtraModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="rendaExtraLista" style="margin-bottom:var(--s4)"></div>
+    <div class="card" style="margin:0">
+      <div class="field full" style="margin-bottom:0">
+        <label id="extraFormTitulo">Novo Extra</label>
+      </div>
+      <input type="hidden" id="extraItemId">
+      <div class="field full">
+        <label>Descrição</label>
+        <input type="text" id="extraItemDesc" placeholder="Ex: Devolução de empréstimo, bico extra...">
+      </div>
+      <div class="field full">
+        <label>Valor</label>
+        <input type="text" inputmode="numeric" id="extraItemValor" placeholder="0,00" oninput="maskMoneyInput(this)">
+      </div>
+      <div class="field full">
+        <label>De (mês inicial)</label>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="extraMesInicioPickerBtn" onclick="toggleMonthPicker('extraMesInicioPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="extraMesInicioPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('extraMesInicioPicker',-1)">‹</button>
+              <span id="extraMesInicioPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('extraMesInicioPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="extraMesInicioPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="extraMesInicio">
+      </div>
+      <div class="field full">
+        <label>Até (mês final)</label>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="extraMesFimPickerBtn" onclick="toggleMonthPicker('extraMesFimPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="extraMesFimPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('extraMesFimPicker',-1)">‹</button>
+              <span id="extraMesFimPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('extraMesFimPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="extraMesFimPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="extraMesFim">
+      </div>
+      <button class="btn btn-block" onclick="salvarExtraItem()">Salvar Extra</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalSimulador">
   <div class="modal">
     <div class="modal-header">

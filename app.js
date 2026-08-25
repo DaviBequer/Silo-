@@ -19,8 +19,8 @@ function novoEstado(){
     pontoOffset:0,
     focusMonth:mesFinanceiroAtual(),
     users:{
-      davi:{ income:{}, incomeExtra:{}, saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } },
-      cris:{ income:{}, incomeExtra:{}, saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } }
+      davi:{ income:{}, incomeExtra:{}, extras:[], saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } },
+      cris:{ income:{}, incomeExtra:{}, extras:[], saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } }
     },
     paid:{},
     pagamentosParciais:{},
@@ -53,8 +53,18 @@ function carregar(){
       state = Object.assign(novoEstado(), saved);
       // garante estrutura de usuários/categorias mesmo se dados antigos incompletos
       ['davi','cris'].forEach(u=>{
-        if(!state.users[u]) state.users[u] = { income:{}, incomeExtra:{}, saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } };
+        if(!state.users[u]) state.users[u] = { income:{}, incomeExtra:{}, extras:[], saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } };
         if(!state.users[u].incomeExtra) state.users[u].incomeExtra = {};
+        if(!state.users[u].extras){
+          // migração: valores antigos de incomeExtra (um por mês) viram entradas individuais
+          state.users[u].extras = Object.keys(state.users[u].incomeExtra).filter(mKey=>state.users[u].incomeExtra[mKey]>0).map(mKey=>({
+            id:'ex'+mKey+Math.random().toString(36).slice(2,6),
+            desc:'Extra',
+            valor:state.users[u].incomeExtra[mKey],
+            mesInicio:mKey,
+            mesFim:mKey
+          }));
+        }
         if(state.users[u].saldoAtual === undefined) state.users[u].saldoAtual = 0;
         if(!state.users[u].cartoes) state.users[u].cartoes = [];
         if(!state.users[u].expenses) state.users[u].expenses = { moradia:[], assinatura:[], fixo:[], futuro:[] };
@@ -110,6 +120,7 @@ function limparDadosAntigos(){
     const us = state.users[u];
     Object.keys(us.income||{}).forEach(mKey=>{ if(mKey < limitePlanner) delete us.income[mKey]; });
     Object.keys(us.incomeExtra||{}).forEach(mKey=>{ if(mKey < limitePlanner) delete us.incomeExtra[mKey]; });
+    us.extras = (us.extras||[]).filter(e=> (e.mesFim||e.mesInicio) >= limitePlanner);
     (us.cartoes||[]).forEach(c=>{
       Object.keys(c.gastos||{}).forEach(mKey=>{ if(mKey < limitePlanner) delete c.gastos[mKey]; });
     });
@@ -171,12 +182,6 @@ function maskMoneyInput(el){
   let intPart = digits.slice(0,-2).replace(/^0+(?=\d)/,'');
   intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   el.value = intPart+','+cents;
-}
-function maskTempoInput(el){
-  let digits = el.value.replace(/\D/g,'').slice(0,4);
-  if(digits.length<=2){ el.value = digits; return; }
-  let h = digits.slice(0,-2), m = digits.slice(-2);
-  el.value = h+':'+m;
 }
 function handleMoneyKeydown(event){
   if(event.key !== 'Enter') return;
@@ -260,9 +265,16 @@ function rendaBaseForMonth(user, mKey){
   }
   return state.users[user].income[mKey] || 0;
 }
+function extraTotalForMonth(user, mKey){
+  return (state.users[user].extras||[]).reduce((sum,e)=>{
+    const fim = e.mesFim || e.mesInicio;
+    if(mKey >= e.mesInicio && mKey <= fim) return sum + (Number(e.valor)||0);
+    return sum;
+  }, 0);
+}
 function incomeForMonth(user, mKey){
   const base = rendaBaseForMonth(user, mKey);
-  const extra = (state.users[user].incomeExtra && state.users[user].incomeExtra[mKey]) || 0;
+  const extra = extraTotalForMonth(user, mKey);
   const saldo = (mKey === mesFinanceiroAtual()) ? (state.users[user].saldoAtual || 0) : 0;
   return base + extra + saldo;
 }
@@ -270,6 +282,92 @@ function dizimoForMonth(user, mKey){
   if(user !== 'davi') return 0;
   const base = rendaBaseForMonth(user, mKey);
   return base * DIZIMO_PERCENT;
+}
+
+/* ================= RENDA EXTRA (múltiplas entradas, por período) ================= */
+let rendaExtraUser = null;
+function abrirRendaExtraModal(user, mKey){
+  rendaExtraUser = user;
+  document.getElementById('rendaExtraModalUsuario').textContent = user==='davi'?'Davi':'Cris';
+  resetarFormExtraItem();
+  createMonthPicker('extraMesInicioPicker','extraMesInicio', mKey);
+  createMonthPicker('extraMesFimPicker','extraMesFim', mKey);
+  renderRendaExtraLista();
+  document.getElementById('modalRendaExtra').classList.add('active');
+}
+function resetarFormExtraItem(){
+  document.getElementById('extraItemId').value = '';
+  document.getElementById('extraItemDesc').value = '';
+  document.getElementById('extraItemValor').value = '';
+  document.getElementById('extraFormTitulo').textContent = 'Novo Extra';
+}
+function renderRendaExtraLista(){
+  const lista = (state.users[rendaExtraUser].extras||[]).slice().sort((a,b)=> b.mesInicio.localeCompare(a.mesInicio));
+  const el = document.getElementById('rendaExtraLista');
+  if(lista.length===0){
+    el.innerHTML = `<div class="empty-state-sm">Nenhum extra cadastrado ainda</div>`;
+    return;
+  }
+  el.innerHTML = lista.map(e=>{
+    const fim = e.mesFim || e.mesInicio;
+    const periodo = e.mesInicio===fim ? monthLabelExtensoCurto(e.mesInicio) : `${monthLabelExtensoCurto(e.mesInicio)} – ${monthLabelExtensoCurto(fim)}`;
+    return `<div class="renda-extra-item">
+      <div class="rei-info">
+        <div class="rei-desc">${e.desc}</div>
+        <div class="rei-periodo">${periodo}</div>
+      </div>
+      <div class="rei-valor">${fmtMoney(e.valor)}</div>
+      <div class="rei-actions">
+        <button class="btn-icon-sm" onclick="editarExtraItem('${e.id}')">${ICON_EDIT}</button>
+        <button class="btn-icon-sm" onclick="excluirExtraItem('${e.id}')">${ICON_TRASH}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function editarExtraItem(id){
+  const item = (state.users[rendaExtraUser].extras||[]).find(e=>e.id===id);
+  if(!item) return;
+  document.getElementById('extraItemId').value = item.id;
+  document.getElementById('extraItemDesc').value = item.desc;
+  document.getElementById('extraItemValor').value = Number(item.valor).toFixed(2).replace('.',',');
+  selectPickerMonth('extraMesInicioPicker', item.mesInicio);
+  selectPickerMonth('extraMesFimPicker', item.mesFim||item.mesInicio);
+  document.getElementById('extraFormTitulo').textContent = 'Editar Extra';
+}
+function salvarExtraItem(){
+  const id = document.getElementById('extraItemId').value;
+  const desc = document.getElementById('extraItemDesc').value.trim();
+  const valor = parseMoney(document.getElementById('extraItemValor').value);
+  const mesInicio = document.getElementById('extraMesInicio').value;
+  const mesFim = document.getElementById('extraMesFim').value;
+  if(!desc){ showToast('Digite uma descrição'); return; }
+  if(!valor){ showToast('Digite um valor'); return; }
+  if(!mesInicio || !mesFim){ showToast('Selecione o período'); return; }
+  if(mesFim < mesInicio){ showToast('Mês final não pode ser antes do inicial'); return; }
+  if(!state.users[rendaExtraUser].extras) state.users[rendaExtraUser].extras = [];
+  if(id){
+    const item = state.users[rendaExtraUser].extras.find(e=>e.id===id);
+    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; }
+  } else {
+    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim });
+  }
+  persist();
+  resetarFormExtraItem();
+  renderRendaExtraLista();
+  renderRendaTable();
+  renderPanorama();
+  showToast('Extra salvo');
+}
+function excluirExtraItem(id){
+  state.users[rendaExtraUser].extras = (state.users[rendaExtraUser].extras||[]).filter(e=>e.id!==id);
+  persist();
+  renderRendaExtraLista();
+  renderRendaTable();
+  renderPanorama();
+}
+function closeRendaExtraModal(){
+  document.getElementById('modalRendaExtra').classList.remove('active');
+  rendaExtraUser = null;
 }
 function futuroValorNoMes(item, mKey){
   // compatibilidade com formato antigo (mês único)
@@ -638,12 +736,38 @@ function renderSumarioPanorama(){
   document.getElementById('sumarioPanoramaMes').textContent = monthLabel(mKeyAtual);
   summary.innerHTML = `
     <div class="summary-row"><span>Renda Total</span><span class="summary-value">${fmtMoney(rendaTotal)}</span></div>
-    <div class="summary-row"><span>Moradia</span><span class="summary-value">${fmtMoney(moradia)}</span></div>
-    <div class="summary-row"><span>Fixos</span><span class="summary-value">${fmtMoney(fixo)}</span></div>
-    <div class="summary-row"><span>Assinaturas</span><span class="summary-value">${fmtMoney(assinatura)}</span></div>
-    <div class="summary-row"><span>Contas Futuras</span><span class="summary-value">${fmtMoney(futuro)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('moradia','${mKeyAtual}')"><span>Moradia</span><span class="summary-value">${fmtMoney(moradia)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('fixo','${mKeyAtual}')"><span>Fixos</span><span class="summary-value">${fmtMoney(fixo)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('assinatura','${mKeyAtual}')"><span>Assinaturas</span><span class="summary-value">${fmtMoney(assinatura)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('futuro','${mKeyAtual}')"><span>Contas Futuras</span><span class="summary-value">${fmtMoney(futuro)}</span></div>
     <div class="summary-row"><span>Cartões</span><span class="summary-value">${fmtMoney(totalCartoes)}</span></div>
   `;
+}
+
+const CATEGORIA_LABELS = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras' };
+function abrirDetalheCategoria(cat, mKey){
+  const itens = getContasDoMes(mKey).filter(it=>it.cat===cat);
+  const total = itens.reduce((s,it)=>s+(Number(it.valor)||0),0);
+  document.getElementById('detalheCategoriaTitulo').textContent = `${CATEGORIA_LABELS[cat]} — ${monthLabelExtensoCurto(mKey)}`;
+  const conteudo = itens.length===0
+    ? `<div class="empty-state-sm">Nenhum item nesta categoria</div>`
+    : `<div class="detalhe-categoria-lista">${itens.map(it=>{
+        const logo = it.logoUrl
+          ? `<img src="${it.logoUrl}" class="conta-logo">`
+          : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
+        return `<div class="detalhe-categoria-item">
+          ${logo}
+          <div class="dci-info">
+            <div class="dci-desc">${it.desc}</div>
+            <div class="dci-meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia}</div>
+          </div>
+          <div class="dci-valor">${fmtMoney(it.valor)}</div>
+        </div>`;
+      }).join('')}
+      <div class="detalhe-categoria-total"><span>Total</span><span>${fmtMoney(total)}</span></div>
+      </div>`;
+  document.getElementById('detalheCategoriaConteudo').innerHTML = conteudo;
+  document.getElementById('modalDetalheCategoria').classList.add('active');
 }
 
 function renderPanoPonto(){
@@ -1163,8 +1287,8 @@ function renderRendaTable(){
   }).join('')}<td></td></tr>`;
 
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
-    const val = (state.users[u].incomeExtra && state.users[u].incomeExtra[mKey]) || 0;
-    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncomeExtra('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
+    const val = extraTotalForMonth(u, mKey);
+    return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirRendaExtraModal('${u}','${mKey}')">${val?fmtMoney(val):'<span class="cell-money-empty">+ Extra</span>'}</td>`;
   }).join('')}<td></td></tr>`;
 
   const dizimoRow = (u!=='davi') ? '' : `<tr><td class="row-label" style="color:var(--text-faint)">Dízimo</td>${months.map(mKey=>{
@@ -1194,14 +1318,6 @@ function setIncome(user, mKey, valStr){
   if(user === 'davi') return; // renda do Davi é automática (vem do Ponto PJ)
   const v = parseMoney(valStr);
   state.users[user].income[mKey] = v;
-  renderRendaTable();
-  renderPanorama();
-  persist();
-}
-function setIncomeExtra(user, mKey, valStr){
-  const v = parseMoney(valStr);
-  if(!state.users[user].incomeExtra) state.users[user].incomeExtra = {};
-  state.users[user].incomeExtra[mKey] = v;
   renderRendaTable();
   renderPanorama();
   persist();
@@ -1851,22 +1967,58 @@ function getDia(mKey, dia){
     const d = keyToDate(mKey); d.setDate(dia);
     const dow = d.getDay();
     const isWeekend = dow===0 || dow===6;
-    const isSexta = dow===5;
-    const saidaPadrao = isSexta ? '16:00' : '17:00';
     state.ponto.days[mKey][dia] = isWeekend
       ? { entrada:null, almocoSaida:null, almocoVolta:null, saida:null, extra:0 }
-      : { entrada:'07:00', almocoSaida:'12:00', almocoVolta:'13:00', saida:saidaPadrao, extra:0 };
+      : { entrada:'07:00', almocoSaida:'12:00', almocoVolta:'13:00', saida:tempoPadraoSaida(mKey,dia), extra:0 };
   }
   return state.ponto.days[mKey][dia];
 }
-function adjustTempo(dia, campo, delta){
+const TEMPO_PADRAO = { entrada:'07:00', almocoSaida:'12:00', almocoVolta:'13:00', saida:'17:00' };
+function tempoPadraoSaida(mKey, dia){
+  const d = keyToDate(mKey); d.setDate(dia);
+  return d.getDay()===5 ? '16:00' : '17:00';
+}
+function ajustarTempo(dia, campo, isRight){
   const mKey = pontoMonthKeyAtual();
   const d = getDia(mKey, dia);
-  const cur = d[campo];
-  const base = cur ? timeToMin(cur) : 0;
-  d[campo] = minToTime(base + delta);
+  if(!d[campo]){
+    d[campo] = campo==='saida' ? tempoPadraoSaida(mKey, dia) : TEMPO_PADRAO[campo];
+  } else {
+    let min = timeToMin(d[campo]) + (isRight ? 1 : -1);
+    min = ((min % 1440) + 1440) % 1440;
+    d[campo] = minToTime(min);
+  }
   renderPonto();
   persist();
+  if(navigator.vibrate) navigator.vibrate(6);
+}
+let tempoPressTimer = null;
+function tempoTapStart(e, dia, campo){
+  if(e.cancelable) e.preventDefault();
+  if(tempoPressTimer) clearTimeout(tempoPressTimer);
+  tempoPressTimer = setTimeout(()=>{
+    tempoPressTimer = null;
+    const mKey = pontoMonthKeyAtual();
+    getDia(mKey, dia)[campo] = null;
+    renderPonto();
+    persist();
+    if(navigator.vibrate) navigator.vibrate(20);
+  }, 550);
+}
+function tempoTapEnd(e, dia, campo){
+  if(e.cancelable) e.preventDefault();
+  if(tempoPressTimer){
+    clearTimeout(tempoPressTimer);
+    tempoPressTimer = null;
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const clientX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
+    const isRight = (clientX - rect.left) > rect.width/2;
+    ajustarTempo(dia, campo, isRight);
+  }
+}
+function tempoTapCancel(){
+  if(tempoPressTimer){ clearTimeout(tempoPressTimer); tempoPressTimer = null; }
 }
 function setExtra(dia, valStr){
   const mKey = pontoMonthKeyAtual();
@@ -1918,10 +2070,10 @@ function renderPonto(){
         </div>
       </div>
       <div class="ponto-horarios-grid">
-        <div class="ph-item"><div class="ph-lbl">Entrada</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.entrada||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'entrada',this.value)"></div>
-        <div class="ph-item"><div class="ph-lbl">Almoço</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.almocoSaida||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'almocoSaida',this.value)"></div>
-        <div class="ph-item"><div class="ph-lbl">Volta</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.almocoVolta||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'almocoVolta',this.value)"></div>
-        <div class="ph-item"><div class="ph-lbl">Saída</div><input type="text" inputmode="numeric" placeholder="00:00" maxlength="5" value="${d.saida||''}" oninput="maskTempoInput(this)" onchange="setTempoDireto(${dia},'saida',this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'entrada')" ontouchend="tempoTapEnd(event,${dia},'entrada')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'entrada')" onmouseup="tempoTapEnd(event,${dia},'entrada')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.entrada||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'almocoSaida')" ontouchend="tempoTapEnd(event,${dia},'almocoSaida')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'almocoSaida')" onmouseup="tempoTapEnd(event,${dia},'almocoSaida')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.almocoSaida||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'almocoVolta')" ontouchend="tempoTapEnd(event,${dia},'almocoVolta')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'almocoVolta')" onmouseup="tempoTapEnd(event,${dia},'almocoVolta')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.almocoVolta||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'saida')" ontouchend="tempoTapEnd(event,${dia},'saida')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'saida')" onmouseup="tempoTapEnd(event,${dia},'saida')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.saida||'--:--'}</div></div>
       </div>
       <div class="ponto-extra-row">
         <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)"></div>
@@ -1930,14 +2082,6 @@ function renderPonto(){
   }
   lista.innerHTML = rows;
   renderPontoSummary();
-}
-
-function setTempoDireto(dia, campo, valStr){
-  const mKey = pontoMonthKeyAtual();
-  const d = getDia(mKey, dia);
-  d[campo] = valStr || null;
-  renderPonto();
-  persist();
 }
 
 function computePontoMes(mKey){
