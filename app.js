@@ -72,6 +72,7 @@ function carregar(){
       });
       if(!state.ponto) state.ponto = { valorHora:0, padraoHoras:8, days:{} };
       if(!state.ponto.days) state.ponto.days = {};
+      if(state.ponto.nomeUsuario === undefined) state.ponto.nomeUsuario = '';
       if(!state.cartoesTracker) state.cartoesTracker = [];
       if(!state.comprasTracker) state.comprasTracker = [];
       if(!state.metas) state.metas = [];
@@ -668,28 +669,22 @@ function renderPanorama(){
   if(!months.includes(state.focusMonth)) state.focusMonth = months[0];
 
   renderAcumTable(months);
-  renderTrendChart(months);
+  renderPanoCharts();
   renderPanoPonto();
 
-  const mesAnterior = addMonths(state.focusMonth, -1);
   const userSection = document.getElementById('panoUserSection');
-  userSection.innerHTML = ['davi','cris'].map(u=>{
+  const colsHtml = ['davi','cris'].map(u=>{
     const receita = incomeForMonth(u, state.focusMonth);
     const gastos = expensesForMonth(u, state.focusMonth);
-    const gastosAnterior = expensesForMonth(u, mesAnterior);
     const sobra = receita - gastos;
-    const diffGastos = gastos - gastosAnterior;
-    const pctGastos = gastosAnterior > 0 ? (diffGastos/gastosAnterior*100) : null;
-    const gastosComparativo = pctGastos===null ? '' :
-      `<div class="meta" style="margin-top:2px;color:${diffGastos>0?'var(--slate-700)':'var(--slate-500)'}">${diffGastos>=0?'▲':'▼'} ${Math.abs(pctGastos).toFixed(0)}% (${fmtMoneySigned(diffGastos)}) vs mês anterior</div>`;
-    return `<div class="user-card ${u==='cris'?'cris':''}">
+    return `<div class="ucc-col">
       <div class="u-name">${u==='davi'?'Davi':'Cris'}</div>
       <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Receita</span><span class="u-receita">${fmtMoney(receita)}</span></div>
       <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Gastos</span><span class="u-gastos">${fmtMoney(gastos)}</span></div>
-      ${gastosComparativo}
       <div class="u-sobra ${sobra>=0?'positive':'negative'}"><span class="lbl">Sobra</span><span>${fmtMoneySigned(sobra)}</span></div>
     </div>`;
-  }).join('');
+  }).join('<div class="ucc-divider"></div>');
+  userSection.innerHTML = `<div class="user-card-combined">${colsHtml}</div>`;
 
   document.getElementById('contasMesLabel').textContent = monthLabel(state.focusMonth);
   renderChecklist();
@@ -785,56 +780,51 @@ function renderPanoPonto(){
     : (diff>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(0)+'% ('+fmtMoneySigned(diff)+') vs mês anterior';
 }
 
-function renderTrendChart(months){
+function renderPanoCharts(){
   const wrap = document.getElementById('trendChartWrap');
   if(!wrap) return;
-  let acumulado = 0;
-  const sobras = months.map(mKey=> saldoHouseholdForMonth(mKey));
-  const acumulados = sobras.map(s=>{ acumulado += s; return acumulado; });
+  const mKey = state.focusMonth;
+  const renda = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
+  const bdDavi = expenseBreakdownForMonth('davi', mKey);
+  const bdCris = expenseBreakdownForMonth('cris', mKey);
+  const cats = ['moradia','fixo','assinatura','futuro','cartao','dizimo'];
+  const catColors = { moradia:'#820AD1', fixo:'#0EA5E9', assinatura:'#DB8B18', futuro:'#E0342B', cartao:'#1C9D5B', dizimo:'#7B5FA6' };
+  const catLabels = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras', cartao:'Cartão', dizimo:'Dízimo' };
+  const totals = {};
+  let gastosTotal = 0;
+  cats.forEach(c=>{ totals[c] = (bdDavi[c]||0)+(bdCris[c]||0); gastosTotal += totals[c]; });
+  const sobra = renda - gastosTotal;
 
-  const w = 320, h = 170, padL = 8, padR = 8, padTop = 14, padBottom = 26;
-  const plotH = h - padTop - padBottom;
-  const allVals = [...sobras, ...acumulados, 0];
-  const min = Math.min(...allVals), max = Math.max(...allVals);
-  const range = (max-min) || 1;
-  const scaleY = v => padTop + plotH - ((v-min)/range)*plotH;
-  const zeroY = scaleY(0);
+  const pctGasto = renda>0 ? Math.min(100,(gastosTotal/renda)*100) : (gastosTotal>0?100:0);
+  const gradGanhos = `conic-gradient(var(--danger) 0% ${pctGasto.toFixed(2)}%, var(--success) ${pctGasto.toFixed(2)}% 100%)`;
 
-  const stepX = (w-padL-padR) / months.length;
-  const barW = Math.min(22, stepX*0.42);
-
-  const bars = sobras.map((s,i)=>{
-    const cx = padL + stepX*i + stepX/2;
-    const y1 = scaleY(Math.max(0,s));
-    const y2 = scaleY(Math.min(0,s));
-    const cor = s>=0 ? 'var(--success)' : 'var(--danger)';
-    return `<rect x="${(cx-barW/2).toFixed(1)}" y="${y1.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1,(y2-y1)).toFixed(1)}" rx="3" fill="${cor}" opacity="0.85"><title>${monthLabel(months[i])} · Sobra: ${fmtMoneySigned(s)}</title></rect>`;
-  }).join('');
-
-  const linePts = acumulados.map((v,i)=>{
-    const x = padL + stepX*i + stepX/2;
-    const y = scaleY(v);
-    return [x,y];
+  let acc = 0;
+  const catsComValor = cats.filter(c=>totals[c]>0);
+  const segs = catsComValor.map(c=>{
+    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
+    const seg = `${catColors[c]} ${acc.toFixed(2)}% ${(acc+pct).toFixed(2)}%`;
+    acc += pct;
+    return seg;
   });
-  const pathD = linePts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-  const circles = linePts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--primary)" stroke="#fff" stroke-width="1.5"><title>${monthLabel(months[i])} · Acumulado: ${fmtMoneySigned(acumulados[i])}</title></circle>`).join('');
-
-  const labels = months.map((m,i)=>{
-    const cx = padL + stepX*i + stepX/2;
-    return `<text x="${cx.toFixed(1)}" y="${h-8}" font-size="9" fill="var(--slate-400)" text-anchor="middle" font-weight="600">${monthLabel(m).slice(0,3)}</text>`;
-  }).join('');
+  const gradCat = segs.length ? `conic-gradient(${segs.join(',')})` : `conic-gradient(var(--line) 0% 100%)`;
+  const legendCat = catsComValor.length ? catsComValor.map(c=>{
+    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
+    return `<div class="donut-legend-item"><i style="background:${catColors[c]}"></i><span>${catLabels[c]}</span><b>${pct.toFixed(0)}%</b></div>`;
+  }).join('') : `<div class="donut-legend-item"><span>Sem gastos no mês</span></div>`;
 
   wrap.innerHTML = `
-    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block">
-      <line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${w-padR}" y2="${zeroY.toFixed(1)}" stroke="var(--slate-200)" stroke-width="1"/>
-      ${bars}
-      <path d="${pathD}" fill="none" stroke="var(--primary)" stroke-width="2"/>
-      ${circles}
-      ${labels}
-    </svg>
-    <div class="trend-legend">
-      <span><i style="background:var(--success)"></i>Sobra do mês</span>
-      <span><i style="background:var(--primary);border-radius:50%"></i>Acumulado</span>
+    <div class="donut-row">
+      <div class="donut-card">
+        <div class="donut-wrap" style="background:${gradGanhos}"><div class="donut-hole"><div class="donut-hole-label">Ganho</div><div class="donut-hole-value">${fmtMoney(renda)}</div></div></div>
+        <div class="donut-legend">
+          <div class="donut-legend-item"><i style="background:var(--success)"></i><span>Sobra</span><b>${fmtMoneySigned(sobra)}</b></div>
+          <div class="donut-legend-item"><i style="background:var(--danger)"></i><span>Gastos</span><b>${fmtMoney(gastosTotal)}</b></div>
+        </div>
+      </div>
+      <div class="donut-card">
+        <div class="donut-wrap" style="background:${gradCat}"><div class="donut-hole"><div class="donut-hole-label">Gastos</div><div class="donut-hole-value">${fmtMoney(gastosTotal)}</div></div></div>
+        <div class="donut-legend">${legendCat}</div>
+      </div>
     </div>
   `;
 }
@@ -878,10 +868,10 @@ function abrirDetalheAcumulado(mKey){
       <div class="detalhe-usuario">
         <div class="detalhe-usuario-nome">${user==='davi'?'Davi':'Cris'}</div>
         <div class="simulador-linha"><span class="label">Renda</span><span class="valor" style="color:var(--success)">${fmtMoney(renda)}</span></div>
-        ${bd.moradia>0?`<div class="simulador-linha"><span class="label">Moradia</span><span class="valor">-${fmtMoney(bd.moradia)}</span></div>`:''}
-        ${bd.fixo>0?`<div class="simulador-linha"><span class="label">Fixos</span><span class="valor">-${fmtMoney(bd.fixo)}</span></div>`:''}
-        ${bd.assinatura>0?`<div class="simulador-linha"><span class="label">Assinaturas</span><span class="valor">-${fmtMoney(bd.assinatura)}</span></div>`:''}
-        ${bd.futuro>0?`<div class="simulador-linha"><span class="label">Contas Futuras</span><span class="valor">-${fmtMoney(bd.futuro)}</span></div>`:''}
+        ${bd.moradia>0?`<div class="simulador-linha summary-row-clickable" onclick="abrirDetalheCategoria('moradia','${mKey}')"><span class="label">Moradia</span><span class="valor">-${fmtMoney(bd.moradia)}</span></div>`:''}
+        ${bd.fixo>0?`<div class="simulador-linha summary-row-clickable" onclick="abrirDetalheCategoria('fixo','${mKey}')"><span class="label">Fixos</span><span class="valor">-${fmtMoney(bd.fixo)}</span></div>`:''}
+        ${bd.assinatura>0?`<div class="simulador-linha summary-row-clickable" onclick="abrirDetalheCategoria('assinatura','${mKey}')"><span class="label">Assinaturas</span><span class="valor">-${fmtMoney(bd.assinatura)}</span></div>`:''}
+        ${bd.futuro>0?`<div class="simulador-linha summary-row-clickable" onclick="abrirDetalheCategoria('futuro','${mKey}')"><span class="label">Contas Futuras</span><span class="valor">-${fmtMoney(bd.futuro)}</span></div>`:''}
         ${bd.cartao>0?`<div class="simulador-linha"><span class="label">Cartão</span><span class="valor">-${fmtMoney(bd.cartao)}</span></div>`:''}
         ${bd.dizimo>0?`<div class="simulador-linha"><span class="label">Dízimo</span><span class="valor">-${fmtMoney(bd.dizimo)}</span></div>`:''}
         <div class="simulador-linha" style="border-top:2px solid var(--slate-200);margin-top:4px;padding-top:8px"><span class="label" style="font-weight:800">Sobra ${user==='davi'?'Davi':'Cris'}</span><span class="valor" style="font-weight:900">${fmtMoneySigned(renda-bd.total)}</span></div>
@@ -2134,6 +2124,160 @@ function renderPontoCompare(){
   }).join('');
 }
 
+/* ================= PONTO PJ: CONFIGURAÇÃO E EXPORTAÇÃO PDF ================= */
+function openPontoConfigModal(){
+  document.getElementById('pontoConfigNome').value = state.ponto.nomeUsuario || '';
+  document.getElementById('modalPontoConfig').classList.add('active');
+}
+function salvarPontoConfig(){
+  const nome = document.getElementById('pontoConfigNome').value.trim();
+  state.ponto.nomeUsuario = nome;
+  persist();
+  closeModal('modalPontoConfig');
+  showToast('Configuração salva');
+}
+
+let pontoExportTipo = 'mes';
+let pontoExportSemanaIdx = 0;
+
+function openPontoExportModal(){
+  pontoExportTipo = 'mes';
+  pontoExportSemanaIdx = 0;
+  document.querySelectorAll('#pontoExportTipoChips .dif-chip').forEach(el=>{
+    el.classList.toggle('active', el.dataset.val==='mes');
+  });
+  document.getElementById('pontoExportSemanaField').style.display = 'none';
+  renderPontoExportSemanaChips();
+  document.getElementById('modalPontoExport').classList.add('active');
+}
+function selecionarPontoExportTipo(val){
+  pontoExportTipo = val;
+  document.querySelectorAll('#pontoExportTipoChips .dif-chip').forEach(el=>{
+    el.classList.toggle('active', el.dataset.val===val);
+  });
+  document.getElementById('pontoExportSemanaField').style.display = val==='semana' ? 'block' : 'none';
+}
+function pontoSemanasDoMes(mKey){
+  const totalDias = daysInMonth(mKey);
+  const semanas = [];
+  for(let inicio=1; inicio<=totalDias; inicio+=7){
+    const fim = Math.min(inicio+6, totalDias);
+    semanas.push({ inicio, fim });
+  }
+  return semanas;
+}
+function renderPontoExportSemanaChips(){
+  const mKey = pontoMonthKeyAtual();
+  const semanas = pontoSemanasDoMes(mKey);
+  const el = document.getElementById('pontoExportSemanaChips');
+  el.innerHTML = semanas.map((s,i)=>
+    `<button type="button" class="dif-chip${i===0?' active':''}" onclick="selecionarPontoExportSemana(${i})">${String(s.inicio).padStart(2,'0')}–${String(s.fim).padStart(2,'0')}</button>`
+  ).join('');
+}
+function selecionarPontoExportSemana(idx){
+  pontoExportSemanaIdx = idx;
+  document.querySelectorAll('#pontoExportSemanaChips .dif-chip').forEach((el,i)=>{
+    el.classList.toggle('active', i===idx);
+  });
+}
+
+function gerarPdfPonto(){
+  if(typeof window.jspdf === 'undefined'){
+    showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
+    return;
+  }
+  const mKey = pontoMonthKeyAtual();
+  const semanas = pontoSemanasDoMes(mKey);
+  let diaIni = 1, diaFim = daysInMonth(mKey);
+  let periodoLabel = monthLabelLong(mKey);
+  if(pontoExportTipo === 'semana'){
+    const s = semanas[pontoExportSemanaIdx] || semanas[0];
+    diaIni = s.inicio; diaFim = s.fim;
+    periodoLabel = `${monthLabelLong(mKey)} — dias ${String(diaIni).padStart(2,'0')} a ${String(diaFim).padStart(2,'0')}`;
+  }
+
+  const valorHora = state.ponto.valorHora || 0;
+  const linhas = [];
+  let totalMinPeriodo = 0;
+  for(let dia=diaIni; dia<=diaFim; dia++){
+    const d = getDia(mKey, dia);
+    const dateObj = keyToDate(mKey); dateObj.setDate(dia);
+    const totalMin = dayTotalMinutes(d);
+    if(totalMin<=0 && !d.entrada) continue;
+    totalMinPeriodo += totalMin;
+    const horas = Math.floor(totalMin/60), minutos = totalMin%60;
+    const valorDia = (totalMin/60) * valorHora;
+    linhas.push([
+      `${String(dia).padStart(2,'0')} (${DIA_SEMANA[dateObj.getDay()]})`,
+      d.entrada || '--:--',
+      d.almocoSaida || '--:--',
+      d.almocoVolta || '--:--',
+      d.saida || '--:--',
+      `${String(horas).padStart(2,'0')}h${String(minutos).padStart(2,'0')}m`,
+      fmtMoney(valorDia)
+    ]);
+  }
+
+  if(linhas.length===0){
+    showToast('Nenhum dia trabalhado nesse período');
+    return;
+  }
+
+  const valorTotalPeriodo = (totalMinPeriodo/60) * valorHora;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const nome = state.ponto.nomeUsuario || '';
+
+  doc.setFillColor(130,10,209);
+  doc.rect(0,0,595,90,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.text('Registro de Ponto PJ', 40, 40);
+  doc.setFontSize(11);
+  doc.setFont('helvetica','normal');
+  if(nome) doc.text(nome, 40, 60);
+  doc.text(periodoLabel, 40, nome ? 76 : 60);
+
+  doc.autoTable({
+    startY: 110,
+    head: [['Dia','Entrada','Almoço','Volta','Saída','Horas','Valor']],
+    body: linhas,
+    theme: 'grid',
+    headStyles: { fillColor:[130,10,209], textColor:255, fontStyle:'bold', fontSize:9 },
+    bodyStyles: { fontSize:9, textColor:[40,40,40] },
+    alternateRowStyles: { fillColor:[247,242,252] },
+    margin: { left:40, right:40 }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 24;
+  doc.setTextColor(40,40,40);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Resumo', 40, finalY);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  const totalHorasLabel = minToHoursLabel(totalMinPeriodo);
+  doc.text(`Valor por hora: ${fmtMoney(valorHora)}`, 40, finalY+18);
+  doc.text(`Total de horas: ${totalHorasLabel}`, 40, finalY+34);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.text(`Valor total: ${fmtMoney(valorTotalPeriodo)}`, 40, finalY+56);
+
+  const fileName = `Ponto_${nome ? nome.replace(/\s+/g,'_')+'_' : ''}${mKey}${pontoExportTipo==='semana' ? '_semana'+(pontoExportSemanaIdx+1) : ''}.pdf`;
+
+  const blob = doc.output('blob');
+  const file = new File([blob], fileName, { type:'application/pdf' });
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    navigator.share({ files:[file], title:'Registro de Ponto PJ', text:periodoLabel }).catch(()=>{
+      doc.save(fileName);
+    });
+  }else{
+    doc.save(fileName);
+  }
+  closeModal('modalPontoExport');
+}
+
 /* ================= CONCLUIR MÊS ================= */
 function openConcluirMesModal(){
   const mesPontoAtual = todayKey();
@@ -2196,7 +2340,7 @@ let receitaDificuldadeSelecionada = '';
 let receitaCorSelecionada = '';
 let receitaDetalheAtualId = null;
 let receitaChecklistState = {};
-const RECEITA_CORES = ['#820AD1','#E0342B','#DB8B18','#1C9D5B','#0EA5E9','#7B5FA6'];
+const RECEITA_CORES = ['#820AD1','#E0342B','#DB8B18','#1C9D5B','#0EA5E9','#7B5FA6','#1A1A1A','#FFFFFF','#7A4A2B','#8A8F98'];
 
 /* ---------- TELA PRINCIPAL ---------- */
 function renderReceitas(){
@@ -2418,11 +2562,6 @@ function renderReceitaDetalheConteudo(r){
       <div class="receita-passos-view">${passosHtml}</div>
 
       ${r.observacoes ? `<div class="receita-view-section-title">Observações</div><div class="receita-obs-view">${r.observacoes}</div>` : ''}
-
-      <div class="receita-detalhe-actions">
-        <button class="btn btn-outline" onclick="openReceitaModal('${r.id}')">${ICON_EDIT} Editar</button>
-        <button class="btn btn-outline" onclick="excluirReceitaAtual()" style="color:var(--danger);border-color:var(--danger)">${ICON_TRASH} Excluir</button>
-      </div>
     </div>
   `;
 }
@@ -2448,11 +2587,12 @@ function compartilharReceitaAtual(){
     showToast('Compartilhamento não suportado neste dispositivo');
   }
 }
-function duplicarReceitaAtual(){
+function editarReceitaAtual(){
   if(!receitaDetalheAtualId) return;
   document.getElementById('receitaDetalheMenuDropdown').style.display = 'none';
-  duplicarReceita(receitaDetalheAtualId);
+  const id = receitaDetalheAtualId;
   closeReceitaDetalhe();
+  openReceitaModal(id);
 }
 function excluirReceitaAtual(){
   if(!receitaDetalheAtualId) return;
@@ -2636,6 +2776,57 @@ function coletarPassos(){
   return Array.from(document.querySelectorAll('#receitaPassosLista .receita-passo-input'))
     .map(t=>t.value.trim());
 }
+
+/* ---------- ARRASTAR PRA REORDENAR (ingredientes e passos) ---------- */
+function attachDragReorder(listId, rowSelector, handleSelector, numSelector){
+  const list = document.getElementById(listId);
+  if(!list || list.dataset.reorderAttached) return;
+  list.dataset.reorderAttached = '1';
+  let dragEl = null;
+
+  list.addEventListener('pointerdown', (e)=>{
+    const handle = e.target.closest(handleSelector);
+    if(!handle) return;
+    const row = handle.closest(rowSelector);
+    if(!row) return;
+    e.preventDefault();
+    dragEl = row;
+    row.classList.add('dragging-row');
+    try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+
+    function onMove(ev){
+      if(!dragEl) return;
+      const rows = Array.from(list.querySelectorAll(rowSelector));
+      const y = ev.clientY;
+      let placed = false;
+      for(const r of rows){
+        if(r===dragEl) continue;
+        const rect = r.getBoundingClientRect();
+        const mid = rect.top + rect.height/2;
+        if(y < mid){
+          if(r.previousElementSibling !== dragEl) list.insertBefore(dragEl, r);
+          placed = true;
+          break;
+        }
+      }
+      if(!placed && list.lastElementChild !== dragEl) list.appendChild(dragEl);
+    }
+    function onUp(){
+      if(dragEl) dragEl.classList.remove('dragging-row');
+      dragEl = null;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      list.querySelectorAll(rowSelector).forEach((row,i)=>{
+        const numEl = row.querySelector(numSelector);
+        if(numEl) numEl.textContent = i+1;
+      });
+    }
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+attachDragReorder('receitaIngredientesLista', '.receita-ing-row', '.receita-ing-num', '.receita-ing-num');
+attachDragReorder('receitaPassosLista', '.receita-passo-row', '.receita-passo-num', '.receita-passo-num');
 
 /* ---------- DIFICULDADE E COR ---------- */
 function selecionarDificuldade(val){
