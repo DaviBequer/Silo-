@@ -788,7 +788,7 @@ function renderPanoCharts(){
   const bdDavi = expenseBreakdownForMonth('davi', mKey);
   const bdCris = expenseBreakdownForMonth('cris', mKey);
   const cats = ['moradia','fixo','assinatura','futuro','cartao','dizimo'];
-  const catColors = { moradia:'#820AD1', fixo:'#0EA5E9', assinatura:'#DB8B18', futuro:'#E0342B', cartao:'#1C9D5B', dizimo:'#7B5FA6' };
+  const catColors = { moradia:'#2B3038', fixo:'#0EA5E9', assinatura:'#DB8B18', futuro:'#E0342B', cartao:'#1C9D5B', dizimo:'#7B5FA6' };
   const catLabels = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras', cartao:'Cartão', dizimo:'Dízimo' };
   const totals = {};
   let gastosTotal = 0;
@@ -994,15 +994,36 @@ function renderChecklist(){
     const logo = it.logoUrl
       ? `<img src="${it.logoUrl}" class="conta-logo">`
       : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
-    return `<div class="check-item-compact ${isPaid?'paid':''}" onclick="abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')">
+    return `<div class="check-item-compact ${isPaid?'paid':''}"
+      ontouchstart="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')" ontouchend="contaTapEnd(event,'${paidKey}')" ontouchcancel="contaTapCancel()"
+      onmousedown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')" onmouseup="contaTapEnd(event,'${paidKey}')" onmouseleave="contaTapCancel()">
       ${logo}
-      <input type="checkbox" ${isPaid?'checked':''} onclick="event.stopPropagation()" onchange="togglePaid('${paidKey}')">
       <div class="info">
         <div class="desc">${it.desc}</div>
         <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia} · ${fmtMoney(it.valor)}${isParcial?` <span style="color:var(--warning);font-weight:700">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
       </div>
     </div>`;
   }).join('');
+}
+let contaTapTimer = null;
+let contaTapLongFired = false;
+function contaTapStart(ev, paidKey, user, cat, id, mKey){
+  if(ev.type==='mousedown' && ev.button!==0) return;
+  contaTapLongFired = false;
+  contaTapTimer = setTimeout(()=>{
+    contaTapLongFired = true;
+    if(navigator.vibrate) navigator.vibrate(12);
+    abrirEditarConta(paidKey, user, cat, id, mKey);
+  }, 500);
+}
+function contaTapEnd(ev, paidKey){
+  clearTimeout(contaTapTimer);
+  if(!contaTapLongFired){
+    togglePaid(paidKey);
+  }
+}
+function contaTapCancel(){
+  clearTimeout(contaTapTimer);
 }
 function togglePaid(paidKey){
   state.paid[paidKey] = !state.paid[paidKey];
@@ -2227,42 +2248,78 @@ function gerarPdfPonto(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4' });
   const nome = state.ponto.nomeUsuario || '';
+  const pageW = 595;
+  const marginX = 40;
 
-  doc.setFillColor(130,10,209);
-  doc.rect(0,0,595,90,'F');
+  /* ---- Cabeçalho ---- */
+  const graphite = [37,41,46];
+  doc.setFillColor(...graphite);
+  doc.rect(0,0,pageW,86,'F');
+  doc.setFillColor(255,255,255);
+  doc.roundedRect(marginX,18,44,44,10,10,'F');
+  doc.setDrawColor(...graphite);
+  doc.setLineWidth(1.6);
+  doc.circle(marginX+22,40,9,'S');
+  doc.line(marginX+22,40,marginX+22,35);
+  doc.line(marginX+22,40,marginX+26,42);
+
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold');
-  doc.setFontSize(18);
-  doc.text('Registro de Ponto PJ', 40, 40);
-  doc.setFontSize(11);
+  doc.setFontSize(15);
+  doc.text('REGISTRO DE PONTO PJ', marginX+58, 36);
   doc.setFont('helvetica','normal');
-  if(nome) doc.text(nome, 40, 60);
-  doc.text(periodoLabel, 40, nome ? 76 : 60);
+  doc.setFontSize(10.5);
+  if(nome) doc.text(nome, marginX+58, 53);
+  doc.setFontSize(9.5);
+  doc.setTextColor(220,220,224);
+  doc.text(periodoLabel, marginX+58, nome ? 68 : 53);
 
+  /* ---- Cards de resumo ---- */
+  const cardsY = 106;
+  const cardH = 56;
+  const gap = 12;
+  const cardW = (pageW - marginX*2 - gap*2) / 3;
+  const totalHorasLabel = minToHoursLabel(totalMinPeriodo);
+  const cards = [
+    { label:'TOTAL DE HORAS', value: totalHorasLabel, accent:graphite },
+    { label:'VALOR TOTAL', value: fmtMoney(valorTotalPeriodo), accent:[28,157,91] },
+    { label:'VALOR POR HORA', value: fmtMoney(valorHora), accent:[59,110,165] },
+  ];
+  cards.forEach((c,i)=>{
+    const x = marginX + i*(cardW+gap);
+    doc.setDrawColor(225,225,228);
+    doc.setLineWidth(1);
+    doc.roundedRect(x,cardsY,cardW,cardH,8,8,'S');
+    doc.setFillColor(...c.accent);
+    doc.roundedRect(x+12,cardsY+12,6,6,2,2,'F');
+    doc.setTextColor(120,120,124);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(7.5);
+    doc.text(c.label, x+24, cardsY+16);
+    doc.setTextColor(30,30,32);
+    doc.setFontSize(15);
+    doc.text(c.value, x+12, cardsY+38);
+  });
+
+  /* ---- Tabela ---- */
   doc.autoTable({
-    startY: 110,
+    startY: cardsY + cardH + 24,
     head: [['Dia','Entrada','Almoço','Volta','Saída','Horas','Valor']],
     body: linhas,
     theme: 'grid',
-    headStyles: { fillColor:[130,10,209], textColor:255, fontStyle:'bold', fontSize:9 },
+    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9 },
     bodyStyles: { fontSize:9, textColor:[40,40,40] },
-    alternateRowStyles: { fillColor:[247,242,252] },
-    margin: { left:40, right:40 }
+    alternateRowStyles: { fillColor:[247,247,248] },
+    styles: { lineColor:[230,230,232], lineWidth:0.5 },
+    margin: { left:marginX, right:marginX }
   });
 
-  const finalY = doc.lastAutoTable.finalY + 24;
-  doc.setTextColor(40,40,40);
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(11);
-  doc.text('Resumo', 40, finalY);
+  /* ---- Rodapé ---- */
+  const finalY = doc.lastAutoTable.finalY + 20;
+  doc.setTextColor(140,140,144);
   doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
-  const totalHorasLabel = minToHoursLabel(totalMinPeriodo);
-  doc.text(`Valor por hora: ${fmtMoney(valorHora)}`, 40, finalY+18);
-  doc.text(`Total de horas: ${totalHorasLabel}`, 40, finalY+34);
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(13);
-  doc.text(`Valor total: ${fmtMoney(valorTotalPeriodo)}`, 40, finalY+56);
+  doc.setFontSize(8);
+  doc.text(`Cálculo das horas considerando intervalo de almoço. Valor da hora: ${fmtMoney(valorHora)}.`, marginX, finalY);
 
   const fileName = `Ponto_${nome ? nome.replace(/\s+/g,'_')+'_' : ''}${mKey}${pontoExportTipo==='semana' ? '_semana'+(pontoExportSemanaIdx+1) : ''}.pdf`;
 
@@ -2340,7 +2397,7 @@ let receitaDificuldadeSelecionada = '';
 let receitaCorSelecionada = '';
 let receitaDetalheAtualId = null;
 let receitaChecklistState = {};
-const RECEITA_CORES = ['#820AD1','#E0342B','#DB8B18','#1C9D5B','#0EA5E9','#7B5FA6','#1A1A1A','#FFFFFF','#7A4A2B','#8A8F98'];
+const RECEITA_CORES = ['#2B3038','#E0342B','#DB8B18','#1C9D5B','#0EA5E9','#7B5FA6','#1A1A1A','#FFFFFF','#7A4A2B','#8A8F98'];
 
 /* ---------- TELA PRINCIPAL ---------- */
 function renderReceitas(){
