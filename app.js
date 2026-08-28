@@ -32,6 +32,7 @@ function novoEstado(){
     tarefaCategorias:[],
     receitas:[],
     receitaCategorias:[],
+    louvores:[],
     semanaOffset:0,
     semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
@@ -80,6 +81,7 @@ function carregar(){
       if(state.reserva === undefined) state.reserva = 0;
       if(!state.receitas) state.receitas = [];
       if(!state.receitaCategorias) state.receitaCategorias = [];
+      if(!state.louvores) state.louvores = [];
       if(state.semanaOffset === undefined) state.semanaOffset = 0;
       if(!state.semanaAgenda) state.semanaAgenda = {};
       state.receitas.forEach(r=>{
@@ -247,6 +249,7 @@ function switchAba(aba){
   if(aba==='planner') renderPlanner();
   if(aba==='panorama') renderPanorama();
   if(aba==='receitas') renderReceitas();
+  if(aba==='louvor') renderLouvor();
 }
 function switchUser(user){
   state.currentUser = user;
@@ -995,8 +998,7 @@ function renderChecklist(){
       ? `<img src="${it.logoUrl}" class="conta-logo">`
       : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
     return `<div class="check-item-compact ${isPaid?'paid':''}"
-      ontouchstart="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')" ontouchend="contaTapEnd(event,'${paidKey}')" ontouchcancel="contaTapCancel()"
-      onmousedown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')" onmouseup="contaTapEnd(event,'${paidKey}')" onmouseleave="contaTapCancel()">
+      onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
       ${logo}
       <div class="info">
         <div class="desc">${it.desc}</div>
@@ -1008,7 +1010,7 @@ function renderChecklist(){
 let contaTapTimer = null;
 let contaTapLongFired = false;
 function contaTapStart(ev, paidKey, user, cat, id, mKey){
-  if(ev.type==='mousedown' && ev.button!==0) return;
+  if(ev.pointerType==='mouse' && ev.button!==0) return;
   contaTapLongFired = false;
   contaTapTimer = setTimeout(()=>{
     contaTapLongFired = true;
@@ -1019,7 +1021,11 @@ function contaTapStart(ev, paidKey, user, cat, id, mKey){
 function contaTapEnd(ev, paidKey){
   clearTimeout(contaTapTimer);
   if(!contaTapLongFired){
-    togglePaid(paidKey);
+    const isPaid = !!state.paid[paidKey];
+    const msg = isPaid ? 'Deseja realmente desfazer o pagamento desta conta?' : 'Deseja marcar esta conta como paga?';
+    if(confirm(msg)){
+      togglePaid(paidKey);
+    }
   }
 }
 function contaTapCancel(){
@@ -3099,6 +3105,412 @@ function excluirSemanaItem(diaKey, periodo, itemId){
   state.semanaAgenda[diaKey][periodo] = state.semanaAgenda[diaKey][periodo].filter(i=>i.id!==itemId);
   persist();
   renderSemana();
+}
+
+/* ================= LOUVOR ================= */
+const LOUVOR_CATEGORIAS = ['Louvor','Harpa Cristã','Corinhos'];
+let louvorFiltroAtivo = 'Todas';
+let louvorSearchTerm = '';
+let louvorAtualId = null;
+let lvSlideIndex = 0;
+
+function getLouvorAtual(){ return state.louvores.find(l=>l.id===louvorAtualId); }
+
+function renderLouvor(){
+  renderLouvorFilterChips();
+  renderLouvorLista();
+}
+function renderLouvorFilterChips(){
+  const el = document.getElementById('louvorFilterChips');
+  const chips = ['Todas', ...LOUVOR_CATEGORIAS];
+  el.innerHTML = chips.map(c=>
+    `<button class="filter-chip${louvorFiltroAtivo===c?' active':''}" onclick="setLouvorFiltro('${c}')">${c}</button>`
+  ).join('');
+}
+function setLouvorFiltro(c){
+  louvorFiltroAtivo = c;
+  renderLouvorFilterChips();
+  renderLouvorLista();
+}
+function onLouvorSearchInput(v){
+  louvorSearchTerm = v.trim().toLowerCase();
+  document.getElementById('louvorSearchClear').style.display = v ? 'block' : 'none';
+  renderLouvorLista();
+}
+function limparLouvorSearch(){
+  louvorSearchTerm = '';
+  document.getElementById('louvorSearchInput').value = '';
+  document.getElementById('louvorSearchClear').style.display = 'none';
+  renderLouvorLista();
+}
+function renderLouvorLista(){
+  const el = document.getElementById('louvorLista');
+  let items = state.louvores.slice();
+  if(louvorFiltroAtivo !== 'Todas') items = items.filter(l=>l.categoria===louvorFiltroAtivo);
+  if(louvorSearchTerm){
+    items = items.filter(l=>
+      (l.titulo||'').toLowerCase().includes(louvorSearchTerm) ||
+      (l.artista||'').toLowerCase().includes(louvorSearchTerm)
+    );
+  }
+  items.sort((a,b)=> (a.titulo||'').localeCompare(b.titulo||''));
+  if(items.length===0){
+    el.innerHTML = `<div class="empty-state"><div class="title">Nenhum louvor encontrado</div><div class="desc">Toque no + para adicionar</div></div>`;
+    return;
+  }
+  el.innerHTML = items.map(l=>{
+    const tomAtual = l.tom ? (lvTransposeChord(l.tom, l.transpose||0) || l.tom) : '';
+    return `<div class="lv-card" onclick="abrirLouvorDetalhe('${l.id}')">
+      <div class="lv-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      <div class="lv-card-info">
+        <div class="lv-card-titulo">${l.titulo||'Sem título'}</div>
+        <div class="lv-card-meta">${l.artista||'Artista desconhecido'} · ${l.categoria||'Louvor'}</div>
+      </div>
+      ${tomAtual?`<div class="lv-card-tom">${tomAtual}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* ---------- Novo louvor ---------- */
+function openLouvorForm(){
+  document.getElementById('lvNovoTitulo').value = '';
+  document.getElementById('lvNovoArtista').value = '';
+  window.lvNovoCategoriaSelecionada = 'Louvor';
+  renderLvNovoCategoriaChips();
+  document.getElementById('pageLouvorForm').classList.add('active');
+}
+function closeLouvorForm(){
+  document.getElementById('pageLouvorForm').classList.remove('active');
+}
+function renderLvNovoCategoriaChips(){
+  document.getElementById('lvNovoCategoriaChips').innerHTML = LOUVOR_CATEGORIAS.map(c=>
+    `<button type="button" class="dif-chip${window.lvNovoCategoriaSelecionada===c?' active':''}" onclick="selecionarLvNovaCategoria('${c}')">${c}</button>`
+  ).join('');
+}
+function selecionarLvNovaCategoria(c){
+  window.lvNovoCategoriaSelecionada = c;
+  renderLvNovoCategoriaChips();
+}
+function criarLouvor(){
+  const titulo = document.getElementById('lvNovoTitulo').value.trim();
+  if(!titulo){ document.getElementById('lvNovoTitulo').focus(); return; }
+  const id = 'lv_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const novo = {
+    id,
+    titulo,
+    artista: document.getElementById('lvNovoArtista').value.trim(),
+    categoria: window.lvNovoCategoriaSelecionada || 'Louvor',
+    tom: '',
+    transpose: 0,
+    colunas: 2,
+    conteudo: '',
+    criadoEm: Date.now()
+  };
+  state.louvores.push(novo);
+  persist();
+  closeLouvorForm();
+  renderLouvor();
+  abrirLouvorDetalhe(id);
+}
+
+/* ---------- Detalhe / Edição ---------- */
+function abrirLouvorDetalhe(id){
+  louvorAtualId = id;
+  const l = getLouvorAtual();
+  if(!l) return;
+  document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
+  document.getElementById('lvTitulo').value = l.titulo || '';
+  document.getElementById('lvArtista').value = l.artista || '';
+  document.getElementById('lvTom').value = l.tom || '';
+  document.getElementById('lvConteudo').value = l.conteudo || '';
+  document.getElementById('lvTransposeLabel').textContent = (l.transpose>0?'+':'')+(l.transpose||0);
+  renderLvCategoriaChips();
+  atualizarLvTomAtualLabel();
+  switchLouvorSubtab('edicao');
+  document.getElementById('pageLouvorDetalhe').classList.add('active');
+}
+function closeLouvorDetalhe(){
+  document.getElementById('pageLouvorDetalhe').classList.remove('active');
+  louvorAtualId = null;
+  renderLouvor();
+}
+function renderLvCategoriaChips(){
+  const l = getLouvorAtual(); if(!l) return;
+  document.getElementById('lvCategoriaChips').innerHTML = LOUVOR_CATEGORIAS.map(c=>
+    `<button type="button" class="dif-chip${l.categoria===c?' active':''}" onclick="selecionarLvCategoria('${c}')">${c}</button>`
+  ).join('');
+}
+function selecionarLvCategoria(c){
+  const l = getLouvorAtual(); if(!l) return;
+  l.categoria = c;
+  renderLvCategoriaChips();
+  persist();
+}
+function salvarLouvorCampo(){
+  const l = getLouvorAtual(); if(!l) return;
+  l.titulo = document.getElementById('lvTitulo').value;
+  l.artista = document.getElementById('lvArtista').value;
+  l.tom = document.getElementById('lvTom').value;
+  l.conteudo = document.getElementById('lvConteudo').value;
+  document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
+  atualizarLvTomAtualLabel();
+  persist();
+}
+function atualizarLvTomAtualLabel(){
+  const l = getLouvorAtual(); if(!l) return;
+  const tomAtual = l.tom ? (lvTransposeChord(l.tom, l.transpose||0) || l.tom) : '';
+  document.getElementById('lvTomAtualLabel').textContent = tomAtual ? `Tom atual: ${tomAtual}` : '';
+}
+function transporLouvorAtual(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  l.transpose = (l.transpose||0) + delta;
+  document.getElementById('lvTransposeLabel').textContent = (l.transpose>0?'+':'')+l.transpose;
+  atualizarLvTomAtualLabel();
+  persist();
+}
+function excluirLouvorAtual(){
+  const l = getLouvorAtual(); if(!l) return;
+  if(!confirm(`Excluir "${l.titulo||'este louvor'}"? Essa ação não pode ser desfeita.`)) return;
+  state.louvores = state.louvores.filter(x=>x.id!==l.id);
+  persist();
+  closeLouvorDetalhe();
+}
+
+function switchLouvorSubtab(tab){
+  document.querySelectorAll('.lv-subtab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
+  document.querySelectorAll('.lv-panel').forEach(el=>el.classList.remove('active'));
+  if(tab==='edicao') document.getElementById('lvPanelEdicao').classList.add('active');
+  if(tab==='pdf'){
+    document.getElementById('lvPanelPdf').classList.add('active');
+    renderLouvorPdfPreview();
+  }
+  if(tab==='slides'){
+    document.getElementById('lvPanelSlides').classList.add('active');
+    lvSlideIndex = 0;
+    renderLouvorSlidePreview();
+  }
+}
+
+/* ---------- Motor de cifras/transposição ---------- */
+function lvParseLine(line){
+  let lyric = '';
+  const chords = [];
+  let i = 0;
+  while(i < line.length){
+    if(line[i] === '['){
+      const end = line.indexOf(']', i);
+      if(end !== -1){
+        chords.push({ pos: lyric.length, chord: line.slice(i+1, end) });
+        i = end+1;
+        continue;
+      }
+    }
+    lyric += line[i];
+    i++;
+  }
+  return { lyric, chords };
+}
+const LV_CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const LV_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+function lvShiftNote(note, delta){
+  let idx = LV_CHROMATIC.indexOf(note);
+  if(idx===-1) idx = LV_FLAT.indexOf(note);
+  if(idx===-1) return null;
+  return LV_CHROMATIC[((idx+delta)%12+12)%12];
+}
+function lvTransposeChord(chord, delta){
+  if(!chord) return chord;
+  if(!delta) return chord;
+  const m = chord.match(/^([A-G])(#|b)?/);
+  if(!m) return chord;
+  const rootFull = m[1] + (m[2]||'');
+  let rest = chord.slice(rootFull.length);
+  const newRoot = lvShiftNote(rootFull, delta);
+  if(!newRoot) return chord;
+  const slashIdx = rest.indexOf('/');
+  if(slashIdx !== -1){
+    const bassPart = rest.slice(slashIdx+1);
+    const bm = bassPart.match(/^([A-G])(#|b)?/);
+    if(bm){
+      const bassFull = bm[1] + (bm[2]||'');
+      const newBass = lvShiftNote(bassFull, delta) || bassFull;
+      const bassRest = bassPart.slice(bassFull.length);
+      return newRoot + rest.slice(0,slashIdx) + '/' + newBass + bassRest;
+    }
+  }
+  return newRoot + rest;
+}
+function lvBuildChordLyricLines(rawLine, delta){
+  const { lyric, chords } = lvParseLine(rawLine);
+  let chordLine = '';
+  chords.forEach(c=>{
+    const transposed = lvTransposeChord(c.chord, delta);
+    let pos = Math.max(c.pos, chordLine.length);
+    while(chordLine.length < pos) chordLine += ' ';
+    chordLine += transposed;
+  });
+  return { chordLine, lyric };
+}
+function lvParseBlocks(conteudo){
+  const rawBlocks = (conteudo||'').split(/\n\s*\n/).map(b=>b.replace(/^\n+|\n+$/g,'')).filter(b=>b.trim().length>0);
+  return rawBlocks.map(b=>{
+    const lines = b.split('\n');
+    let label = '';
+    if(lines[0] && lines[0].trim().startsWith('#')){
+      label = lines[0].trim().slice(1).trim();
+      lines.shift();
+    }
+    return { label, lines };
+  });
+}
+
+/* ---------- PDF ---------- */
+function setLouvorColunas(n){
+  const l = getLouvorAtual(); if(!l) return;
+  l.colunas = n;
+  persist();
+  renderLouvorPdfPreview();
+}
+function renderLouvorPdfPreview(){
+  const l = getLouvorAtual(); if(!l) return;
+  const cols = l.colunas || 2;
+  document.getElementById('lvColuna1').classList.toggle('active', cols===1);
+  document.getElementById('lvColuna2').classList.toggle('active', cols===2);
+  const delta = l.transpose || 0;
+  const blocks = lvParseBlocks(l.conteudo);
+  const blocksHtml = blocks.map(b=>{
+    const linesHtml = b.lines.map(line=>{
+      const { chordLine, lyric } = lvBuildChordLyricLines(line, delta);
+      return `${chordLine.trim() ? `<div class="lv-sheet-chordline">${chordLine}</div>` : ''}<div class="lv-sheet-lyricline">${lyric || '&nbsp;'}</div>`;
+    }).join('');
+    return `<div class="lv-sheet-block">${b.label?`<div class="lv-sheet-label">${b.label}</div>`:''}${linesHtml}</div>`;
+  }).join('');
+  const tomAtual = l.tom ? (lvTransposeChord(l.tom, delta) || l.tom) : '';
+  document.getElementById('lvPdfPreview').innerHTML = `
+    <div class="lv-sheet-title">${l.titulo||'Sem título'}</div>
+    <div class="lv-sheet-artist">${l.artista||''}${tomAtual?' · Tom: '+tomAtual:''}</div>
+    <div class="lv-sheet-cols" style="column-count:${cols};column-gap:20px">${blocksHtml || '<p class="empty-hint">Sem conteúdo ainda.</p>'}</div>
+  `;
+}
+function exportarLouvorPdf(){
+  const l = getLouvorAtual(); if(!l) return;
+  if(typeof window.jspdf === 'undefined'){
+    showToast('Não foi possível carregar o gerador de PDF.');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const pageW = 595, pageH = 842, marginX = 40;
+  const graphite = [37,41,46];
+  const delta = l.transpose || 0;
+  const tomAtual = l.tom ? (lvTransposeChord(l.tom, delta) || l.tom) : '';
+
+  doc.setFillColor(...graphite);
+  doc.rect(0,0,pageW,70,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(16);
+  doc.text(l.titulo||'Sem título', marginX, 32);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10.5);
+  doc.text(`${l.artista||''}${tomAtual?'   ·   Tom: '+tomAtual:''}`, marginX, 50);
+
+  const blocks = lvParseBlocks(l.conteudo);
+  const cols = l.colunas || 2;
+  const colWidth = cols===2 ? (pageW - marginX*2 - 20)/2 : (pageW - marginX*2);
+  const colX = [marginX, marginX + colWidth + 20];
+  const startY = 96;
+  let colIdx = 0, y = startY;
+  const lineH = 12.5;
+  doc.setFont('courier','normal');
+  doc.setFontSize(9.5);
+
+  function ensureSpace(need){
+    if(y + need > pageH - 40){
+      if(cols===2 && colIdx===0){ colIdx = 1; y = startY; }
+      else { doc.addPage(); colIdx = 0; y = startY; }
+    }
+  }
+
+  blocks.forEach(b=>{
+    ensureSpace(lineH*2);
+    if(b.label){
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...graphite);
+      doc.setFontSize(8.5);
+      doc.text(b.label.toUpperCase(), colX[colIdx], y);
+      y += lineH;
+      doc.setFont('courier','normal');
+      doc.setFontSize(9.5);
+    }
+    b.lines.forEach(line=>{
+      const { chordLine, lyric } = lvBuildChordLyricLines(line, delta);
+      ensureSpace(lineH*2);
+      if(chordLine.trim()){
+        doc.setTextColor(...graphite);
+        doc.text(chordLine, colX[colIdx], y);
+        y += lineH*0.9;
+      }
+      doc.setTextColor(40,40,40);
+      doc.text(lyric || ' ', colX[colIdx], y);
+      y += lineH;
+    });
+    y += lineH*0.6;
+  });
+
+  doc.save(`${(l.titulo||'louvor').replace(/\s+/g,'_')}.pdf`);
+}
+
+/* ---------- Slides ---------- */
+function renderLouvorSlidePreview(){
+  const l = getLouvorAtual(); if(!l) return;
+  const blocks = lvParseBlocks(l.conteudo);
+  const total = blocks.length + 1;
+  if(lvSlideIndex >= total) lvSlideIndex = total-1;
+  if(lvSlideIndex < 0) lvSlideIndex = 0;
+  document.getElementById('lvSlideCounter').textContent = `${lvSlideIndex+1} / ${total}`;
+  const el = document.getElementById('lvSlidePreview');
+  if(lvSlideIndex === 0){
+    el.innerHTML = `<div class="lv-slide-title">${l.titulo||'Sem título'}</div><div class="lv-slide-artist">${l.artista||''}</div>`;
+  }else{
+    const b = blocks[lvSlideIndex-1];
+    const lyricText = b.lines.map(line=>lvParseLine(line).lyric).join('\n');
+    el.innerHTML = `<div class="lv-slide-lyric">${lyricText.replace(/\n/g,'<br>')}</div>`;
+  }
+}
+function lvSlideNav(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  const blocks = lvParseBlocks(l.conteudo);
+  const total = blocks.length + 1;
+  lvSlideIndex = Math.max(0, Math.min(total-1, lvSlideIndex + delta));
+  renderLouvorSlidePreview();
+}
+function exportarLouvorSlides(){
+  const l = getLouvorAtual(); if(!l) return;
+  const PptxCtor = window.pptxgen || window.PptxGenJS;
+  if(typeof PptxCtor === 'undefined'){
+    showToast('Não foi possível carregar o gerador de slides.');
+    return;
+  }
+  const pres = new PptxCtor();
+  pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
+  pres.layout = 'WIDE';
+  const graphiteHex = '25292E';
+
+  const capa = pres.addSlide();
+  capa.background = { color: graphiteHex };
+  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:44, bold:true, color:'FFFFFF', align:'center' });
+  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:'center' });
+
+  const blocks = lvParseBlocks(l.conteudo);
+  blocks.forEach(b=>{
+    const slide = pres.addSlide();
+    slide.background = { color: graphiteHex };
+    const lyricText = b.lines.map(line=>lvParseLine(line).lyric).join('\n');
+    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:32, bold:true, color:'FFFFFF', align:'center', valign:'middle' });
+  });
+
+  pres.writeFile({ fileName: `${(l.titulo||'louvor').replace(/\s+/g,'_')}_slides.pptx` });
 }
 
 if('serviceWorker' in navigator){
