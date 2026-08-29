@@ -746,18 +746,43 @@
       </div>
       <div class="field full">
         <label>Letra e cifra</label>
-        <div class="lv-hint">Coloque os acordes entre colchetes antes da sílaba, ex: <code>Grande [G]é o Senhor</code>. Deixe uma linha em branco entre cada parte (Verso, Refrão) — isso também separa os slides.</div>
+        <div class="lv-hint">
+          O acorde vai sozinho numa linha (o app identifica automaticamente e deixa laranja); a linha de baixo é a letra. Use espaços pra alinhar o acorde em cima da sílaba certa.<br>
+          <code>[Refrão]</code> cria um título de seção · <code>-</code> sozinho quebra pro próximo slide · <code>--</code> insere uma linha divisória no PDF · <code>---</code> força quebra de coluna no PDF.
+        </div>
         <textarea id="lvConteudo" rows="16" placeholder="[G]Grande é o Senhor..." oninput="salvarLouvorCampo()" style="font-family:'Courier New',monospace;font-size:13px"></textarea>
       </div>
     </div>
 
     <!-- PAINEL: PDF -->
     <div class="lv-panel" id="lvPanelPdf">
-      <div class="field full">
-        <label>Colunas</label>
-        <div class="dificuldade-chips">
-          <button type="button" class="dif-chip" id="lvColuna1" onclick="setLouvorColunas(1)">1 coluna</button>
-          <button type="button" class="dif-chip" id="lvColuna2" onclick="setLouvorColunas(2)">2 colunas</button>
+      <button type="button" class="accordion-toggle" onclick="toggleAccordion('lvPdfConfigBody')">
+        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
+        <svg id="lvPdfConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-body" id="lvPdfConfigBody" style="display:none">
+        <div class="field full">
+          <label>Colunas</label>
+          <div class="dificuldade-chips">
+            <button type="button" class="dif-chip" id="lvColuna1" onclick="setLouvorColunas(1)">1 coluna</button>
+            <button type="button" class="dif-chip" id="lvColuna2" onclick="setLouvorColunas(2)">2 colunas</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Tamanho do texto</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(-1)">−</button>
+            <span id="lvPdfTextoLabel">11pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Tamanho do título</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(-1)">−</button>
+            <span id="lvPdfTituloLabel">17pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(1)">+</button>
+          </div>
         </div>
       </div>
       <div class="lv-pdf-preview" id="lvPdfPreview"></div>
@@ -768,6 +793,36 @@
 
     <!-- PAINEL: SLIDES -->
     <div class="lv-panel" id="lvPanelSlides">
+      <button type="button" class="accordion-toggle" onclick="toggleAccordion('lvSlideConfigBody')">
+        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
+        <svg id="lvSlideConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-body" id="lvSlideConfigBody" style="display:none">
+        <div class="field full">
+          <label>Tamanho do título</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(-2)">−</button>
+            <span id="lvSlideTituloTamanhoLabel">44pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(2)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Alinhamento do título</label>
+          <div class="dificuldade-chips" id="lvSlideTituloAlinhamentoChips"></div>
+        </div>
+        <div class="field full">
+          <label>Tamanho do texto</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(-2)">−</button>
+            <span id="lvSlideTextoTamanhoLabel">32pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(2)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Alinhamento do texto</label>
+          <div class="dificuldade-chips" id="lvSlideTextoAlinhamentoChips"></div>
+        </div>
+      </div>
       <div class="lv-slides-nav">
         <button class="btn-icon-sm" onclick="lvSlideNav(-1)">◀</button>
         <span id="lvSlideCounter">1 / 1</span>

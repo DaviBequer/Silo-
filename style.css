@@ -637,13 +637,16 @@ body{padding-bottom:0}
 .lv-hint code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10.5px}
 
 .lv-pdf-preview{background:#fff;border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--s3);margin-top:var(--s2);overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.lv-sheet-title{font-family:'Courier New',monospace;font-weight:800;font-size:15px;color:var(--text);text-align:center}
-.lv-sheet-artist{font-family:'Courier New',monospace;font-size:11px;color:var(--text-faint);text-align:center;margin-bottom:10px}
-.lv-sheet-cols{display:grid;gap:18px}
-.lv-sheet-block{margin-bottom:12px;break-inside:avoid}
-.lv-sheet-label{font-family:'Courier New',monospace;font-weight:800;font-size:10.5px;color:var(--primary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.lv-sheet-chordline{font-family:'Courier New',monospace;font-size:11.5px;font-weight:800;color:var(--primary);white-space:pre;line-height:1.15}
-.lv-sheet-lyricline{font-family:'Courier New',monospace;font-size:11.5px;color:var(--text);white-space:pre;line-height:1.5}
+.lv-sheet-header{text-align:center;margin-bottom:14px}
+.lv-sheet-title{font-family:'Courier New',monospace;font-weight:800;color:var(--text)}
+.lv-sheet-artist{font-family:'Courier New',monospace;font-size:11px;color:var(--text-faint);margin-top:2px}
+.lv-sheet-cols{column-gap:22px;orphans:2;widows:2}
+.lv-sheet-section{font-family:'Courier New',monospace;font-weight:800;font-size:11px;color:var(--text);text-transform:uppercase;letter-spacing:.6px;margin:10px 0 4px;break-inside:avoid;break-after:avoid}
+.lv-sheet-divider{border-top:1px dashed var(--line);margin:8px 0}
+.lv-sheet-blank{height:9px}
+.lv-colbreak{break-after:column;-webkit-column-break-after:always;height:0}
+.lv-sheet-chordline{font-family:'Courier New',monospace;font-weight:800;color:var(--warning);white-space:pre;line-height:1.15;break-inside:avoid;break-after:avoid}
+.lv-sheet-lyricline{font-family:'Courier New',monospace;color:var(--text);white-space:pre;line-height:1.5;break-inside:avoid}
 
 .lv-slides-nav{display:flex;align-items:center;justify-content:center;gap:var(--s3);margin-bottom:var(--s3)}
 .lv-slides-nav span{font-size:12px;font-weight:700;color:var(--text-dim);min-width:50px;text-align:center}

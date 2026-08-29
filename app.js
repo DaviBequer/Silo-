@@ -3218,6 +3218,7 @@ function abrirLouvorDetalhe(id){
   louvorAtualId = id;
   const l = getLouvorAtual();
   if(!l) return;
+  ensureLouvorConfig(l);
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
   document.getElementById('lvTitulo').value = l.titulo || '';
   document.getElementById('lvArtista').value = l.artista || '';
@@ -3291,24 +3292,34 @@ function switchLouvorSubtab(tab){
   }
 }
 
-/* ---------- Motor de cifras/transposição ---------- */
-function lvParseLine(line){
-  let lyric = '';
-  const chords = [];
-  let i = 0;
-  while(i < line.length){
-    if(line[i] === '['){
-      const end = line.indexOf(']', i);
-      if(end !== -1){
-        chords.push({ pos: lyric.length, chord: line.slice(i+1, end) });
-        i = end+1;
-        continue;
-      }
-    }
-    lyric += line[i];
-    i++;
-  }
-  return { lyric, chords };
+/* ---------- Configurações padrão (PDF e Slides) ---------- */
+function ensureLouvorConfig(l){
+  if(!l.colunas) l.colunas = 2;
+  if(l.pdfTamanhoTexto === undefined) l.pdfTamanhoTexto = 11;
+  if(l.pdfTamanhoTitulo === undefined) l.pdfTamanhoTitulo = 17;
+  if(l.slideTituloTamanho === undefined) l.slideTituloTamanho = 44;
+  if(l.slideTituloAlinhamento === undefined) l.slideTituloAlinhamento = 'center';
+  if(l.slideTextoTamanho === undefined) l.slideTextoTamanho = 32;
+  if(l.slideTextoAlinhamento === undefined) l.slideTextoAlinhamento = 'center';
+}
+
+/* ---------- Motor de cifras: detecção automática, seções e marcadores ----------
+   Sintaxe do texto bruto:
+   [Nome da Seção]  -> cabeçalho de seção (Refrão, Primeira Parte...)
+   Linha só com acordes (ex: "E   A9   B") -> detectada automaticamente, fica laranja no PDF
+   -    (um traço sozinho)  -> quebra para o próximo slide (continua a mesma seção)
+   --   (dois traços)       -> linha divisória no PDF
+   ---  (três traços)       -> força quebra de coluna no PDF
+------------------------------------------------------------------------------ */
+const LV_CHORD_SUFFIXES = ['maj7','majsus4','madd9','madd11','msus2','msus4','mdim7','m7b5','m7M','maj9','maj','min','dim7','dim','aug','sus2','sus4','add9','add11','add2',
+  'm7','m9','m6','m11','m13','7M','9M','6','7','9','11','13','m','M'];
+const LV_CHORD_SUFFIX_RE = LV_CHORD_SUFFIXES.sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+const LV_CHORD_RE = new RegExp(`^[A-G](#|b)?(${LV_CHORD_SUFFIX_RE})?(\\/[A-G](#|b)?)?$`);
+function isChordLine(line){
+  const trimmed = line.trim();
+  if(!trimmed) return false;
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  return tokens.every(t=>LV_CHORD_RE.test(t));
 }
 const LV_CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const LV_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
@@ -3319,8 +3330,7 @@ function lvShiftNote(note, delta){
   return LV_CHROMATIC[((idx+delta)%12+12)%12];
 }
 function lvTransposeChord(chord, delta){
-  if(!chord) return chord;
-  if(!delta) return chord;
+  if(!chord || !delta) return chord;
   const m = chord.match(/^([A-G])(#|b)?/);
   if(!m) return chord;
   const rootFull = m[1] + (m[2]||'');
@@ -3340,28 +3350,63 @@ function lvTransposeChord(chord, delta){
   }
   return newRoot + rest;
 }
-function lvBuildChordLyricLines(rawLine, delta){
-  const { lyric, chords } = lvParseLine(rawLine);
-  let chordLine = '';
-  chords.forEach(c=>{
-    const transposed = lvTransposeChord(c.chord, delta);
-    let pos = Math.max(c.pos, chordLine.length);
-    while(chordLine.length < pos) chordLine += ' ';
-    chordLine += transposed;
-  });
-  return { chordLine, lyric };
+function lvTransposeChordLine(line, delta){
+  if(!delta) return line;
+  return line.replace(/\S+/g, tok => lvTransposeChord(tok, delta));
 }
-function lvParseBlocks(conteudo){
-  const rawBlocks = (conteudo||'').split(/\n\s*\n/).map(b=>b.replace(/^\n+|\n+$/g,'')).filter(b=>b.trim().length>0);
-  return rawBlocks.map(b=>{
-    const lines = b.split('\n');
-    let label = '';
-    if(lines[0] && lines[0].trim().startsWith('#')){
-      label = lines[0].trim().slice(1).trim();
-      lines.shift();
+
+/* Faz uma única passada pelo texto bruto e devolve:
+   items -> sequência pra montar o PDF (seções, pares cifra+letra, divisores, quebras de coluna, espaços em branco)
+   slides -> lista de slides (cada um só com as linhas de letra, sem cifra), quebrados por seção e por "-" */
+function lvParseContent(conteudo){
+  const rawLines = (conteudo||'').split('\n');
+  const items = [];
+  let pendingChord = null;
+  let currentLabel = '';
+  const slides = [];
+  let currentSlideLines = null;
+
+  function flushPendingChord(){
+    if(pendingChord !== null){
+      items.push({ type:'pair', chordLine: pendingChord, lyricLine: '' });
+      pendingChord = null;
     }
-    return { label, lines };
+  }
+  function startNewSlide(){
+    currentSlideLines = [];
+    slides.push({ label: currentLabel, lines: currentSlideLines });
+  }
+
+  rawLines.forEach(raw=>{
+    const trimmed = raw.trim();
+    if(trimmed === '---'){ flushPendingChord(); items.push({type:'colbreak'}); return; }
+    if(trimmed === '--'){ flushPendingChord(); items.push({type:'divider'}); return; }
+    if(trimmed === '-'){ flushPendingChord(); startNewSlide(); return; }
+    const sectionMatch = trimmed.match(/^\[(.+)\]$/);
+    if(sectionMatch){
+      flushPendingChord();
+      currentLabel = sectionMatch[1];
+      items.push({ type:'section', label: currentLabel });
+      startNewSlide();
+      return;
+    }
+    if(trimmed === ''){
+      flushPendingChord();
+      items.push({ type:'blank' });
+      return;
+    }
+    if(isChordLine(trimmed)){
+      flushPendingChord();
+      pendingChord = raw;
+      return;
+    }
+    items.push({ type:'pair', chordLine: pendingChord||'', lyricLine: raw });
+    pendingChord = null;
+    if(currentSlideLines === null) startNewSlide();
+    currentSlideLines.push(raw);
   });
+  flushPendingChord();
+  return { items, slides: slides.filter(s=>s.lines.length>0) };
 }
 
 /* ---------- PDF ---------- */
@@ -3371,29 +3416,58 @@ function setLouvorColunas(n){
   persist();
   renderLouvorPdfPreview();
 }
+function ajustarLvPdfTamanhoTexto(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.pdfTamanhoTexto = Math.max(8, Math.min(16, l.pdfTamanhoTexto + delta));
+  persist();
+  renderLouvorPdfPreview();
+}
+function ajustarLvPdfTamanhoTitulo(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.pdfTamanhoTitulo = Math.max(12, Math.min(26, l.pdfTamanhoTitulo + delta));
+  persist();
+  renderLouvorPdfPreview();
+}
 function renderLouvorPdfPreview(){
   const l = getLouvorAtual(); if(!l) return;
-  const cols = l.colunas || 2;
-  document.getElementById('lvColuna1').classList.toggle('active', cols===1);
-  document.getElementById('lvColuna2').classList.toggle('active', cols===2);
+  ensureLouvorConfig(l);
+  document.getElementById('lvColuna1').classList.toggle('active', l.colunas===1);
+  document.getElementById('lvColuna2').classList.toggle('active', l.colunas===2);
+  document.getElementById('lvPdfTextoLabel').textContent = l.pdfTamanhoTexto+'pt';
+  document.getElementById('lvPdfTituloLabel').textContent = l.pdfTamanhoTitulo+'pt';
+
   const delta = l.transpose || 0;
-  const blocks = lvParseBlocks(l.conteudo);
-  const blocksHtml = blocks.map(b=>{
-    const linesHtml = b.lines.map(line=>{
-      const { chordLine, lyric } = lvBuildChordLyricLines(line, delta);
-      return `${chordLine.trim() ? `<div class="lv-sheet-chordline">${chordLine}</div>` : ''}<div class="lv-sheet-lyricline">${lyric || '&nbsp;'}</div>`;
-    }).join('');
-    return `<div class="lv-sheet-block">${b.label?`<div class="lv-sheet-label">${b.label}</div>`:''}${linesHtml}</div>`;
-  }).join('');
+  const { items } = lvParseContent(l.conteudo);
+  let bodyHtml = '';
+  items.forEach(it=>{
+    if(it.type==='section'){
+      bodyHtml += `<div class="lv-sheet-section">${it.label}</div>`;
+    }else if(it.type==='divider'){
+      bodyHtml += `<div class="lv-sheet-divider"></div>`;
+    }else if(it.type==='colbreak'){
+      bodyHtml += `<div class="lv-colbreak"></div>`;
+    }else if(it.type==='blank'){
+      bodyHtml += `<div class="lv-sheet-blank"></div>`;
+    }else if(it.type==='pair'){
+      const chordLine = lvTransposeChordLine(it.chordLine||'', delta);
+      bodyHtml += chordLine.trim() ? `<div class="lv-sheet-chordline" style="font-size:${l.pdfTamanhoTexto}px">${chordLine}</div>` : '';
+      bodyHtml += `<div class="lv-sheet-lyricline" style="font-size:${l.pdfTamanhoTexto}px">${it.lyricLine || ' '}</div>`;
+    }
+  });
   const tomAtual = l.tom ? (lvTransposeChord(l.tom, delta) || l.tom) : '';
   document.getElementById('lvPdfPreview').innerHTML = `
-    <div class="lv-sheet-title">${l.titulo||'Sem título'}</div>
-    <div class="lv-sheet-artist">${l.artista||''}${tomAtual?' · Tom: '+tomAtual:''}</div>
-    <div class="lv-sheet-cols" style="column-count:${cols};column-gap:20px">${blocksHtml || '<p class="empty-hint">Sem conteúdo ainda.</p>'}</div>
+    <div class="lv-sheet-header">
+      <div class="lv-sheet-title" style="font-size:${l.pdfTamanhoTitulo}px">${l.titulo||'Sem título'}</div>
+      <div class="lv-sheet-artist">${l.artista||''}${tomAtual?' · Tom: '+tomAtual:''}</div>
+    </div>
+    <div class="lv-sheet-cols" style="column-count:${l.colunas}">${bodyHtml || '<p class="empty-hint">Sem conteúdo ainda.</p>'}</div>
   `;
 }
 function exportarLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
   if(typeof window.jspdf === 'undefined'){
     showToast('Não foi possível carregar o gerador de PDF.');
     return;
@@ -3402,6 +3476,7 @@ function exportarLouvorPdf(){
   const doc = new jsPDF({ unit:'pt', format:'a4' });
   const pageW = 595, pageH = 842, marginX = 40;
   const graphite = [37,41,46];
+  const orange = [219,139,24];
   const delta = l.transpose || 0;
   const tomAtual = l.tom ? (lvTransposeChord(l.tom, delta) || l.tom) : '';
 
@@ -3409,84 +3484,143 @@ function exportarLouvorPdf(){
   doc.rect(0,0,pageW,70,'F');
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold');
-  doc.setFontSize(16);
+  doc.setFontSize(l.pdfTamanhoTitulo+2);
   doc.text(l.titulo||'Sem título', marginX, 32);
   doc.setFont('helvetica','normal');
   doc.setFontSize(10.5);
   doc.text(`${l.artista||''}${tomAtual?'   ·   Tom: '+tomAtual:''}`, marginX, 50);
 
-  const blocks = lvParseBlocks(l.conteudo);
+  const { items } = lvParseContent(l.conteudo);
   const cols = l.colunas || 2;
   const colWidth = cols===2 ? (pageW - marginX*2 - 20)/2 : (pageW - marginX*2);
   const colX = [marginX, marginX + colWidth + 20];
   const startY = 96;
   let colIdx = 0, y = startY;
-  const lineH = 12.5;
+  const fontSize = l.pdfTamanhoTexto;
+  const lineH = fontSize + 3;
   doc.setFont('courier','normal');
-  doc.setFontSize(9.5);
+  doc.setFontSize(fontSize);
 
+  function nextColumnOrPage(){
+    if(cols===2 && colIdx===0){ colIdx = 1; y = startY; }
+    else { doc.addPage(); colIdx = 0; y = startY; }
+  }
   function ensureSpace(need){
-    if(y + need > pageH - 40){
-      if(cols===2 && colIdx===0){ colIdx = 1; y = startY; }
-      else { doc.addPage(); colIdx = 0; y = startY; }
-    }
+    if(y + need > pageH - 40) nextColumnOrPage();
   }
 
-  blocks.forEach(b=>{
-    ensureSpace(lineH*2);
-    if(b.label){
+  items.forEach(it=>{
+    if(it.type==='colbreak'){ nextColumnOrPage(); return; }
+    if(it.type==='divider'){
+      ensureSpace(lineH);
+      doc.setDrawColor(210,210,214);
+      doc.line(colX[colIdx], y-4, colX[colIdx]+colWidth, y-4);
+      y += lineH*0.7;
+      return;
+    }
+    if(it.type==='blank'){ ensureSpace(lineH*0.7); y += lineH*0.7; return; }
+    if(it.type==='section'){
+      ensureSpace(lineH*1.6);
       doc.setFont('helvetica','bold');
       doc.setTextColor(...graphite);
-      doc.setFontSize(8.5);
-      doc.text(b.label.toUpperCase(), colX[colIdx], y);
-      y += lineH;
+      doc.setFontSize(fontSize-1);
+      doc.text(it.label.toUpperCase(), colX[colIdx], y);
+      y += lineH*1.2;
       doc.setFont('courier','normal');
-      doc.setFontSize(9.5);
+      doc.setFontSize(fontSize);
+      return;
     }
-    b.lines.forEach(line=>{
-      const { chordLine, lyric } = lvBuildChordLyricLines(line, delta);
+    if(it.type==='pair'){
+      const chordLine = lvTransposeChordLine(it.chordLine||'', delta);
       ensureSpace(lineH*2);
       if(chordLine.trim()){
-        doc.setTextColor(...graphite);
+        doc.setTextColor(...orange);
         doc.text(chordLine, colX[colIdx], y);
-        y += lineH*0.9;
+        y += lineH*0.85;
       }
       doc.setTextColor(40,40,40);
-      doc.text(lyric || ' ', colX[colIdx], y);
+      doc.text(it.lyricLine || ' ', colX[colIdx], y);
       y += lineH;
-    });
-    y += lineH*0.6;
+    }
   });
 
   doc.save(`${(l.titulo||'louvor').replace(/\s+/g,'_')}.pdf`);
 }
 
 /* ---------- Slides ---------- */
+function ajustarLvSlideTituloTamanho(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.slideTituloTamanho = Math.max(20, Math.min(70, l.slideTituloTamanho + delta));
+  persist();
+  renderLouvorSlidePreview();
+}
+function setLvSlideTituloAlinhamento(v){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.slideTituloAlinhamento = v;
+  persist();
+  renderLouvorSlidePreview();
+}
+function ajustarLvSlideTextoTamanho(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.slideTextoTamanho = Math.max(16, Math.min(56, l.slideTextoTamanho + delta));
+  persist();
+  renderLouvorSlidePreview();
+}
+function setLvSlideTextoAlinhamento(v){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.slideTextoAlinhamento = v;
+  persist();
+  renderLouvorSlidePreview();
+}
+function lvAlinhamentoChips(grupo, valorAtual){
+  const opcoes = [['left','Esquerda'],['center','Centro'],['right','Direita'],['justify','Justificado']];
+  return opcoes.map(([v,label])=>
+    `<button type="button" class="dif-chip${valorAtual===v?' active':''}" onclick="${grupo}('${v}')">${label}</button>`
+  ).join('');
+}
+function renderLouvorSlideConfigPainel(){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  document.getElementById('lvSlideTituloTamanhoLabel').textContent = l.slideTituloTamanho+'pt';
+  document.getElementById('lvSlideTextoTamanhoLabel').textContent = l.slideTextoTamanho+'pt';
+  document.getElementById('lvSlideTituloAlinhamentoChips').innerHTML = lvAlinhamentoChips('setLvSlideTituloAlinhamento', l.slideTituloAlinhamento);
+  document.getElementById('lvSlideTextoAlinhamentoChips').innerHTML = lvAlinhamentoChips('setLvSlideTextoAlinhamento', l.slideTextoAlinhamento);
+}
 function renderLouvorSlidePreview(){
   const l = getLouvorAtual(); if(!l) return;
-  const blocks = lvParseBlocks(l.conteudo);
-  const total = blocks.length + 1;
+  ensureLouvorConfig(l);
+  renderLouvorSlideConfigPainel();
+  const { slides } = lvParseContent(l.conteudo);
+  const total = slides.length + 1;
   if(lvSlideIndex >= total) lvSlideIndex = total-1;
   if(lvSlideIndex < 0) lvSlideIndex = 0;
   document.getElementById('lvSlideCounter').textContent = `${lvSlideIndex+1} / ${total}`;
   const el = document.getElementById('lvSlidePreview');
+  const alinhaFlex = { left:'flex-start', center:'center', right:'flex-end', justify:'center' };
   if(lvSlideIndex === 0){
-    el.innerHTML = `<div class="lv-slide-title">${l.titulo||'Sem título'}</div><div class="lv-slide-artist">${l.artista||''}</div>`;
+    el.style.alignItems = alinhaFlex[l.slideTituloAlinhamento] || 'center';
+    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:${l.slideTituloAlinhamento}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist">${l.artista||''}</div>`;
   }else{
-    const b = blocks[lvSlideIndex-1];
-    const lyricText = b.lines.map(line=>lvParseLine(line).lyric).join('\n');
-    el.innerHTML = `<div class="lv-slide-lyric">${lyricText.replace(/\n/g,'<br>')}</div>`;
+    const s = slides[lvSlideIndex-1];
+    const lyricText = s.lines.join('\n');
+    el.style.alignItems = alinhaFlex[l.slideTextoAlinhamento] || 'center';
+    el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${l.slideTextoTamanho/10}vw;text-align:${l.slideTextoAlinhamento}">${lyricText.replace(/\n/g,'<br>')}</div>`;
   }
 }
 function lvSlideNav(delta){
   const l = getLouvorAtual(); if(!l) return;
-  const blocks = lvParseBlocks(l.conteudo);
-  const total = blocks.length + 1;
+  const { slides } = lvParseContent(l.conteudo);
+  const total = slides.length + 1;
   lvSlideIndex = Math.max(0, Math.min(total-1, lvSlideIndex + delta));
   renderLouvorSlidePreview();
 }
 function exportarLouvorSlides(){
   const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
   const PptxCtor = window.pptxgen || window.PptxGenJS;
   if(typeof PptxCtor === 'undefined'){
     showToast('Não foi possível carregar o gerador de slides.');
@@ -3496,18 +3630,19 @@ function exportarLouvorSlides(){
   pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
   pres.layout = 'WIDE';
   const graphiteHex = '25292E';
+  const alinhaPptx = { left:'left', center:'center', right:'right', justify:'justify' };
 
   const capa = pres.addSlide();
   capa.background = { color: graphiteHex };
-  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:44, bold:true, color:'FFFFFF', align:'center' });
-  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:'center' });
+  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTituloAlinhamento]||'center' });
+  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:alinhaPptx[l.slideTituloAlinhamento]||'center' });
 
-  const blocks = lvParseBlocks(l.conteudo);
-  blocks.forEach(b=>{
+  const { slides } = lvParseContent(l.conteudo);
+  slides.forEach(s=>{
     const slide = pres.addSlide();
     slide.background = { color: graphiteHex };
-    const lyricText = b.lines.map(line=>lvParseLine(line).lyric).join('\n');
-    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:32, bold:true, color:'FFFFFF', align:'center', valign:'middle' });
+    const lyricText = s.lines.join('\n');
+    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:l.slideTextoTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTextoAlinhamento]||'center', valign:'middle' });
   });
 
   pres.writeFile({ fileName: `${(l.titulo||'louvor').replace(/\s+/g,'_')}_slides.pptx` });
