@@ -733,16 +733,11 @@
         <div class="dificuldade-chips" id="lvCategoriaChips"></div>
       </div>
       <div class="field full">
-        <label>Tom original</label>
-        <div class="lv-tom-row">
-          <input type="text" id="lvTom" placeholder="Ex: G" maxlength="4" oninput="salvarLouvorCampo()" style="max-width:90px">
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="transporLouvorAtual(-1)">−</button>
-            <span id="lvTransposeLabel">0</span>
-            <button class="btn-icon-sm" onclick="transporLouvorAtual(1)">+</button>
-          </div>
-          <span class="lv-tom-atual" id="lvTomAtualLabel"></span>
-        </div>
+        <label>Tom</label>
+        <button type="button" class="lv-tom-box" id="lvTomBox" onclick="abrirLvTomPicker()">
+          <span id="lvTomBoxValor">—</span>
+        </button>
+        <div class="lv-hint" style="margin-top:6px">Toque uma vez pra escolher o tom. Toque duas vezes seguidas pra usar o relativo menor.</div>
       </div>
       <div class="field full">
         <label>Letra e cifra</label>
@@ -769,6 +764,13 @@
           </div>
         </div>
         <div class="field full">
+          <label>Orientação</label>
+          <div class="dificuldade-chips">
+            <button type="button" class="dif-chip" id="lvOrientRetrato" onclick="setLvPdfOrientacao('retrato')">Retrato</button>
+            <button type="button" class="dif-chip" id="lvOrientPaisagem" onclick="setLvPdfOrientacao('paisagem')">Paisagem</button>
+          </div>
+        </div>
+        <div class="field full">
           <label>Tamanho do texto</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(-1)">−</button>
@@ -782,6 +784,30 @@
             <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(-1)">−</button>
             <span id="lvPdfTituloLabel">17pt</span>
             <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Altura da linha</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(-0.1)">−</button>
+            <span id="lvPdfAlturaLinhaLabel">1.5</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(0.1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Espaçamento de letras</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(-0.2)">−</button>
+            <span id="lvPdfEspacamentoLabel">0</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(0.2)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Margem da folha</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfMargem(-4)">−</button>
+            <span id="lvPdfMargemLabel">40pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfMargem(4)">+</button>
           </div>
         </div>
       </div>
@@ -822,6 +848,22 @@
           <label>Alinhamento do texto</label>
           <div class="dificuldade-chips" id="lvSlideTextoAlinhamentoChips"></div>
         </div>
+        <div class="field full">
+          <label>Altura da linha no slide</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(-0.1)">−</button>
+            <span id="lvSlideAlturaLinhaLabel">1.4</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(0.1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Espaçamento de letras</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(-0.2)">−</button>
+            <span id="lvSlideEspacamentoLabel">0</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(0.2)">+</button>
+          </div>
+        </div>
       </div>
       <div class="lv-slides-nav">
         <button class="btn-icon-sm" onclick="lvSlideNav(-1)">◀</button>
@@ -858,6 +900,18 @@
       <div class="dificuldade-chips" id="lvNovoCategoriaChips"></div>
     </div>
     <button class="btn btn-block" onclick="criarLouvor()">Criar e Abrir</button>
+  </div>
+</div>
+
+<!-- MODAL: Seletor de Tom (cromático + relativo menor no duplo toque) -->
+<div class="modal-overlay" id="modalLvTom">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Escolher Tom</h3>
+      <button class="modal-close" onclick="closeModal('modalLvTom')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="lv-hint">Um toque = tom maior. Toque duas vezes seguidas na mesma nota = relativo menor.</div>
+    <div class="lv-tom-grid" id="lvTomGrid"></div>
   </div>
 </div>
 

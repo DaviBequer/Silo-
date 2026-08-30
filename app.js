@@ -3159,7 +3159,8 @@ function renderLouvorLista(){
     return;
   }
   el.innerHTML = items.map(l=>{
-    const tomAtual = l.tom ? (lvTransposeChord(l.tom, l.transpose||0) || l.tom) : '';
+    ensureLouvorConfig(l);
+    const tomAtual = lvTomAtual(l);
     return `<div class="lv-card" onclick="abrirLouvorDetalhe('${l.id}')">
       <div class="lv-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
       <div class="lv-card-info">
@@ -3222,11 +3223,9 @@ function abrirLouvorDetalhe(id){
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
   document.getElementById('lvTitulo').value = l.titulo || '';
   document.getElementById('lvArtista').value = l.artista || '';
-  document.getElementById('lvTom').value = l.tom || '';
   document.getElementById('lvConteudo').value = l.conteudo || '';
-  document.getElementById('lvTransposeLabel').textContent = (l.transpose>0?'+':'')+(l.transpose||0);
   renderLvCategoriaChips();
-  atualizarLvTomAtualLabel();
+  atualizarLvTomBox();
   switchLouvorSubtab('edicao');
   document.getElementById('pageLouvorDetalhe').classList.add('active');
 }
@@ -3251,22 +3250,8 @@ function salvarLouvorCampo(){
   const l = getLouvorAtual(); if(!l) return;
   l.titulo = document.getElementById('lvTitulo').value;
   l.artista = document.getElementById('lvArtista').value;
-  l.tom = document.getElementById('lvTom').value;
   l.conteudo = document.getElementById('lvConteudo').value;
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
-  atualizarLvTomAtualLabel();
-  persist();
-}
-function atualizarLvTomAtualLabel(){
-  const l = getLouvorAtual(); if(!l) return;
-  const tomAtual = l.tom ? (lvTransposeChord(l.tom, l.transpose||0) || l.tom) : '';
-  document.getElementById('lvTomAtualLabel').textContent = tomAtual ? `Tom atual: ${tomAtual}` : '';
-}
-function transporLouvorAtual(delta){
-  const l = getLouvorAtual(); if(!l) return;
-  l.transpose = (l.transpose||0) + delta;
-  document.getElementById('lvTransposeLabel').textContent = (l.transpose>0?'+':'')+l.transpose;
-  atualizarLvTomAtualLabel();
   persist();
 }
 function excluirLouvorAtual(){
@@ -3297,10 +3282,91 @@ function ensureLouvorConfig(l){
   if(!l.colunas) l.colunas = 2;
   if(l.pdfTamanhoTexto === undefined) l.pdfTamanhoTexto = 11;
   if(l.pdfTamanhoTitulo === undefined) l.pdfTamanhoTitulo = 17;
+  if(l.pdfOrientacao === undefined) l.pdfOrientacao = 'retrato';
+  if(l.pdfAlturaLinha === undefined) l.pdfAlturaLinha = 1.5;
+  if(l.pdfEspacamento === undefined) l.pdfEspacamento = 0;
+  if(l.pdfMargem === undefined) l.pdfMargem = 40;
   if(l.slideTituloTamanho === undefined) l.slideTituloTamanho = 44;
   if(l.slideTituloAlinhamento === undefined) l.slideTituloAlinhamento = 'center';
   if(l.slideTextoTamanho === undefined) l.slideTextoTamanho = 32;
   if(l.slideTextoAlinhamento === undefined) l.slideTextoAlinhamento = 'center';
+  if(l.slideAlturaLinha === undefined) l.slideAlturaLinha = 1.4;
+  if(l.slideEspacamento === undefined) l.slideEspacamento = 0;
+  if(l.transpose === undefined) l.transpose = 0;
+  if(l.tomOriginal === undefined){
+    let base = (l.tom||'').trim();
+    let isMinor = false;
+    if(/m$/i.test(base) && !/maj$/i.test(base)){ isMinor = true; base = base.slice(0,-1); }
+    const m = base.match(/^([A-G])(#|b)?/);
+    l.tomOriginal = m ? (m[1]+(m[2]||'')) : '';
+    l.tomModoMenor = isMinor;
+  }
+  if(l.tomModoMenor === undefined) l.tomModoMenor = false;
+}
+function lvTomAtual(l){
+  if(!l.tomOriginal) return '';
+  const rootAtual = lvShiftNote(l.tomOriginal, l.transpose||0) || l.tomOriginal;
+  if(l.tomModoMenor){
+    const idx = LV_CHROMATIC.indexOf(rootAtual);
+    const relIdx = idx===-1 ? null : (idx+9)%12;
+    return (relIdx!==null ? LV_CHROMATIC[relIdx] : rootAtual) + 'm';
+  }
+  return rootAtual;
+}
+function atualizarLvTomBox(){
+  const l = getLouvorAtual(); if(!l) return;
+  document.getElementById('lvTomBoxValor').textContent = lvTomAtual(l) || '—';
+}
+
+/* ---------- Seletor de Tom (grid cromático + relativo menor no duplo toque) ---------- */
+const LV_TOM_GRID = ['C','C#','Db','D','D#','Eb','E','F','F#','Gb','G','G#','Ab','A','A#','Bb','B'];
+function lvNotasEquivalentes(a,b){
+  if(!a || !b) return false;
+  let ia = LV_CHROMATIC.indexOf(a); if(ia===-1) ia = LV_FLAT.indexOf(a);
+  let ib = LV_CHROMATIC.indexOf(b); if(ib===-1) ib = LV_FLAT.indexOf(b);
+  return ia!==-1 && ia===ib;
+}
+function abrirLvTomPicker(){
+  renderLvTomGrid();
+  document.getElementById('modalLvTom').classList.add('active');
+}
+function renderLvTomGrid(){
+  const l = getLouvorAtual(); if(!l) return;
+  const atualBase = lvTomAtual(l).replace(/m$/,'');
+  document.getElementById('lvTomGrid').innerHTML = LV_TOM_GRID.map(nota=>{
+    const isActive = lvNotasEquivalentes(nota, atualBase);
+    return `<button type="button" class="lv-tom-grid-btn${isActive?' active':''}" onclick="lvTomGridClick('${nota}')">${nota}</button>`;
+  }).join('');
+}
+let lvTomClickTimer = null;
+function lvTomGridClick(nota){
+  if(lvTomClickTimer){
+    clearTimeout(lvTomClickTimer);
+    lvTomClickTimer = null;
+    lvTomGridEscolher(nota, true);
+  }else{
+    lvTomClickTimer = setTimeout(()=>{
+      lvTomClickTimer = null;
+      lvTomGridEscolher(nota, false);
+    }, 280);
+  }
+}
+function lvTomGridEscolher(nota, modoMenor){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  let idxNota = LV_CHROMATIC.indexOf(nota); if(idxNota===-1) idxNota = LV_FLAT.indexOf(nota);
+  let idxOriginal = LV_CHROMATIC.indexOf(l.tomOriginal); if(idxOriginal===-1) idxOriginal = LV_FLAT.indexOf(l.tomOriginal);
+  if(idxOriginal===-1){
+    l.tomOriginal = nota;
+    l.transpose = 0;
+  }else{
+    l.transpose = ((idxNota - idxOriginal)%12+12)%12;
+  }
+  l.tomModoMenor = modoMenor;
+  persist();
+  atualizarLvTomBox();
+  renderLouvorPdfPreview();
+  closeModal('modalLvTom');
 }
 
 /* ---------- Motor de cifras: detecção automática, seções e marcadores ----------
@@ -3416,6 +3482,13 @@ function setLouvorColunas(n){
   persist();
   renderLouvorPdfPreview();
 }
+function setLvPdfOrientacao(v){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.pdfOrientacao = v;
+  persist();
+  renderLouvorPdfPreview();
+}
 function ajustarLvPdfTamanhoTexto(delta){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
@@ -3430,20 +3503,47 @@ function ajustarLvPdfTamanhoTitulo(delta){
   persist();
   renderLouvorPdfPreview();
 }
+function ajustarLvPdfAlturaLinha(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.pdfAlturaLinha = Math.round(Math.max(1.0, Math.min(2.2, l.pdfAlturaLinha + delta))*10)/10;
+  persist();
+  renderLouvorPdfPreview();
+}
+function ajustarLvPdfEspacamento(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.pdfEspacamento = Math.round(Math.max(0, Math.min(3, l.pdfEspacamento + delta))*10)/10;
+  persist();
+  renderLouvorPdfPreview();
+}
+function ajustarLvPdfMargem(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.pdfMargem = Math.max(20, Math.min(72, l.pdfMargem + delta));
+  persist();
+  renderLouvorPdfPreview();
+}
 function renderLouvorPdfPreview(){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
   document.getElementById('lvColuna1').classList.toggle('active', l.colunas===1);
   document.getElementById('lvColuna2').classList.toggle('active', l.colunas===2);
+  document.getElementById('lvOrientRetrato').classList.toggle('active', l.pdfOrientacao==='retrato');
+  document.getElementById('lvOrientPaisagem').classList.toggle('active', l.pdfOrientacao==='paisagem');
   document.getElementById('lvPdfTextoLabel').textContent = l.pdfTamanhoTexto+'pt';
   document.getElementById('lvPdfTituloLabel').textContent = l.pdfTamanhoTitulo+'pt';
+  document.getElementById('lvPdfAlturaLinhaLabel').textContent = l.pdfAlturaLinha.toFixed(1);
+  document.getElementById('lvPdfEspacamentoLabel').textContent = l.pdfEspacamento.toFixed(1);
+  document.getElementById('lvPdfMargemLabel').textContent = l.pdfMargem+'pt';
 
   const delta = l.transpose || 0;
   const { items } = lvParseContent(l.conteudo);
+  const lineStyle = `line-height:${l.pdfAlturaLinha};letter-spacing:${l.pdfEspacamento}px`;
   let bodyHtml = '';
   items.forEach(it=>{
     if(it.type==='section'){
-      bodyHtml += `<div class="lv-sheet-section">${it.label}</div>`;
+      bodyHtml += `<div class="lv-sheet-section-wrap"><span class="lv-sheet-section">${it.label}</span></div>`;
     }else if(it.type==='divider'){
       bodyHtml += `<div class="lv-sheet-divider"></div>`;
     }else if(it.type==='colbreak'){
@@ -3452,12 +3552,15 @@ function renderLouvorPdfPreview(){
       bodyHtml += `<div class="lv-sheet-blank"></div>`;
     }else if(it.type==='pair'){
       const chordLine = lvTransposeChordLine(it.chordLine||'', delta);
-      bodyHtml += chordLine.trim() ? `<div class="lv-sheet-chordline" style="font-size:${l.pdfTamanhoTexto}px">${chordLine}</div>` : '';
-      bodyHtml += `<div class="lv-sheet-lyricline" style="font-size:${l.pdfTamanhoTexto}px">${it.lyricLine || ' '}</div>`;
+      bodyHtml += chordLine.trim() ? `<div class="lv-sheet-chordline" style="font-size:${l.pdfTamanhoTexto}px;${lineStyle}">${chordLine}</div>` : '';
+      bodyHtml += `<div class="lv-sheet-lyricline" style="font-size:${l.pdfTamanhoTexto}px;${lineStyle}">${it.lyricLine || ' '}</div>`;
     }
   });
-  const tomAtual = l.tom ? (lvTransposeChord(l.tom, delta) || l.tom) : '';
-  document.getElementById('lvPdfPreview').innerHTML = `
+  const tomAtual = lvTomAtual(l);
+  const previewEl = document.getElementById('lvPdfPreview');
+  previewEl.classList.toggle('paisagem', l.pdfOrientacao==='paisagem');
+  previewEl.style.padding = l.pdfMargem+'px';
+  previewEl.innerHTML = `
     <div class="lv-sheet-header">
       <div class="lv-sheet-title" style="font-size:${l.pdfTamanhoTitulo}px">${l.titulo||'Sem título'}</div>
       <div class="lv-sheet-artist">${l.artista||''}${tomAtual?' · Tom: '+tomAtual:''}</div>
@@ -3473,12 +3576,14 @@ function exportarLouvorPdf(){
     return;
   }
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'pt', format:'a4' });
-  const pageW = 595, pageH = 842, marginX = 40;
+  const doc = new jsPDF({ unit:'pt', format:'a4', orientation: l.pdfOrientacao==='paisagem' ? 'landscape' : 'portrait' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginX = l.pdfMargem;
   const graphite = [37,41,46];
   const orange = [219,139,24];
   const delta = l.transpose || 0;
-  const tomAtual = l.tom ? (lvTransposeChord(l.tom, delta) || l.tom) : '';
+  const tomAtual = lvTomAtual(l);
 
   doc.setFillColor(...graphite);
   doc.rect(0,0,pageW,70,'F');
@@ -3497,16 +3602,17 @@ function exportarLouvorPdf(){
   const startY = 96;
   let colIdx = 0, y = startY;
   const fontSize = l.pdfTamanhoTexto;
-  const lineH = fontSize + 3;
+  const lineH = fontSize * l.pdfAlturaLinha;
   doc.setFont('courier','normal');
   doc.setFontSize(fontSize);
+  if(doc.setCharSpace) doc.setCharSpace(l.pdfEspacamento);
 
   function nextColumnOrPage(){
     if(cols===2 && colIdx===0){ colIdx = 1; y = startY; }
     else { doc.addPage(); colIdx = 0; y = startY; }
   }
   function ensureSpace(need){
-    if(y + need > pageH - 40) nextColumnOrPage();
+    if(y + need > pageH - marginX) nextColumnOrPage();
   }
 
   items.forEach(it=>{
@@ -3521,13 +3627,20 @@ function exportarLouvorPdf(){
     if(it.type==='blank'){ ensureSpace(lineH*0.7); y += lineH*0.7; return; }
     if(it.type==='section'){
       ensureSpace(lineH*1.6);
+      if(doc.setCharSpace) doc.setCharSpace(0);
+      doc.setFillColor(118,124,133);
+      const label = it.label.toUpperCase();
       doc.setFont('helvetica','bold');
-      doc.setTextColor(...graphite);
-      doc.setFontSize(fontSize-1);
-      doc.text(it.label.toUpperCase(), colX[colIdx], y);
-      y += lineH*1.2;
+      doc.setFontSize(fontSize-2);
+      const textW = doc.getTextWidth(label);
+      const pillW = textW + 20, pillH = fontSize+6, pillX = colX[colIdx]+colWidth/2-pillW/2;
+      doc.roundedRect(pillX, y-fontSize+2, pillW, pillH, pillH/2, pillH/2, 'F');
+      doc.setTextColor(255,255,255);
+      doc.text(label, colX[colIdx]+colWidth/2, y+2, { align:'center' });
+      y += lineH*1.3;
       doc.setFont('courier','normal');
       doc.setFontSize(fontSize);
+      if(doc.setCharSpace) doc.setCharSpace(l.pdfEspacamento);
       return;
     }
     if(it.type==='pair'){
@@ -3576,6 +3689,20 @@ function setLvSlideTextoAlinhamento(v){
   persist();
   renderLouvorSlidePreview();
 }
+function ajustarLvSlideAlturaLinha(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.slideAlturaLinha = Math.round(Math.max(1.0, Math.min(2.5, l.slideAlturaLinha + delta))*10)/10;
+  persist();
+  renderLouvorSlidePreview();
+}
+function ajustarLvSlideEspacamento(delta){
+  const l = getLouvorAtual(); if(!l) return;
+  ensureLouvorConfig(l);
+  l.slideEspacamento = Math.round(Math.max(0, Math.min(3, l.slideEspacamento + delta))*10)/10;
+  persist();
+  renderLouvorSlidePreview();
+}
 function lvAlinhamentoChips(grupo, valorAtual){
   const opcoes = [['left','Esquerda'],['center','Centro'],['right','Direita'],['justify','Justificado']];
   return opcoes.map(([v,label])=>
@@ -3589,6 +3716,8 @@ function renderLouvorSlideConfigPainel(){
   document.getElementById('lvSlideTextoTamanhoLabel').textContent = l.slideTextoTamanho+'pt';
   document.getElementById('lvSlideTituloAlinhamentoChips').innerHTML = lvAlinhamentoChips('setLvSlideTituloAlinhamento', l.slideTituloAlinhamento);
   document.getElementById('lvSlideTextoAlinhamentoChips').innerHTML = lvAlinhamentoChips('setLvSlideTextoAlinhamento', l.slideTextoAlinhamento);
+  document.getElementById('lvSlideAlturaLinhaLabel').textContent = l.slideAlturaLinha.toFixed(1);
+  document.getElementById('lvSlideEspacamentoLabel').textContent = l.slideEspacamento.toFixed(1);
 }
 function renderLouvorSlidePreview(){
   const l = getLouvorAtual(); if(!l) return;
@@ -3601,14 +3730,15 @@ function renderLouvorSlidePreview(){
   document.getElementById('lvSlideCounter').textContent = `${lvSlideIndex+1} / ${total}`;
   const el = document.getElementById('lvSlidePreview');
   const alinhaFlex = { left:'flex-start', center:'center', right:'flex-end', justify:'center' };
+  const espacamentoStyle = `letter-spacing:${l.slideEspacamento}px`;
   if(lvSlideIndex === 0){
     el.style.alignItems = alinhaFlex[l.slideTituloAlinhamento] || 'center';
-    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:${l.slideTituloAlinhamento}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist">${l.artista||''}</div>`;
+    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:${l.slideTituloAlinhamento};line-height:${l.slideAlturaLinha};${espacamentoStyle}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist">${l.artista||''}</div>`;
   }else{
     const s = slides[lvSlideIndex-1];
     const lyricText = s.lines.join('\n');
     el.style.alignItems = alinhaFlex[l.slideTextoAlinhamento] || 'center';
-    el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${l.slideTextoTamanho/10}vw;text-align:${l.slideTextoAlinhamento}">${lyricText.replace(/\n/g,'<br>')}</div>`;
+    el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${l.slideTextoTamanho/10}vw;text-align:${l.slideTextoAlinhamento};line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lyricText.replace(/\n/g,'<br>')}</div>`;
   }
 }
 function lvSlideNav(delta){
@@ -3634,7 +3764,7 @@ function exportarLouvorSlides(){
 
   const capa = pres.addSlide();
   capa.background = { color: graphiteHex };
-  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTituloAlinhamento]||'center' });
+  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTituloAlinhamento]||'center', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
   capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:alinhaPptx[l.slideTituloAlinhamento]||'center' });
 
   const { slides } = lvParseContent(l.conteudo);
@@ -3642,7 +3772,7 @@ function exportarLouvorSlides(){
     const slide = pres.addSlide();
     slide.background = { color: graphiteHex };
     const lyricText = s.lines.join('\n');
-    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:l.slideTextoTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTextoAlinhamento]||'center', valign:'middle' });
+    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:l.slideTextoTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTextoAlinhamento]||'center', valign:'middle', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
   });
 
   pres.writeFile({ fileName: `${(l.titulo||'louvor').replace(/\s+/g,'_')}_slides.pptx` });
