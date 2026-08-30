@@ -233,6 +233,7 @@
   <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span>Ponto PJ</span></button>
   <button class="nav-item" onclick="switchAba('receitas')" data-aba="receitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg><span>Receitas</span></button>
   <button class="nav-item" onclick="switchAba('louvor')" data-aba="louvor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Louvor</span></button>
+  <button class="nav-item" onclick="switchAba('mercado')" data-aba="mercado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>Mercado</span></button>
 </nav>
 
 <!-- MODAL GASTO -->
@@ -912,6 +913,74 @@
     </div>
     <div class="lv-hint">Um toque = tom maior. Toque duas vezes seguidas na mesma nota = relativo menor.</div>
     <div class="lv-tom-grid" id="lvTomGrid"></div>
+  </div>
+</div>
+
+<!-- MERCADO: Lista de Compras + Estoque de Casa -->
+<div class="aba" id="aba-mercado">
+
+  <div class="tarefas-subtabs">
+    <button class="subtab-btn active" id="subtabBtnMercadoLista" onclick="switchMercadoSubtab('lista')">Lista de Compras</button>
+    <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="switchMercadoSubtab('estoque')">Estoque de Casa</button>
+  </div>
+
+  <!-- SUB-ABA: Lista de Compras -->
+  <div id="mercadoSubtabLista" class="mercado-subtab active">
+    <div class="mercado-add-row">
+      <input type="text" id="mercadoNovoItemInput" placeholder="Adicionar item avulso..." onkeydown="if(event.key==='Enter') adicionarItemManualCompra()">
+      <button class="btn-icon-sm" onclick="adicionarItemManualCompra()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+    </div>
+    <div id="mercadoListaCompras" class="mercado-lista"></div>
+  </div>
+
+  <!-- SUB-ABA: Estoque de Casa -->
+  <div id="mercadoSubtabEstoque" class="mercado-subtab" style="display:none">
+    <div class="receita-filter-chips" id="mercadoEstoqueFilterChips" style="padding:0 var(--s3) var(--s2)"></div>
+    <div id="mercadoEstoqueLista" class="mercado-lista"></div>
+    <button class="receita-fab" onclick="abrirEstoqueForm(null)" title="Novo item" aria-label="Novo item">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+    </button>
+  </div>
+
+</div>
+
+<!-- MODAL: Item de Estoque (criar/editar) -->
+<div class="modal-overlay" id="modalEstoqueItem">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalEstoqueItemTitulo">Novo item</h3>
+      <button class="modal-close" onclick="closeModal('modalEstoqueItem')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome do item</label>
+      <input type="text" id="estItemNome" placeholder="Ex: Arroz">
+    </div>
+    <div class="field full">
+      <label>Categoria</label>
+      <div class="dificuldade-chips" id="estItemCategoriaChips"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quantidade atual</label>
+        <input type="number" id="estItemQtdAtual" placeholder="0" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label>Unidade</label>
+        <input type="text" id="estItemUnidade" placeholder="un, kg, L..." maxlength="10">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Qtd. mínima</label>
+        <input type="number" id="estItemQtdMinima" placeholder="0" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label>Repor quanto</label>
+        <input type="number" id="estItemQtdReposicao" placeholder="0" min="0" step="0.1">
+      </div>
+    </div>
+    <button class="btn btn-block" onclick="salvarEstoqueItem()">Salvar</button>
+    <button class="btn-danger-outline" id="btnExcluirEstoqueItem" onclick="excluirEstoqueItemAtual()" style="display:none">Excluir item</button>
   </div>
 </div>
 

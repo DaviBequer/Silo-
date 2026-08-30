@@ -33,6 +33,8 @@ function novoEstado(){
     receitas:[],
     receitaCategorias:[],
     louvores:[],
+    estoque:[],
+    listaCompras:[],
     semanaOffset:0,
     semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
@@ -82,6 +84,8 @@ function carregar(){
       if(!state.receitas) state.receitas = [];
       if(!state.receitaCategorias) state.receitaCategorias = [];
       if(!state.louvores) state.louvores = [];
+      if(!state.estoque) state.estoque = [];
+      if(!state.listaCompras) state.listaCompras = [];
       if(state.semanaOffset === undefined) state.semanaOffset = 0;
       if(!state.semanaAgenda) state.semanaAgenda = {};
       state.receitas.forEach(r=>{
@@ -250,6 +254,7 @@ function switchAba(aba){
   if(aba==='panorama') renderPanorama();
   if(aba==='receitas') renderReceitas();
   if(aba==='louvor') renderLouvor();
+  if(aba==='mercado') renderMercado();
 }
 function switchUser(user){
   state.currentUser = user;
@@ -3776,6 +3781,185 @@ function exportarLouvorSlides(){
   });
 
   pres.writeFile({ fileName: `${(l.titulo||'louvor').replace(/\s+/g,'_')}_slides.pptx` });
+}
+
+/* ================= MERCADO: Lista de Compras + Estoque de Casa ================= */
+const MERCADO_CATEGORIAS = ['Alimentos','Limpeza','Higiene','Bebidas','Outros'];
+let mercadoEstoqueFiltroAtivo = 'Todas';
+let estoqueItemAtualId = null;
+
+function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function renderMercado(){
+  renderListaComprasView();
+  renderMercadoEstoqueFilterChips();
+  renderEstoqueView();
+}
+function switchMercadoSubtab(tab){
+  document.getElementById('subtabBtnMercadoLista').classList.toggle('active', tab==='lista');
+  document.getElementById('subtabBtnMercadoEstoque').classList.toggle('active', tab==='estoque');
+  document.getElementById('mercadoSubtabLista').style.display = tab==='lista' ? 'block' : 'none';
+  document.getElementById('mercadoSubtabEstoque').style.display = tab==='estoque' ? 'block' : 'none';
+  if(tab==='lista') renderListaComprasView();
+  if(tab==='estoque') renderEstoqueView();
+}
+
+/* ---------- Lista de Compras ---------- */
+function renderListaComprasView(){
+  const el = document.getElementById('mercadoListaCompras');
+  const autoItens = state.estoque.filter(e=> e.quantidadeAtual < e.quantidadeMinima);
+  const manualItens = state.listaCompras.slice().sort((a,b)=>b.criadoEm-a.criadoEm);
+
+  if(autoItens.length===0 && manualItens.length===0){
+    el.innerHTML = `<div class="empty-state"><div class="title">Lista vazia</div><div class="desc">Adicione um item ou espere o estoque acabar</div></div>`;
+    return;
+  }
+
+  let html = '';
+  autoItens.forEach(e=>{
+    html += `<div class="mercado-item" onpointerup="marcarEstoqueComprado('${e.id}')">
+      <div class="mercado-item-info">
+        <div class="mercado-item-nome">${e.nome}<span class="mercado-badge-auto">Repor</span></div>
+        <div class="mercado-item-meta">${e.categoria} · tem ${e.quantidadeAtual}${e.unidade}, mínimo ${e.quantidadeMinima}${e.unidade}</div>
+      </div>
+      <div class="mercado-item-qtd">+${e.quantidadeReposicao||e.quantidadeMinima}${e.unidade}</div>
+    </div>`;
+  });
+  manualItens.forEach(it=>{
+    html += `<div class="mercado-item" onpointerup="marcarManualComprado('${it.id}')">
+      <div class="mercado-item-info">
+        <div class="mercado-item-nome">${it.nome}</div>
+        <div class="mercado-item-meta">Item avulso</div>
+      </div>
+      <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
+      <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+function adicionarItemManualCompra(){
+  const input = document.getElementById('mercadoNovoItemInput');
+  const nome = input.value.trim();
+  if(!nome) return;
+  state.listaCompras.push({ id: uid('mc'), nome, quantidade:1, unidade:'un', criadoEm: Date.now() });
+  input.value = '';
+  persist();
+  renderListaComprasView();
+}
+function excluirItemManual(id){
+  state.listaCompras = state.listaCompras.filter(it=>it.id!==id);
+  persist();
+  renderListaComprasView();
+}
+function marcarManualComprado(id){
+  state.listaCompras = state.listaCompras.filter(it=>it.id!==id);
+  persist();
+  renderListaComprasView();
+}
+function marcarEstoqueComprado(id){
+  const e = state.estoque.find(x=>x.id===id);
+  if(!e) return;
+  e.quantidadeAtual = Math.round((e.quantidadeAtual + (e.quantidadeReposicao||e.quantidadeMinima))*100)/100;
+  persist();
+  renderListaComprasView();
+  renderEstoqueView();
+}
+
+/* ---------- Estoque de Casa ---------- */
+function renderMercadoEstoqueFilterChips(){
+  const chips = ['Todas', ...MERCADO_CATEGORIAS];
+  document.getElementById('mercadoEstoqueFilterChips').innerHTML = chips.map(c=>
+    `<button class="filter-chip${mercadoEstoqueFiltroAtivo===c?' active':''}" onclick="setMercadoEstoqueFiltro('${c}')">${c}</button>`
+  ).join('');
+}
+function setMercadoEstoqueFiltro(c){
+  mercadoEstoqueFiltroAtivo = c;
+  renderMercadoEstoqueFilterChips();
+  renderEstoqueView();
+}
+function renderEstoqueView(){
+  const el = document.getElementById('mercadoEstoqueLista');
+  let items = state.estoque.slice();
+  if(mercadoEstoqueFiltroAtivo !== 'Todas') items = items.filter(e=>e.categoria===mercadoEstoqueFiltroAtivo);
+  items.sort((a,b)=> a.nome.localeCompare(b.nome));
+  if(items.length===0){
+    el.innerHTML = `<div class="empty-state"><div class="title">Nenhum item no estoque</div><div class="desc">Toque no + para adicionar</div></div>`;
+    return;
+  }
+  el.innerHTML = items.map(e=>{
+    const abaixo = e.quantidadeAtual < e.quantidadeMinima;
+    return `<div class="mercado-item ${abaixo?'repor':''}">
+      <div class="mercado-item-info" onclick="abrirEstoqueForm('${e.id}')">
+        <div class="mercado-item-nome">${e.nome}${abaixo?'<span class="mercado-badge-auto">Repor</span>':''}</div>
+        <div class="mercado-item-meta">${e.categoria} · mínimo ${e.quantidadeMinima}${e.unidade}</div>
+      </div>
+      <div class="mercado-item-stepper">
+        <button onclick="ajustarEstoqueQtdRapido('${e.id}', -1)">−</button>
+        <span>${e.quantidadeAtual}${e.unidade}</span>
+        <button onclick="ajustarEstoqueQtdRapido('${e.id}', 1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function ajustarEstoqueQtdRapido(id, delta){
+  const e = state.estoque.find(x=>x.id===id);
+  if(!e) return;
+  e.quantidadeAtual = Math.max(0, Math.round((e.quantidadeAtual + delta)*100)/100);
+  persist();
+  renderEstoqueView();
+  renderListaComprasView();
+}
+function abrirEstoqueForm(id){
+  estoqueItemAtualId = id;
+  const e = id ? state.estoque.find(x=>x.id===id) : null;
+  document.getElementById('modalEstoqueItemTitulo').textContent = e ? 'Editar item' : 'Novo item';
+  document.getElementById('estItemNome').value = e ? e.nome : '';
+  document.getElementById('estItemQtdAtual').value = e ? e.quantidadeAtual : '';
+  document.getElementById('estItemUnidade').value = e ? e.unidade : 'un';
+  document.getElementById('estItemQtdMinima').value = e ? e.quantidadeMinima : '';
+  document.getElementById('estItemQtdReposicao').value = e ? (e.quantidadeReposicao||'') : '';
+  document.getElementById('btnExcluirEstoqueItem').style.display = e ? 'block' : 'none';
+  window.estFormCategoriaSelecionada = e ? e.categoria : 'Alimentos';
+  renderEstFormCategoriaChips();
+  document.getElementById('modalEstoqueItem').classList.add('active');
+}
+function renderEstFormCategoriaChips(){
+  document.getElementById('estItemCategoriaChips').innerHTML = MERCADO_CATEGORIAS.map(c=>
+    `<button type="button" class="dif-chip${window.estFormCategoriaSelecionada===c?' active':''}" onclick="selecionarEstFormCategoria('${c}')">${c}</button>`
+  ).join('');
+}
+function selecionarEstFormCategoria(c){
+  window.estFormCategoriaSelecionada = c;
+  renderEstFormCategoriaChips();
+}
+function salvarEstoqueItem(){
+  const nome = document.getElementById('estItemNome').value.trim();
+  if(!nome){ document.getElementById('estItemNome').focus(); return; }
+  const qtdAtual = parseFloat(document.getElementById('estItemQtdAtual').value) || 0;
+  const unidade = document.getElementById('estItemUnidade').value.trim() || 'un';
+  const qtdMinima = parseFloat(document.getElementById('estItemQtdMinima').value) || 0;
+  const qtdReposicao = parseFloat(document.getElementById('estItemQtdReposicao').value) || qtdMinima;
+  if(estoqueItemAtualId){
+    const e = state.estoque.find(x=>x.id===estoqueItemAtualId);
+    e.nome = nome; e.categoria = window.estFormCategoriaSelecionada; e.quantidadeAtual = qtdAtual;
+    e.unidade = unidade; e.quantidadeMinima = qtdMinima; e.quantidadeReposicao = qtdReposicao;
+  }else{
+    state.estoque.push({ id: uid('est'), nome, categoria: window.estFormCategoriaSelecionada, quantidadeAtual: qtdAtual, unidade, quantidadeMinima: qtdMinima, quantidadeReposicao: qtdReposicao, criadoEm: Date.now() });
+  }
+  persist();
+  closeModal('modalEstoqueItem');
+  renderEstoqueView();
+  renderListaComprasView();
+}
+function excluirEstoqueItemAtual(){
+  if(!estoqueItemAtualId) return;
+  const e = state.estoque.find(x=>x.id===estoqueItemAtualId);
+  if(!confirm(`Excluir "${e?.nome||'este item'}" do estoque?`)) return;
+  state.estoque = state.estoque.filter(x=>x.id!==estoqueItemAtualId);
+  persist();
+  closeModal('modalEstoqueItem');
+  renderEstoqueView();
+  renderListaComprasView();
 }
 
 if('serviceWorker' in navigator){
