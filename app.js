@@ -85,6 +85,7 @@ function carregar(){
       if(!state.receitaCategorias) state.receitaCategorias = [];
       if(!state.louvores) state.louvores = [];
       if(!state.estoque) state.estoque = [];
+      state.estoque.forEach(e=>{ if(!e.precos) e.precos = []; if(!e.historicoCompras) e.historicoCompras = []; });
       if(!state.listaCompras) state.listaCompras = [];
       if(state.semanaOffset === undefined) state.semanaOffset = 0;
       if(!state.semanaAgenda) state.semanaAgenda = {};
@@ -3785,6 +3786,7 @@ function exportarLouvorSlides(){
 
 /* ================= MERCADO: Lista de Compras + Estoque de Casa ================= */
 const MERCADO_CATEGORIAS = ['Alimentos','Limpeza','Higiene','Bebidas','Outros'];
+const MERCADO_UNIDADES = ['un','kg','g','L','ml','pct'];
 let mercadoEstoqueFiltroAtivo = 'Todas';
 let estoqueItemAtualId = null;
 
@@ -3798,13 +3800,20 @@ function renderMercado(){
 function switchMercadoSubtab(tab){
   document.getElementById('subtabBtnMercadoLista').classList.toggle('active', tab==='lista');
   document.getElementById('subtabBtnMercadoEstoque').classList.toggle('active', tab==='estoque');
+  document.getElementById('subtabBtnMercadoDashboard').classList.toggle('active', tab==='dashboard');
   document.getElementById('mercadoSubtabLista').style.display = tab==='lista' ? 'block' : 'none';
   document.getElementById('mercadoSubtabEstoque').style.display = tab==='estoque' ? 'block' : 'none';
+  document.getElementById('mercadoSubtabDashboard').style.display = tab==='dashboard' ? 'block' : 'none';
   if(tab==='lista') renderListaComprasView();
   if(tab==='estoque') renderEstoqueView();
+  if(tab==='dashboard') renderMercadoDashboard();
 }
 
 /* ---------- Lista de Compras ---------- */
+function encontrarEstoquePorNome(nome){
+  const alvo = (nome||'').trim().toLowerCase();
+  return state.estoque.find(e=>e.nome.trim().toLowerCase()===alvo);
+}
 function renderListaComprasView(){
   const el = document.getElementById('mercadoListaCompras');
   const autoItens = state.estoque.filter(e=> e.quantidadeAtual < e.quantidadeMinima);
@@ -3817,23 +3826,35 @@ function renderListaComprasView(){
 
   let html = '';
   autoItens.forEach(e=>{
-    html += `<div class="mercado-item" onpointerup="marcarEstoqueComprado('${e.id}')">
+    html += `<div class="mercado-item" onclick="abrirFinalizarCompra('${e.id}')">
       <div class="mercado-item-info">
-        <div class="mercado-item-nome">${e.nome}<span class="mercado-badge-auto">Repor</span></div>
+        <div class="mercado-item-nome">${e.nome}<span class="mercado-badge-auto">Pendente</span></div>
         <div class="mercado-item-meta">${e.categoria} · tem ${e.quantidadeAtual}${e.unidade}, mínimo ${e.quantidadeMinima}${e.unidade}</div>
       </div>
       <div class="mercado-item-qtd">+${e.quantidadeReposicao||e.quantidadeMinima}${e.unidade}</div>
     </div>`;
   });
   manualItens.forEach(it=>{
-    html += `<div class="mercado-item" onpointerup="marcarManualComprado('${it.id}')">
-      <div class="mercado-item-info">
-        <div class="mercado-item-nome">${it.nome}</div>
-        <div class="mercado-item-meta">Item avulso</div>
-      </div>
-      <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
-      <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
-    </div>`;
+    const match = encontrarEstoquePorNome(it.nome);
+    if(match){
+      html += `<div class="mercado-item" onclick="abrirFinalizarCompra('${match.id}','${it.id}')">
+        <div class="mercado-item-info">
+          <div class="mercado-item-nome">${it.nome}<span class="mercado-badge-auto">Pendente</span></div>
+          <div class="mercado-item-meta">Vinculado ao estoque · ${match.categoria}</div>
+        </div>
+        <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
+        <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
+      </div>`;
+    }else{
+      html += `<div class="mercado-item" onclick="marcarManualComprado('${it.id}')">
+        <div class="mercado-item-info">
+          <div class="mercado-item-nome">${it.nome}</div>
+          <div class="mercado-item-meta">Item avulso · sem controle de estoque</div>
+        </div>
+        <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
+        <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
+      </div>`;
+    }
   });
   el.innerHTML = html;
 }
@@ -3856,11 +3877,76 @@ function marcarManualComprado(id){
   persist();
   renderListaComprasView();
 }
-function marcarEstoqueComprado(id){
-  const e = state.estoque.find(x=>x.id===id);
+
+/* ---------- Finalizar Compra (dá entrada no estoque + registra e compara preço) ---------- */
+let fcEstoqueId = null;
+let fcManualItemId = null;
+function abrirFinalizarCompra(estoqueId, manualItemId){
+  const e = state.estoque.find(x=>x.id===estoqueId);
   if(!e) return;
-  e.quantidadeAtual = Math.round((e.quantidadeAtual + (e.quantidadeReposicao||e.quantidadeMinima))*100)/100;
+  fcEstoqueId = estoqueId;
+  fcManualItemId = manualItemId || null;
+  document.getElementById('fcItemNome').textContent = e.nome;
+  document.getElementById('fcSaldoAtual').value = e.quantidadeAtual;
+  document.getElementById('fcQuantidade').value = e.quantidadeReposicao || e.quantidadeMinima || 1;
+  document.getElementById('fcUnidade').textContent = e.unidade;
+  document.getElementById('fcValor').value = '';
+  document.getElementById('fcComparacao').style.display = 'none';
+  document.getElementById('modalFinalizarCompra').classList.add('active');
+}
+function zerarSaldoFinalizar(){
+  document.getElementById('fcSaldoAtual').value = 0;
+}
+function atualizarComparacaoPreco(){
+  const e = state.estoque.find(x=>x.id===fcEstoqueId);
+  const el = document.getElementById('fcComparacao');
+  if(!e || !e.precos || e.precos.length===0){ el.style.display='none'; return; }
+  const novoValor = parseFloat(document.getElementById('fcValor').value);
+  if(isNaN(novoValor)){ el.style.display='none'; return; }
+  const anterior = e.precos[e.precos.length-1].valor;
+  const diff = novoValor - anterior;
+  const pct = anterior>0 ? (diff/anterior*100) : 0;
+  let linha;
+  if(Math.abs(diff) < 0.005){
+    linha = `Igual ao preço anterior (R$ ${anterior.toFixed(2).replace('.',',')})`;
+  }else if(diff > 0){
+    linha = `▲ Subiu R$ ${diff.toFixed(2).replace('.',',')} (${pct.toFixed(0)}%) — antes R$ ${anterior.toFixed(2).replace('.',',')}`;
+  }else{
+    linha = `▼ Desceu R$ ${Math.abs(diff).toFixed(2).replace('.',',')} (${Math.abs(pct).toFixed(0)}%) — antes R$ ${anterior.toFixed(2).replace('.',',')}`;
+  }
+  el.textContent = linha;
+  el.style.display = 'block';
+}
+function confirmarFinalizarCompra(){
+  const e = state.estoque.find(x=>x.id===fcEstoqueId);
+  if(!e) return;
+  const saldoAtualCorrigido = Math.max(0, parseFloat(document.getElementById('fcSaldoAtual').value) || 0);
+  const qtd = parseFloat(document.getElementById('fcQuantidade').value) || 0;
+  const valor = parseFloat(document.getElementById('fcValor').value);
+  if(!e.precos) e.precos = [];
+  if(!isNaN(valor) && valor>0) e.precos.push({ valor, data: Date.now() });
+
+  if(!e.historicoCompras) e.historicoCompras = [];
+  const agora = Date.now();
+  let diasDesdeUltima = null;
+  if(e.historicoCompras.length>0){
+    const ultima = e.historicoCompras[e.historicoCompras.length-1];
+    diasDesdeUltima = Math.round((agora - ultima.data)/86400000);
+  }
+  e.historicoCompras.push({
+    data: agora,
+    quantidadeComprada: qtd,
+    valorUnitario: (!isNaN(valor) && valor>0) ? valor : null,
+    saldoAntesCorrigido: saldoAtualCorrigido,
+    zerou: saldoAtualCorrigido<=0,
+    diasDesdeUltima
+  });
+
+  e.quantidadeAtual = Math.round((saldoAtualCorrigido + qtd)*100)/100;
+  if(fcManualItemId) state.listaCompras = state.listaCompras.filter(it=>it.id!==fcManualItemId);
   persist();
+  closeModal('modalFinalizarCompra');
+  fcEstoqueId = null; fcManualItemId = null;
   renderListaComprasView();
   renderEstoqueView();
 }
@@ -3888,10 +3974,11 @@ function renderEstoqueView(){
   }
   el.innerHTML = items.map(e=>{
     const abaixo = e.quantidadeAtual < e.quantidadeMinima;
+    const ultimoPreco = (e.precos && e.precos.length) ? e.precos[e.precos.length-1].valor : null;
     return `<div class="mercado-item ${abaixo?'repor':''}">
       <div class="mercado-item-info" onclick="abrirEstoqueForm('${e.id}')">
         <div class="mercado-item-nome">${e.nome}${abaixo?'<span class="mercado-badge-auto">Repor</span>':''}</div>
-        <div class="mercado-item-meta">${e.categoria} · mínimo ${e.quantidadeMinima}${e.unidade}</div>
+        <div class="mercado-item-meta">${e.categoria} · mínimo ${e.quantidadeMinima}${e.unidade}${ultimoPreco!==null?` · R$ ${ultimoPreco.toFixed(2).replace('.',',')}/${e.unidade}`:''}</div>
       </div>
       <div class="mercado-item-stepper">
         <button onclick="ajustarEstoqueQtdRapido('${e.id}', -1)">−</button>
@@ -3915,12 +4002,23 @@ function abrirEstoqueForm(id){
   document.getElementById('modalEstoqueItemTitulo').textContent = e ? 'Editar item' : 'Novo item';
   document.getElementById('estItemNome').value = e ? e.nome : '';
   document.getElementById('estItemQtdAtual').value = e ? e.quantidadeAtual : '';
-  document.getElementById('estItemUnidade').value = e ? e.unidade : 'un';
   document.getElementById('estItemQtdMinima').value = e ? e.quantidadeMinima : '';
   document.getElementById('estItemQtdReposicao').value = e ? (e.quantidadeReposicao||'') : '';
   document.getElementById('btnExcluirEstoqueItem').style.display = e ? 'block' : 'none';
+  document.getElementById('btnVerHistoricoItem').style.display = (e && e.historicoCompras && e.historicoCompras.length>0) ? 'block' : 'none';
+  const temPreco = e && e.precos && e.precos.length>0;
+  document.getElementById('estItemPrecoInicialWrap').style.display = temPreco ? 'none' : 'block';
+  document.getElementById('estItemPrecoInicial').value = '';
+  document.getElementById('estItemPrecoAtualWrap').style.display = temPreco ? 'block' : 'none';
+  if(temPreco){
+    const ultimo = e.precos[e.precos.length-1];
+    const dataStr = new Date(ultimo.data).toLocaleDateString('pt-BR');
+    document.getElementById('estItemPrecoAtualValor').textContent = `R$ ${ultimo.valor.toFixed(2).replace('.',',')} em ${dataStr}`;
+  }
   window.estFormCategoriaSelecionada = e ? e.categoria : 'Alimentos';
+  window.estFormUnidadeSelecionada = e ? e.unidade : 'un';
   renderEstFormCategoriaChips();
+  renderEstFormUnidadeChips();
   document.getElementById('modalEstoqueItem').classList.add('active');
 }
 function renderEstFormCategoriaChips(){
@@ -3932,19 +4030,34 @@ function selecionarEstFormCategoria(c){
   window.estFormCategoriaSelecionada = c;
   renderEstFormCategoriaChips();
 }
+function renderEstFormUnidadeChips(){
+  document.getElementById('estItemUnidadeChips').innerHTML = MERCADO_UNIDADES.map(u=>
+    `<button type="button" class="dif-chip${window.estFormUnidadeSelecionada===u?' active':''}" onclick="selecionarEstFormUnidade('${u}')">${u}</button>`
+  ).join('');
+}
+function selecionarEstFormUnidade(u){
+  window.estFormUnidadeSelecionada = u;
+  renderEstFormUnidadeChips();
+}
 function salvarEstoqueItem(){
   const nome = document.getElementById('estItemNome').value.trim();
   if(!nome){ document.getElementById('estItemNome').focus(); return; }
   const qtdAtual = parseFloat(document.getElementById('estItemQtdAtual').value) || 0;
-  const unidade = document.getElementById('estItemUnidade').value.trim() || 'un';
+  const unidade = window.estFormUnidadeSelecionada || 'un';
   const qtdMinima = parseFloat(document.getElementById('estItemQtdMinima').value) || 0;
   const qtdReposicao = parseFloat(document.getElementById('estItemQtdReposicao').value) || qtdMinima;
+  const precoInicial = parseFloat(document.getElementById('estItemPrecoInicial').value);
   if(estoqueItemAtualId){
     const e = state.estoque.find(x=>x.id===estoqueItemAtualId);
     e.nome = nome; e.categoria = window.estFormCategoriaSelecionada; e.quantidadeAtual = qtdAtual;
     e.unidade = unidade; e.quantidadeMinima = qtdMinima; e.quantidadeReposicao = qtdReposicao;
+    if(!e.precos) e.precos = [];
+    if((!e.precos || e.precos.length===0) && !isNaN(precoInicial) && precoInicial>0){
+      e.precos.push({ valor: precoInicial, data: Date.now() });
+    }
   }else{
-    state.estoque.push({ id: uid('est'), nome, categoria: window.estFormCategoriaSelecionada, quantidadeAtual: qtdAtual, unidade, quantidadeMinima: qtdMinima, quantidadeReposicao: qtdReposicao, criadoEm: Date.now() });
+    const precos = (!isNaN(precoInicial) && precoInicial>0) ? [{ valor: precoInicial, data: Date.now() }] : [];
+    state.estoque.push({ id: uid('est'), nome, categoria: window.estFormCategoriaSelecionada, quantidadeAtual: qtdAtual, unidade, quantidadeMinima: qtdMinima, quantidadeReposicao: qtdReposicao, precos, historicoCompras:[], criadoEm: Date.now() });
   }
   persist();
   closeModal('modalEstoqueItem');
@@ -3960,6 +4073,76 @@ function excluirEstoqueItemAtual(){
   closeModal('modalEstoqueItem');
   renderEstoqueView();
   renderListaComprasView();
+}
+
+/* ---------- Histórico de compras (por item) ---------- */
+function abrirHistoricoItem(){
+  const e = state.estoque.find(x=>x.id===estoqueItemAtualId);
+  if(!e) return;
+  document.getElementById('histItemTitulo').textContent = `Histórico — ${e.nome}`;
+  const hist = (e.historicoCompras||[]).slice().reverse();
+  document.getElementById('histItemLista').innerHTML = hist.map(h=>{
+    const dataStr = new Date(h.data).toLocaleDateString('pt-BR');
+    const diasStr = h.diasDesdeUltima!==null ? `${h.diasDesdeUltima} dia${h.diasDesdeUltima===1?'':'s'} desde a compra anterior${h.zerou?' · zerou antes de repor':''}` : 'Primeira compra registrada';
+    const valorStr = h.valorUnitario!==null ? `R$ ${h.valorUnitario.toFixed(2).replace('.',',')}` : '—';
+    return `<div class="mkt-hist-item">
+      <div>
+        <div class="mkt-hist-data">${dataStr} · +${h.quantidadeComprada}${e.unidade}</div>
+        <div class="mkt-hist-dias">${diasStr}</div>
+      </div>
+      <div class="mkt-hist-valor">${valorStr}</div>
+    </div>`;
+  }).join('') || '<p class="empty-hint">Sem compras registradas ainda.</p>';
+  document.getElementById('modalHistoricoItem').classList.add('active');
+}
+
+/* ---------- Dashboard ---------- */
+function renderMercadoDashboard(){
+  const agora = new Date();
+  const mesAtual = agora.getMonth(), anoAtual = agora.getFullYear();
+
+  let gastoMes = 0;
+  const gastoPorCategoria = {};
+  state.estoque.forEach(e=>{
+    (e.historicoCompras||[]).forEach(h=>{
+      const d = new Date(h.data);
+      if(d.getMonth()===mesAtual && d.getFullYear()===anoAtual && h.valorUnitario){
+        const total = h.valorUnitario * h.quantidadeComprada;
+        gastoMes += total;
+        gastoPorCategoria[e.categoria] = (gastoPorCategoria[e.categoria]||0) + total;
+      }
+    });
+  });
+  document.getElementById('mktGastoMes').textContent = 'R$ '+gastoMes.toFixed(2).replace('.',',');
+
+  const itensFalta = state.estoque.filter(e=>e.quantidadeAtual < e.quantidadeMinima).length;
+  document.getElementById('mktItensFalta').textContent = itensFalta;
+
+  const ranking = state.estoque
+    .map(e=>{
+      const dias = (e.historicoCompras||[]).map(h=>h.diasDesdeUltima).filter(d=>d!==null && d>0);
+      if(dias.length===0) return null;
+      const media = dias.reduce((a,b)=>a+b,0)/dias.length;
+      return { nome:e.nome, media };
+    })
+    .filter(Boolean)
+    .sort((a,b)=>a.media-b.media)
+    .slice(0,5);
+  const rankEl = document.getElementById('mktRankingGiro');
+  rankEl.innerHTML = ranking.length ? ranking.map(r=>
+    `<div class="mkt-rank-item"><span class="mkt-rank-nome">${r.nome}</span><span class="mkt-rank-valor">${r.media.toFixed(0)} dias</span></div>`
+  ).join('') : '<p class="empty-hint">Ainda sem dados suficientes — finalize compras mais de uma vez pra ver o giro.</p>';
+
+  const catEl = document.getElementById('mktGastoCategoria');
+  const categoriasComGasto = Object.entries(gastoPorCategoria).sort((a,b)=>b[1]-a[1]);
+  const maiorGasto = categoriasComGasto.length ? categoriasComGasto[0][1] : 0;
+  catEl.innerHTML = categoriasComGasto.length ? categoriasComGasto.map(([cat,valor])=>{
+    const pct = maiorGasto>0 ? (valor/maiorGasto*100) : 0;
+    return `<div class="mkt-cat-bar-row">
+      <div class="mkt-cat-bar-head"><span>${cat}</span><span>R$ ${valor.toFixed(2).replace('.',',')}</span></div>
+      <div class="mkt-cat-bar-track"><div class="mkt-cat-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('') : '<p class="empty-hint">Nenhuma compra finalizada este mês ainda.</p>';
 }
 
 if('serviceWorker' in navigator){

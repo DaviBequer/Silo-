@@ -25,7 +25,7 @@
     </div>
     <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="onLogoFileSelected(event)">
     <div>
-      <div class="header-title">Siloé</div>
+      <div class="header-title">Siloé <span class="header-version">v1.0</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -920,8 +920,9 @@
 <div class="aba" id="aba-mercado">
 
   <div class="tarefas-subtabs">
-    <button class="subtab-btn active" id="subtabBtnMercadoLista" onclick="switchMercadoSubtab('lista')">Lista de Compras</button>
-    <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="switchMercadoSubtab('estoque')">Estoque de Casa</button>
+    <button class="subtab-btn active" id="subtabBtnMercadoLista" onclick="switchMercadoSubtab('lista')">Lista</button>
+    <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="switchMercadoSubtab('estoque')">Estoque</button>
+    <button class="subtab-btn" id="subtabBtnMercadoDashboard" onclick="switchMercadoSubtab('dashboard')">Dashboard</button>
   </div>
 
   <!-- SUB-ABA: Lista de Compras -->
@@ -942,6 +943,28 @@
     </button>
   </div>
 
+  <!-- SUB-ABA: Dashboard -->
+  <div id="mercadoSubtabDashboard" class="mercado-subtab" style="display:none;padding-left:var(--s3);padding-right:var(--s3)">
+    <div class="mkt-stat-row">
+      <div class="mkt-stat-card">
+        <div class="mkt-stat-label">Gasto no mês</div>
+        <div class="mkt-stat-value" id="mktGastoMes">R$ 0,00</div>
+      </div>
+      <div class="mkt-stat-card">
+        <div class="mkt-stat-label">Itens em falta</div>
+        <div class="mkt-stat-value" id="mktItensFalta">0</div>
+      </div>
+    </div>
+    <div class="mkt-dash-section">
+      <div class="mkt-dash-title">Giram mais rápido (dias médios até acabar)</div>
+      <div id="mktRankingGiro"></div>
+    </div>
+    <div class="mkt-dash-section">
+      <div class="mkt-dash-title">Gasto por categoria no mês</div>
+      <div id="mktGastoCategoria"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- MODAL: Item de Estoque (criar/editar) -->
@@ -959,15 +982,13 @@
       <label>Categoria</label>
       <div class="dificuldade-chips" id="estItemCategoriaChips"></div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Quantidade atual</label>
-        <input type="number" id="estItemQtdAtual" placeholder="0" min="0" step="0.1">
-      </div>
-      <div class="field">
-        <label>Unidade</label>
-        <input type="text" id="estItemUnidade" placeholder="un, kg, L..." maxlength="10">
-      </div>
+    <div class="field full">
+      <label>Quantidade atual</label>
+      <input type="number" id="estItemQtdAtual" placeholder="0" min="0" step="0.1">
+    </div>
+    <div class="field full">
+      <label>Unidade</label>
+      <div class="dificuldade-chips" id="estItemUnidadeChips"></div>
     </div>
     <div class="field-row">
       <div class="field">
@@ -979,8 +1000,67 @@
         <input type="number" id="estItemQtdReposicao" placeholder="0" min="0" step="0.1">
       </div>
     </div>
+    <div class="field full" id="estItemPrecoInicialWrap">
+      <label>Preço por unidade (opcional)</label>
+      <input type="number" id="estItemPrecoInicial" placeholder="R$ 0,00" min="0" step="0.01">
+    </div>
+    <div class="field full" id="estItemPrecoAtualWrap" style="display:none">
+      <label>Último preço registrado</label>
+      <div class="lv-tom-box" style="cursor:default;justify-content:flex-start;padding:12px 14px">
+        <span id="estItemPrecoAtualValor" style="font-size:16px"></span>
+      </div>
+    </div>
+    <button type="button" class="btn-mini" id="btnVerHistoricoItem" onclick="abrirHistoricoItem()" style="display:none;margin-bottom:var(--s3)">Ver histórico de compras</button>
     <button class="btn btn-block" onclick="salvarEstoqueItem()">Salvar</button>
     <button class="btn-danger-outline" id="btnExcluirEstoqueItem" onclick="excluirEstoqueItemAtual()" style="display:none">Excluir item</button>
+  </div>
+</div>
+
+<!-- MODAL: Finalizar Compra (dá entrada no estoque + registra preço) -->
+<div class="modal-overlay" id="modalFinalizarCompra">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Finalizar Compra</h3>
+      <button class="modal-close" onclick="closeModal('modalFinalizarCompra')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Item</label>
+      <div style="font-size:17px;font-weight:800;color:var(--text)" id="fcItemNome"></div>
+    </div>
+    <div class="field full">
+      <label>Quanto tem agora no estoque (antes de repor)</label>
+      <div class="field-row">
+        <input type="number" id="fcSaldoAtual" min="0" step="0.1" style="flex:2">
+        <button type="button" class="btn-icon-sm" style="flex:1;width:auto;font-size:12px;font-weight:700" onclick="zerarSaldoFinalizar()">Zerou</button>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quantidade comprada</label>
+        <input type="number" id="fcQuantidade" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label>Unidade</label>
+        <div class="lv-tom-box" style="cursor:default;padding:12px"><span id="fcUnidade" style="font-size:14px"></span></div>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Preço por unidade</label>
+      <input type="number" id="fcValor" placeholder="R$ 0,00" min="0" step="0.01" oninput="atualizarComparacaoPreco()">
+    </div>
+    <div class="lv-hint" id="fcComparacao" style="display:none"></div>
+    <button class="btn btn-block" onclick="confirmarFinalizarCompra()">Finalizar e Repor Estoque</button>
+  </div>
+</div>
+
+<!-- MODAL: Histórico de compras de um item -->
+<div class="modal-overlay" id="modalHistoricoItem">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="histItemTitulo">Histórico</h3>
+      <button class="modal-close" onclick="closeModal('modalHistoricoItem')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="histItemLista"></div>
   </div>
 </div>
 

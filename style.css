@@ -30,6 +30,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .header-brand{display:flex;align-items:center;gap:var(--s2)}
 .header-logo{width:30px;height:30px;border-radius:9px;background:var(--primary-tint);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
 .header-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.header-version{font-size:9.5px;font-weight:700;color:var(--text-faint);background:var(--card-2);border:1px solid var(--line);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:1px}
 .header-sub{font-size:9px;color:var(--text);opacity:.4;font-weight:500;letter-spacing:.5px;text-transform:uppercase}
 .header-btn{background:transparent;border:1px solid var(--line);color:var(--text-dim);width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--dur) var(--ease)}
 .header-btn:hover{border-color:var(--primary);color:var(--primary)}
@@ -684,3 +685,24 @@ body{padding-bottom:0}
 .mercado-item-stepper span{min-width:26px;text-align:center;font-weight:800;font-size:12px;color:var(--text)}
 .mercado-item-stepper button{width:22px;height:22px;border-radius:6px;border:none;background:var(--card);color:var(--text-dim);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .mercado-badge-auto{font-size:9px;font-weight:800;color:var(--warning);text-transform:uppercase;letter-spacing:.4px;background:var(--warning-tint);padding:2px 7px;border-radius:10px;margin-left:6px}
+
+/* ---------- Mercado: Dashboard ---------- */
+.mkt-stat-row{display:flex;gap:var(--s2);margin-bottom:var(--s3)}
+.mkt-stat-card{flex:1;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--s3)}
+.mkt-stat-label{font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.4px}
+.mkt-stat-value{font-size:20px;font-weight:800;color:var(--text);margin-top:4px}
+.mkt-dash-section{margin-bottom:var(--s4)}
+.mkt-dash-title{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--s2)}
+.mkt-rank-item{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px}
+.mkt-rank-nome{font-size:13px;font-weight:700;color:var(--text)}
+.mkt-rank-valor{font-size:12px;font-weight:800;color:var(--primary)}
+.mkt-cat-bar-row{margin-bottom:10px}
+.mkt-cat-bar-head{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:4px}
+.mkt-cat-bar-track{height:8px;background:var(--card-2);border-radius:6px;overflow:hidden}
+.mkt-cat-bar-fill{height:100%;background:var(--primary);border-radius:6px}
+
+.mkt-hist-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.mkt-hist-item:last-child{border-bottom:none}
+.mkt-hist-data{font-size:12px;font-weight:700;color:var(--text)}
+.mkt-hist-dias{font-size:10.5px;color:var(--text-faint);margin-top:1px}
+.mkt-hist-valor{font-size:13px;font-weight:800;color:var(--text)}
