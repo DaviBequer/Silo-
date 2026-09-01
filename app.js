@@ -87,6 +87,7 @@ function carregar(){
       if(!state.estoque) state.estoque = [];
       state.estoque.forEach(e=>{ if(!e.precos) e.precos = []; if(!e.historicoCompras) e.historicoCompras = []; });
       if(!state.listaCompras) state.listaCompras = [];
+      state.listaCompras.forEach(it=>{ if(it.comprado===undefined) it.comprado = false; });
       if(state.semanaOffset === undefined) state.semanaOffset = 0;
       if(!state.semanaAgenda) state.semanaAgenda = {};
       state.receitas.forEach(r=>{
@@ -239,6 +240,8 @@ const ICON_CLOCK_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="non
 const ICON_PORCOES_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
 const ICON_DUPLICATE_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_BAN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg>';
+const ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const ICON_UNLOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
 const ICON_SAVE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
 const ICON_CHART = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
 const ICON_ALERT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
@@ -1014,6 +1017,18 @@ function renderChecklist(){
   }).join('');
 }
 let contaTapTimer = null;
+let iosConfirmResolve = null;
+function iosConfirm(msg){
+  document.getElementById('iosConfirmMsg').textContent = msg;
+  document.getElementById('iosConfirmOverlay').classList.add('show');
+  return new Promise(resolve=>{ iosConfirmResolve = resolve; });
+}
+function iosConfirmResolver(v){
+  document.getElementById('iosConfirmOverlay').classList.remove('show');
+  if(iosConfirmResolve) iosConfirmResolve(v);
+  iosConfirmResolve = null;
+}
+
 let contaTapLongFired = false;
 function contaTapStart(ev, paidKey, user, cat, id, mKey){
   if(ev.pointerType==='mouse' && ev.button!==0) return;
@@ -1028,8 +1043,9 @@ function contaTapEnd(ev, paidKey){
   clearTimeout(contaTapTimer);
   if(!contaTapLongFired){
     const isPaid = !!state.paid[paidKey];
-    const msg = isPaid ? 'Deseja realmente desfazer o pagamento desta conta?' : 'Deseja marcar esta conta como paga?';
-    if(confirm(msg)){
+    if(isPaid){
+      iosConfirm('Cancelar?').then(ok=>{ if(ok) togglePaid(paidKey); });
+    }else{
       togglePaid(paidKey);
     }
   }
@@ -2001,9 +2017,18 @@ function tempoPadraoSaida(mKey, dia){
   const d = keyToDate(mKey); d.setDate(dia);
   return d.getDay()===5 ? '16:00' : '17:00';
 }
+function toggleDiaConcluido(dia){
+  const mKey = pontoMonthKeyAtual();
+  const d = getDia(mKey, dia);
+  d.concluido = !d.concluido;
+  renderPonto();
+  persist();
+  if(navigator.vibrate) navigator.vibrate(10);
+}
 function ajustarTempo(dia, campo, isRight){
   const mKey = pontoMonthKeyAtual();
   const d = getDia(mKey, dia);
+  if(d.concluido) return;
   if(!d[campo]){
     d[campo] = campo==='saida' ? tempoPadraoSaida(mKey, dia) : TEMPO_PADRAO[campo];
   } else {
@@ -2022,7 +2047,9 @@ function tempoTapStart(e, dia, campo){
   tempoPressTimer = setTimeout(()=>{
     tempoPressTimer = null;
     const mKey = pontoMonthKeyAtual();
-    getDia(mKey, dia)[campo] = null;
+    const d = getDia(mKey, dia);
+    if(d.concluido) return;
+    d[campo] = null;
     renderPonto();
     persist();
     if(navigator.vibrate) navigator.vibrate(20);
@@ -2063,10 +2090,20 @@ function zerarDia(dia){
   persist();
 }
 function dayTotalMinutes(d){
-  if(!d.entrada || !d.almocoSaida || !d.almocoVolta || !d.saida) return (d.extra||0);
-  const manha = timeToMin(d.almocoSaida) - timeToMin(d.entrada);
-  const tarde = timeToMin(d.saida) - timeToMin(d.almocoVolta);
-  return Math.max(0, manha) + Math.max(0, tarde) + (d.extra||0);
+  const { entrada, almocoSaida, almocoVolta, saida } = d;
+  let periodo = 0;
+  if(entrada && almocoSaida && almocoVolta && saida){
+    const manha = timeToMin(almocoSaida) - timeToMin(entrada);
+    const tarde = timeToMin(saida) - timeToMin(almocoVolta);
+    periodo = Math.max(0, manha) + Math.max(0, tarde);
+  }else if(entrada && saida && !almocoSaida && !almocoVolta){
+    periodo = Math.max(0, timeToMin(saida) - timeToMin(entrada));
+  }else if(entrada && almocoSaida && !almocoVolta && !saida){
+    periodo = Math.max(0, timeToMin(almocoSaida) - timeToMin(entrada));
+  }else if(almocoVolta && saida && !entrada && !almocoSaida){
+    periodo = Math.max(0, timeToMin(saida) - timeToMin(almocoVolta));
+  }
+  return periodo + (d.extra||0);
 }
 
 function renderPonto(){
@@ -2084,22 +2121,25 @@ function renderPonto(){
     const isWeekend = dateObj.getDay()===0 || dateObj.getDay()===6;
     const total = dayTotalMinutes(d);
     const extraVal = d.extra ? String(Math.floor(d.extra/60)).padStart(2,'0')+':'+String(d.extra%60).padStart(2,'0') : '';
-    rows += `<div class="ponto-dia-row ${isWeekend?'weekend':''}">
+    const travado = !!d.concluido;
+    const tapAttrs = (campo)=> travado ? '' : `onpointerdown="tempoTapStart(event,${dia},'${campo}')" onpointerup="tempoTapEnd(event,${dia},'${campo}')" onpointercancel="tempoTapCancel()" onpointerleave="tempoTapCancel()" oncontextmenu="return false"`;
+    rows += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''}">
       <div class="pd-head">
         <div class="pd-data">${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="pd-total ${total===0?'zero':''}">${minToHoursLabel(total)}</div>
-          <button class="btn-icon-sm" onclick="zerarDia(${dia})" title="Não trabalhei">${ICON_BAN}</button>
+          <button class="btn-icon-sm ${travado?'concluido-ativo':''}" onclick="toggleDiaConcluido(${dia})" title="${travado?'Reabrir dia':'Marcar como concluído'}">${travado?ICON_CHECK:ICON_UNLOCK}</button>
+          <button class="btn-icon-sm" onclick="zerarDia(${dia})" title="Não trabalhei" ${travado?'disabled':''}>${ICON_BAN}</button>
         </div>
       </div>
       <div class="ponto-horarios-grid">
-        <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'entrada')" ontouchend="tempoTapEnd(event,${dia},'entrada')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'entrada')" onmouseup="tempoTapEnd(event,${dia},'entrada')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.entrada||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'almocoSaida')" ontouchend="tempoTapEnd(event,${dia},'almocoSaida')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'almocoSaida')" onmouseup="tempoTapEnd(event,${dia},'almocoSaida')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.almocoSaida||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'almocoVolta')" ontouchend="tempoTapEnd(event,${dia},'almocoVolta')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'almocoVolta')" onmouseup="tempoTapEnd(event,${dia},'almocoVolta')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.almocoVolta||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap" ontouchstart="tempoTapStart(event,${dia},'saida')" ontouchend="tempoTapEnd(event,${dia},'saida')" ontouchcancel="tempoTapCancel()" onmousedown="tempoTapStart(event,${dia},'saida')" onmouseup="tempoTapEnd(event,${dia},'saida')" onmouseleave="tempoTapCancel()" oncontextmenu="return false">${d.saida||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap" ${tapAttrs('entrada')}>${d.entrada||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap" ${tapAttrs('almocoSaida')}>${d.almocoSaida||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap" ${tapAttrs('almocoVolta')}>${d.almocoVolta||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
       </div>
       <div class="ponto-extra-row">
-        <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)"></div>
+        <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)" ${travado?'disabled':''}></div>
       </div>
     </div>`;
   }
@@ -2774,14 +2814,20 @@ function comprimirImagem(file, maxDim, qualidade){
 }
 
 /* ---------- INGREDIENTES (quantidade + unidade + nome) ---------- */
+const UNIDADES_MEDIDA = ['g','ml','xícaras','unidades'];
+function unidadeSelectHtml(className, valorAtual){
+  let opts = UNIDADES_MEDIDA.slice();
+  if(valorAtual && !opts.includes(valorAtual)) opts = [valorAtual, ...opts];
+  return `<select class="${className}"><option value="">Unid.</option>${opts.map(op=>`<option value="${op}"${valorAtual===op?' selected':''}>${op}</option>`).join('')}</select>`;
+}
 function ingredienteRowHtml(ing, i){
   const q = (ing && ing.quantidade || '').toString().replace(/"/g,'&quot;');
-  const u = (ing && ing.unidade || '').toString().replace(/"/g,'&quot;');
+  const u = (ing && ing.unidade || '').toString();
   const n = (ing && ing.nome || '').toString().replace(/"/g,'&quot;');
   return `<div class="receita-ing-row">
     <div class="receita-ing-num">${i+1}</div>
     <input type="text" class="receita-ing-qtd" placeholder="Qtd" value="${q}">
-    <input type="text" class="receita-ing-un" placeholder="Unid." value="${u}">
+    ${unidadeSelectHtml('receita-ing-un', u)}
     <input type="text" class="receita-ing-nome" placeholder="Ingrediente" value="${n}">
     <button type="button" class="btn-icon-sm" onclick="removerIngredienteCampo(this)">${ICON_TRASH}</button>
   </div>`;
@@ -3568,8 +3614,11 @@ function renderLouvorPdfPreview(){
   previewEl.style.padding = l.pdfMargem+'px';
   previewEl.innerHTML = `
     <div class="lv-sheet-header">
-      <div class="lv-sheet-title" style="font-size:${l.pdfTamanhoTitulo}px">${l.titulo||'Sem título'}</div>
-      <div class="lv-sheet-artist">${l.artista||''}${tomAtual?' · Tom: '+tomAtual:''}</div>
+      <div class="lv-sheet-header-text">
+        <div class="lv-sheet-title" style="font-size:${l.pdfTamanhoTitulo}px">${l.titulo||'Sem título'}</div>
+        <div class="lv-sheet-artist">${l.artista||''}</div>
+      </div>
+      ${tomAtual?`<div class="lv-sheet-tom-box"><span>TOM</span><b>${tomAtual}</b></div>`:''}
     </div>
     <div class="lv-sheet-cols" style="column-count:${l.colunas}">${bodyHtml || '<p class="empty-hint">Sem conteúdo ainda.</p>'}</div>
   `;
@@ -3586,20 +3635,36 @@ function exportarLouvorPdf(){
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const marginX = l.pdfMargem;
-  const graphite = [37,41,46];
   const orange = [219,139,24];
   const delta = l.transpose || 0;
   const tomAtual = lvTomAtual(l);
 
-  doc.setFillColor(...graphite);
-  doc.rect(0,0,pageW,70,'F');
-  doc.setTextColor(255,255,255);
+  doc.setTextColor(20,20,22);
   doc.setFont('helvetica','bold');
   doc.setFontSize(l.pdfTamanhoTitulo+2);
-  doc.text(l.titulo||'Sem título', marginX, 32);
+  doc.text(l.titulo||'Sem título', marginX, 34);
   doc.setFont('helvetica','normal');
-  doc.setFontSize(10.5);
-  doc.text(`${l.artista||''}${tomAtual?'   ·   Tom: '+tomAtual:''}`, marginX, 50);
+  doc.setFontSize(11);
+  doc.setTextColor(140,140,144);
+  doc.text(l.artista||'', marginX, 52);
+
+  if(tomAtual){
+    const boxW = 66, boxH = 46, boxX = pageW - marginX - boxW, boxY = 16;
+    doc.setDrawColor(222,222,226);
+    doc.setLineWidth(1);
+    doc.roundedRect(boxX, boxY, boxW, boxH, 8, 8, 'S');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(150,150,154);
+    doc.text('TOM', boxX+boxW/2, boxY+16, { align:'center' });
+    doc.setFontSize(17);
+    doc.setTextColor(30,30,32);
+    doc.text(tomAtual, boxX+boxW/2, boxY+35, { align:'center' });
+  }
+
+  doc.setDrawColor(230,230,233);
+  doc.setLineWidth(1);
+  doc.line(marginX, 70, pageW-marginX, 70);
 
   const { items } = lvParseContent(l.conteudo);
   const cols = l.colunas || 2;
@@ -3663,7 +3728,10 @@ function exportarLouvorPdf(){
     }
   });
 
-  doc.save(`${(l.titulo||'louvor').replace(/\s+/g,'_')}.pdf`);
+  const tomRaiz = lvShiftNote(l.tomOriginal, l.transpose||0) || l.tomOriginal || '';
+  const nomePartes = [l.artista, l.titulo||'Sem título', tomRaiz].filter(Boolean);
+  const nomeArquivo = nomePartes.join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
+  doc.save(`${nomeArquivo}.pdf`);
 }
 
 /* ---------- Slides ---------- */
@@ -3781,21 +3849,31 @@ function exportarLouvorSlides(){
     slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:l.slideTextoTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTextoAlinhamento]||'center', valign:'middle', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
   });
 
-  pres.writeFile({ fileName: `${(l.titulo||'louvor').replace(/\s+/g,'_')}_slides.pptx` });
+  const nomePartesSlides = [l.artista, l.titulo||'Sem título'].filter(Boolean);
+  const nomeArquivoSlides = nomePartesSlides.join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
+  pres.writeFile({ fileName: `${nomeArquivoSlides}.pptx` });
 }
 
 /* ================= MERCADO: Lista de Compras + Estoque de Casa ================= */
 const MERCADO_CATEGORIAS = ['Alimentos','Limpeza','Higiene','Bebidas','Outros'];
-const MERCADO_UNIDADES = ['un','kg','g','L','ml','pct'];
+
 let mercadoEstoqueFiltroAtivo = 'Todas';
 let estoqueItemAtualId = null;
 
 function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 function renderMercado(){
+  renderMercadoNovoItemUnidadeSelect();
   renderListaComprasView();
   renderMercadoEstoqueFilterChips();
   renderEstoqueView();
+}
+function renderMercadoNovoItemUnidadeSelect(){
+  const sel = document.getElementById('mercadoNovoItemUnidade');
+  if(sel && !sel.dataset.filled){
+    sel.innerHTML = UNIDADES_MEDIDA.map(u=>`<option value="${u}">${u}</option>`).join('');
+    sel.dataset.filled = '1';
+  }
 }
 function switchMercadoSubtab(tab){
   document.getElementById('subtabBtnMercadoLista').classList.toggle('active', tab==='lista');
@@ -3810,6 +3888,7 @@ function switchMercadoSubtab(tab){
 }
 
 /* ---------- Lista de Compras ---------- */
+const ICON_CART_SMALL = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
 function encontrarEstoquePorNome(nome){
   const alvo = (nome||'').trim().toLowerCase();
   return state.estoque.find(e=>e.nome.trim().toLowerCase()===alvo);
@@ -3825,8 +3904,10 @@ function renderListaComprasView(){
   }
 
   let html = '';
+  let temComprado = false;
   autoItens.forEach(e=>{
     html += `<div class="mercado-item" onclick="abrirFinalizarCompra('${e.id}')">
+      <div class="mercado-check pending">${ICON_CART_SMALL}</div>
       <div class="mercado-item-info">
         <div class="mercado-item-nome">${e.nome}<span class="mercado-badge-auto">Pendente</span></div>
         <div class="mercado-item-meta">${e.categoria} · tem ${e.quantidadeAtual}${e.unidade}, mínimo ${e.quantidadeMinima}${e.unidade}</div>
@@ -3838,6 +3919,7 @@ function renderListaComprasView(){
     const match = encontrarEstoquePorNome(it.nome);
     if(match){
       html += `<div class="mercado-item" onclick="abrirFinalizarCompra('${match.id}','${it.id}')">
+        <div class="mercado-check pending">${ICON_CART_SMALL}</div>
         <div class="mercado-item-info">
           <div class="mercado-item-nome">${it.nome}<span class="mercado-badge-auto">Pendente</span></div>
           <div class="mercado-item-meta">Vinculado ao estoque · ${match.categoria}</div>
@@ -3846,7 +3928,9 @@ function renderListaComprasView(){
         <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
       </div>`;
     }else{
-      html += `<div class="mercado-item" onclick="marcarManualComprado('${it.id}')">
+      if(it.comprado) temComprado = true;
+      html += `<div class="mercado-item ${it.comprado?'comprado':''}">
+        <div class="mercado-check${it.comprado?' checked':''}" onclick="event.stopPropagation();marcarManualComprado('${it.id}')">${it.comprado?ICON_CHECK:''}</div>
         <div class="mercado-item-info">
           <div class="mercado-item-nome">${it.nome}</div>
           <div class="mercado-item-meta">Item avulso · sem controle de estoque</div>
@@ -3856,14 +3940,17 @@ function renderListaComprasView(){
       </div>`;
     }
   });
-  el.innerHTML = html;
+  el.innerHTML = (temComprado ? `<button type="button" class="mkt-clear-link" onclick="limparComprasConcluidas()">Limpar concluídos</button>` : '') + html;
 }
 function adicionarItemManualCompra(){
   const input = document.getElementById('mercadoNovoItemInput');
   const nome = input.value.trim();
   if(!nome) return;
-  state.listaCompras.push({ id: uid('mc'), nome, quantidade:1, unidade:'un', criadoEm: Date.now() });
+  const qtd = parseFloat(document.getElementById('mercadoNovoItemQtd').value) || 1;
+  const unidade = document.getElementById('mercadoNovoItemUnidade').value || 'unidades';
+  state.listaCompras.push({ id: uid('mc'), nome, quantidade:qtd, unidade, comprado:false, criadoEm: Date.now() });
   input.value = '';
+  document.getElementById('mercadoNovoItemQtd').value = '';
   persist();
   renderListaComprasView();
 }
@@ -3873,7 +3960,14 @@ function excluirItemManual(id){
   renderListaComprasView();
 }
 function marcarManualComprado(id){
-  state.listaCompras = state.listaCompras.filter(it=>it.id!==id);
+  const it = state.listaCompras.find(x=>x.id===id);
+  if(!it) return;
+  it.comprado = !it.comprado;
+  persist();
+  renderListaComprasView();
+}
+function limparComprasConcluidas(){
+  state.listaCompras = state.listaCompras.filter(it=>!it.comprado);
   persist();
   renderListaComprasView();
 }
@@ -4031,7 +4125,7 @@ function selecionarEstFormCategoria(c){
   renderEstFormCategoriaChips();
 }
 function renderEstFormUnidadeChips(){
-  document.getElementById('estItemUnidadeChips').innerHTML = MERCADO_UNIDADES.map(u=>
+  document.getElementById('estItemUnidadeChips').innerHTML = UNIDADES_MEDIDA.map(u=>
     `<button type="button" class="dif-chip${window.estFormUnidadeSelecionada===u?' active':''}" onclick="selecionarEstFormUnidade('${u}')">${u}</button>`
   ).join('');
 }

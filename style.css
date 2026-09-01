@@ -188,6 +188,9 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .ponto-dia-row{padding:var(--s3) var(--s1);border-bottom:1px solid var(--line)}
 .ponto-dia-row:last-child{border-bottom:none}
 .ponto-dia-row.weekend{opacity:.4}
+.ponto-dia-row.travado{background:var(--success-tint);border-radius:12px}
+.ponto-dia-row.travado .ph-tempo-tap{cursor:default;opacity:.75}
+.btn-icon-sm.concluido-ativo{background:var(--success);color:#fff;border-color:var(--success)}
 .ponto-dia-row .pd-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s2)}
 .ponto-dia-row .pd-data{font-size:13px;font-weight:700;color:var(--text)}
 .ponto-dia-row .pd-data small{color:var(--text-faint);font-weight:500;margin-left:4px}
@@ -543,8 +546,8 @@ body{padding-bottom:0}
 .receita-ing-num{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:grab;touch-action:none;user-select:none}
 .receita-passo-row .receita-passo-num{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:9px;cursor:grab;touch-action:none;user-select:none}
 .receita-ing-row.dragging-row,.receita-passo-row.dragging-row{opacity:0.55;background:var(--primary-tint);border-radius:var(--radius-sm)}
-.receita-ing-row input{width:100%;padding:9px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:12px;background:var(--card-2);color:var(--text);font-family:inherit;transition:all var(--dur) var(--ease);min-width:0}
-.receita-ing-row input:focus{outline:none;border-color:var(--primary);background:var(--card)}
+.receita-ing-row input,.receita-ing-row select{width:100%;padding:9px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:12px;background:var(--card-2);color:var(--text);font-family:inherit;transition:all var(--dur) var(--ease);min-width:0}
+.receita-ing-row input:focus,.receita-ing-row select:focus{outline:none;border-color:var(--primary);background:var(--card)}
 .receita-ing-row .btn-icon-sm{flex-shrink:0;color:var(--text-faint)}
 .receita-ing-row .btn-icon-sm:hover{color:var(--danger)}
 
@@ -637,9 +640,13 @@ body{padding-bottom:0}
 
 .lv-pdf-preview{background:#fff;border:1px solid var(--line);border-radius:var(--radius-md);margin-top:var(--s2);overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .lv-pdf-preview.paisagem{max-width:none}
-.lv-sheet-header{text-align:center;margin-bottom:14px}
+.lv-sheet-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3);margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.lv-sheet-header-text{min-width:0}
 .lv-sheet-title{font-family:'Courier New',monospace;font-weight:800;color:var(--text)}
 .lv-sheet-artist{font-family:'Courier New',monospace;font-size:11px;color:var(--text-faint);margin-top:2px}
+.lv-sheet-tom-box{border:1px solid var(--line);border-radius:10px;padding:6px 16px;text-align:center;flex-shrink:0}
+.lv-sheet-tom-box span{display:block;font-size:8px;font-weight:800;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px}
+.lv-sheet-tom-box b{display:block;font-size:18px;font-weight:800;color:var(--text);margin-top:2px}
 .lv-sheet-cols{column-gap:22px;orphans:2;widows:2;text-align:left}
 .lv-sheet-section-wrap{text-align:center;break-inside:avoid;break-after:avoid;margin:12px 0 6px}
 .lv-sheet-section{display:inline-block;background:#767c85;color:#fff;font-family:'Courier New',monospace;font-weight:800;font-size:10px;padding:4px 16px;border-radius:20px;text-transform:uppercase;letter-spacing:.6px}
@@ -667,14 +674,20 @@ body{padding-bottom:0}
 .field-row .field{flex:1}
 
 .mercado-subtab{padding:0 0 100px}
-.mercado-add-row{display:flex;gap:8px;padding:var(--s2) var(--s3)}
-.mercado-add-row input{flex:1;padding:11px var(--s3);border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:14px}
+.mercado-add-row{display:flex;gap:8px;padding:var(--s2) var(--s3);flex-wrap:wrap}
+.mercado-add-row input,.mercado-add-row select{flex:1;padding:11px var(--s3);border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:14px;min-width:0}
+.mercado-add-row input[style*="max-width"],.mercado-add-row select[style*="max-width"]{flex:0 1 auto;padding-left:8px;padding-right:8px}
 .mercado-add-row .btn-icon-sm{width:40px;height:40px;flex-shrink:0}
 
 .mercado-lista{display:flex;flex-direction:column;gap:var(--s2);padding:0 var(--s3)}
 .mercado-item{display:flex;align-items:center;gap:var(--s2);background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:var(--s2) var(--s3);cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}
 .mercado-item.comprado{border-color:var(--success);background:var(--success-tint)}
+.mercado-item.comprado .mercado-item-nome{text-decoration:line-through;color:var(--text-faint)}
 .mercado-item.repor{border-color:var(--warning);background:var(--warning-tint)}
+.mercado-check{width:22px;height:22px;border-radius:7px;border:1.6px solid var(--line);background:var(--card-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;cursor:pointer}
+.mercado-check.checked{background:var(--success);border-color:var(--success)}
+.mercado-check.pending{background:var(--warning-tint);border-color:var(--warning);color:var(--warning);cursor:default}
+.mkt-clear-link{display:block;margin:0 0 var(--s2);background:none;border:none;color:var(--primary);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;padding:0}
 .mercado-item-info{flex:1;min-width:0}
 .mercado-item-nome{font-size:13.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mercado-item-meta{font-size:11px;color:var(--text-faint);margin-top:2px}
@@ -706,3 +719,13 @@ body{padding-bottom:0}
 .mkt-hist-data{font-size:12px;font-weight:700;color:var(--text)}
 .mkt-hist-dias{font-size:10.5px;color:var(--text-faint);margin-top:1px}
 .mkt-hist-valor{font-size:13px;font-weight:800;color:var(--text)}
+
+/* ---------- Confirmação estilo iOS ---------- */
+.ios-confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.25);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:900;display:none;align-items:center;justify-content:center}
+.ios-confirm-overlay.show{display:flex}
+.ios-confirm-card{width:270px;background:rgba(250,250,252,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.25);text-align:center}
+.ios-confirm-msg{padding:20px 16px;font-size:15px;font-weight:600;color:var(--text)}
+.ios-confirm-actions{display:flex;border-top:1px solid rgba(0,0,0,0.12)}
+.ios-confirm-btn{flex:1;padding:13px 0;background:none;border:none;font-size:15px;font-weight:500;color:var(--primary);cursor:pointer;font-family:inherit}
+.ios-confirm-btn:first-child{border-right:1px solid rgba(0,0,0,0.12)}
+.ios-confirm-btn.destructive{font-weight:700;color:var(--danger)}
