@@ -25,7 +25,7 @@
     </div>
     <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="onLogoFileSelected(event)">
     <div>
-      <div class="header-title">Siloé <span class="header-version">v1.1</span></div>
+      <div class="header-title">Siloé <span class="header-version">v1.2</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -916,6 +916,17 @@
   </div>
 </div>
 
+<!-- MODAL: Seletor de Unidade de Medida (genérico, substitui select nativo) -->
+<div class="modal-overlay" id="modalUnidadePicker">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Unidade</h3>
+      <button class="modal-close" onclick="closeModal('modalUnidadePicker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="unidadePickerLista"></div>
+  </div>
+</div>
+
 <!-- MERCADO: Lista de Compras + Estoque de Casa -->
 <div class="aba" id="aba-mercado">
 
@@ -931,7 +942,10 @@
       <input type="text" id="mercadoNovoItemInput" class="mercado-add-nome" placeholder="O que você precisa comprar?" onkeydown="if(event.key==='Enter') document.getElementById('mercadoNovoItemQtd').focus()">
       <div class="mercado-add-row2">
         <input type="text" id="mercadoNovoItemQtd" placeholder="Qtd" onkeydown="if(event.key==='Enter') adicionarItemManualCompra()">
-        <select id="mercadoNovoItemUnidade"></select>
+        <div class="unidade-picker" id="mercadoNovoItemUnidade" data-valor="" onclick="abrirUnidadePicker(this)">
+          <span class="unidade-picker-valor">Unid.</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
         <button class="mercado-add-btn" onclick="adicionarItemManualCompra()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
       </div>
     </div>

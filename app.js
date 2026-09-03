@@ -2839,12 +2839,35 @@ function comprimirImagem(file, maxDim, qualidade){
   });
 }
 
+/* ---------- Seletor de Unidade genérico (substitui <select> nativo) ---------- */
+let unidadePickerTargetEl = null;
+function abrirUnidadePicker(triggerEl){
+  unidadePickerTargetEl = triggerEl;
+  const atual = triggerEl.dataset.valor || '';
+  let opts = UNIDADES_MEDIDA.slice();
+  if(atual && !opts.includes(atual)) opts = [atual, ...opts];
+  document.getElementById('unidadePickerLista').innerHTML = opts.map(u=>
+    `<div class="unidade-picker-opt${atual===u?' selected':''}" onclick="selecionarUnidadePicker('${u}')">${u}${atual===u?ICON_CHECK:''}</div>`
+  ).join('');
+  document.getElementById('modalUnidadePicker').classList.add('active');
+}
+function selecionarUnidadePicker(u){
+  if(unidadePickerTargetEl){
+    unidadePickerTargetEl.dataset.valor = u;
+    unidadePickerTargetEl.querySelector('.unidade-picker-valor').textContent = u;
+  }
+  unidadePickerTargetEl = null;
+  closeModal('modalUnidadePicker');
+}
+
 /* ---------- INGREDIENTES (quantidade + unidade + nome) ---------- */
 const UNIDADES_MEDIDA = ['g','ml','xícaras','unidades'];
 function unidadeSelectHtml(className, valorAtual){
-  let opts = UNIDADES_MEDIDA.slice();
-  if(valorAtual && !opts.includes(valorAtual)) opts = [valorAtual, ...opts];
-  return `<select class="${className}"><option value="">Unid.</option>${opts.map(op=>`<option value="${op}"${valorAtual===op?' selected':''}>${op}</option>`).join('')}</select>`;
+  const valor = valorAtual || '';
+  return `<div class="unidade-picker ${className}" data-valor="${valor}" onclick="abrirUnidadePicker(this)">
+    <span class="unidade-picker-valor">${valor || 'Unid.'}</span>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>`;
 }
 function ingredienteRowHtml(ing, i){
   const q = (ing && ing.quantidade || '').toString().replace(/"/g,'&quot;');
@@ -2880,7 +2903,7 @@ function removerIngredienteCampo(btn){
 function coletarIngredientes(){
   return Array.from(document.querySelectorAll('#receitaIngredientesLista .receita-ing-row')).map(row=>({
     quantidade: row.querySelector('.receita-ing-qtd').value.trim(),
-    unidade: row.querySelector('.receita-ing-un').value.trim(),
+    unidade: (row.querySelector('.receita-ing-un').dataset.valor||'').trim(),
     nome: row.querySelector('.receita-ing-nome').value.trim()
   })).filter(i=>i.nome || i.quantidade || i.unidade);
 }
@@ -3897,10 +3920,10 @@ function renderMercado(){
   renderEstoqueView();
 }
 function renderMercadoNovoItemUnidadeSelect(){
-  const sel = document.getElementById('mercadoNovoItemUnidade');
-  if(sel && !sel.dataset.filled){
-    sel.innerHTML = UNIDADES_MEDIDA.map(u=>`<option value="${u}">${u}</option>`).join('');
-    sel.dataset.filled = '1';
+  const el = document.getElementById('mercadoNovoItemUnidade');
+  if(el && !el.dataset.valor){
+    el.dataset.valor = UNIDADES_MEDIDA[0];
+    el.querySelector('.unidade-picker-valor').textContent = UNIDADES_MEDIDA[0];
   }
 }
 function switchMercadoSubtab(tab){
@@ -3983,7 +4006,7 @@ function adicionarItemManualCompra(){
   const nome = input.value.trim();
   if(!nome) return;
   const qtd = parseFloat(document.getElementById('mercadoNovoItemQtd').value) || 1;
-  const unidade = document.getElementById('mercadoNovoItemUnidade').value || 'unidades';
+  const unidade = document.getElementById('mercadoNovoItemUnidade').dataset.valor || 'unidades';
   state.listaCompras.push({ id: uid('mc'), nome, quantidade:qtd, unidade, noCarrinho:false, criadoEm: Date.now() });
   input.value = '';
   document.getElementById('mercadoNovoItemQtd').value = '';

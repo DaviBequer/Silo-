@@ -548,8 +548,9 @@ body{padding-bottom:0}
 .receita-ing-num{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:grab;touch-action:none;user-select:none}
 .receita-passo-row .receita-passo-num{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:9px;cursor:grab;touch-action:none;user-select:none}
 .receita-ing-row.dragging-row,.receita-passo-row.dragging-row{opacity:0.55;background:var(--primary-tint);border-radius:var(--radius-sm)}
-.receita-ing-row input,.receita-ing-row select{width:100%;padding:9px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:12px;background:var(--card-2);color:var(--text);font-family:inherit;transition:all var(--dur) var(--ease);min-width:0}
-.receita-ing-row input:focus,.receita-ing-row select:focus{outline:none;border-color:var(--primary);background:var(--card)}
+.receita-ing-row input,.receita-ing-row .unidade-picker{width:100%;padding:9px 6px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:11px;background:var(--card-2);color:var(--text);font-family:inherit;transition:all var(--dur) var(--ease);min-width:0}
+.receita-ing-row input:focus{outline:none;border-color:var(--primary);background:var(--card)}
+.receita-ing-row .unidade-picker svg{width:11px;height:11px}
 .receita-ing-row .btn-icon-sm{flex-shrink:0;color:var(--text-faint)}
 .receita-ing-row .btn-icon-sm:hover{color:var(--danger)}
 
@@ -682,7 +683,15 @@ body{padding-bottom:0}
 .mercado-add-nome{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:15px;margin-bottom:var(--s2)}
 .mercado-add-row2{display:flex;gap:8px}
 .mercado-add-row2 input{width:70px;flex:0 0 70px;padding:12px 10px;border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:14px;text-align:center}
-.mercado-add-row2 select{flex:1;min-width:0;padding:12px 10px;border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:14px}
+.mercado-add-row2 .unidade-picker{flex:1}
+
+.unidade-picker{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:12px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:14px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.unidade-picker-valor{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unidade-picker svg{flex-shrink:0;color:var(--text-faint)}
+.unidade-picker-opt{display:flex;align-items:center;justify-content:space-between;padding:14px 4px;font-size:15px;color:var(--text);border-bottom:1px solid var(--line);cursor:pointer}
+.unidade-picker-opt:last-child{border-bottom:none}
+.unidade-picker-opt.selected{color:var(--primary);font-weight:700}
+.unidade-picker-opt svg{color:var(--primary)}
 .mercado-add-btn{flex:0 0 48px;height:48px;border-radius:12px;border:none;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .mercado-add-btn:active{opacity:.85}
 
