@@ -87,7 +87,7 @@ function carregar(){
       if(!state.estoque) state.estoque = [];
       state.estoque.forEach(e=>{ if(!e.precos) e.precos = []; if(!e.historicoCompras) e.historicoCompras = []; });
       if(!state.listaCompras) state.listaCompras = [];
-      state.listaCompras.forEach(it=>{ if(it.comprado===undefined) it.comprado = false; });
+      state.listaCompras.forEach(it=>{ if(it.noCarrinho===undefined) it.noCarrinho = false; });
       if(state.semanaOffset === undefined) state.semanaOffset = 0;
       if(!state.semanaAgenda) state.semanaAgenda = {};
       state.receitas.forEach(r=>{
@@ -1609,11 +1609,19 @@ function salvarCartaoCard(){
 }
 function excluirCartaoCard(id){
   const temCompras = (state.comprasTracker||[]).some(c=>c.cartaoId===id);
-  if(temCompras && !confirm('Este cartão tem compras lançadas. Excluir o cartão também vai excluir todas as compras dele. Continuar?')) return;
-  state.cartoesTracker = (state.cartoesTracker||[]).filter(i=>i.id!==id);
-  state.comprasTracker = (state.comprasTracker||[]).filter(c=>c.cartaoId!==id);
-  persist();
-  renderCartaoTrackerList();
+  function finalizarExclusao(){
+    state.cartoesTracker = (state.cartoesTracker||[]).filter(i=>i.id!==id);
+    state.comprasTracker = (state.comprasTracker||[]).filter(c=>c.cartaoId!==id);
+    persist();
+    renderCartaoTrackerList();
+  }
+  if(temCompras){
+    iosConfirm('Este cartão tem compras lançadas. Excluir também vai excluir todas as compras dele.').then(ok=>{
+      if(ok) finalizarExclusao();
+    });
+  }else{
+    finalizarExclusao();
+  }
 }
 
 /* --- Compra (parcelamento vinculado a um cartão) --- */
@@ -2007,9 +2015,10 @@ function getDia(mKey, dia){
     const dow = d.getDay();
     const isWeekend = dow===0 || dow===6;
     state.ponto.days[mKey][dia] = isWeekend
-      ? { entrada:null, almocoSaida:null, almocoVolta:null, saida:null, extra:0 }
-      : { entrada:'07:00', almocoSaida:'12:00', almocoVolta:'13:00', saida:tempoPadraoSaida(mKey,dia), extra:0 };
+      ? { entrada:null, almocoSaida:null, almocoVolta:null, saida:null, extra:0, confirmado:{} }
+      : { entrada:'07:00', almocoSaida:'12:00', almocoVolta:'13:00', saida:tempoPadraoSaida(mKey,dia), extra:0, confirmado:{} };
   }
+  if(!state.ponto.days[mKey][dia].confirmado) state.ponto.days[mKey][dia].confirmado = {};
   return state.ponto.days[mKey][dia];
 }
 const TEMPO_PADRAO = { entrada:'07:00', almocoSaida:'12:00', almocoVolta:'13:00', saida:'17:00' };
@@ -2036,6 +2045,7 @@ function ajustarTempo(dia, campo, isRight){
     min = ((min % 1440) + 1440) % 1440;
     d[campo] = minToTime(min);
   }
+  d.confirmado[campo] = true;
   renderPonto();
   persist();
   if(navigator.vibrate) navigator.vibrate(6);
@@ -2050,6 +2060,7 @@ function tempoTapStart(e, dia, campo){
     const d = getDia(mKey, dia);
     if(d.concluido) return;
     d[campo] = null;
+    d.confirmado[campo] = false;
     renderPonto();
     persist();
     if(navigator.vibrate) navigator.vibrate(20);
@@ -2085,7 +2096,7 @@ function setExtra(dia, valStr){
 }
 function zerarDia(dia){
   const mKey = pontoMonthKeyAtual();
-  state.ponto.days[mKey][dia] = { entrada:null, almocoSaida:null, almocoVolta:null, saida:null, extra:0 };
+  state.ponto.days[mKey][dia] = { entrada:null, almocoSaida:null, almocoVolta:null, saida:null, extra:0, confirmado:{} };
   renderPonto();
   persist();
 }
@@ -2114,15 +2125,23 @@ function renderPonto(){
 
   const totalDias = daysInMonth(mKey);
   const lista = document.getElementById('pontoDiasLista');
+  const hoje = new Date();
+  const nowMin = hoje.getHours()*60 + hoje.getMinutes();
   let rows = '';
   for(let dia=1; dia<=totalDias; dia++){
     const d = getDia(mKey, dia);
     const dateObj = keyToDate(mKey); dateObj.setDate(dia);
     const isWeekend = dateObj.getDay()===0 || dateObj.getDay()===6;
+    const isHoje = dateObj.getFullYear()===hoje.getFullYear() && dateObj.getMonth()===hoje.getMonth() && dateObj.getDate()===hoje.getDate();
     const total = dayTotalMinutes(d);
     const extraVal = d.extra ? String(Math.floor(d.extra/60)).padStart(2,'0')+':'+String(d.extra%60).padStart(2,'0') : '';
     const travado = !!d.concluido;
     const tapAttrs = (campo)=> travado ? '' : `onpointerdown="tempoTapStart(event,${dia},'${campo}')" onpointerup="tempoTapEnd(event,${dia},'${campo}')" onpointercancel="tempoTapCancel()" onpointerleave="tempoTapCancel()" oncontextmenu="return false"`;
+    const statusClasse = (campo)=>{
+      if(d.confirmado && d.confirmado[campo]) return 'ph-confirmado';
+      if(isHoje && d[campo] && nowMin > timeToMin(d[campo])) return 'ph-atrasado';
+      return '';
+    };
     rows += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''}">
       <div class="pd-head">
         <div class="pd-data">${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
@@ -2133,10 +2152,10 @@ function renderPonto(){
         </div>
       </div>
       <div class="ponto-horarios-grid">
-        <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap" ${tapAttrs('entrada')}>${d.entrada||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap" ${tapAttrs('almocoSaida')}>${d.almocoSaida||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap" ${tapAttrs('almocoVolta')}>${d.almocoVolta||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap ${statusClasse('entrada')}" ${tapAttrs('entrada')}>${d.entrada||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap ${statusClasse('almocoSaida')}" ${tapAttrs('almocoSaida')}>${d.almocoSaida||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap ${statusClasse('almocoVolta')}" ${tapAttrs('almocoVolta')}>${d.almocoVolta||'--:--'}</div></div>
+        <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap ${statusClasse('saida')}" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
       </div>
       <div class="ponto-extra-row">
         <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)" ${travado?'disabled':''}></div>
@@ -2478,12 +2497,14 @@ function selecionarReceitaFiltro(val){
   renderReceitas();
 }
 function excluirReceitaCategoria(id){
-  if(!confirm('Excluir esta categoria? As receitas dela ficarão sem categoria.')) return;
-  state.receitaCategorias = (state.receitaCategorias||[]).filter(c=>c.id!==id);
-  (state.receitas||[]).forEach(r=>{ if(r.categoriaId===id) r.categoriaId=null; });
-  if(receitaFiltroAtivo===id) receitaFiltroAtivo='todas';
-  persist();
-  renderReceitas();
+  iosConfirm('Excluir esta categoria? As receitas dela ficarão sem categoria.').then(ok=>{
+    if(!ok) return;
+    state.receitaCategorias = (state.receitaCategorias||[]).filter(c=>c.id!==id);
+    (state.receitas||[]).forEach(r=>{ if(r.categoriaId===id) r.categoriaId=null; });
+    if(receitaFiltroAtivo===id) receitaFiltroAtivo='todas';
+    persist();
+    renderReceitas();
+  });
 }
 function onReceitaSearchInput(val){
   receitaSearchQuery = val.trim().toLowerCase();
@@ -2602,11 +2623,13 @@ function duplicarReceita(id){
   showToast('Receita duplicada');
 }
 function excluirReceita(id){
-  if(!confirm('Excluir esta receita?')) return;
-  state.receitas = (state.receitas||[]).filter(r=>r.id!==id);
-  persist();
-  renderReceitas();
-  showToast('Receita removida');
+  iosConfirm('Excluir esta receita?').then(ok=>{
+    if(!ok) return;
+    state.receitas = (state.receitas||[]).filter(r=>r.id!==id);
+    persist();
+    renderReceitas();
+    showToast('Receita removida');
+  });
 }
 
 /* ---------- DETALHES (fullpage) ---------- */
@@ -2706,12 +2729,15 @@ function editarReceitaAtual(){
 function excluirReceitaAtual(){
   if(!receitaDetalheAtualId) return;
   document.getElementById('receitaDetalheMenuDropdown').style.display = 'none';
-  if(!confirm('Excluir esta receita?')) return;
-  state.receitas = (state.receitas||[]).filter(r=>r.id!==receitaDetalheAtualId);
-  persist();
-  closeReceitaDetalhe();
-  renderReceitas();
-  showToast('Receita removida');
+  const idAlvo = receitaDetalheAtualId;
+  iosConfirm('Excluir esta receita?').then(ok=>{
+    if(!ok) return;
+    state.receitas = (state.receitas||[]).filter(r=>r.id!==idAlvo);
+    persist();
+    closeReceitaDetalhe();
+    renderReceitas();
+    showToast('Receita removida');
+  });
 }
 
 /* ---------- CATEGORIA (seletor customizado) ---------- */
@@ -3308,10 +3334,12 @@ function salvarLouvorCampo(){
 }
 function excluirLouvorAtual(){
   const l = getLouvorAtual(); if(!l) return;
-  if(!confirm(`Excluir "${l.titulo||'este louvor'}"? Essa ação não pode ser desfeita.`)) return;
-  state.louvores = state.louvores.filter(x=>x.id!==l.id);
-  persist();
-  closeLouvorDetalhe();
+  iosConfirm(`Excluir "${l.titulo||'este louvor'}"?`).then(ok=>{
+    if(!ok) return;
+    state.louvores = state.louvores.filter(x=>x.id!==l.id);
+    persist();
+    closeLouvorDetalhe();
+  });
 }
 
 function switchLouvorSubtab(tab){
@@ -3904,7 +3932,6 @@ function renderListaComprasView(){
   }
 
   let html = '';
-  let temComprado = false;
   autoItens.forEach(e=>{
     html += `<div class="mercado-item" onclick="abrirFinalizarCompra('${e.id}')">
       <div class="mercado-check pending">${ICON_CART_SMALL}</div>
@@ -3927,10 +3954,19 @@ function renderListaComprasView(){
         <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
         <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
       </div>`;
+    }else if(it.noCarrinho){
+      html += `<div class="mercado-item carrinho" onclick="abrirFinalizarAvulso('${it.id}')">
+        <div class="mercado-check checked">${ICON_CHECK}</div>
+        <div class="mercado-item-info">
+          <div class="mercado-item-nome">${it.nome}<span class="mercado-badge-carrinho">No carrinho</span></div>
+          <div class="mercado-item-meta">Toque pra finalizar a compra</div>
+        </div>
+        <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
+        <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
+      </div>`;
     }else{
-      if(it.comprado) temComprado = true;
-      html += `<div class="mercado-item ${it.comprado?'comprado':''}">
-        <div class="mercado-check${it.comprado?' checked':''}" onclick="event.stopPropagation();marcarManualComprado('${it.id}')">${it.comprado?ICON_CHECK:''}</div>
+      html += `<div class="mercado-item" onclick="marcarItemNoCarrinho('${it.id}')">
+        <div class="mercado-check"></div>
         <div class="mercado-item-info">
           <div class="mercado-item-nome">${it.nome}</div>
           <div class="mercado-item-meta">Item avulso · sem controle de estoque</div>
@@ -3940,7 +3976,7 @@ function renderListaComprasView(){
       </div>`;
     }
   });
-  el.innerHTML = (temComprado ? `<button type="button" class="mkt-clear-link" onclick="limparComprasConcluidas()">Limpar concluídos</button>` : '') + html;
+  el.innerHTML = html;
 }
 function adicionarItemManualCompra(){
   const input = document.getElementById('mercadoNovoItemInput');
@@ -3948,9 +3984,10 @@ function adicionarItemManualCompra(){
   if(!nome) return;
   const qtd = parseFloat(document.getElementById('mercadoNovoItemQtd').value) || 1;
   const unidade = document.getElementById('mercadoNovoItemUnidade').value || 'unidades';
-  state.listaCompras.push({ id: uid('mc'), nome, quantidade:qtd, unidade, comprado:false, criadoEm: Date.now() });
+  state.listaCompras.push({ id: uid('mc'), nome, quantidade:qtd, unidade, noCarrinho:false, criadoEm: Date.now() });
   input.value = '';
   document.getElementById('mercadoNovoItemQtd').value = '';
+  input.focus();
   persist();
   renderListaComprasView();
 }
@@ -3959,17 +3996,73 @@ function excluirItemManual(id){
   persist();
   renderListaComprasView();
 }
-function marcarManualComprado(id){
+function marcarItemNoCarrinho(id){
   const it = state.listaCompras.find(x=>x.id===id);
   if(!it) return;
-  it.comprado = !it.comprado;
+  it.noCarrinho = true;
   persist();
   renderListaComprasView();
+  if(navigator.vibrate) navigator.vibrate(10);
 }
-function limparComprasConcluidas(){
-  state.listaCompras = state.listaCompras.filter(it=>!it.comprado);
+
+/* ---------- Finalizar Compra de item avulso (sem estoque prévio) ---------- */
+let favManualItemId = null;
+let favAdicionarEstoque = false;
+function abrirFinalizarAvulso(manualItemId){
+  const it = state.listaCompras.find(x=>x.id===manualItemId);
+  if(!it) return;
+  favManualItemId = manualItemId;
+  document.getElementById('favItemNome').textContent = it.nome;
+  document.getElementById('favQuantidade').value = it.quantidade || 1;
+  document.getElementById('favUnidade').textContent = it.unidade || 'unidades';
+  document.getElementById('favValor').value = '';
+  setFavAdicionarEstoque(false);
+  window.favCategoriaSelecionada = 'Alimentos';
+  renderFavCategoriaChips();
+  document.getElementById('favQtdMinima').value = '';
+  document.getElementById('favQtdReposicao').value = '';
+  document.getElementById('modalFinalizarAvulso').classList.add('active');
+}
+function setFavAdicionarEstoque(v){
+  favAdicionarEstoque = v;
+  document.getElementById('favEstoqueSim').classList.toggle('active', v);
+  document.getElementById('favEstoqueNao').classList.toggle('active', !v);
+  document.getElementById('favEstoqueCamposWrap').style.display = v ? 'block' : 'none';
+}
+function renderFavCategoriaChips(){
+  document.getElementById('favCategoriaChips').innerHTML = MERCADO_CATEGORIAS.map(c=>
+    `<button type="button" class="dif-chip${window.favCategoriaSelecionada===c?' active':''}" onclick="selecionarFavCategoria('${c}')">${c}</button>`
+  ).join('');
+}
+function selecionarFavCategoria(c){
+  window.favCategoriaSelecionada = c;
+  renderFavCategoriaChips();
+}
+function confirmarFinalizarAvulso(){
+  const it = state.listaCompras.find(x=>x.id===favManualItemId);
+  if(!it) return;
+  const qtd = parseFloat(document.getElementById('favQuantidade').value) || 0;
+  const valor = parseFloat(document.getElementById('favValor').value);
+
+  if(favAdicionarEstoque){
+    const qtdMinima = parseFloat(document.getElementById('favQtdMinima').value) || 0;
+    const qtdReposicao = parseFloat(document.getElementById('favQtdReposicao').value) || qtdMinima;
+    const temPreco = !isNaN(valor) && valor>0;
+    state.estoque.push({
+      id: uid('est'), nome: it.nome, categoria: window.favCategoriaSelecionada,
+      quantidadeAtual: qtd, unidade: it.unidade, quantidadeMinima: qtdMinima, quantidadeReposicao: qtdReposicao,
+      precos: temPreco ? [{ valor, data: Date.now() }] : [],
+      historicoCompras: [{ data: Date.now(), quantidadeComprada: qtd, valorUnitario: temPreco?valor:null, saldoAntesCorrigido:0, zerou:true, diasDesdeUltima:null }],
+      criadoEm: Date.now()
+    });
+  }
+
+  state.listaCompras = state.listaCompras.filter(x=>x.id!==favManualItemId);
   persist();
+  closeModal('modalFinalizarAvulso');
+  favManualItemId = null;
   renderListaComprasView();
+  renderEstoqueView();
 }
 
 /* ---------- Finalizar Compra (dá entrada no estoque + registra e compara preço) ---------- */
@@ -4161,12 +4254,14 @@ function salvarEstoqueItem(){
 function excluirEstoqueItemAtual(){
   if(!estoqueItemAtualId) return;
   const e = state.estoque.find(x=>x.id===estoqueItemAtualId);
-  if(!confirm(`Excluir "${e?.nome||'este item'}" do estoque?`)) return;
-  state.estoque = state.estoque.filter(x=>x.id!==estoqueItemAtualId);
-  persist();
-  closeModal('modalEstoqueItem');
-  renderEstoqueView();
-  renderListaComprasView();
+  iosConfirm(`Excluir "${e?.nome||'este item'}"?`).then(ok=>{
+    if(!ok) return;
+    state.estoque = state.estoque.filter(x=>x.id!==estoqueItemAtualId);
+    persist();
+    closeModal('modalEstoqueItem');
+    renderEstoqueView();
+    renderListaComprasView();
+  });
 }
 
 /* ---------- Histórico de compras (por item) ---------- */
@@ -4238,6 +4333,11 @@ function renderMercadoDashboard(){
     </div>`;
   }).join('') : '<p class="empty-hint">Nenhuma compra finalizada este mês ainda.</p>';
 }
+
+setInterval(()=>{
+  const abaPonto = document.getElementById('aba-ponto');
+  if(abaPonto && abaPonto.classList.contains('active')) renderPonto();
+}, 60000);
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{

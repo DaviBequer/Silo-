@@ -25,7 +25,7 @@
     </div>
     <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="onLogoFileSelected(event)">
     <div>
-      <div class="header-title">Siloé <span class="header-version">v1.0</span></div>
+      <div class="header-title">Siloé <span class="header-version">v1.1</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -919,7 +919,7 @@
 <!-- MERCADO: Lista de Compras + Estoque de Casa -->
 <div class="aba" id="aba-mercado">
 
-  <div class="tarefas-subtabs">
+  <div class="tarefas-subtabs mercado-subtabs">
     <button class="subtab-btn active" id="subtabBtnMercadoLista" onclick="switchMercadoSubtab('lista')">Lista</button>
     <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="switchMercadoSubtab('estoque')">Estoque</button>
     <button class="subtab-btn" id="subtabBtnMercadoDashboard" onclick="switchMercadoSubtab('dashboard')">Dashboard</button>
@@ -927,18 +927,20 @@
 
   <!-- SUB-ABA: Lista de Compras -->
   <div id="mercadoSubtabLista" class="mercado-subtab active">
-    <div class="mercado-add-row">
-      <input type="text" id="mercadoNovoItemInput" placeholder="Adicionar item avulso..." onkeydown="if(event.key==='Enter') adicionarItemManualCompra()">
-      <input type="text" id="mercadoNovoItemQtd" placeholder="Qtd" style="max-width:56px" onkeydown="if(event.key==='Enter') adicionarItemManualCompra()">
-      <select id="mercadoNovoItemUnidade" style="max-width:78px"></select>
-      <button class="btn-icon-sm" onclick="adicionarItemManualCompra()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+    <div class="mercado-add-card">
+      <input type="text" id="mercadoNovoItemInput" class="mercado-add-nome" placeholder="O que você precisa comprar?" onkeydown="if(event.key==='Enter') document.getElementById('mercadoNovoItemQtd').focus()">
+      <div class="mercado-add-row2">
+        <input type="text" id="mercadoNovoItemQtd" placeholder="Qtd" onkeydown="if(event.key==='Enter') adicionarItemManualCompra()">
+        <select id="mercadoNovoItemUnidade"></select>
+        <button class="mercado-add-btn" onclick="adicionarItemManualCompra()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+      </div>
     </div>
     <div id="mercadoListaCompras" class="mercado-lista"></div>
   </div>
 
   <!-- SUB-ABA: Estoque de Casa -->
   <div id="mercadoSubtabEstoque" class="mercado-subtab" style="display:none">
-    <div class="receita-filter-chips" id="mercadoEstoqueFilterChips" style="padding:0 var(--s3) var(--s2)"></div>
+    <div class="receita-filter-chips" id="mercadoEstoqueFilterChips" style="padding:var(--s2) var(--s3)"></div>
     <div id="mercadoEstoqueLista" class="mercado-lista"></div>
     <button class="receita-fab" onclick="abrirEstoqueForm(null)" title="Novo item" aria-label="Novo item">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
@@ -946,7 +948,7 @@
   </div>
 
   <!-- SUB-ABA: Dashboard -->
-  <div id="mercadoSubtabDashboard" class="mercado-subtab" style="display:none;padding-left:var(--s3);padding-right:var(--s3)">
+  <div id="mercadoSubtabDashboard" class="mercado-subtab" style="display:none;padding:var(--s2) var(--s3) 100px">
     <div class="mkt-stat-row">
       <div class="mkt-stat-card">
         <div class="mkt-stat-label">Gasto no mês</div>
@@ -1052,6 +1054,58 @@
     </div>
     <div class="lv-hint" id="fcComparacao" style="display:none"></div>
     <button class="btn btn-block" onclick="confirmarFinalizarCompra()">Finalizar e Repor Estoque</button>
+  </div>
+</div>
+
+<!-- MODAL: Finalizar Compra de item avulso (sem estoque prévio) -->
+<div class="modal-overlay" id="modalFinalizarAvulso">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Finalizar Compra</h3>
+      <button class="modal-close" onclick="closeModal('modalFinalizarAvulso')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Item</label>
+      <div style="font-size:17px;font-weight:800;color:var(--text)" id="favItemNome"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quantidade comprada</label>
+        <input type="number" id="favQuantidade" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label>Unidade</label>
+        <div class="lv-tom-box" style="cursor:default;padding:12px"><span id="favUnidade" style="font-size:14px"></span></div>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Preço por unidade (opcional)</label>
+      <input type="number" id="favValor" placeholder="R$ 0,00" min="0" step="0.01">
+    </div>
+    <div class="field full">
+      <label>Adicionar ao estoque de casa?</label>
+      <div class="dificuldade-chips">
+        <button type="button" class="dif-chip" id="favEstoqueSim" onclick="setFavAdicionarEstoque(true)">Sim</button>
+        <button type="button" class="dif-chip active" id="favEstoqueNao" onclick="setFavAdicionarEstoque(false)">Não</button>
+      </div>
+    </div>
+    <div id="favEstoqueCamposWrap" style="display:none">
+      <div class="field full">
+        <label>Categoria</label>
+        <div class="dificuldade-chips" id="favCategoriaChips"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Qtd. mínima</label>
+          <input type="number" id="favQtdMinima" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Repor quanto</label>
+          <input type="number" id="favQtdReposicao" min="0" step="0.1">
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-block" onclick="confirmarFinalizarAvulso()">Finalizar</button>
   </div>
 </div>
 
