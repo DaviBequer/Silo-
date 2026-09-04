@@ -25,7 +25,7 @@
     </div>
     <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="onLogoFileSelected(event)">
     <div>
-      <div class="header-title">Siloé <span class="header-version">v1.2</span></div>
+      <div class="header-title">Siloé <span class="header-version">v1.3</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -721,32 +721,36 @@
 
     <!-- PAINEL: EDIÇÃO -->
     <div class="lv-panel active" id="lvPanelEdicao">
-      <div class="field full">
-        <label>Título</label>
-        <input type="text" id="lvTitulo" placeholder="Nome do louvor" oninput="salvarLouvorCampo()">
+      <div class="field-row">
+        <div class="field">
+          <label>Título</label>
+          <input type="text" id="lvTitulo" placeholder="Nome do louvor" oninput="salvarLouvorCampo()">
+        </div>
+        <div class="field">
+          <label>Artista</label>
+          <input type="text" id="lvArtista" placeholder="Artista / Autor" oninput="salvarLouvorCampo()">
+        </div>
       </div>
-      <div class="field full">
-        <label>Artista</label>
-        <input type="text" id="lvArtista" placeholder="Artista / Autor" oninput="salvarLouvorCampo()">
+      <div class="field-row">
+        <div class="field" style="flex:2">
+          <label>Categoria</label>
+          <div class="dificuldade-chips" id="lvCategoriaChips"></div>
+        </div>
+        <div class="field" style="flex:1;min-width:90px">
+          <label>Tom</label>
+          <button type="button" class="lv-tom-box" id="lvTomBox" onclick="abrirLvTomPicker()">
+            <span id="lvTomBoxValor">—</span>
+          </button>
+        </div>
       </div>
-      <div class="field full">
-        <label>Categoria</label>
-        <div class="dificuldade-chips" id="lvCategoriaChips"></div>
-      </div>
-      <div class="field full">
-        <label>Tom</label>
-        <button type="button" class="lv-tom-box" id="lvTomBox" onclick="abrirLvTomPicker()">
-          <span id="lvTomBoxValor">—</span>
-        </button>
-        <div class="lv-hint" style="margin-top:6px">Toque uma vez pra escolher o tom. Toque duas vezes seguidas pra usar o relativo menor.</div>
-      </div>
+      <div class="lv-hint" style="margin-top:-6px">Toque uma vez pra escolher o tom. Toque duas vezes seguidas pra usar o relativo menor.</div>
       <div class="field full">
         <label>Letra e cifra</label>
         <div class="lv-hint">
           O acorde vai sozinho numa linha (o app identifica automaticamente e deixa laranja); a linha de baixo é a letra. Use espaços pra alinhar o acorde em cima da sílaba certa.<br>
           <code>[Refrão]</code> cria um título de seção · <code>-</code> sozinho quebra pro próximo slide · <code>--</code> insere uma linha divisória no PDF · <code>---</code> força quebra de coluna no PDF.
         </div>
-        <textarea id="lvConteudo" rows="16" placeholder="[G]Grande é o Senhor..." oninput="salvarLouvorCampo()" style="font-family:'Courier New',monospace;font-size:13px"></textarea>
+        <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[G]Grande é o Senhor..." oninput="salvarLouvorCampo()"></textarea>
       </div>
     </div>
 

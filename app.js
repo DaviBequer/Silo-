@@ -2252,9 +2252,20 @@ function selecionarPontoExportTipo(val){
 function pontoSemanasDoMes(mKey){
   const totalDias = daysInMonth(mKey);
   const semanas = [];
-  for(let inicio=1; inicio<=totalDias; inicio+=7){
-    const fim = Math.min(inicio+6, totalDias);
-    semanas.push({ inicio, fim });
+  let atual = null;
+  for(let dia=1; dia<=totalDias; dia++){
+    const d = keyToDate(mKey); d.setDate(dia);
+    const dow = d.getDay();
+    if(dow===0 || dow===6){
+      atual = null;
+      continue;
+    }
+    if(dow===1 || !atual){
+      atual = { inicio:dia, fim:dia };
+      semanas.push(atual);
+    }else{
+      atual.fim = dia;
+    }
   }
   return semanas;
 }
@@ -3767,14 +3778,24 @@ function exportarLouvorPdf(){
     }
     if(it.type==='pair'){
       const chordLine = lvTransposeChordLine(it.chordLine||'', delta);
+      const lyricLine = it.lyricLine || ' ';
       ensureSpace(lineH*2);
+      doc.setFontSize(fontSize);
+      const chordW = chordLine.trim() ? doc.getTextWidth(chordLine) : 0;
+      const lyricW = doc.getTextWidth(lyricLine);
+      const maiorLargura = Math.max(chordW, lyricW);
+      const escala = maiorLargura > colWidth ? Math.max(0.5, colWidth / maiorLargura) : 1;
+      const tamanhoDesenho = fontSize * escala;
       if(chordLine.trim()){
+        doc.setFontSize(tamanhoDesenho);
         doc.setTextColor(...orange);
         doc.text(chordLine, colX[colIdx], y);
         y += lineH*0.85;
       }
+      doc.setFontSize(tamanhoDesenho);
       doc.setTextColor(40,40,40);
-      doc.text(it.lyricLine || ' ', colX[colIdx], y);
+      doc.text(lyricLine, colX[colIdx], y);
+      doc.setFontSize(fontSize);
       y += lineH;
     }
   });
