@@ -25,7 +25,7 @@
     </div>
     <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="onLogoFileSelected(event)">
     <div>
-      <div class="header-title">Siloé <span class="header-version">v1.3</span></div>
+      <div class="header-title">Siloé <span class="header-version">v1.4</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -714,43 +714,31 @@
   </div>
   <div class="lv-subtabs">
     <button class="lv-subtab active" data-tab="edicao" onclick="switchLouvorSubtab('edicao')">Edição</button>
-    <button class="lv-subtab" data-tab="pdf" onclick="switchLouvorSubtab('pdf')">PDF</button>
+    <button class="lv-subtab" data-tab="pdf" onclick="switchLouvorSubtab('pdf')">Visualizar</button>
     <button class="lv-subtab" data-tab="slides" onclick="switchLouvorSubtab('slides')">Slides</button>
   </div>
   <div class="fullpage-content" id="louvorDetalheConteudo" style="padding-bottom:100px">
 
     <!-- PAINEL: EDIÇÃO -->
     <div class="lv-panel active" id="lvPanelEdicao">
-      <div class="field-row">
-        <div class="field">
-          <label>Título</label>
-          <input type="text" id="lvTitulo" placeholder="Nome do louvor" oninput="salvarLouvorCampo()">
-        </div>
-        <div class="field">
-          <label>Artista</label>
-          <input type="text" id="lvArtista" placeholder="Artista / Autor" oninput="salvarLouvorCampo()">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field" style="flex:2">
-          <label>Categoria</label>
-          <div class="dificuldade-chips" id="lvCategoriaChips"></div>
-        </div>
-        <div class="field" style="flex:1;min-width:90px">
-          <label>Tom</label>
-          <button type="button" class="lv-tom-box" id="lvTomBox" onclick="abrirLvTomPicker()">
+      <div class="lv-harmonic-bar" id="lvHarmonicBar"></div>
+      <div class="lv-page-sheet">
+        <div class="lv-page-top">
+          <div class="lv-page-top-text">
+            <input type="text" id="lvTitulo" class="lv-title-input" placeholder="Nome do louvor" oninput="salvarLouvorCampo()">
+            <input type="text" id="lvArtista" class="lv-artist-input" placeholder="Artista / Autor" oninput="salvarLouvorCampo()">
+            <div class="dificuldade-chips lv-categoria-mini" id="lvCategoriaChips"></div>
+          </div>
+          <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker()">
+            <span class="lv-tom-box-lbl">TOM</span>
             <span id="lvTomBoxValor">—</span>
           </button>
         </div>
+        <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
       </div>
-      <div class="lv-hint" style="margin-top:-6px">Toque uma vez pra escolher o tom. Toque duas vezes seguidas pra usar o relativo menor.</div>
-      <div class="field full">
-        <label>Letra e cifra</label>
-        <div class="lv-hint">
-          O acorde vai sozinho numa linha (o app identifica automaticamente e deixa laranja); a linha de baixo é a letra. Use espaços pra alinhar o acorde em cima da sílaba certa.<br>
-          <code>[Refrão]</code> cria um título de seção · <code>-</code> sozinho quebra pro próximo slide · <code>--</code> insere uma linha divisória no PDF · <code>---</code> força quebra de coluna no PDF.
-        </div>
-        <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[G]Grande é o Senhor..." oninput="salvarLouvorCampo()"></textarea>
+      <div class="lv-hint" style="max-width:720px;margin:var(--s2) auto 0">
+        O acorde vai sozinho numa linha (o app identifica automaticamente e deixa laranja); a linha de baixo é a letra. Use espaços pra alinhar o acorde em cima da sílaba certa. Toque duas vezes no tom pra usar o relativo menor.<br>
+        <code>[Refrão]</code> cria um título de seção · <code>-</code> sozinho quebra pro próximo slide · <code>--</code> insere uma linha divisória no PDF · <code>---</code> força quebra de coluna no PDF.
       </div>
     </div>
 

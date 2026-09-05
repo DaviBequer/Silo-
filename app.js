@@ -3430,6 +3430,30 @@ function lvTomAtual(l){
 function atualizarLvTomBox(){
   const l = getLouvorAtual(); if(!l) return;
   document.getElementById('lvTomBoxValor').textContent = lvTomAtual(l) || '—';
+  renderLvHarmonicBar(l);
+}
+const LV_GRAUS_MAIOR = [
+  { grau:'I', semitom:0, qualidade:'' },
+  { grau:'II', semitom:2, qualidade:'m' },
+  { grau:'III', semitom:4, qualidade:'m' },
+  { grau:'IV', semitom:5, qualidade:'' },
+  { grau:'V', semitom:7, qualidade:'' },
+  { grau:'VI', semitom:9, qualidade:'m' },
+  { grau:'VII', semitom:11, qualidade:'º' }
+];
+function renderLvHarmonicBar(l){
+  const el = document.getElementById('lvHarmonicBar');
+  if(!el) return;
+  const rootAtual = l.tomOriginal ? (lvShiftNote(l.tomOriginal, l.transpose||0) || l.tomOriginal) : '';
+  if(!rootAtual){ el.innerHTML = ''; return; }
+  const rootIdx = LV_CHROMATIC.indexOf(rootAtual);
+  if(rootIdx===-1){ el.innerHTML = ''; return; }
+  el.innerHTML = LV_GRAUS_MAIOR.map(g=>{
+    const nota = LV_CHROMATIC[(rootIdx+g.semitom)%12];
+    const acorde = nota + g.qualidade;
+    const alt = nota + '7';
+    return `<div class="lv-grau-chip"><div class="lv-grau-num">${g.grau}</div><div class="lv-grau-chord">${acorde}</div><div class="lv-grau-alt">${alt}</div></div>`;
+  }).join('');
 }
 
 /* ---------- Seletor de Tom (grid cromático + relativo menor no duplo toque) ---------- */

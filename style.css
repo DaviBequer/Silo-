@@ -429,6 +429,28 @@ body{padding-bottom:calc(84px + var(--safe))}
 .bottom-nav{justify-content:center;gap:var(--s4)}
 .nav-item{flex:0 0 auto;min-width:100px}
 }
+@media(min-width:1100px){
+#aba-louvor.active{
+  position:fixed;
+  left:0; right:auto; top:73px; bottom:calc(84px + var(--safe));
+  width:380px;
+  max-width:380px;
+  margin:0;
+  border-right:1px solid var(--line);
+  overflow-y:auto;
+  padding-bottom:0;
+}
+#pageLouvorDetalhe{
+  left:380px !important; right:0 !important; top:73px !important; bottom:calc(84px + var(--safe)) !important;
+  z-index:60;
+}
+}
+@media(min-width:1024px){
+#aba-panorama{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);max-width:1100px;align-items:start}
+#aba-panorama > *{margin-bottom:0}
+#aba-panorama > *:nth-child(1){grid-column:1/-1}
+#aba-panorama > *:nth-child(4){grid-column:1/-1}
+}
 
 .reserva-badge{display:flex;justify-content:space-between;align-items:center;margin-top:var(--s2);padding:var(--s2) var(--s3);border-radius:var(--radius-sm);background:var(--warning-tint);cursor:pointer;font-size:11.5px;color:var(--text-dim);font-weight:600}
 .reserva-badge b{color:var(--text);font-weight:800;font-size:13px}
@@ -631,9 +653,27 @@ body{padding-bottom:calc(84px + var(--safe))}
 .lv-card-meta{font-size:11px;color:var(--text-faint);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lv-card-tom{font-size:11px;font-weight:800;color:var(--primary);background:var(--primary-tint);padding:3px 9px;border-radius:20px;flex-shrink:0}
 
-.lv-subtabs{display:flex;gap:6px;padding:var(--s2) var(--s3);border-bottom:1px solid var(--line);flex-shrink:0}
-.lv-subtab{flex:1;padding:9px 4px;border-radius:10px;background:var(--card-2);border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--text-dim);cursor:pointer;font-family:inherit;transition:all var(--dur) var(--ease)}
-.lv-subtab.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.lv-subtabs{display:flex;gap:var(--s4);padding:0 var(--s3);border-bottom:1px solid var(--line);flex-shrink:0}
+.lv-subtab{background:none;border:none;padding:14px 2px;font-size:13px;font-weight:700;color:var(--text-faint);cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--dur) var(--ease)}
+.lv-subtab.active{color:var(--text);border-bottom-color:var(--text)}
+
+.lv-harmonic-bar{display:flex;gap:8px;overflow-x:auto;padding:var(--s3);-webkit-overflow-scrolling:touch}
+.lv-grau-chip{flex:0 0 auto;min-width:52px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center}
+.lv-grau-chip.active{background:var(--primary-tint);border-color:var(--primary)}
+.lv-grau-num{font-size:8px;font-weight:800;color:var(--text-faint);text-transform:uppercase}
+.lv-grau-chord{font-size:13px;font-weight:800;color:var(--text);margin-top:2px}
+.lv-grau-alt{font-size:9px;color:var(--text-faint);margin-top:2px}
+
+.lv-page-sheet{max-width:760px;margin:0 auto var(--s3);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 3px 14px rgba(0,0,0,.08);padding:28px 28px 20px}
+.lv-page-top{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3);padding-bottom:16px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.lv-page-top-text{flex:1;min-width:0}
+.lv-title-input{width:100%;border:none;background:none;font-family:inherit;font-size:24px;font-weight:800;color:var(--text);padding:0;outline:none}
+.lv-artist-input{width:100%;border:none;background:none;font-family:inherit;font-size:14px;color:var(--text-faint);padding:0;margin-top:2px;outline:none}
+.lv-categoria-mini{margin-top:10px;gap:6px}
+.lv-categoria-mini .dif-chip{padding:5px 11px;font-size:10.5px;border-radius:20px;flex:0 0 auto;min-width:0}
+.lv-tom-box-header{flex-shrink:0;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:8px 18px;display:flex;flex-direction:column;align-items:center;cursor:pointer;font-family:inherit}
+.lv-tom-box-lbl{font-size:8px;font-weight:800;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px}
+.lv-tom-box-header span:last-child{font-size:20px;font-weight:800;color:var(--text);margin-top:1px}
 
 .lv-panel{display:none}
 .lv-panel.active{display:block}
