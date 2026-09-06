@@ -35,6 +35,7 @@ function novoEstado(){
     louvores:[],
     estoque:[],
     listaCompras:[],
+    preListaCompras:[],
     semanaOffset:0,
     semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} }
@@ -69,6 +70,7 @@ function carregar(){
           }));
         }
         if(state.users[u].saldoAtual === undefined) state.users[u].saldoAtual = 0;
+        if(state.users[u].usarSaldoComoBase === undefined) state.users[u].usarSaldoComoBase = false;
         if(!state.users[u].cartoes) state.users[u].cartoes = [];
         if(!state.users[u].expenses) state.users[u].expenses = { moradia:[], assinatura:[], fixo:[], futuro:[] };
         ['moradia','assinatura','fixo','futuro'].forEach(c=>{ if(!state.users[u].expenses[c]) state.users[u].expenses[c]=[]; });
@@ -87,7 +89,13 @@ function carregar(){
       if(!state.estoque) state.estoque = [];
       state.estoque.forEach(e=>{ if(!e.precos) e.precos = []; if(!e.historicoCompras) e.historicoCompras = []; });
       if(!state.listaCompras) state.listaCompras = [];
-      state.listaCompras.forEach(it=>{ if(it.noCarrinho===undefined) it.noCarrinho = false; });
+      state.listaCompras.forEach(it=>{
+        if(it.valor===undefined) it.valor = 0;
+        if(it.pego===undefined) it.pego = false;
+        if(!it.unidade) it.unidade = 'unidades';
+        delete it.noCarrinho;
+      });
+      if(!state.preListaCompras) state.preListaCompras = [];
       if(state.semanaOffset === undefined) state.semanaOffset = 0;
       if(!state.semanaAgenda) state.semanaAgenda = {};
       state.receitas.forEach(r=>{
@@ -286,9 +294,13 @@ function extraTotalForMonth(user, mKey){
   }, 0);
 }
 function incomeForMonth(user, mKey){
+  const isAtual = mKey === mesFinanceiroAtual();
+  const saldo = isAtual ? (state.users[user].saldoAtual || 0) : 0;
+  if(isAtual && state.users[user].usarSaldoComoBase){
+    return saldo;
+  }
   const base = rendaBaseForMonth(user, mKey);
   const extra = extraTotalForMonth(user, mKey);
-  const saldo = (mKey === mesFinanceiroAtual()) ? (state.users[user].saldoAtual || 0) : 0;
   return base + extra + saldo;
 }
 function dizimoForMonth(user, mKey){
@@ -1296,6 +1308,7 @@ function renderTarefasModal(){
 function renderPlanner(){
   const u = state.currentUser;
   document.getElementById('saldoAtualInput').value = state.users[u].saldoAtual ? state.users[u].saldoAtual.toFixed(2).replace('.',',') : '';
+  renderPlannerSaldoModoBtn();
   document.getElementById('btnAddCartao').style.display = (u==='davi') ? '' : 'none';
 
   renderRendaTable();
@@ -1367,6 +1380,24 @@ function setSaldoAtual(valStr){
   renderRendaTable();
   renderPanorama();
   persist();
+}
+function toggleUsarSaldoComoBase(){
+  const u = state.currentUser;
+  state.users[u].usarSaldoComoBase = !state.users[u].usarSaldoComoBase;
+  persist();
+  renderPlannerSaldoModoBtn();
+  renderRendaTable();
+  renderPanorama();
+}
+function renderPlannerSaldoModoBtn(){
+  const u = state.currentUser;
+  const btn = document.getElementById('btnSaldoModo');
+  if(!btn) return;
+  const ativo = !!state.users[u].usarSaldoComoBase;
+  btn.classList.toggle('active', ativo);
+  btn.textContent = ativo
+    ? '✓ Calculando pelo saldo em conta — toque pra voltar a somar a renda'
+    : 'Já recebi tudo e comecei a pagar? Toque pra calcular só pelo saldo em conta';
 }
 
 function openReservaModal(){
@@ -3959,17 +3990,20 @@ let estoqueItemAtualId = null;
 function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 function renderMercado(){
-  renderMercadoNovoItemUnidadeSelect();
+  renderPreListaView();
   renderListaComprasView();
   renderMercadoEstoqueFilterChips();
   renderEstoqueView();
 }
-function renderMercadoNovoItemUnidadeSelect(){
-  const el = document.getElementById('mercadoNovoItemUnidade');
-  if(el && !el.dataset.valor){
-    el.dataset.valor = UNIDADES_MEDIDA[0];
-    el.querySelector('.unidade-picker-valor').textContent = UNIDADES_MEDIDA[0];
-  }
+let mercadoListaModoAtivo = 'pre';
+function switchMercadoListaModo(modo){
+  mercadoListaModoAtivo = modo;
+  document.getElementById('btnMlPre').classList.toggle('active', modo==='pre');
+  document.getElementById('btnMlAtiva').classList.toggle('active', modo==='ativa');
+  document.getElementById('mercadoPreListaView').style.display = modo==='pre' ? 'block' : 'none';
+  document.getElementById('mercadoListaAtivaView').style.display = modo==='ativa' ? 'block' : 'none';
+  if(modo==='pre') renderPreListaView();
+  if(modo==='ativa') renderListaComprasView();
 }
 function switchMercadoSubtab(tab){
   document.getElementById('subtabBtnMercadoLista').classList.toggle('active', tab==='lista');
@@ -3978,12 +4012,59 @@ function switchMercadoSubtab(tab){
   document.getElementById('mercadoSubtabLista').style.display = tab==='lista' ? 'block' : 'none';
   document.getElementById('mercadoSubtabEstoque').style.display = tab==='estoque' ? 'block' : 'none';
   document.getElementById('mercadoSubtabDashboard').style.display = tab==='dashboard' ? 'block' : 'none';
-  if(tab==='lista') renderListaComprasView();
+  if(tab==='lista'){ renderPreListaView(); renderListaComprasView(); }
   if(tab==='estoque') renderEstoqueView();
   if(tab==='dashboard') renderMercadoDashboard();
 }
 
-/* ---------- Lista de Compras ---------- */
+/* ---------- Pré-listagem (planejamento: só quantidade + nome) ---------- */
+function renderPreListaView(){
+  const el = document.getElementById('mercadoPreLista');
+  if(!el) return;
+  const itens = (state.preListaCompras||[]).slice().sort((a,b)=>b.criadoEm-a.criadoEm);
+  if(itens.length===0){
+    el.innerHTML = `<div class="empty-state"><div class="title">Pré-listagem vazia</div><div class="desc">Anote o que vai precisar comprar</div></div>`;
+    return;
+  }
+  el.innerHTML = itens.map(it=>`<div class="mercado-item" style="cursor:default">
+    <div class="mercado-item-info">
+      <div class="mercado-item-nome">${it.nome}</div>
+      <div class="mercado-item-meta">Planejado</div>
+    </div>
+    <div class="mercado-item-qtd">${it.quantidade}${it.unidade||''}</div>
+    <button type="button" class="mkt-item-mover" onclick="moverItemPreLista('${it.id}')">Mover pra lista</button>
+    <button class="mercado-item-del" onclick="excluirItemPreLista('${it.id}')">✕</button>
+  </div>`).join('');
+}
+function adicionarItemPreLista(){
+  const nomeInput = document.getElementById('mpNome');
+  const nome = nomeInput.value.trim();
+  if(!nome) return;
+  const qtd = parseFloat(document.getElementById('mpQuantidade').value) || 1;
+  state.preListaCompras.push({ id: uid('mp'), nome, quantidade:qtd, unidade:'unidades', criadoEm: Date.now() });
+  document.getElementById('mpQuantidade').value = '';
+  nomeInput.value = '';
+  document.getElementById('mpQuantidade').focus();
+  persist();
+  renderPreListaView();
+}
+function excluirItemPreLista(id){
+  state.preListaCompras = state.preListaCompras.filter(it=>it.id!==id);
+  persist();
+  renderPreListaView();
+}
+function moverItemPreLista(id){
+  const it = state.preListaCompras.find(x=>x.id===id);
+  if(!it) return;
+  state.listaCompras.push({ id: uid('mc'), nome: it.nome, quantidade: it.quantidade, unidade: it.unidade||'unidades', valor:0, pego:false, criadoEm: Date.now() });
+  state.preListaCompras = state.preListaCompras.filter(x=>x.id!==id);
+  persist();
+  renderPreListaView();
+  renderListaComprasView();
+  switchMercadoListaModo('ativa');
+}
+
+/* ---------- Lista de Compras ativa (quantidade + nome + valor, com totais) ---------- */
 const ICON_CART_SMALL = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
 function encontrarEstoquePorNome(nome){
   const alvo = (nome||'').trim().toLowerCase();
@@ -3991,8 +4072,15 @@ function encontrarEstoquePorNome(nome){
 }
 function renderListaComprasView(){
   const el = document.getElementById('mercadoListaCompras');
+  if(!el) return;
   const autoItens = state.estoque.filter(e=> e.quantidadeAtual < e.quantidadeMinima);
   const manualItens = state.listaCompras.slice().sort((a,b)=>b.criadoEm-a.criadoEm);
+
+  let totalItens = 0, totalValor = 0;
+  manualItens.forEach(it=>{ totalItens++; totalValor += (it.valor||0) * (it.quantidade||0); });
+  document.getElementById('mlHeaderItens').textContent = totalItens;
+  document.getElementById('mlHeaderTotal').textContent = totalValor.toFixed(2).replace('.',',');
+  document.getElementById('btnFinalizarListaAtiva').style.display = manualItens.length>0 ? 'block' : 'none';
 
   if(autoItens.length===0 && manualItens.length===0){
     el.innerHTML = `<div class="empty-state"><div class="title">Lista vazia</div><div class="desc">Adicione um item ou espere o estoque acabar</div></div>`;
@@ -4011,51 +4099,29 @@ function renderListaComprasView(){
     </div>`;
   });
   manualItens.forEach(it=>{
-    const match = encontrarEstoquePorNome(it.nome);
-    if(match){
-      html += `<div class="mercado-item" onclick="abrirFinalizarCompra('${match.id}','${it.id}')">
-        <div class="mercado-check pending">${ICON_CART_SMALL}</div>
-        <div class="mercado-item-info">
-          <div class="mercado-item-nome">${it.nome}<span class="mercado-badge-auto">Pendente</span></div>
-          <div class="mercado-item-meta">Vinculado ao estoque · ${match.categoria}</div>
-        </div>
-        <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
-        <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
-      </div>`;
-    }else if(it.noCarrinho){
-      html += `<div class="mercado-item carrinho" onclick="abrirFinalizarAvulso('${it.id}')">
-        <div class="mercado-check checked">${ICON_CHECK}</div>
-        <div class="mercado-item-info">
-          <div class="mercado-item-nome">${it.nome}<span class="mercado-badge-carrinho">No carrinho</span></div>
-          <div class="mercado-item-meta">Toque pra finalizar a compra</div>
-        </div>
-        <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
-        <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
-      </div>`;
-    }else{
-      html += `<div class="mercado-item" onclick="marcarItemNoCarrinho('${it.id}')">
-        <div class="mercado-check"></div>
-        <div class="mercado-item-info">
-          <div class="mercado-item-nome">${it.nome}</div>
-          <div class="mercado-item-meta">Item avulso · sem controle de estoque</div>
-        </div>
-        <div class="mercado-item-qtd">${it.quantidade}${it.unidade}</div>
-        <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
-      </div>`;
-    }
+    const subtotal = (it.valor||0) * (it.quantidade||0);
+    html += `<div class="mercado-item ${it.pego?'carrinho':''}" onclick="toggleItemListaPego('${it.id}')">
+      <div class="mercado-check${it.pego?' checked':''}">${it.pego?ICON_CHECK:''}</div>
+      <div class="mercado-item-info">
+        <div class="mercado-item-nome">${it.nome}</div>
+        <div class="mercado-item-meta">${it.quantidade}${it.unidade} · R$ ${(it.valor||0).toFixed(2).replace('.',',')} un. · subtotal R$ ${subtotal.toFixed(2).replace('.',',')}</div>
+      </div>
+      <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
+    </div>`;
   });
   el.innerHTML = html;
 }
-function adicionarItemManualCompra(){
-  const input = document.getElementById('mercadoNovoItemInput');
-  const nome = input.value.trim();
+function adicionarItemListaAtiva(){
+  const nomeInput = document.getElementById('mlNome');
+  const nome = nomeInput.value.trim();
   if(!nome) return;
-  const qtd = parseFloat(document.getElementById('mercadoNovoItemQtd').value) || 1;
-  const unidade = document.getElementById('mercadoNovoItemUnidade').dataset.valor || 'unidades';
-  state.listaCompras.push({ id: uid('mc'), nome, quantidade:qtd, unidade, noCarrinho:false, criadoEm: Date.now() });
-  input.value = '';
-  document.getElementById('mercadoNovoItemQtd').value = '';
-  input.focus();
+  const qtd = parseFloat(document.getElementById('mlQuantidade').value) || 1;
+  const valor = parseMoney(document.getElementById('mlValor').value);
+  state.listaCompras.push({ id: uid('mc'), nome, quantidade:qtd, unidade:'unidades', valor, pego:false, criadoEm: Date.now() });
+  document.getElementById('mlQuantidade').value = '';
+  nomeInput.value = '';
+  document.getElementById('mlValor').value = '';
+  document.getElementById('mlQuantidade').focus();
   persist();
   renderListaComprasView();
 }
@@ -4064,73 +4130,70 @@ function excluirItemManual(id){
   persist();
   renderListaComprasView();
 }
-function marcarItemNoCarrinho(id){
+function toggleItemListaPego(id){
   const it = state.listaCompras.find(x=>x.id===id);
   if(!it) return;
-  it.noCarrinho = true;
+  it.pego = !it.pego;
   persist();
   renderListaComprasView();
   if(navigator.vibrate) navigator.vibrate(10);
 }
-
-/* ---------- Finalizar Compra de item avulso (sem estoque prévio) ---------- */
-let favManualItemId = null;
-let favAdicionarEstoque = false;
-function abrirFinalizarAvulso(manualItemId){
-  const it = state.listaCompras.find(x=>x.id===manualItemId);
-  if(!it) return;
-  favManualItemId = manualItemId;
-  document.getElementById('favItemNome').textContent = it.nome;
-  document.getElementById('favQuantidade').value = it.quantidade || 1;
-  document.getElementById('favUnidade').textContent = it.unidade || 'unidades';
-  document.getElementById('favValor').value = '';
-  setFavAdicionarEstoque(false);
-  window.favCategoriaSelecionada = 'Alimentos';
-  renderFavCategoriaChips();
-  document.getElementById('favQtdMinima').value = '';
-  document.getElementById('favQtdReposicao').value = '';
-  document.getElementById('modalFinalizarAvulso').classList.add('active');
-}
-function setFavAdicionarEstoque(v){
-  favAdicionarEstoque = v;
-  document.getElementById('favEstoqueSim').classList.toggle('active', v);
-  document.getElementById('favEstoqueNao').classList.toggle('active', !v);
-  document.getElementById('favEstoqueCamposWrap').style.display = v ? 'block' : 'none';
-}
-function renderFavCategoriaChips(){
-  document.getElementById('favCategoriaChips').innerHTML = MERCADO_CATEGORIAS.map(c=>
-    `<button type="button" class="dif-chip${window.favCategoriaSelecionada===c?' active':''}" onclick="selecionarFavCategoria('${c}')">${c}</button>`
-  ).join('');
-}
-function selecionarFavCategoria(c){
-  window.favCategoriaSelecionada = c;
-  renderFavCategoriaChips();
-}
-function confirmarFinalizarAvulso(){
-  const it = state.listaCompras.find(x=>x.id===favManualItemId);
-  if(!it) return;
-  const qtd = parseFloat(document.getElementById('favQuantidade').value) || 0;
-  const valor = parseFloat(document.getElementById('favValor').value);
-
-  if(favAdicionarEstoque){
-    const qtdMinima = parseFloat(document.getElementById('favQtdMinima').value) || 0;
-    const qtdReposicao = parseFloat(document.getElementById('favQtdReposicao').value) || qtdMinima;
-    const temPreco = !isNaN(valor) && valor>0;
-    state.estoque.push({
-      id: uid('est'), nome: it.nome, categoria: window.favCategoriaSelecionada,
-      quantidadeAtual: qtd, unidade: it.unidade, quantidadeMinima: qtdMinima, quantidadeReposicao: qtdReposicao,
-      precos: temPreco ? [{ valor, data: Date.now() }] : [],
-      historicoCompras: [{ data: Date.now(), quantidadeComprada: qtd, valorUnitario: temPreco?valor:null, saldoAntesCorrigido:0, zerou:true, diasDesdeUltima:null }],
-      criadoEm: Date.now()
+function calcularGastoMercadoMes(ano, mes){
+  let total = 0;
+  state.estoque.forEach(e=>{
+    (e.historicoCompras||[]).forEach(h=>{
+      if(!h.valorUnitario) return;
+      const d = new Date(h.data);
+      if(d.getFullYear()===ano && d.getMonth()===mes) total += h.valorUnitario * h.quantidadeComprada;
     });
-  }
-
-  state.listaCompras = state.listaCompras.filter(x=>x.id!==favManualItemId);
+  });
+  return total;
+}
+function finalizarListaAtiva(){
+  const itens = state.listaCompras.slice();
+  if(itens.length===0) return;
+  const agora = Date.now();
+  let totalGasto = 0;
+  itens.forEach(it=>{
+    totalGasto += (it.valor||0) * (it.quantidade||0);
+    let e = encontrarEstoquePorNome(it.nome);
+    if(!e){
+      e = { id: uid('est'), nome: it.nome, categoria:'Outros', quantidadeAtual:0, unidade: it.unidade||'unidades', quantidadeMinima:0, quantidadeReposicao: it.quantidade||1, precos:[], historicoCompras:[], criadoEm: agora };
+      state.estoque.push(e);
+    }
+    if(!e.precos) e.precos = [];
+    if(!e.historicoCompras) e.historicoCompras = [];
+    if(it.valor>0) e.precos.push({ valor: it.valor, data: agora });
+    let diasDesdeUltima = null;
+    if(e.historicoCompras.length>0){
+      diasDesdeUltima = Math.round((agora - e.historicoCompras[e.historicoCompras.length-1].data)/86400000);
+    }
+    e.historicoCompras.push({ data: agora, quantidadeComprada: it.quantidade, valorUnitario: it.valor>0?it.valor:null, saldoAntesCorrigido: e.quantidadeAtual, zerou: e.quantidadeAtual<=0, diasDesdeUltima });
+    e.quantidadeAtual = Math.round((e.quantidadeAtual + (it.quantidade||0))*100)/100;
+  });
+  const totalItens = itens.length;
+  state.listaCompras = [];
   persist();
-  closeModal('modalFinalizarAvulso');
-  favManualItemId = null;
   renderListaComprasView();
   renderEstoqueView();
+  mostrarResumoCompra(totalItens, totalGasto);
+}
+function mostrarResumoCompra(totalItens, totalGasto){
+  const agora = new Date();
+  const gastoMesAtual = calcularGastoMercadoMes(agora.getFullYear(), agora.getMonth());
+  const mesAnt = new Date(agora.getFullYear(), agora.getMonth()-1, 1);
+  const gastoMesAnterior = calcularGastoMercadoMes(mesAnt.getFullYear(), mesAnt.getMonth());
+  let linha = 'Ainda não há gasto registrado no mês anterior pra comparar.';
+  if(gastoMesAnterior>0){
+    const diff = gastoMesAtual - gastoMesAnterior;
+    if(Math.abs(diff)<0.01) linha = 'Gasto igual ao mês passado até agora.';
+    else if(diff>0) linha = `▲ Você está gastando R$ ${diff.toFixed(2).replace('.',',')} a mais que no mês passado (até agora).`;
+    else linha = `▼ Você está economizando R$ ${Math.abs(diff).toFixed(2).replace('.',',')} em relação ao mês passado (até agora).`;
+  }
+  document.getElementById('resumoCompraValor').textContent = 'R$ '+totalGasto.toFixed(2).replace('.',',');
+  document.getElementById('resumoCompraItens').textContent = `${totalItens} ite${totalItens===1?'m':'ns'} registrado${totalItens===1?'':'s'}`;
+  document.getElementById('resumoCompraComparacao').textContent = linha;
+  document.getElementById('modalResumoCompra').classList.add('active');
 }
 
 /* ---------- Finalizar Compra (dá entrada no estoque + registra e compara preço) ---------- */

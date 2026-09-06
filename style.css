@@ -791,3 +791,16 @@ body{padding-bottom:calc(84px + var(--safe))}
 .ios-confirm-btn{flex:1;padding:13px 0;background:none;border:none;font-size:15px;font-weight:500;color:var(--primary);cursor:pointer;font-family:inherit}
 .ios-confirm-btn:first-child{border-right:1px solid rgba(0,0,0,0.12)}
 .ios-confirm-btn.destructive{font-weight:700;color:var(--danger)}
+
+/* ---------- Mercado: Pré-listagem / Lista ativa ---------- */
+.mercado-lista-toggle{display:flex;gap:8px;padding:var(--s2) var(--s3)}
+.mercado-lista-toggle .subtab-btn{flex:1}
+.mkt-lista-header{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin:0 var(--s3) var(--s2);font-size:13px;font-weight:700;color:var(--text-dim)}
+.mkt-lista-header-valor{font-size:18px;font-weight:800;color:var(--primary)}
+.mkt-item-mover{background:none;border:1px solid var(--primary);color:var(--primary);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
+.mkt-resumo-valor{font-size:32px;font-weight:800;color:var(--text);text-align:center;margin-top:var(--s2)}
+.mkt-resumo-itens{font-size:13px;color:var(--text-faint);text-align:center;margin-top:4px}
+
+/* ---------- Planner: toggle renda x saldo em conta ---------- */
+.saldo-modo-btn{width:100%;text-align:left;background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;font-family:inherit;margin-top:-4px;margin-bottom:var(--s2);transition:all var(--dur) var(--ease)}
+.saldo-modo-btn.active{background:var(--success-tint);border-color:var(--success);color:var(--success);font-weight:700}
