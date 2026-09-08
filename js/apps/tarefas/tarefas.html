@@ -1,0 +1,37 @@
+<!-- APP TAREFAS: Gerenciador de tarefas -->
+<div class="tarefas-app">
+  <div class="tarefas-subtabs" style="padding:16px 16px 0">
+    <button class="subtab-btn active" id="tarefasSubtabBtn" onclick="TarefasApp.switchSubtab('tarefas')">Tarefas</button>
+    <button class="subtab-btn" id="semanaSubtabBtn" onclick="TarefasApp.switchSubtab('semana')">Semana</button>
+  </div>
+
+  <!-- SUB-ABA: Tarefas -->
+  <div id="subtabTarefas" class="fullpage-content" style="padding:16px">
+    <div class="card">
+      <div class="field full">
+        <label>Nome da Tarefa</label>
+        <input type="text" id="tarefaNome" placeholder="Ex: Comprar mantimentos" onkeydown="if(event.key==='Enter') TarefasApp.addTarefa()">
+      </div>
+      <div class="field full">
+        <label>Descrição (opcional)</label>
+        <input type="text" id="tarefaDesc" placeholder="Detalhes da tarefa">
+      </div>
+      <div class="field full">
+        <label>Categoria (opcional)</label>
+        <input type="text" id="tarefaCategoria" placeholder="Ex: Casa, Trabalho...">
+      </div>
+      <button class="btn btn-block" onclick="TarefasApp.addTarefa()">+ Adicionar Tarefa</button>
+    </div>
+    <div id="tarefasLista"></div>
+  </div>
+
+  <!-- SUB-ABA: Semana -->
+  <div id="subtabSemana" class="fullpage-content" style="display:none;padding:16px">
+    <div class="semana-nav">
+      <button class="btn-icon-sm" onclick="TarefasApp.navSemana(-1)">◀</button>
+      <div class="semana-label" id="semanaLabel"></div>
+      <button class="btn-icon-sm" onclick="TarefasApp.navSemana(1)">▶</button>
+    </div>
+    <div id="semanaDiasLista"></div>
+  </div>
+</div>

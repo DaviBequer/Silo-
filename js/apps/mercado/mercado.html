@@ -1,0 +1,41 @@
+<!-- APP MERCADO: Lista de compras e estoque -->
+<div class="mercado-app">
+  <div class="tarefas-subtabs mercado-subtabs">
+    <button class="subtab-btn active" id="subtabBtnMercadoLista" onclick="MercadoApp.switchSubtab('lista')">Lista</button>
+    <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="MercadoApp.switchSubtab('estoque')">Estoque</button>
+    <button class="subtab-btn" id="subtabBtnMercadoDashboard" onclick="MercadoApp.switchSubtab('dashboard')">Dashboard</button>
+  </div>
+
+  <!-- SUB-ABA: Lista de Compras -->
+  <div id="mercadoSubtabLista" class="mercado-subtab active">
+    <div class="mercado-add-card">
+      <div class="mercado-add-row2">
+        <input type="text" id="mpNome" placeholder="O que precisa comprar?" style="flex:1" onkeydown="if(event.key==='Enter') MercadoApp.addItem()">
+        <button class="mercado-add-btn" onclick="MercadoApp.addItem()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      </div>
+    </div>
+    <div id="mercadoLista" class="mercado-lista"></div>
+  </div>
+
+  <!-- SUB-ABA: Estoque -->
+  <div id="mercadoSubtabEstoque" class="mercado-subtab" style="display:none">
+    <div id="mercadoEstoqueLista" class="mercado-lista" style="padding:16px"></div>
+    <button class="receita-fab" onclick="MercadoApp.openEstoqueForm()" title="Novo item" aria-label="Novo item">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+    </button>
+  </div>
+
+  <!-- SUB-ABA: Dashboard -->
+  <div id="mercadoSubtabDashboard" class="mercado-subtab" style="display:none;padding:16px">
+    <div class="mkt-stat-row">
+      <div class="mkt-stat-card">
+        <div class="mkt-stat-label">Gasto no mês</div>
+        <div class="mkt-stat-value" id="mktGastoMes">R$ 0,00</div>
+      </div>
+      <div class="mkt-stat-card">
+        <div class="mkt-stat-label">Itens em falta</div>
+        <div class="mkt-stat-value" id="mktItensFalta">0</div>
+      </div>
+    </div>
+  </div>
+</div>

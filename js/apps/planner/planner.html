@@ -1,0 +1,61 @@
+<!-- APP PLANNER: Planejamento de receitas e despesas -->
+<div class="planner-app">
+  <div class="user-tabs">
+    <button class="user-tab active" id="tabDavi" onclick="PlannerApp.switchUser('davi')">Davi</button>
+    <button class="user-tab cris" id="tabCris" onclick="PlannerApp.switchUser('cris')">Cris</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><path d="M6 14h.01"/><path d="M10 14h.01"/></svg></div></div>
+    <div class="field">
+      <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="Utils.maskMoneyInput(this); PlannerApp.onSaldoChange(this.value)"></div>
+    </div>
+  </div>
+
+  <div class="card card-flat">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg></div></div>
+    <div class="ponto-table-wrap">
+      <table class="money-table" id="rendaTable">
+        <thead id="rendaTableThead"></thead>
+        <tbody id="rendaTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Moradia</div>
+      <button class="section-add" onclick="PlannerApp.openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-moradia"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Assinaturas</div>
+      <button class="section-add" onclick="PlannerApp.openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-assinatura"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Fixos</div>
+      <button class="section-add" onclick="PlannerApp.openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-fixo"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Contas Futuras</div>
+      <button class="section-add" onclick="PlannerApp.openGastoModal('futuro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-futuro"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/></svg></div></div>
+    <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
+  </div>
+</div>
