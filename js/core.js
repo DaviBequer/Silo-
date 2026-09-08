@@ -31,8 +31,13 @@ const Storage = {
   save(key, data) {
     try {
       localStorage.setItem(`silo_${key}`, JSON.stringify(data));
+      console.log(`✓ Dados salvos: ${key}`);
     } catch (e) {
-      console.error('Erro ao salvar:', e);
+      if (e.name === 'QuotaExceededError') {
+        console.error('Erro: localStorage cheio');
+      } else {
+        console.error('Erro ao salvar:', e);
+      }
     }
   },
   
@@ -48,6 +53,7 @@ const Storage = {
   
   clear(key) {
     localStorage.removeItem(`silo_${key}`);
+    console.log(`✓ Dados limpos: ${key}`);
   },
   
   loadAll() {
@@ -66,12 +72,23 @@ const Storage = {
     Storage.save('louvor', state.louvor);
     Storage.save('mercado', state.mercado);
     Storage.save('tarefas', state.tarefas);
+  },
+  
+  // Obter tamanho total do localStorage
+  getSize() {
+    let total = 0;
+    for (let key in localStorage) {
+      if (key.startsWith('silo_')) {
+        total += localStorage[key].length;
+      }
+    }
+    return (total / 1024).toFixed(2); // KB
   }
 };
 
 // ========== UTILITÁRIOS ==========
 const Utils = {
-  // Data
+  // ===== DATA =====
   monthKey(d) { 
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); 
   },
@@ -96,7 +113,15 @@ const Utils = {
     return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); 
   },
   
-  // Formatação
+  formatDate(d) {
+    return d.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' });
+  },
+  
+  formatTime(d) {
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  },
+  
+  // ===== FORMATAÇÃO =====
   fmtMoney(v) { 
     return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); 
   },
@@ -115,29 +140,122 @@ const Utils = {
     return parseFloat((str || '0').replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
   },
   
-  // UID
+  fmtPercent(value, total) {
+    if (total === 0) return '0%';
+    return ((value / total) * 100).toFixed(1) + '%';
+  },
+  
+  fmtHoras(minutes) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+  },
+  
+  // ===== UID E VALIDAÇÃO =====
   uid(prefix = 'id') { 
     return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); 
   },
   
-  // Toast
-  showToast(msg, duration = 2000) {
+  isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  },
+  
+  slugify(str) {
+    return str.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+  },
+  
+  // ===== BUSCA E FILTRO =====
+  searchInArray(arr, query, fields) {
+    const q = query.toLowerCase();
+    return arr.filter(item => 
+      fields.some(field => 
+        String(item[field]).toLowerCase().includes(q)
+      )
+    );
+  },
+  
+  sortArray(arr, field, order = 'asc') {
+    return [...arr].sort((a, b) => {
+      if (order === 'asc') {
+        return a[field] > b[field] ? 1 : -1;
+      }
+      return a[field] < b[field] ? 1 : -1;
+    });
+  },
+  
+  groupBy(arr, field) {
+    return arr.reduce((groups, item) => {
+      const key = item[field];
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+      return groups;
+    }, {});
+  },
+  
+  // ===== TOAST =====
+  showToast(msg, type = 'info', duration = 2000) {
     const el = document.getElementById('toast');
     if (!el) return;
     el.textContent = msg;
-    el.classList.add('show');
+    el.className = `toast show toast-${type}`;
     setTimeout(() => el.classList.remove('show'), duration);
   },
   
-  // Modal
+  // ===== MODAL =====
   openModal(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.add('active');
+    if (el) {
+      el.classList.add('active');
+      el.setAttribute('aria-hidden', 'false');
+    }
   },
   
   closeModal(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.remove('active');
+    if (el) {
+      el.classList.remove('active');
+      el.setAttribute('aria-hidden', 'true');
+    }
+  },
+  
+  toggleModal(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.toggle('active');
+    }
+  },
+  
+  // ===== CÓPIA E COMPARTILHAMENTO =====
+  copyToClipboard(text) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      Utils.showToast('Copiado para clipboard', 'success');
+    } else {
+      console.warn('Clipboard API não disponível');
+    }
+  },
+  
+  shareData(title, text, url) {
+    if (navigator.share) {
+      navigator.share({ title, text, url }).catch(() => {});
+    } else {
+      Utils.showToast('Compartilhamento não disponível', 'warning');
+    }
+  },
+  
+  // ===== VERIFICAÇÃO DE ELEMENTOS =====
+  elementExists(id) {
+    return document.getElementById(id) !== null;
+  },
+  
+  getValueSafe(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : null;
+  },
+  
+  setValueSafe(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
   }
 };
 
@@ -148,6 +266,7 @@ const EventBus = {
   on(event, callback) {
     if (!this.listeners[event]) this.listeners[event] = [];
     this.listeners[event].push(callback);
+    return () => this.off(event, callback); // Retorna função para unsubscribe
   },
   
   off(event, callback) {
@@ -158,7 +277,21 @@ const EventBus = {
   
   emit(event, data) {
     if (this.listeners[event]) {
-      this.listeners[event].forEach(cb => cb(data));
+      this.listeners[event].forEach(cb => {
+        try {
+          cb(data);
+        } catch (e) {
+          console.error(`Erro ao executar listener de ${event}:`, e);
+        }
+      });
+    }
+  },
+  
+  clear(event) {
+    if (event) {
+      delete this.listeners[event];
+    } else {
+      this.listeners = {};
     }
   }
 };
@@ -170,8 +303,11 @@ function initCore() {
   
   // Configurar listeners globais
   window.addEventListener('beforeunload', () => Storage.saveAll());
+  window.addEventListener('online', () => Utils.showToast('Conectado', 'success'));
+  window.addEventListener('offline', () => Utils.showToast('Desconectado', 'warning'));
   
   console.log('✓ Core inicializado');
+  console.log(`📊 Storage: ${Storage.getSize()} KB`);
 }
 
 // Auto-init

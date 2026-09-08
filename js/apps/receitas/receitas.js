@@ -6,12 +6,24 @@
 const ReceitasApp = {
   currentRecipeId: null,
   currentFoto: null,
+  filtroAtivo: null,
+  buscaAtiva: '',
   
   // ========== INICIALIZAÇÃO ==========
   init() {
     this.loadCategories();
     this.render();
+    this.setupEventListeners();
     console.log('✓ Receitas App inicializado');
+  },
+  
+  setupEventListeners() {
+    const searchInput = document.getElementById('receitaSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') this.clearSearch();
+      });
+    }
   },
   
   // ========== DADOS ==========
@@ -27,6 +39,18 @@ const ReceitasApp = {
     return this.getRecipes().find(r => r.id === id);
   },
   
+  getRecipesByCategory(categoria) {
+    return this.getRecipes().filter(r => r.categoria === categoria);
+  },
+  
+  getFavoritedRecipes() {
+    return this.getRecipes().filter(r => r.favorito);
+  },
+  
+  getRecipesByDifficulty(dificuldade) {
+    return this.getRecipes().filter(r => r.dificuldade === dificuldade);
+  },
+  
   // ========== CATEGORIAS ==========
   loadCategories() {
     this.renderCategoryChips();
@@ -37,29 +61,37 @@ const ReceitasApp = {
     if (!container) return;
     
     const cats = this.getCategories();
-    container.innerHTML = cats.map(cat => 
-      `<button class="filter-chip" onclick="ReceitasApp.filterByCategory('${cat}')">${cat}</button>`
-    ).join('') + 
-    `<button class="filter-chip filter-chip-add" onclick="ReceitasApp.openCategoryModal()">+ Nova</button>`;
+    const html = cats.map(cat => {
+      const count = this.getRecipesByCategory(cat).length;
+      return `<button class="filter-chip ${this.filtroAtivo === cat ? 'active' : ''}" onclick="ReceitasApp.filterByCategory('${cat}')">${cat} (${count})</button>`;
+    }).join('');
+    
+    container.innerHTML = html + 
+      `<button class="filter-chip filter-chip-add" onclick="ReceitasApp.openCategoryModal()">+ Nova</button>`;
   },
   
   openCategoryModal() {
     Utils.openModal('modalReceitaCategoria');
+    document.getElementById('receitaCategoriaNome').focus();
   },
   
   saveCategory() {
     const nome = document.getElementById('receitaCategoriaNome').value.trim();
     if (!nome) {
-      Utils.showToast('Digite um nome');
+      Utils.showToast('Digite um nome', 'warning');
       return;
     }
     
-    if (!state.receitas.categorias.includes(nome)) {
-      state.receitas.categorias.push(nome);
-      Storage.save('receitas', state.receitas);
-      this.loadCategories();
-      Utils.showToast('Categoria criada');
+    if (state.receitas.categorias.includes(nome)) {
+      Utils.showToast('Categoria já existe', 'warning');
+      return;
     }
+    
+    state.receitas.categorias.push(nome);
+    state.receitas.categorias.sort();
+    Storage.save('receitas', state.receitas);
+    this.loadCategories();
+    Utils.showToast('Categoria criada', 'success');
     
     document.getElementById('receitaCategoriaNome').value = '';
     this.closeModal('modalReceitaCategoria');
@@ -71,12 +103,27 @@ const ReceitasApp = {
     
     if (!state.receitas.categorias.includes(nome)) {
       state.receitas.categorias.push(nome);
+      state.receitas.categorias.sort();
       Storage.save('receitas', state.receitas);
     }
     
     this.selectCategory(nome);
     this.renderCategoryOptions();
     document.getElementById('receitaCatNovaInput').value = '';
+  },
+  
+  deleteCategory(cat) {
+    if (!confirm(`Deletar categoria "${cat}"? Receitas não serão deletadas.`)) return;
+    
+    state.receitas.categorias = state.receitas.categorias.filter(c => c !== cat);
+    state.receitas.receitas.forEach(r => {
+      if (r.categoria === cat) r.categoria = null;
+    });
+    
+    Storage.save('receitas', state.receitas);
+    this.loadCategories();
+    this.render();
+    Utils.showToast('Categoria deletada', 'success');
   },
   
   // ========== RENDERIZAÇÃO ==========
@@ -88,13 +135,18 @@ const ReceitasApp = {
     const container = document.getElementById('receitaGrid');
     if (!container) return;
     
-    const recipes = this.getRecipes();
+    let recipes = this.getRecipes();
+    
+    // Aplicar filtro de categoria
+    if (this.filtroAtivo) {
+      recipes = recipes.filter(r => r.categoria === this.filtroAtivo);
+    }
     
     if (recipes.length === 0) {
       container.innerHTML = `
         <div class="receita-empty">
           <div class="receita-empty-icon">🍳</div>
-          <div class="receita-empty-title">Nenhuma receita ainda</div>
+          <div class="receita-empty-title">Nenhuma receita${this.filtroAtivo ? ' nesta categoria' : ''}</div>
           <div class="receita-empty-sub">Crie sua primeira receita clicando no botão +</div>
         </div>
       `;
@@ -105,26 +157,35 @@ const ReceitasApp = {
   },
   
   renderCard(recipe) {
+    const estrelas = this.renderDificuldadeEstrelas(recipe.dificuldade);
+    
     return `
       <div class="receita-card" onclick="ReceitasApp.openDetail('${recipe.id}')">
         <div class="receita-card-media">
           ${recipe.foto ? `<img class="receita-card-img" src="${recipe.foto}" alt="${recipe.nome}">` : `<div class="receita-card-img-placeholder">🍽️</div>`}
-          <button class="receita-card-fav ${recipe.favorito ? 'active' : ''}" onclick="event.stopPropagation(); ReceitasApp.toggleFav('${recipe.id}')">♥</button>
+          <button class="receita-card-fav ${recipe.favorito ? 'active' : ''}" onclick="event.stopPropagation(); ReceitasApp.toggleFav('${recipe.id}')" title="${recipe.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">♥</button>
           ${recipe.categoria ? `<div class="receita-card-cat">${recipe.categoria}</div>` : ''}
+          ${recipe.dificuldade ? `<div class="receita-card-dif">${estrelas}</div>` : ''}
         </div>
         <div class="receita-card-body">
           <div class="receita-card-nome">${recipe.nome}</div>
           <div class="receita-card-meta">
             ${recipe.tempo ? `<span>⏱ ${recipe.tempo}</span>` : ''}
-            ${recipe.porcoes ? `<span>🍽 ${recipe.porcoes} porções</span>` : ''}
+            ${recipe.porcoes ? `<span>🍽 ${recipe.porcoes}</span>` : ''}
           </div>
         </div>
       </div>
     `;
   },
   
+  renderDificuldadeEstrelas(dificuldade) {
+    const map = { facil: '⭐', media: '⭐⭐', dificil: '⭐⭐⭐' };
+    return map[dificuldade] || '';
+  },
+  
   // ========== BUSCA E FILTRO ==========
   onSearch(value) {
+    this.buscaAtiva = value;
     const searchBtn = document.getElementById('receitaSearchClear');
     if (searchBtn) searchBtn.style.display = value ? 'block' : 'none';
     
@@ -132,24 +193,42 @@ const ReceitasApp = {
   },
   
   clearSearch() {
+    this.buscaAtiva = '';
     document.getElementById('receitaSearchInput').value = '';
     document.getElementById('receitaSearchClear').style.display = 'none';
     this.render();
   },
   
   filterByCategory(cat) {
+    this.filtroAtivo = this.filtroAtivo === cat ? null : cat;
+    this.renderCategoryChips();
     this.render();
   },
   
   filterRecipes() {
-    const searchTerm = document.getElementById('receitaSearchInput').value.toLowerCase();
-    const filtered = this.getRecipes().filter(r => 
+    const searchTerm = this.buscaAtiva.toLowerCase();
+    let filtered = this.getRecipes();
+    
+    // Filtrar por categoria
+    if (this.filtroAtivo) {
+      filtered = filtered.filter(r => r.categoria === this.filtroAtivo);
+    }
+    
+    // Filtrar por busca
+    filtered = filtered.filter(r => 
       r.nome.toLowerCase().includes(searchTerm) ||
+      r.observacoes?.toLowerCase().includes(searchTerm) ||
       (r.ingredientes || []).some(ing => ing.nome.toLowerCase().includes(searchTerm))
     );
     
     const container = document.getElementById('receitaGrid');
     if (!container) return;
+    
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state-sm">Nenhum resultado encontrado</div>';
+      return;
+    }
+    
     container.innerHTML = filtered.map(recipe => this.renderCard(recipe)).join('');
   },
   
@@ -159,9 +238,12 @@ const ReceitasApp = {
     this.currentFoto = null;
     
     const form = document.getElementById('receitaForm');
+    const titleEl = document.getElementById('receitaFormTitulo');
+    
     if (recipeId) {
       const recipe = this.findRecipe(recipeId);
       if (recipe) {
+        titleEl.textContent = 'Editar Receita';
         document.getElementById('receitaNome').value = recipe.nome || '';
         document.getElementById('receitaTempo').value = recipe.tempo || '';
         document.getElementById('receitaPorcoes').value = recipe.porcoes || '';
@@ -174,6 +256,7 @@ const ReceitasApp = {
         this.renderSteps(recipe.passos || []);
       }
     } else {
+      titleEl.textContent = 'Nova Receita';
       form.reset();
       this.renderIngredients([]);
       this.renderSteps([]);
@@ -191,7 +274,13 @@ const ReceitasApp = {
   saveRecipe() {
     const nome = document.getElementById('receitaNome').value.trim();
     if (!nome) {
-      Utils.showToast('Digite um nome');
+      Utils.showToast('Digite um nome', 'warning');
+      return;
+    }
+    
+    const ingredientes = this.getFormIngredients();
+    if (ingredientes.length === 0) {
+      Utils.showToast('Adicione pelo menos um ingrediente', 'warning');
       return;
     }
     
@@ -200,36 +289,45 @@ const ReceitasApp = {
     const recipe = {
       id: this.currentRecipeId || Utils.uid('receita'),
       nome,
-      tempo: document.getElementById('receitaTempo').value,
+      tempo: document.getElementById('receitaTempo').value || '',
       porcoes: parseInt(document.getElementById('receitaPorcoes').value) || 0,
       dificuldade: document.getElementById('receitaDificuldade').value,
       categoria: document.getElementById('receitaCategoriaSelect').value || null,
       cor: document.getElementById('receitaCor').value,
       foto: this.currentFoto,
-      ingredientes: this.getFormIngredients(),
+      ingredientes: ingredientes,
       passos: this.getFormSteps(),
       observacoes: document.getElementById('receitaObservacoes').value,
       favorito: oldRecipe?.favorito || false,
-      dataCriacao: oldRecipe?.dataCriacao || new Date().toISOString()
+      dataCriacao: oldRecipe?.dataCriacao || new Date().toISOString(),
+      dataModificacao: new Date().toISOString()
     };
     
     const idx = state.receitas.receitas.findIndex(r => r.id === this.currentRecipeId);
     if (idx >= 0) {
       state.receitas.receitas[idx] = recipe;
+      Utils.showToast('Receita atualizada', 'success');
     } else {
       state.receitas.receitas.push(recipe);
+      Utils.showToast('Receita criada', 'success');
     }
     
     Storage.save('receitas', state.receitas);
+    EventBus.emit('receita:salva', recipe);
     this.closeForm();
     this.render();
-    Utils.showToast(this.currentRecipeId ? 'Receita atualizada' : 'Receita criada');
   },
   
   // ========== FOTO ==========
   onFotoSelected(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    // Validar tamanho (máx 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      Utils.showToast('Imagem muito grande (máx 2MB)', 'warning');
+      return;
+    }
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -249,7 +347,7 @@ const ReceitasApp = {
     if (!container) return;
     
     if (this.currentFoto) {
-      container.innerHTML = `<img src="${this.currentFoto}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+      container.innerHTML = `<img src="${this.currentFoto}" style="width:100%;height:100%;object-fit:cover;border-radius:12px" alt="Preview">`;
     } else {
       container.innerHTML = `<div class="receita-form-foto-placeholder"><span>📸</span><span>Adicione uma foto</span></div>`;
     }
@@ -269,9 +367,9 @@ const ReceitasApp = {
       <div class="receita-ing-row">
         <div class="receita-ing-num">${idx + 1}</div>
         <input type="text" value="${ing.quantidade || ''}" placeholder="Qtd" class="ing-qtd" data-idx="${idx}">
-        <input type="text" value="${ing.unidade || ''}" placeholder="Unidade" class="ing-unit" data-idx="${idx}">
-        <input type="text" value="${ing.nome || ''}" placeholder="Ingrediente" class="ing-nome" data-idx="${idx}">
-        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removeIngredient(${idx})">✕</button>
+        <input type="text" value="${ing.unidade || ''}" placeholder="Un" class="ing-unit" data-idx="${idx}">
+        <input type="text" value="${ing.nome || ''}" placeholder="Ingrediente" class="ing-nome" data-idx="${idx}" required>
+        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removeIngredient(${idx})" title="Remover">✕</button>
       </div>
     `).join('');
   },
@@ -284,25 +382,31 @@ const ReceitasApp = {
       <div class="receita-ing-row">
         <div class="receita-ing-num">${idx + 1}</div>
         <input type="text" placeholder="Qtd" class="ing-qtd" data-idx="${idx}">
-        <input type="text" placeholder="Unidade" class="ing-unit" data-idx="${idx}">
-        <input type="text" placeholder="Ingrediente" class="ing-nome" data-idx="${idx}">
-        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removeIngredient(${idx})">✕</button>
+        <input type="text" placeholder="Un" class="ing-unit" data-idx="${idx}">
+        <input type="text" placeholder="Ingrediente" class="ing-nome" data-idx="${idx}" required>
+        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removeIngredient(${idx})" title="Remover">✕</button>
       </div>
     `;
     
     container.insertAdjacentHTML('beforeend', newRow);
+    container.querySelector(`.ing-nome[data-idx="${idx}"]`).focus();
   },
   
   removeIngredient(idx) {
-    document.querySelectorAll('.receita-ing-row')[idx]?.remove();
+    const rows = document.querySelectorAll('.receita-ing-row');
+    if (rows.length > 1) {
+      rows[idx]?.remove();
+    } else {
+      Utils.showToast('Precisa ter pelo menos 1 ingrediente', 'warning');
+    }
   },
   
   getFormIngredients() {
     return Array.from(document.querySelectorAll('.receita-ing-row')).map(row => ({
-      quantidade: row.querySelector('.ing-qtd').value,
-      unidade: row.querySelector('.ing-unit').value,
+      quantidade: row.querySelector('.ing-qtd').value || '1',
+      unidade: row.querySelector('.ing-unit').value || 'un',
       nome: row.querySelector('.ing-nome').value
-    }));
+    })).filter(ing => ing.nome.trim());
   },
   
   // ========== MODO DE PREPARO ==========
@@ -319,7 +423,7 @@ const ReceitasApp = {
       <div class="receita-passo-row">
         <div class="receita-passo-num">${idx + 1}</div>
         <textarea class="receita-passo-input" data-idx="${idx}" placeholder="Descreva este passo...">${passo}</textarea>
-        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removePasso(${idx})">✕</button>
+        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removePasso(${idx})" title="Remover">✕</button>
       </div>
     `).join('');
   },
@@ -331,12 +435,13 @@ const ReceitasApp = {
     const newRow = `
       <div class="receita-passo-row">
         <div class="receita-passo-num">${idx + 1}</div>
-        <textarea class="receita-passo-input" data-idx="${idx}" placeholder="Descreva este passo..."></textarea>
-        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removePasso(${idx})">✕</button>
+        <textarea class="receita-passo-input" data-idx="${idx}" placeholder="Descreva este passo..." required></textarea>
+        <button type="button" class="btn-icon-sm" onclick="ReceitasApp.removePasso(${idx})" title="Remover">✕</button>
       </div>
     `;
     
     container.insertAdjacentHTML('beforeend', newRow);
+    container.querySelector(`.receita-passo-input[data-idx="${idx}"]`).focus();
   },
   
   removePasso(idx) {
@@ -345,8 +450,8 @@ const ReceitasApp = {
   
   getFormSteps() {
     return Array.from(document.querySelectorAll('.receita-passo-input'))
-      .map(el => el.value)
-      .filter(v => v.trim());
+      .map(el => el.value.trim())
+      .filter(v => v);
   },
   
   // ========== CATEGORIAS NO FORM ==========
@@ -389,7 +494,8 @@ const ReceitasApp = {
       recipe.favorito = !recipe.favorito;
       Storage.save('receitas', state.receitas);
       this.render();
-      Utils.showToast(recipe.favorito ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
+      Utils.showToast(recipe.favorito ? 'Adicionado aos favoritos ♥' : 'Removido dos favoritos', 'success');
+      EventBus.emit('receita:favorito', recipe);
     }
   },
   
@@ -402,17 +508,19 @@ const ReceitasApp = {
     const content = document.getElementById('receitaDetalheConteudo');
     if (!content) return;
     
+    const estrelas = this.renderDificuldadeEstrelas(recipe.dificuldade);
+    
     content.innerHTML = `
       <div class="receita-hero" ${recipe.foto ? `style="background-image:url(${recipe.foto})"` : ''}>
         <div class="receita-hero-gradient"></div>
-        <button class="receita-hero-fav ${recipe.favorito ? 'active' : ''}" onclick="ReceitasApp.toggleFav()">♥</button>
+        <button class="receita-hero-fav ${recipe.favorito ? 'active' : ''}" onclick="ReceitasApp.toggleFav()" title="Favoritar">♥</button>
         <div class="receita-hero-info">
           ${recipe.categoria ? `<div class="receita-hero-cat">${recipe.categoria}</div>` : ''}
           <div class="receita-hero-nome">${recipe.nome}</div>
           <div class="receita-hero-meta">
-            ${recipe.dificuldade ? `<span class="dif-badge">Dificuldade: ${recipe.dificuldade}</span>` : ''}
+            ${recipe.dificuldade ? `<span class="dif-badge">${estrelas} ${recipe.dificuldade}</span>` : ''}
             ${recipe.tempo ? `<span>⏱ ${recipe.tempo}</span>` : ''}
-            ${recipe.porcoes ? `<span>🍽 ${recipe.porcoes}</span>` : ''}
+            ${recipe.porcoes ? `<span>🍽 ${recipe.porcoes} porções</span>` : ''}
           </div>
         </div>
       </div>
@@ -423,8 +531,8 @@ const ReceitasApp = {
           <div class="receita-check-lista">
             ${recipe.ingredientes.map(ing => `
               <div class="receita-check-item">
-                <div class="receita-check-box"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
-                <span>${ing.quantidade} ${ing.unidade} ${ing.nome}</span>
+                <div class="receita-check-box"><input type="checkbox"></div>
+                <span><strong>${ing.quantidade}</strong> ${ing.unidade} ${ing.nome}</span>
               </div>
             `).join('')}
           </div>
@@ -443,8 +551,10 @@ const ReceitasApp = {
         ` : ''}
         
         ${recipe.observacoes ? `
-          <div class="receita-obs-view" style="margin-top:24px">${recipe.observacoes}</div>
+          <div class="receita-obs-view" style="margin-top:24px;padding:12px;background:var(--card-2);border-radius:8px">📝 <strong>Observações:</strong> ${recipe.observacoes}</div>
         ` : ''}
+        
+        <div style="font-size:11px;color:var(--text-faint);margin-top:24px">Criado em ${Utils.formatDate(new Date(recipe.dataCriacao))}</div>
       </div>
     `;
     
@@ -461,26 +571,40 @@ const ReceitasApp = {
   },
   
   deleteRecipe() {
-    if (!confirm('Tem certeza que deseja excluir esta receita?')) return;
+    const recipe = this.findRecipe(this.currentRecipeId);
+    if (!confirm(`Tem certeza que deseja deletar "${recipe.nome}"?`)) return;
     
     state.receitas.receitas = state.receitas.receitas.filter(r => r.id !== this.currentRecipeId);
     Storage.save('receitas', state.receitas);
     this.closeDetalhe();
     this.render();
-    Utils.showToast('Receita excluída');
+    Utils.showToast('Receita deletada', 'success');
+    EventBus.emit('receita:deletada', recipe);
   },
   
   shareRecipe() {
     const recipe = this.findRecipe(this.currentRecipeId);
     if (!recipe) return;
     
-    const text = `${recipe.nome}\n\nIngredientes:\n${recipe.ingredientes?.map(i => `- ${i.quantidade} ${i.unidade} ${i.nome}`).join('\n') || 'N/A'}\n\nModo de preparo:\n${recipe.passos?.map((p, i) => `${i+1}. ${p}`).join('\n') || 'N/A'}`;
+    const text = `${recipe.nome}\n\n📋 Ingredientes:\n${recipe.ingredientes?.map(i => `• ${i.quantidade} ${i.unidade} ${i.nome}`).join('\n')}\n\n👨‍🍳 Modo de preparo:\n${recipe.passos?.map((p, i) => `${i + 1}. ${p}`).join('\n')}`;
     
-    if (navigator.share) {
-      navigator.share({ title: recipe.nome, text });
-    } else {
-      Utils.showToast('Copiar: ' + text);
-    }
+    Utils.shareData(recipe.nome, text);
+  },
+  
+  exportRecipeAsJSON() {
+    const recipe = this.findRecipe(this.currentRecipeId);
+    if (!recipe) return;
+    
+    const json = JSON.stringify(recipe, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receita-${Utils.slugify(recipe.nome)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    Utils.showToast('Receita exportada', 'success');
   },
   
   toggleMenu() {
@@ -490,7 +614,6 @@ const ReceitasApp = {
   
   // ========== MODAIS ==========
   closeModal(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('active');
+    Utils.closeModal(id);
   }
 };
