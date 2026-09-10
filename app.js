@@ -23,6 +23,7 @@ function novoEstado(){
       cris:{ income:{}, incomeExtra:{}, extras:[], saldoAtual:0, cartoes:[], expenses:{ moradia:[], assinatura:[], fixo:[], futuro:[] } }
     },
     paid:{},
+    contasArquivadas:{},
     pagamentosParciais:{},
     reserva:0,
     cartoesTracker:[],
@@ -82,6 +83,7 @@ function carregar(){
       if(!state.comprasTracker) state.comprasTracker = [];
       if(!state.metas) state.metas = [];
       if(!state.pagamentosParciais) state.pagamentosParciais = {};
+      if(!state.contasArquivadas) state.contasArquivadas = {};
       if(state.reserva === undefined) state.reserva = 0;
       if(!state.receitas) state.receitas = [];
       if(!state.receitaCategorias) state.receitaCategorias = [];
@@ -998,37 +1000,51 @@ function contasEmAbertoNoMes(mKey){
 }
 function renderChecklist(){
   const mKey = state.focusMonth;
-  const items = getContasDoMes(mKey);
+  const mesAnteriorKey = addMonths(mKey, -1);
+  const arquivadas = state.contasArquivadas || {};
+
+  let itemsAtual = getContasDoMes(mKey).map(it=>Object.assign({}, it, { mesOrigem: mKey }));
+  let itemsAnterior = getContasDoMes(mesAnteriorKey).map(it=>Object.assign({}, it, { mesOrigem: mesAnteriorKey }));
+
+  itemsAtual = itemsAtual.filter(it=> !arquivadas[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]);
+  itemsAnterior = itemsAnterior.filter(it=>{
+    const pk = mesAnteriorKey+'_'+it.user+'_'+it.cat+'_'+it.id;
+    return !state.paid[pk] && !arquivadas[pk];
+  });
+
+  const items = itemsAnterior.concat(itemsAtual);
 
   const list = document.getElementById('contasChecklist');
   if(items.length === 0){
     list.innerHTML = `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Planner</div></div>`;
     return;
   }
-  // ordenar: usuário (davi primeiro), depois valor decrescente
   items.sort((a,b)=>{
+    if(a.mesOrigem !== b.mesOrigem) return a.mesOrigem < b.mesOrigem ? -1 : 1;
     if(a.user !== b.user) return a.user === 'davi' ? -1 : 1;
     return (b.valor||0) - (a.valor||0);
   });
   list.innerHTML = items.map(it=>{
-    const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
+    const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
     const isPaid = !!state.paid[paidKey];
     const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
     const isParcial = !isPaid && valorPago > 0;
     const logo = it.logoUrl
       ? `<img src="${it.logoUrl}" class="conta-logo">`
       : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
+    const tagMes = it.mesOrigem !== mKey ? `<span class="conta-mes-tag">${monthLabel(it.mesOrigem)}</span>` : '';
     return `<div class="check-item-compact ${isPaid?'paid':''}"
-      onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${mKey}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
+      onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
       ${logo}
       <div class="info">
-        <div class="desc">${it.desc}</div>
+        <div class="desc">${it.desc}${tagMes}</div>
         <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia} · ${fmtMoney(it.valor)}${isParcial?` <span style="color:var(--warning);font-weight:700">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
       </div>
     </div>`;
   }).join('');
 }
 let contaTapTimer = null;
+let contaTapClickTimer = null;
 let iosConfirmResolve = null;
 function iosConfirm(msg){
   document.getElementById('iosConfirmMsg').textContent = msg;
@@ -1053,17 +1069,29 @@ function contaTapStart(ev, paidKey, user, cat, id, mKey){
 }
 function contaTapEnd(ev, paidKey){
   clearTimeout(contaTapTimer);
-  if(!contaTapLongFired){
-    const isPaid = !!state.paid[paidKey];
-    if(isPaid){
-      iosConfirm('Cancelar?').then(ok=>{ if(ok) togglePaid(paidKey); });
-    }else{
+  if(contaTapLongFired) return;
+  if(contaTapClickTimer){
+    clearTimeout(contaTapClickTimer);
+    contaTapClickTimer = null;
+    confirmarEArquivarConta(paidKey);
+  }else{
+    contaTapClickTimer = setTimeout(()=>{
+      contaTapClickTimer = null;
       togglePaid(paidKey);
-    }
+    }, 280);
   }
 }
 function contaTapCancel(){
   clearTimeout(contaTapTimer);
+}
+function confirmarEArquivarConta(paidKey){
+  state.paid[paidKey] = true;
+  if(!state.contasArquivadas) state.contasArquivadas = {};
+  state.contasArquivadas[paidKey] = true;
+  if(state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
+  persist();
+  renderPanorama();
+  if(navigator.vibrate) navigator.vibrate([10,30,10]);
 }
 function togglePaid(paidKey){
   state.paid[paidKey] = !state.paid[paidKey];
@@ -3042,16 +3070,6 @@ function selecionarDificuldade(val){
     el.classList.toggle('active', el.dataset.val === receitaDificuldadeSelecionada);
   });
 }
-function renderCorChips(){
-  const el = document.getElementById('receitaCorChips');
-  el.innerHTML = RECEITA_CORES.map(c=>`<button type="button" class="cor-chip${receitaCorSelecionada===c?' selected':''}" style="background:${c}" onclick="selecionarCor('${c}')"></button>`).join('')
-    + `<button type="button" class="cor-chip cor-chip-none${receitaCorSelecionada===''?' selected':''}" onclick="selecionarCor('')">✕</button>`;
-}
-function selecionarCor(val){
-  receitaCorSelecionada = val;
-  document.getElementById('receitaCor').value = val;
-  renderCorChips();
-}
 function toggleReceitaFormFavorito(){
   const btn = document.getElementById('receitaFormFavBtn');
   const ativo = btn.classList.toggle('active');
@@ -3103,7 +3121,6 @@ function openReceitaModal(id){
     favBtn.querySelector('svg').setAttribute('fill', 'none');
   }
   renderReceitaFotoPreview();
-  renderCorChips();
   document.getElementById('pageReceitaForm').classList.add('active');
 }
 function closeReceitaForm(){
@@ -3116,7 +3133,7 @@ function salvarReceita(){
   const tempo = document.getElementById('receitaTempo').value.trim();
   const porcoes = document.getElementById('receitaPorcoes').value.trim();
   const dificuldade = document.getElementById('receitaDificuldade').value || '';
-  const cor = document.getElementById('receitaCor').value || '';
+  const cor = receitaCorSelecionada || '';
   const observacoes = document.getElementById('receitaObservacoes').value.trim();
   const fotoUrl = receitaFotoUrlAtual;
   const ingredientes = coletarIngredientes();
@@ -3369,8 +3386,22 @@ function abrirLouvorDetalhe(id){
   document.getElementById('lvConteudo').value = l.conteudo || '';
   renderLvCategoriaChips();
   atualizarLvTomBox();
+  renderLvStatusBtn();
   switchLouvorSubtab('edicao');
   document.getElementById('pageLouvorDetalhe').classList.add('active');
+}
+function renderLvStatusBtn(){
+  const l = getLouvorAtual(); if(!l) return;
+  const btn = document.getElementById('lvStatusBtn');
+  const finalizada = l.status === 'finalizada';
+  btn.textContent = finalizada ? 'Finalizado' : 'Em Produção';
+  btn.classList.toggle('finalizada', finalizada);
+}
+function toggleLouvorStatus(){
+  const l = getLouvorAtual(); if(!l) return;
+  l.status = l.status === 'finalizada' ? 'producao' : 'finalizada';
+  persist();
+  renderLvStatusBtn();
 }
 function closeLouvorDetalhe(){
   document.getElementById('pageLouvorDetalhe').classList.remove('active');
@@ -3447,6 +3478,7 @@ function ensureLouvorConfig(l){
     l.tomModoMenor = isMinor;
   }
   if(l.tomModoMenor === undefined) l.tomModoMenor = false;
+  if(l.status === undefined) l.status = 'producao';
 }
 function lvTomAtual(l){
   if(!l.tomOriginal) return '';
@@ -4100,7 +4132,8 @@ function renderListaComprasView(){
   });
   manualItens.forEach(it=>{
     const subtotal = (it.valor||0) * (it.quantidade||0);
-    html += `<div class="mercado-item ${it.pego?'carrinho':''}" onclick="toggleItemListaPego('${it.id}')">
+    html += `<div class="mercado-item ${it.pego?'carrinho':''}"
+      onpointerdown="mlItemTapStart(event,'${it.id}')" onpointerup="mlItemTapEnd(event,'${it.id}')" onpointercancel="mlItemTapCancel()" onpointerleave="mlItemTapCancel()">
       <div class="mercado-check${it.pego?' checked':''}">${it.pego?ICON_CHECK:''}</div>
       <div class="mercado-item-info">
         <div class="mercado-item-nome">${it.nome}</div>
@@ -4130,6 +4163,47 @@ function excluirItemManual(id){
   persist();
   renderListaComprasView();
 }
+let mlItemTapTimer = null;
+let mlItemTapLongFired = false;
+function mlItemTapStart(ev, id){
+  if(ev.pointerType==='mouse' && ev.button!==0) return;
+  mlItemTapLongFired = false;
+  mlItemTapTimer = setTimeout(()=>{
+    mlItemTapLongFired = true;
+    if(navigator.vibrate) navigator.vibrate(12);
+    abrirEditarItemLista(id);
+  }, 500);
+}
+function mlItemTapEnd(ev, id){
+  clearTimeout(mlItemTapTimer);
+  if(!mlItemTapLongFired) toggleItemListaPego(id);
+}
+function mlItemTapCancel(){
+  clearTimeout(mlItemTapTimer);
+}
+let editandoItemListaId = null;
+function abrirEditarItemLista(id){
+  const it = state.listaCompras.find(x=>x.id===id);
+  if(!it) return;
+  editandoItemListaId = id;
+  document.getElementById('mlEditNome').value = it.nome;
+  document.getElementById('mlEditQuantidade').value = it.quantidade;
+  document.getElementById('mlEditValor').value = (it.valor||0).toFixed(2).replace('.',',');
+  document.getElementById('modalEditarItemLista').classList.add('active');
+}
+function salvarEdicaoItemLista(){
+  const it = state.listaCompras.find(x=>x.id===editandoItemListaId);
+  if(!it) return;
+  const nome = document.getElementById('mlEditNome').value.trim();
+  if(!nome) return;
+  it.nome = nome;
+  it.quantidade = parseFloat(document.getElementById('mlEditQuantidade').value) || 1;
+  it.valor = parseMoney(document.getElementById('mlEditValor').value);
+  persist();
+  closeModal('modalEditarItemLista');
+  editandoItemListaId = null;
+  renderListaComprasView();
+}
 function toggleItemListaPego(id){
   const it = state.listaCompras.find(x=>x.id===id);
   if(!it) return;
@@ -4149,16 +4223,49 @@ function calcularGastoMercadoMes(ano, mes){
   });
   return total;
 }
+let loteCategorias = {};
 function finalizarListaAtiva(){
   const itens = state.listaCompras.slice();
   if(itens.length===0) return;
-  const agora = Date.now();
+  loteCategorias = {};
+  const novos = itens.filter(it=>!encontrarEstoquePorNome(it.nome));
+  novos.forEach(it=>{ loteCategorias[it.id] = 'Alimentos'; });
+  renderLoteCategorizacao();
+  document.getElementById('loteDataCompra').value = new Date().toISOString().slice(0,10);
+  document.getElementById('modalFinalizarLote').classList.add('active');
+}
+function renderLoteCategorizacao(){
+  const wrap = document.getElementById('loteCategoriasWrap');
+  const novos = state.listaCompras.filter(it=>!encontrarEstoquePorNome(it.nome));
+  if(novos.length===0){
+    wrap.innerHTML = '<p class="empty-hint">Todos os itens já existem no estoque — nenhuma categoria nova pra escolher.</p>';
+    return;
+  }
+  wrap.innerHTML = `<div class="lv-hint">Esses itens são novos — escolha a categoria de cada um:</div>` + novos.map(it=>`
+    <div class="field full">
+      <label>${it.nome}</label>
+      <div class="dificuldade-chips">
+        ${MERCADO_CATEGORIAS.map(c=>`<button type="button" class="dif-chip${loteCategorias[it.id]===c?' active':''}" onclick="selecionarLoteCategoria('${it.id}','${c}')">${c}</button>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+function selecionarLoteCategoria(itemId, cat){
+  loteCategorias[itemId] = cat;
+  renderLoteCategorizacao();
+}
+function confirmarFinalizarLote(){
+  const itens = state.listaCompras.slice();
+  if(itens.length===0){ closeModal('modalFinalizarLote'); return; }
+  const dataStr = document.getElementById('loteDataCompra').value;
+  const agora = dataStr ? new Date(dataStr+'T12:00:00').getTime() : Date.now();
   let totalGasto = 0;
   itens.forEach(it=>{
     totalGasto += (it.valor||0) * (it.quantidade||0);
     let e = encontrarEstoquePorNome(it.nome);
     if(!e){
-      e = { id: uid('est'), nome: it.nome, categoria:'Outros', quantidadeAtual:0, unidade: it.unidade||'unidades', quantidadeMinima:0, quantidadeReposicao: it.quantidade||1, precos:[], historicoCompras:[], criadoEm: agora };
+      const categoria = loteCategorias[it.id] || 'Outros';
+      e = { id: uid('est'), nome: it.nome, categoria, quantidadeAtual:0, unidade: it.unidade||'unidades', quantidadeMinima:0, quantidadeReposicao: it.quantidade||1, precos:[], historicoCompras:[], criadoEm: agora };
       state.estoque.push(e);
     }
     if(!e.precos) e.precos = [];
@@ -4174,6 +4281,7 @@ function finalizarListaAtiva(){
   const totalItens = itens.length;
   state.listaCompras = [];
   persist();
+  closeModal('modalFinalizarLote');
   renderListaComprasView();
   renderEstoqueView();
   mostrarResumoCompra(totalItens, totalGasto);
@@ -4209,6 +4317,7 @@ function abrirFinalizarCompra(estoqueId, manualItemId){
   document.getElementById('fcQuantidade').value = e.quantidadeReposicao || e.quantidadeMinima || 1;
   document.getElementById('fcUnidade').textContent = e.unidade;
   document.getElementById('fcValor').value = '';
+  document.getElementById('fcDataCompra').value = new Date().toISOString().slice(0,10);
   document.getElementById('fcComparacao').style.display = 'none';
   document.getElementById('modalFinalizarCompra').classList.add('active');
 }
@@ -4241,11 +4350,12 @@ function confirmarFinalizarCompra(){
   const saldoAtualCorrigido = Math.max(0, parseFloat(document.getElementById('fcSaldoAtual').value) || 0);
   const qtd = parseFloat(document.getElementById('fcQuantidade').value) || 0;
   const valor = parseFloat(document.getElementById('fcValor').value);
+  const dataStr = document.getElementById('fcDataCompra').value;
+  const agora = dataStr ? new Date(dataStr+'T12:00:00').getTime() : Date.now();
   if(!e.precos) e.precos = [];
-  if(!isNaN(valor) && valor>0) e.precos.push({ valor, data: Date.now() });
+  if(!isNaN(valor) && valor>0) e.precos.push({ valor, data: agora });
 
   if(!e.historicoCompras) e.historicoCompras = [];
-  const agora = Date.now();
   let diasDesdeUltima = null;
   if(e.historicoCompras.length>0){
     const ultima = e.historicoCompras[e.historicoCompras.length-1];
@@ -4474,4 +4584,68 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw.js').catch(e=> console.error('Erro ao registrar service worker', e));
   });
+}
+
+/* ================= IMPORTAR / EXPORTAR TODOS OS DADOS ================= */
+function abrirImportExportModal(){
+  document.getElementById('modalImportExport').classList.add('active');
+}
+function exportarDadosApp(){
+  const versaoEl = document.querySelector('.header-version');
+  const backup = {
+    app: 'Siloe',
+    versaoApp: versaoEl ? versaoEl.textContent.trim() : '',
+    exportadoEm: new Date().toISOString(),
+    mesAtual: mesAtualRef,
+    logo: localStorage.getItem('siloe-logo') || null,
+    state: state
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dataStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `siloe-backup-${dataStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  closeModal('modalImportExport');
+  showToast('Backup exportado');
+}
+function triggerImportarDados(){
+  document.getElementById('importFileInput').click();
+}
+function onImportFileSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    let backup;
+    try{
+      backup = JSON.parse(e.target.result);
+    }catch(err){
+      showToast('Não foi possível ler esse arquivo.');
+      event.target.value = '';
+      return;
+    }
+    if(!backup || typeof backup !== 'object' || !backup.state){
+      showToast('Esse arquivo não é um backup válido do Siloé.');
+      event.target.value = '';
+      return;
+    }
+    iosConfirm('Importar vai substituir TODOS os dados atuais do app por esse backup. Continuar?').then(ok=>{
+      event.target.value = '';
+      if(!ok) return;
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.state));
+        if(backup.mesAtual) localStorage.setItem(MES_ATUAL_KEY, backup.mesAtual);
+        if(backup.logo) localStorage.setItem('siloe-logo', backup.logo);
+        location.reload();
+      }catch(err){
+        showToast('Erro ao importar os dados.');
+      }
+    });
+  };
+  reader.readAsText(file);
 }

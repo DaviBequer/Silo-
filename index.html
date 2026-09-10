@@ -25,7 +25,7 @@
     </div>
     <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="onLogoFileSelected(event)">
     <div>
-      <div class="header-title">Siloé <span class="header-version">v1.5</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v1.6</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -628,11 +628,6 @@
         </div>
         <input type="hidden" id="receitaDificuldade">
       </div>
-      <div class="field full">
-        <label>Cor da Receita (opcional)</label>
-        <div class="cor-chips" id="receitaCorChips"></div>
-        <input type="hidden" id="receitaCor">
-      </div>
     </div>
 
     <div class="receita-form-section">
@@ -730,10 +725,13 @@
             <input type="text" id="lvArtista" class="lv-artist-input" placeholder="Artista / Autor" oninput="salvarLouvorCampo()">
             <div class="dificuldade-chips lv-categoria-mini" id="lvCategoriaChips"></div>
           </div>
-          <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker()">
-            <span class="lv-tom-box-lbl">TOM</span>
-            <span id="lvTomBoxValor">—</span>
-          </button>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+            <button type="button" class="lv-status-btn" id="lvStatusBtn" onclick="toggleLouvorStatus()"></button>
+            <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker()">
+              <span class="lv-tom-box-lbl">TOM</span>
+              <span id="lvTomBoxValor">—</span>
+            </button>
+          </div>
         </div>
         <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
       </div>
@@ -940,7 +938,7 @@
     <div id="mercadoPreListaView">
       <div class="mercado-add-card">
         <div class="mercado-add-row2">
-          <input type="text" id="mpQuantidade" placeholder="Qtd" onkeydown="if(event.key==='Enter') document.getElementById('mpNome').focus()">
+          <input type="text" id="mpQuantidade" inputmode="decimal" placeholder="Qtd" onkeydown="if(event.key==='Enter') document.getElementById('mpNome').focus()">
           <input type="text" id="mpNome" placeholder="O que precisa comprar?" style="flex:1" onkeydown="if(event.key==='Enter') adicionarItemPreLista()">
           <button class="mercado-add-btn" onclick="adicionarItemPreLista()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
         </div>
@@ -956,7 +954,7 @@
       </div>
       <div class="mercado-add-card">
         <div class="mercado-add-row2">
-          <input type="text" id="mlQuantidade" placeholder="Qtd" onkeydown="if(event.key==='Enter') document.getElementById('mlNome').focus()">
+          <input type="text" id="mlQuantidade" inputmode="decimal" placeholder="Qtd" onkeydown="if(event.key==='Enter') document.getElementById('mlNome').focus()">
           <input type="text" id="mlNome" placeholder="Nome do item" style="flex:1" onkeydown="if(event.key==='Enter') document.getElementById('mlValor').focus()">
         </div>
         <div class="mercado-add-row2" style="margin-top:8px">
@@ -1083,12 +1081,60 @@
       <label>Preço por unidade</label>
       <input type="number" id="fcValor" placeholder="R$ 0,00" min="0" step="0.01" oninput="atualizarComparacaoPreco()">
     </div>
+    <div class="field full">
+      <label>Data da compra</label>
+      <input type="date" id="fcDataCompra">
+    </div>
     <div class="lv-hint" id="fcComparacao" style="display:none"></div>
     <button class="btn btn-block" onclick="confirmarFinalizarCompra()">Finalizar e Repor Estoque</button>
   </div>
 </div>
 
 <!-- MODAL: Finalizar Compra de item avulso (sem estoque prévio) -->
+<!-- MODAL: Importar / Exportar todos os dados do app -->
+<div class="modal-overlay" id="modalImportExport">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Dados do App</h3>
+      <button class="modal-close" onclick="closeModal('modalImportExport')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="lv-hint">Exporta ou importa TODOS os dados do Siloé (finanças, ponto, receitas, louvor, mercado) em um único arquivo. Use isso pra manter o celular e o PC sincronizados manualmente.</div>
+    <button class="btn btn-block" onclick="exportarDadosApp()">Exportar todos os dados</button>
+    <button class="btn btn-outline btn-block" style="margin-top:var(--s2)" onclick="triggerImportarDados()">Importar backup</button>
+    <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEditarItemLista">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Editar Item</h3>
+      <button class="modal-close" onclick="closeModal('modalEditarItemLista')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full"><label>Nome</label><input type="text" id="mlEditNome"></div>
+    <div class="field-row">
+      <div class="field"><label>Quantidade</label><input type="text" id="mlEditQuantidade" inputmode="decimal"></div>
+      <div class="field"><label>Valor por unidade</label><input type="text" id="mlEditValor" inputmode="numeric" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <button class="btn btn-block" onclick="salvarEdicaoItemLista()">Salvar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalFinalizarLote">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Finalizar Compras</h3>
+      <button class="modal-close" onclick="closeModal('modalFinalizarLote')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Data da compra</label>
+      <input type="date" id="loteDataCompra">
+    </div>
+    <div id="loteCategoriasWrap"></div>
+    <button class="btn btn-block" onclick="confirmarFinalizarLote()">Confirmar e Dar Baixa</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalResumoCompra">
   <div class="modal">
     <div class="modal-header">
