@@ -573,8 +573,50 @@ if('serviceWorker' in navigator){
 
 /* ================= IMPORTAR / EXPORTAR TODOS OS DADOS ================= */
 function abrirImportExportModal(){
+  renderStorageUsage();
   document.getElementById('modalImportExport').classList.add('active');
 }
+
+function formatStorageBytes(bytes){
+  if(bytes < 1024) return bytes+' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1).replace('.',',')+' KB';
+  return (bytes/(1024*1024)).toFixed(2).replace('.',',')+' MB';
+}
+
+function renderStorageUsage(){
+  const label = document.getElementById('storageUsageLabel');
+  const fill = document.getElementById('storageUsageFill');
+  const meta = document.getElementById('storageUsageMeta');
+  const track = fill ? fill.parentElement : null;
+  if(!label || !fill || !meta || !track) return;
+
+  const storageLimit = 5 * 1024 * 1024;
+  let usedBytes = 0;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const key = localStorage.key(i);
+      if(key !== null){
+        usedBytes += (key.length + (localStorage.getItem(key) || '').length) * 2;
+      }
+    }
+  }catch(error){
+    console.error('Erro ao calcular uso do localStorage', error);
+    label.textContent = 'Indisponível';
+    meta.textContent = 'Não foi possível consultar o armazenamento local neste dispositivo';
+    fill.style.width = '0%';
+    track.setAttribute('aria-valuenow', '0');
+    return;
+  }
+
+  const percent = Math.min(100, (usedBytes / storageLimit) * 100);
+  label.textContent = `${formatStorageBytes(usedBytes)} / ${formatStorageBytes(storageLimit)}`;
+  meta.textContent = `${percent.toFixed(1).replace('.',',')}% usado · limite estimado de 5 MB`;
+  fill.style.width = `${percent}%`;
+  fill.classList.toggle('warning', percent >= 70 && percent < 90);
+  fill.classList.toggle('danger', percent >= 90);
+  track.setAttribute('aria-valuenow', percent.toFixed(1));
+}
+
 function exportarDadosApp(){
   const versaoEl = document.querySelector('.header-version');
   const backup = {

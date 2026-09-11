@@ -296,29 +296,26 @@ function renderSumarioPanorama(){
   if(!summary) return;
   const mKeyAtual = state.focusMonth;
   const rendaTotal = (incomeForMonth('davi', mKeyAtual) || 0) + (incomeForMonth('cris', mKeyAtual) || 0);
-  const totalCartoes = (state.cartoesTracker||[]).reduce((s,c)=>{
-    const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
-    const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
-    return s + usado;
-  },0);
-  const moradia = categoryTotalForMonth('moradia', mKeyAtual);
-  const assinatura = categoryTotalForMonth('assinatura', mKeyAtual);
-  const fixo = categoryTotalForMonth('fixo', mKeyAtual);
-  const futuro = categoryTotalForMonth('futuro', mKeyAtual);
+  const breakdown = getPanoramaBreakdown(mKeyAtual);
   document.getElementById('sumarioPanoramaMes').textContent = monthLabel(mKeyAtual);
   summary.innerHTML = `
     <div class="summary-row"><span>Renda Total</span><span class="summary-value">${fmtMoney(rendaTotal)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('moradia','${mKeyAtual}')"><span>Moradia</span><span class="summary-value">${fmtMoney(moradia)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('fixo','${mKeyAtual}')"><span>Fixos</span><span class="summary-value">${fmtMoney(fixo)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('assinatura','${mKeyAtual}')"><span>Assinaturas</span><span class="summary-value">${fmtMoney(assinatura)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('futuro','${mKeyAtual}')"><span>Contas Futuras</span><span class="summary-value">${fmtMoney(futuro)}</span></div>
-    <div class="summary-row"><span>Cartões</span><span class="summary-value">${fmtMoney(totalCartoes)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('moradia','${mKeyAtual}')"><span>Moradia</span><span class="summary-value">${fmtMoney(breakdown.moradia)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('fixo','${mKeyAtual}')"><span>Fixos</span><span class="summary-value">${fmtMoney(breakdown.fixo)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('assinatura','${mKeyAtual}')"><span>Assinaturas</span><span class="summary-value">${fmtMoney(breakdown.assinatura)}</span></div>
+    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('futuro','${mKeyAtual}')"><span>Contas Futuras</span><span class="summary-value">${fmtMoney(breakdown.futuro)}</span></div>
+    <div class="summary-row"><span>Cartões no mês</span><span class="summary-value">${fmtMoney(breakdown.cartao)}</span></div>
+    <div class="summary-row"><span>Dízimo</span><span class="summary-value">${fmtMoney(breakdown.dizimo)}</span></div>
   `;
 }
 
 const CATEGORIA_LABELS = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras' };
 function abrirDetalheCategoria(cat, mKey){
-  const itens = getContasDoMes(mKey).filter(it=>it.cat===cat);
+  const itens = getContasDoMes(mKey).filter(it=>{
+    if(it.cat !== cat) return false;
+    const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
+    return !state.paid[paidKey];
+  });
   const total = itens.reduce((s,it)=>s+(Number(it.valor)||0),0);
   document.getElementById('detalheCategoriaTitulo').textContent = `${CATEGORIA_LABELS[cat]} — ${monthLabelExtensoCurto(mKey)}`;
   const conteudo = itens.length===0
@@ -362,18 +359,22 @@ function renderPanoCharts(){
   if(!wrap) return;
   const mKey = state.focusMonth;
   const renda = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
-  const bdDavi = expenseBreakdownForMonth('davi', mKey);
-  const bdCris = expenseBreakdownForMonth('cris', mKey);
+  const breakdown = getPanoramaBreakdown(mKey);
   const cats = ['moradia','fixo','assinatura','futuro','cartao','dizimo'];
   const catColors = { moradia:'#2B3038', fixo:'#0EA5E9', assinatura:'#DB8B18', futuro:'#E0342B', cartao:'#1C9D5B', dizimo:'#7B5FA6' };
   const catLabels = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras', cartao:'Cartão', dizimo:'Dízimo' };
-  const totals = {};
-  let gastosTotal = 0;
-  cats.forEach(c=>{ totals[c] = (bdDavi[c]||0)+(bdCris[c]||0); gastosTotal += totals[c]; });
+  const totals = cats.reduce((result, category)=>{
+    result[category] = breakdown[category] || 0;
+    return result;
+  }, {});
+  const gastosTotal = breakdown.total;
   const sobra = renda - gastosTotal;
 
   const pctGasto = renda>0 ? Math.min(100,(gastosTotal/renda)*100) : (gastosTotal>0?100:0);
   const gradGanhos = `conic-gradient(var(--danger) 0% ${pctGasto.toFixed(2)}%, var(--success) ${pctGasto.toFixed(2)}% 100%)`;
+  const sobraLabel = sobra >= 0 ? 'Sobra' : 'Déficit';
+  const sobraColor = sobra >= 0 ? 'var(--success)' : 'var(--danger)';
+  const sobraPct = renda > 0 ? Math.max(0, sobra) / renda * 100 : 0;
 
   let acc = 0;
   const catsComValor = cats.filter(c=>totals[c]>0);
@@ -394,8 +395,8 @@ function renderPanoCharts(){
       <div class="donut-card">
         <div class="donut-wrap" style="background:${gradGanhos}"><div class="donut-hole"><div class="donut-hole-label">Ganho</div><div class="donut-hole-value">${fmtMoney(renda)}</div></div></div>
         <div class="donut-legend">
-          <div class="donut-legend-item"><i style="background:var(--success)"></i><span>Sobra</span><b>${fmtMoneySigned(sobra)}</b></div>
-          <div class="donut-legend-item"><i style="background:var(--danger)"></i><span>Gastos</span><b>${fmtMoney(gastosTotal)}</b></div>
+          <div class="donut-legend-item"><i style="background:${sobraColor}"></i><span>${sobraLabel}</span><b>${fmtMoneySigned(sobra)}${renda>0?` (${sobraPct.toFixed(0)}%)`:''}</b></div>
+          <div class="donut-legend-item"><i style="background:var(--danger)"></i><span>Gastos</span><b>${fmtMoney(gastosTotal)}${renda>0?` (${pctGasto.toFixed(0)}%)`:''}</b></div>
         </div>
       </div>
       <div class="donut-card">
@@ -404,6 +405,22 @@ function renderPanoCharts(){
       </div>
     </div>
   `;
+}
+
+function getPanoramaBreakdown(mKey){
+  const categories = ['moradia','fixo','assinatura','futuro','cartao','dizimo'];
+  const breakdown = categories.reduce((result, category)=>{
+    result[category] = 0;
+    return result;
+  }, {});
+  ['davi','cris'].forEach(user=>{
+    const userBreakdown = expenseBreakdownForMonth(user, mKey);
+    categories.forEach(category=>{
+      breakdown[category] += Number(userBreakdown[category]) || 0;
+    });
+  });
+  breakdown.total = categories.reduce((total, category)=>total + breakdown[category], 0);
+  return breakdown;
 }
 
 function expenseBreakdownForMonth(user, mKey){
@@ -727,4 +744,3 @@ function salvarPagamentoConta(){
   renderPanorama();
   showToast('Conta atualizada');
 }
-

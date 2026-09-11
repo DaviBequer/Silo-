@@ -682,6 +682,14 @@ body{padding-bottom:calc(84px + var(--safe))}
 
 .lv-hint{font-size:11px;color:var(--text-faint);background:var(--card-2);border-radius:10px;padding:8px 10px;margin-bottom:8px;line-height:1.5}
 .lv-hint code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10.5px}
+.storage-usage{background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:var(--s2)}
+.storage-usage-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);font-size:11px;color:var(--text-dim)}
+.storage-usage-head strong{font-size:11px;color:var(--text);white-space:nowrap}
+.storage-usage-track{height:7px;margin-top:7px;background:var(--card);border-radius:7px;overflow:hidden}
+.storage-usage-fill{height:100%;width:0;background:var(--success);border-radius:7px;transition:width .25s var(--ease),background .25s var(--ease)}
+.storage-usage-fill.warning{background:var(--warning)}
+.storage-usage-fill.danger{background:var(--danger)}
+.storage-usage-meta{margin-top:5px;font-size:10px;color:var(--text-faint)}
 
 .lv-pdf-preview{background:#fff;border:1px solid var(--line);border-radius:8px;margin:var(--s2) auto 0;overflow-x:auto;box-shadow:0 3px 14px rgba(0,0,0,.08);max-width:720px}
 .lv-pdf-preview.paisagem{max-width:960px}

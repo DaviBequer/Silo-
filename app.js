@@ -1376,14 +1376,12 @@ function renderRendaTable(){
     return `<td class="${mKey===hoje?'current-col':''}" style="color:var(--text-faint);font-weight:600">${fmtMoney(val)}</td>`;
   }).join('')}<td></td></tr>`;
 
-  const cartaoRows = (u!=='davi') ? '' : (cartoes.length === 0
-    ? `<tr><td class="row-label" style="color:var(--text-faint);font-weight:500" colspan="${months.length+2}">Nenhum cartão — toque em + acima</td></tr>`
-    : cartoes.map(c=>{
+  const cartaoRows = (u!=='davi' || cartoes.length === 0) ? '' : cartoes.map(c=>{
       return `<tr class="cartao-row"><td class="row-label">${c.nome}</td>${months.map(mKey=>{
         const val = (c.gastos||{})[mKey] || 0;
         return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
       }).join('')}<td><span class="cartao-actions"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span></td></tr>`;
-    }).join(''));
+    }).join('');
 
   const sobraRow = `<tr class="total-row"><td class="row-label">Sobra estimada</td>${months.map(mKey=>{
     const s = saldoForMonth(u, mKey);

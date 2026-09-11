@@ -1099,6 +1099,16 @@
       <button class="modal-close" onclick="closeModal('modalImportExport')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="lv-hint">Exporta ou importa TODOS os dados do Siloé (finanças, ponto, receitas, louvor, mercado) em um único arquivo. Use isso pra manter o celular e o PC sincronizados manualmente.</div>
+    <div class="storage-usage" aria-live="polite">
+      <div class="storage-usage-head">
+        <span>Armazenamento local</span>
+        <strong id="storageUsageLabel">Calculando...</strong>
+      </div>
+      <div class="storage-usage-track" role="progressbar" aria-label="Uso do armazenamento local" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="storage-usage-fill" id="storageUsageFill"></div>
+      </div>
+      <div class="storage-usage-meta" id="storageUsageMeta">Uso atual e limite estimado do localStorage</div>
+    </div>
     <button class="btn btn-block" onclick="exportarDadosApp()">Exportar todos os dados</button>
     <button class="btn btn-outline btn-block" style="margin-top:var(--s2)" onclick="triggerImportarDados()">Importar backup</button>
     <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
