@@ -1,8 +1,14 @@
-const CACHE_NAME = 'siloe-cache-v54';
+const CACHE_NAME = 'siloe-cache-v55';
 const ARQUIVOS = [
   './index.html',
   './style.css',
-  './app.js',
+  './core.js',
+  './panorama.js',
+  './planner.js',
+  './ponto.js',
+  './receitas.js',
+  './louvor.js',
+  './mercado.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
