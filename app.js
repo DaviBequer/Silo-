@@ -472,11 +472,16 @@ function iosConfirmResolver(v){
 function calcularStorageUsage(){
   let usado = 0;
   try{
-    // Calcular tamanho de TODOS os items do localStorage
+    // Calcular tamanho REAL em bytes de TODOS os items do localStorage
     for(let i = 0; i < localStorage.length; i++){
       const key = localStorage.key(i);
       const value = localStorage.getItem(key);
-      if(value) usado += key.length + value.length;
+      if(value){
+        // Usar TextEncoder para contar bytes REAL (UTF-8)
+        const keyBytes = new TextEncoder().encode(key).length;
+        const valueBytes = new TextEncoder().encode(value).length;
+        usado += keyBytes + valueBytes;
+      }
     }
   }catch(e){}
   const total = 5 * 1024 * 1024; // 5MB
