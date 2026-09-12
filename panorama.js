@@ -376,7 +376,7 @@ function renderPanoCharts(){
   const gradGanhos = `conic-gradient(var(--danger) 0% ${pctGasto.toFixed(2)}%, var(--success) ${pctGasto.toFixed(2)}% 100%)`;
 
   let acc = 0;
-  const catsComValor = cats.filter(c=>totals[c]>0);
+  const catsComValor = cats.filter(c=>totals[c]>0).sort((a,b)=>totals[b]-totals[a]);
   const segs = catsComValor.map(c=>{
     const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
     const seg = `${catColors[c]} ${acc.toFixed(2)}% ${(acc+pct).toFixed(2)}%`;
@@ -389,6 +389,11 @@ function renderPanoCharts(){
     return `<div class="donut-legend-item"><i style="background:${catColors[c]}"></i><span>${catLabels[c]}</span><b>${pct.toFixed(0)}%</b></div>`;
   }).join('') : `<div class="donut-legend-item"><span>Sem gastos no mês</span></div>`;
 
+  const barChart = catsComValor.length ? catsComValor.map(c=>{
+    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
+    return `<div class="bar-row"><div class="bar-label">${catLabels[c]}</div><div class="bar-container"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${catColors[c]}"><div class="bar-percent">${pct.toFixed(0)}%</div></div></div></div>`;
+  }).join('') : '';
+
   wrap.innerHTML = `
     <div class="donut-row">
       <div class="donut-card">
@@ -398,10 +403,10 @@ function renderPanoCharts(){
           <div class="donut-legend-item"><i style="background:var(--danger)"></i><span>Gastos</span><b>${fmtMoney(gastosTotal)}</b></div>
         </div>
       </div>
-      <div class="donut-card">
-        <div class="donut-wrap" style="background:${gradCat}"><div class="donut-hole"><div class="donut-hole-label">Gastos</div><div class="donut-hole-value">${fmtMoney(gastosTotal)}</div></div></div>
-        <div class="donut-legend">${legendCat}</div>
-      </div>
+    </div>
+    <div style="margin-top:var(--s4);padding:var(--s3);background:var(--card-2);border-radius:var(--radius-md)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:var(--s3)">Distribuição por Categoria (Ordenado)</div>
+      <div class="bar-chart">${barChart}</div>
     </div>
   `;
 }
