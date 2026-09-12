@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2B3038">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Siloé">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Siloé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo" id="headerLogoWrap" title="Logo do Siloé">
+      <img id="headerLogoImg" src="icon-192.png" alt="Siloé" style="width:100%;height:100%;object-fit:cover;border-radius:12px" onerror="this.style.display='none'; document.getElementById('headerLogoFallback').style.display='flex';">
+      <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
+    </div>
+    <div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.1</span></div>
+      <div class="header-sub">Finanças Pessoais</div>
+    </div>
+  </div>
+  <button class="header-btn" onclick="openConcluirMesModal()" title="Concluir mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+</div>
+
+<!-- PANORAMA -->
+<div class="aba active" id="aba-panorama">
+
+  <div class="card card-flat">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Acumulado</div></div>
+    <div class="pano-nav">
+      <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)">◀</button>
+      <div class="pano-nav-label" id="panoWindowLabel"></div>
+      <button class="pano-nav-btn" onclick="shiftPanoWindow(1)">▶</button>
+    </div>
+    <table class="compact-table" id="acumTable">
+      <thead>
+        <tr><th style="text-align:left;padding-left:8px">Mês</th><th>Sobra</th><th>Acumulado</th></tr>
+      </thead>
+      <tbody id="acumTableBody"></tbody>
+    </table>
+    <div class="card-title" style="margin-top:var(--s4);margin-bottom:0"><div class="left" style="font-size:12px">Visão do mês selecionado</div></div>
+    <div id="trendChartWrap" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Ponto PJ</div></div>
+    <div class="summary-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="summary-item"><div class="label" style="font-size:11px;color:var(--slate-500);text-transform:uppercase;font-weight:700">Total de Horas</div><div class="value" id="panoPontoHoras" style="font-size:20px;font-weight:800">00:00</div></div>
+      <div class="summary-item"><div class="label" style="font-size:11px;color:var(--slate-500);text-transform:uppercase;font-weight:700">Valor a Receber</div><div class="value" id="panoPontoValor" style="font-size:20px;font-weight:800">R$ 0,00</div></div>
+    </div>
+    <div class="meta" id="panoPontoComparativo" style="margin-top:10px;color:var(--slate-500)"></div>
+  </div>
+
+  <div class="user-section" id="panoUserSection"></div>
+
+  <div class="card" style="background:linear-gradient(160deg,var(--primary),var(--primary-dim));text-align:center;padding:24px;margin-bottom:var(--s4);position:relative;overflow:hidden;box-shadow:var(--shadow-lg)">
+    <div class="hero-inline-title" style="color:#fff;justify-content:center;position:relative;z-index:1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>Planeje Suas Compras Futuras</div>
+    <div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-bottom:16px;position:relative;z-index:1">Simule como suas metas afetariam seu orçamento</div>
+    <button class="btn" style="background:#fff;color:var(--primary);position:relative;z-index:1" onclick="openSimuladorModal()">Gerar Orçamento</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Resumo — <span id="sumarioPanoramaMes"></span></div></div>
+    <div id="sumarioPanorama" class="summary-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Contas a Pagar — <span id="contasMesLabel"></span></div></div>
+    <div class="checklist" id="contasChecklist"></div>
+  </div>
+
+</div>
+
+<!-- PLANNER -->
+<div class="aba" id="aba-planner">
+
+  <div class="user-tabs">
+    <button class="user-tab active" id="tabDavi" onclick="switchUser('davi')">Davi</button>
+    <button class="user-tab cris" id="tabCris" onclick="switchUser('cris')">Cris</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Saldo Atual</div><div style="display:flex;gap:4px"><button class="btn-icon-sm" onclick="openReservaModal()" title="Reserva"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M12 11V7a4 4 0 0 1 8 0v1"/><circle cx="12" cy="16" r="1.5"/></svg></button><button class="btn-icon-sm" onclick="openTarefasModal()" title="Lista de Tarefas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button></div></div>
+    <div class="field">
+      <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
+    </div>
+    <button type="button" class="saldo-modo-btn" id="btnSaldoModo" onclick="toggleUsarSaldoComoBase()"></button>
+    <div class="reserva-badge" id="reservaBadge" style="display:none" onclick="openReservaModal()"></div>
+  </div>
+
+  <div class="card card-flat">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><button class="section-add" id="btnAddCartao" onclick="openCartaoModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
+    <div class="ponto-table-wrap">
+      <table class="money-table">
+        <thead id="rendaTableThead"></thead>
+        <tbody id="rendaTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Moradia</div>
+      <button class="section-add" onclick="openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-moradia"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Assinaturas</div>
+      <button class="section-add" onclick="openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-assinatura"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Fixos</div>
+      <button class="section-add" onclick="openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-fixo"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Contas Futuras</div>
+      <button class="section-add" onclick="openGastoModal('futuro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>
+    <div id="grid-futuro"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><button class="section-add" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
+    <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
+  </div>
+
+</div>
+
+<!-- PONTO PJ -->
+<div class="aba" id="aba-ponto">
+
+  <div class="card">
+    <div class="card-title">
+      <div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Ponto PJ</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-icon-sm" onclick="openPontoConfigModal()" title="Configurações"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+        <button class="btn-icon-sm" onclick="openPontoExportModal()" title="Exportar PDF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
+      </div>
+    </div>
+
+    <div class="ponto-summary">
+      <div class="summary-grid">
+        <div class="summary-item"><div class="label">Total de Horas</div><div class="value" id="pontoTotalHoras">00:00</div></div>
+        <div class="summary-item"><div class="label">Valor a Receber</div><div class="value" id="pontoValorReceber">R$ 0,00</div></div>
+      </div>
+      <div class="comparacao">
+        <div><div class="comp-label">Padrão</div><div class="comp-value" id="pontoPadrao">00:00</div></div>
+        <div><div class="comp-label">Diferença</div><div class="comp-value" id="pontoDiferenca">00:00</div></div>
+        <div><div class="comp-label">Impacto</div><div class="comp-value" id="pontoImpacto">R$ 0,00</div></div>
+      </div>
+    </div>
+
+    <div class="ponto-compare" id="pontoCompareStrip"></div>
+
+    <div class="ponto-mes-nav">
+      <button onclick="pontoNavMes(-1)">◀</button>
+      <div class="mes-label" id="pontoMesLabel"></div>
+      <button onclick="pontoNavMes(1)">▶</button>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Valor da Hora</label>
+      <input type="text" id="pontoValorHora" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this); onValorHoraInput(this)">
+    </div>
+    <div id="pontoDiasLista" class="ponto-dias-lista"></div>
+  </div>
+
+</div>
+
+<div class="aba" id="aba-receitas">
+
+  <div class="receitas-header">
+    <div class="receitas-search">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="receitaSearchInput" placeholder="Buscar por nome, ingrediente ou categoria..." oninput="onReceitaSearchInput(this.value)">
+      <button id="receitaSearchClear" onclick="limparReceitaSearch()" style="display:none">✕</button>
+    </div>
+
+    <div class="receita-filter-chips" id="receitaFilterChips"></div>
+  </div>
+
+  <div id="receitaGrid" class="receita-grid"></div>
+
+  <button class="receita-fab" onclick="openReceitaModal()" title="Nova Receita" aria-label="Nova Receita">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+  </button>
+
+</div>
+
+<!-- LOUVOR: BIBLIOTECA -->
+<div class="aba" id="aba-louvor">
+
+  <div class="receitas-header">
+    <div class="receitas-search">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="louvorSearchInput" placeholder="Buscar por título ou artista..." oninput="onLouvorSearchInput(this.value)">
+      <button id="louvorSearchClear" onclick="limparLouvorSearch()" style="display:none">✕</button>
+    </div>
+
+    <div class="receita-filter-chips" id="louvorFilterChips"></div>
+  </div>
+
+  <div id="louvorLista" class="lv-lista"></div>
+
+  <button class="receita-fab" onclick="openLouvorForm()" title="Novo Louvor" aria-label="Novo Louvor">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+  </button>
+
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="switchAba('panorama')" data-aba="panorama"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Panorama</span></button>
+  <button class="nav-item" onclick="switchAba('planner')" data-aba="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Planner</span></button>
+  <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span>Ponto PJ</span></button>
+  <button class="nav-item" onclick="switchAba('receitas')" data-aba="receitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg><span>Receitas</span></button>
+  <button class="nav-item" onclick="switchAba('louvor')" data-aba="louvor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Louvor</span></button>
+  <button class="nav-item" onclick="switchAba('mercado')" data-aba="mercado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>Mercado</span></button>
+</nav>
+
+<!-- MODAL GASTO -->
+<div class="modal-overlay" id="modalEditarConta">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="editarContaTitulo">Conta</h3>
+      <button class="modal-close" onclick="closeEditarConta()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px">
+      <div id="editarContaLogoPreview"></div>
+      <div style="display:flex;gap:8px">
+        <label class="btn btn-sm btn-outline" style="cursor:pointer">
+          Escolher logo
+          <input type="file" accept="image/*" style="display:none" onchange="onContaLogoSelected(event)">
+        </label>
+        <button class="btn btn-sm btn-outline" onclick="removerContaLogo()">Remover</button>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Valor Total</label>
+      <div id="editarContaValorTotal" style="font-size:20px;font-weight:800;color:var(--text)"></div>
+    </div>
+    <div class="field full">
+      <label>Valor Pago (parcial)</label>
+      <div class="input-money"><input type="text" id="editarContaValorPago" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="field full">
+      <label class="checkbox-field">
+        <input type="checkbox" id="editarContaPagaCheck">
+        <span>Marcar como paga integralmente</span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeEditarConta()">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarPagamentoConta()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalGasto">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalGastoTitle">Adicionar Gasto</h3>
+      <button class="modal-close" onclick="closeModal('modalGasto')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div id="gastoLogoPreview"></div>
+      <div style="flex:1;display:flex;gap:6px">
+        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Logo<input type="file" accept="image/*" style="display:none" onchange="onGastoLogoSelected(event)"></label>
+        <button type="button" class="btn btn-sm btn-outline" onclick="removerGastoLogo()">Remover</button>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Descrição</label>
+        <input type="text" id="gastoDesc" placeholder="Ex: Aluguel">
+      </div>
+      <div class="field full">
+        <label>Descrição breve (opcional)</label>
+        <input type="text" id="gastoDescricaoBreve" placeholder="Ex: conta de luz da casa" style="font-size:12px">
+      </div>
+      <div class="field" id="gastoValorWrap">
+        <label>Valor</label>
+        <div class="input-money"><input type="text" id="gastoValor" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this)"></div>
+      </div>
+      <div class="field" id="gastoDiaWrap">
+        <label>Dia Vencimento</label>
+        <input type="number" id="gastoDia" placeholder="10" min="1" max="31">
+      </div>
+      <div class="field" id="gastoMesInicioSimplesWrap">
+        <label>A partir de</label>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="gastoMesInicioSimplesPickerBtn" onclick="toggleMonthPicker('gastoMesInicioSimplesPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="gastoMesInicioSimplesPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioSimplesPicker',-1)">‹</button>
+              <span id="gastoMesInicioSimplesPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioSimplesPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="gastoMesInicioSimplesPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="gastoMesInicioSimples">
+      </div>
+
+      <!-- campos exclusivos de Contas Futuras -->
+      <div class="field full" id="gastoRecorrenteWrap" style="display:none">
+        <label class="checkbox-field">
+          <input type="checkbox" id="gastoRecorrente" onchange="onGastoRecorrenteChange()">
+          <span>Recorrente</span>
+        </label>
+      </div>
+      <div class="field" id="gastoMesInicioWrap" style="display:none">
+        <label id="gastoMesInicioLabel">Mês</label>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="gastoMesInicioPickerBtn" onclick="toggleMonthPicker('gastoMesInicioPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="gastoMesInicioPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioPicker',-1)">‹</button>
+              <span id="gastoMesInicioPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('gastoMesInicioPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="gastoMesInicioPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="gastoMesInicio">
+      </div>
+      <div class="field" id="gastoParcelasWrap" style="display:none">
+        <label>Parcelas</label>
+        <input type="number" id="gastoParcelas" min="1" value="1" oninput="onGastoParcelasChange()">
+      </div>
+      <div class="field full" id="gastoReplicarWrap" style="display:none">
+        <label class="checkbox-field">
+          <input type="checkbox" id="gastoReplicar" checked onchange="onGastoReplicarChange()">
+          <span>Replicar valor em todas as parcelas</span>
+        </label>
+      </div>
+      <div class="field full" id="gastoParcelasValoresWrap" style="display:none">
+        <label>Valor de cada parcela</label>
+        <div id="gastoParcelasValores" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
+      <input type="hidden" id="gastoCat">
+      <input type="hidden" id="gastoId">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalGasto')">Cancelar</button>
+      <button class="btn btn-block" onclick="saveGasto()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL CARTAO -->
+<div class="modal-overlay" id="modalCartao">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCartaoTitle">Novo Cartão</h3>
+      <button class="modal-close" onclick="closeModal('modalCartao')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome do Cartão</label>
+      <input type="text" id="cartaoNome" placeholder="Ex: Nubank">
+    </div>
+    <input type="hidden" id="cartaoId">
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCartao')">Cancelar</button>
+      <button class="btn btn-block" onclick="saveCartao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCartaoCard">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCartaoCardTitle">Novo Cartão</h3>
+      <button class="modal-close" onclick="closeModal('modalCartaoCard')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="cartaoCardId">
+    <div class="field full">
+      <label>Nome do Cartão</label>
+      <input type="text" id="cartaoCardNome" placeholder="Ex: Nubank">
+    </div>
+    <div class="field">
+      <label>Dia de Fechamento</label>
+      <input type="number" id="cartaoCardFechamento" min="1" max="31" placeholder="Ex: 20">
+    </div>
+    <div class="field">
+      <label>Dia de Vencimento</label>
+      <input type="number" id="cartaoCardVencimento" min="1" max="31" placeholder="Ex: 27">
+    </div>
+    <div class="field full">
+      <label>Limite</label>
+      <div class="input-money"><input type="text" id="cartaoCardLimite" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCartaoCard')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCartaoCard()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCompraTracker">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCompraTrackerTitle">Nova Compra</h3>
+      <button class="modal-close" onclick="closeModal('modalCompraTracker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="compraTrackerId">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div id="compraTrackerLogoPreview"></div>
+      <div style="flex:1;display:flex;gap:6px">
+        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Logo<input type="file" accept="image/*" style="display:none" onchange="onCompraTrackerLogoSelected(event)"></label>
+        <button type="button" class="btn btn-sm btn-outline" onclick="removerCompraTrackerLogo()">Remover</button>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Nome da Compra</label>
+      <input type="text" id="compraTrackerNome" placeholder="Ex: Tênis">
+    </div>
+    <div class="field full">
+      <label>Descrição breve (opcional)</label>
+      <input type="text" id="compraTrackerDescricao" placeholder="Ex: compra de aniversário" style="font-size:12px">
+    </div>
+    <div class="field full">
+      <label>Cartão</label>
+      <select id="compraTrackerCartaoId"></select>
+    </div>
+    <div class="field">
+      <label>Valor Total</label>
+      <div class="input-money"><input type="text" id="compraTrackerValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="field">
+      <label>Parcelas</label>
+      <input type="number" id="compraTrackerParcelas" min="1" value="1">
+    </div>
+    <div class="field full">
+      <label>Mês da 1ª parcela</label>
+      <div class="month-picker">
+        <button type="button" class="month-picker-btn" id="compraTrackerMesInicioPickerBtn" onclick="toggleMonthPicker('compraTrackerMesInicioPicker')">Selecione o mês</button>
+        <div class="month-picker-panel" id="compraTrackerMesInicioPickerPanel" style="display:none">
+          <div class="month-picker-nav">
+            <button type="button" onclick="shiftPickerYear('compraTrackerMesInicioPicker',-1)">‹</button>
+            <span id="compraTrackerMesInicioPickerYear"></span>
+            <button type="button" onclick="shiftPickerYear('compraTrackerMesInicioPicker',1)">›</button>
+          </div>
+          <div class="month-picker-grid" id="compraTrackerMesInicioPickerGrid"></div>
+        </div>
+      </div>
+      <input type="hidden" id="compraTrackerMesInicio">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCompraTracker')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCompraTracker()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCredoVista">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalCredoVistaTitle">Crédito à Vista</h3>
+      <button class="modal-close" onclick="closeModal('modalCredoVista')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="credoVistaCartaoId">
+    <input type="hidden" id="credoVistaId">
+    <div class="field full">
+      <label>Descrição</label>
+      <input type="text" id="credoVistaDescricao" placeholder="Ex: Cinema">
+    </div>
+    <div class="field full">
+      <label>Valor</label>
+      <div class="input-money"><input type="text" id="credoVistaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCredoVista')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCredoVista()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalConcluirMes">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Concluir Mês</h3>
+      <button class="modal-close" onclick="closeModal('modalConcluirMes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="concluirMesInfo"></div>
+    <div id="concluirMesAviso" class="check-item urgent" style="display:none;margin-top:12px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalConcluirMes')">Cancelar</button>
+      <button class="btn btn-block" onclick="confirmarConcluirMes()">Concluir Mês</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReserva">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Reserva</h3>
+      <button class="modal-close" onclick="closeModal('modalReserva')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="caption" style="margin-bottom:12px">Dinheiro que está na conta mas não entra no saldo disponível — só pra controle visual.</div>
+    <div class="field full">
+      <label>Valor Reservado</label>
+      <div class="input-money"><input type="text" id="reservaValorInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalReserva')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarReserva()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReceitaCategoria">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nova Categoria</h3>
+      <button class="modal-close" onclick="closeModal('modalReceitaCategoria')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome da Categoria</label>
+      <input type="text" id="receitaCategoriaNome" placeholder="Ex: Sobremesa, Salgado, Bebida...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalReceitaCategoria')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarReceitaCategoria()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FULLPAGE: Detalhes da Receita -->
+<div class="fullpage" id="pageReceitaDetalhe">
+  <div class="fullpage-header receita-detalhe-header">
+    <button class="header-btn" onclick="closeReceitaDetalhe()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title" id="receitaDetalheHeaderTitle" style="opacity:0"></div>
+    <button class="header-btn" id="receitaDetalheMenuBtn" onclick="toggleReceitaDetalheMenu()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
+    <div class="receita-menu-dropdown" id="receitaDetalheMenuDropdown" style="display:none">
+      <button onclick="compartilharReceitaAtual()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Compartilhar</button>
+      <button onclick="editarReceitaAtual()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
+      <button onclick="excluirReceitaAtual()" style="color:var(--danger)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Excluir</button>
+    </div>
+  </div>
+  <div class="fullpage-content" style="padding:0" id="receitaDetalheConteudo"></div>
+</div>
+
+<!-- FULLPAGE: Assistente de Cadastro/Edição -->
+<div class="fullpage" id="pageReceitaForm">
+  <div class="fullpage-header">
+    <button class="header-btn" onclick="closeReceitaForm()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title" id="receitaFormTitulo">Nova Receita</div>
+    <button class="header-btn" id="receitaFormFavBtn" onclick="toggleReceitaFormFavorito()">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </button>
+  </div>
+  <div class="fullpage-content">
+    <input type="hidden" id="receitaId">
+
+    <div class="receita-form-section">
+      <div class="receita-form-foto-wrap">
+        <div id="receitaFotoPreview" class="receita-form-foto"></div>
+        <div class="receita-foto-fabs">
+          <label class="receita-foto-fab" title="Escolher da galeria">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <input type="file" accept="image/*" style="display:none" onchange="onReceitaFotoSelected(event)">
+          </label>
+          <button type="button" class="receita-foto-fab" onclick="removerReceitaFoto()" title="Remover foto">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="receita-form-section">
+      <div class="field full">
+        <label>Nome da Receita</label>
+        <input type="text" id="receitaNome" placeholder="Ex: Bolo de Cenoura">
+      </div>
+      <div class="field full">
+        <label>Categoria</label>
+        <div class="cat-picker">
+          <button type="button" class="cat-picker-btn" id="receitaCatPickerBtn" onclick="toggleReceitaCatPicker()">Sem categoria</button>
+          <div class="cat-picker-panel" id="receitaCatPickerPanel" style="display:none">
+            <div class="cat-picker-grid" id="receitaCatPickerGrid"></div>
+            <div class="cat-picker-nova">
+              <input type="text" id="receitaCatNovaInput" placeholder="Nova categoria...">
+              <button type="button" class="btn-icon-sm" onclick="criarCategoriaInline()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="receitaCategoriaSelect">
+      </div>
+      <div class="receita-form-row2">
+        <div class="field">
+          <label>Tempo de Preparo</label>
+          <input type="text" id="receitaTempo" placeholder="Ex: 40 min">
+        </div>
+        <div class="field">
+          <label>Porções</label>
+          <input type="number" id="receitaPorcoes" min="1" placeholder="Ex: 4">
+        </div>
+      </div>
+      <div class="field full">
+        <label>Dificuldade</label>
+        <div class="dificuldade-chips" id="receitaDificuldadeChips">
+          <button type="button" class="dif-chip" data-val="facil" onclick="selecionarDificuldade('facil')">Fácil</button>
+          <button type="button" class="dif-chip" data-val="media" onclick="selecionarDificuldade('media')">Média</button>
+          <button type="button" class="dif-chip" data-val="dificil" onclick="selecionarDificuldade('dificil')">Difícil</button>
+        </div>
+        <input type="hidden" id="receitaDificuldade">
+      </div>
+    </div>
+
+    <div class="receita-form-section">
+      <div class="field full">
+        <label>Ingredientes</label>
+        <div id="receitaIngredientesLista" class="receita-ing-lista"></div>
+        <button type="button" class="btn btn-sm btn-outline btn-block" style="margin-top:8px" onclick="addIngredienteCampo()">+ Adicionar Ingrediente</button>
+      </div>
+    </div>
+
+    <div class="receita-form-section">
+      <div class="field full">
+        <label>Modo de Preparo</label>
+        <div id="receitaPassosLista" class="receita-passos-lista"></div>
+        <button type="button" class="btn btn-sm btn-outline btn-block" style="margin-top:8px" onclick="addPassoCampo()">+ Adicionar Passo</button>
+      </div>
+    </div>
+
+    <div class="receita-form-section">
+      <div class="field full">
+        <label>Observações (opcional)</label>
+        <textarea id="receitaObservacoes" rows="3" placeholder="Dicas, substituições, observações..."></textarea>
+      </div>
+    </div>
+
+    <button class="receita-salvar-fab" onclick="salvarReceita()" title="Salvar Receita" aria-label="Salvar Receita">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    </button>
+    <div style="height:80px"></div>
+  </div>
+</div>
+
+<div class="fullpage" id="pageTarefas">
+  <div class="fullpage-header">
+    <button class="header-btn" onclick="closeTarefasPage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><path d="M9 12l2 2 4-4"/></svg>Organização</div>
+    <div style="width:40px"></div>
+  </div>
+
+  <div class="tarefas-subtabs">
+    <button class="subtab-btn active" id="subtabBtnTarefas" onclick="switchTarefasSubtab('tarefas')">Tarefas</button>
+    <button class="subtab-btn" id="subtabBtnSemana" onclick="switchTarefasSubtab('semana')">Semana</button>
+  </div>
+
+  <div class="fullpage-content" id="subtabTarefas">
+    <div class="card">
+      <div class="field full">
+        <label>Nome da Tarefa</label>
+        <input type="text" id="tarefaNome" placeholder="Ex: Comprar mantimentos">
+      </div>
+      <div class="field full">
+        <label>Descrição (opcional)</label>
+        <input type="text" id="tarefaDesc" placeholder="Detalhes da tarefa">
+      </div>
+      <div class="field full">
+        <label>Categoria (opcional)</label>
+        <input type="text" id="tarefaCategoria" placeholder="Ex: Casa, Trabalho...">
+      </div>
+      <button class="btn btn-block" onclick="salvarTarefa()">+ Adicionar Tarefa</button>
+    </div>
+    <div id="tarefasLista"></div>
+  </div>
+
+  <div class="fullpage-content" id="subtabSemana" style="display:none">
+    <div class="semana-nav">
+      <button class="btn-icon-sm" onclick="navSemana(-1)">◀</button>
+      <div class="semana-label" id="semanaLabel"></div>
+      <button class="btn-icon-sm" onclick="navSemana(1)">▶</button>
+    </div>
+    <div id="semanaDiasLista"></div>
+  </div>
+</div>
+
+<!-- FULLPAGE: Detalhe do Louvor (Edição / PDF / Slides) -->
+<div class="fullpage" id="pageLouvorDetalhe">
+  <div class="fullpage-header">
+    <button class="header-btn" onclick="closeLouvorDetalhe()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title" id="louvorDetalheHeaderTitle"></div>
+    <button class="header-btn" onclick="excluirLouvorAtual()" style="color:var(--danger);border-color:var(--danger-tint)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+  </div>
+  <div class="lv-subtabs">
+    <button class="lv-subtab active" data-tab="edicao" onclick="switchLouvorSubtab('edicao')">Edição</button>
+    <button class="lv-subtab" data-tab="pdf" onclick="switchLouvorSubtab('pdf')">Visualizar</button>
+    <button class="lv-subtab" data-tab="slides" onclick="switchLouvorSubtab('slides')">Slides</button>
+  </div>
+  <div class="fullpage-content" id="louvorDetalheConteudo" style="padding-bottom:100px">
+
+    <!-- PAINEL: EDIÇÃO -->
+    <div class="lv-panel active" id="lvPanelEdicao">
+      <div class="lv-harmonic-bar" id="lvHarmonicBar"></div>
+      <div class="lv-page-sheet">
+        <div class="lv-page-top">
+          <div class="lv-page-top-text">
+            <input type="text" id="lvTitulo" class="lv-title-input" placeholder="Nome do louvor" oninput="salvarLouvorCampo()">
+            <input type="text" id="lvArtista" class="lv-artist-input" placeholder="Artista / Autor" oninput="salvarLouvorCampo()">
+            <div class="dificuldade-chips lv-categoria-mini" id="lvCategoriaChips"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+            <button type="button" class="lv-status-btn" id="lvStatusBtn" onclick="toggleLouvorStatus()"></button>
+            <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker()">
+              <span class="lv-tom-box-lbl">TOM</span>
+              <span id="lvTomBoxValor">—</span>
+            </button>
+          </div>
+        </div>
+        <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
+      </div>
+      <div class="lv-hint" style="max-width:720px;margin:var(--s2) auto 0">
+        O acorde vai sozinho numa linha (o app identifica automaticamente e deixa laranja); a linha de baixo é a letra. Use espaços pra alinhar o acorde em cima da sílaba certa. Toque duas vezes no tom pra usar o relativo menor.<br>
+        <code>[Refrão]</code> cria um título de seção · <code>-</code> sozinho quebra pro próximo slide · <code>--</code> insere uma linha divisória no PDF · <code>---</code> força quebra de coluna no PDF.
+      </div>
+    </div>
+
+    <!-- PAINEL: PDF -->
+    <div class="lv-panel" id="lvPanelPdf">
+      <button type="button" class="accordion-toggle" onclick="toggleAccordion('lvPdfConfigBody')">
+        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
+        <svg id="lvPdfConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-body" id="lvPdfConfigBody" style="display:none">
+        <div class="field full">
+          <label>Colunas</label>
+          <div class="dificuldade-chips">
+            <button type="button" class="dif-chip" id="lvColuna1" onclick="setLouvorColunas(1)">1 coluna</button>
+            <button type="button" class="dif-chip" id="lvColuna2" onclick="setLouvorColunas(2)">2 colunas</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Orientação</label>
+          <div class="dificuldade-chips">
+            <button type="button" class="dif-chip" id="lvOrientRetrato" onclick="setLvPdfOrientacao('retrato')">Retrato</button>
+            <button type="button" class="dif-chip" id="lvOrientPaisagem" onclick="setLvPdfOrientacao('paisagem')">Paisagem</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Tamanho do texto</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(-1)">−</button>
+            <span id="lvPdfTextoLabel">11pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Tamanho do título</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(-1)">−</button>
+            <span id="lvPdfTituloLabel">17pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Altura da linha</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(-0.1)">−</button>
+            <span id="lvPdfAlturaLinhaLabel">1.5</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(0.1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Espaçamento de letras</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(-0.2)">−</button>
+            <span id="lvPdfEspacamentoLabel">0</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(0.2)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Margem da folha</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvPdfMargem(-4)">−</button>
+            <span id="lvPdfMargemLabel">40pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvPdfMargem(4)">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="lv-pdf-preview" id="lvPdfPreview"></div>
+      <button class="receita-salvar-fab" onclick="exportarLouvorPdf()" title="Baixar PDF" aria-label="Baixar PDF">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>
+      </button>
+    </div>
+
+    <!-- PAINEL: SLIDES -->
+    <div class="lv-panel" id="lvPanelSlides">
+      <button type="button" class="accordion-toggle" onclick="toggleAccordion('lvSlideConfigBody')">
+        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
+        <svg id="lvSlideConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-body" id="lvSlideConfigBody" style="display:none">
+        <div class="field full">
+          <label>Tamanho do título</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(-2)">−</button>
+            <span id="lvSlideTituloTamanhoLabel">44pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(2)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Alinhamento do título</label>
+          <div class="dificuldade-chips" id="lvSlideTituloAlinhamentoChips"></div>
+        </div>
+        <div class="field full">
+          <label>Tamanho do texto</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(-2)">−</button>
+            <span id="lvSlideTextoTamanhoLabel">32pt</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(2)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Alinhamento do texto</label>
+          <div class="dificuldade-chips" id="lvSlideTextoAlinhamentoChips"></div>
+        </div>
+        <div class="field full">
+          <label>Altura da linha no slide</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(-0.1)">−</button>
+            <span id="lvSlideAlturaLinhaLabel">1.4</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(0.1)">+</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Espaçamento de letras</label>
+          <div class="lv-transpose">
+            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(-0.2)">−</button>
+            <span id="lvSlideEspacamentoLabel">0</span>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(0.2)">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="lv-slides-nav">
+        <button class="btn-icon-sm" onclick="lvSlideNav(-1)">◀</button>
+        <span id="lvSlideCounter">1 / 1</span>
+        <button class="btn-icon-sm" onclick="lvSlideNav(1)">▶</button>
+      </div>
+      <div class="lv-slide-preview" id="lvSlidePreview"></div>
+      <button class="receita-salvar-fab" onclick="exportarLouvorSlides()" title="Baixar Slides" aria-label="Baixar Slides">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- FULLPAGE: Novo Louvor (formulário rápido) -->
+<div class="fullpage" id="pageLouvorForm">
+  <div class="fullpage-header">
+    <button class="header-btn" onclick="closeLouvorForm()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title">Novo Louvor</div>
+    <div style="width:28px"></div>
+  </div>
+  <div class="fullpage-content">
+    <div class="field full">
+      <label>Título</label>
+      <input type="text" id="lvNovoTitulo" placeholder="Nome do louvor">
+    </div>
+    <div class="field full">
+      <label>Artista</label>
+      <input type="text" id="lvNovoArtista" placeholder="Artista / Autor">
+    </div>
+    <div class="field full">
+      <label>Categoria</label>
+      <div class="dificuldade-chips" id="lvNovoCategoriaChips"></div>
+    </div>
+    <button class="btn btn-block" onclick="criarLouvor()">Criar e Abrir</button>
+  </div>
+</div>
+
+<!-- MODAL: Seletor de Tom (cromático + relativo menor no duplo toque) -->
+<div class="modal-overlay" id="modalLvTom">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Escolher Tom</h3>
+      <button class="modal-close" onclick="closeModal('modalLvTom')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="lv-hint">Um toque = tom maior. Toque duas vezes seguidas na mesma nota = relativo menor.</div>
+    <div class="lv-tom-grid" id="lvTomGrid"></div>
+  </div>
+</div>
+
+<!-- MODAL: Seletor de Unidade de Medida (genérico, substitui select nativo) -->
+<div class="modal-overlay" id="modalUnidadePicker">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Unidade</h3>
+      <button class="modal-close" onclick="closeModal('modalUnidadePicker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="unidadePickerLista"></div>
+  </div>
+</div>
+
+<!-- MERCADO: Lista de Compras + Estoque de Casa -->
+<div class="aba" id="aba-mercado">
+
+  <div class="tarefas-subtabs mercado-subtabs">
+    <button class="subtab-btn active" id="subtabBtnMercadoLista" onclick="switchMercadoSubtab('lista')">Lista</button>
+    <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="switchMercadoSubtab('estoque')">Estoque</button>
+    <button class="subtab-btn" id="subtabBtnMercadoDashboard" onclick="switchMercadoSubtab('dashboard')">Dashboard</button>
+  </div>
+
+  <!-- SUB-ABA: Lista de Compras -->
+  <div id="mercadoSubtabLista" class="mercado-subtab active">
+    <div class="mercado-lista-toggle">
+      <button class="subtab-btn active" id="btnMlPre" onclick="switchMercadoListaModo('pre')">Pré-listagem</button>
+      <button class="subtab-btn" id="btnMlAtiva" onclick="switchMercadoListaModo('ativa')">Lista de Compras</button>
+    </div>
+
+    <!-- PRÉ-LISTAGEM: só quantidade + nome, pra planejar antes de ir ao mercado -->
+    <div id="mercadoPreListaView">
+      <div class="mercado-add-card">
+        <div class="mercado-add-row2">
+          <input type="text" id="mpQuantidade" inputmode="decimal" placeholder="Qtd" onkeydown="if(event.key==='Enter') document.getElementById('mpNome').focus()">
+          <input type="text" id="mpNome" placeholder="O que precisa comprar?" style="flex:1" onkeydown="if(event.key==='Enter') adicionarItemPreLista()">
+          <button class="mercado-add-btn" onclick="adicionarItemPreLista()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+        </div>
+      </div>
+      <div id="mercadoPreLista" class="mercado-lista"></div>
+    </div>
+
+    <!-- LISTA DE COMPRAS ATIVA: quantidade + nome + valor (mascarado), com totais em tempo real -->
+    <div id="mercadoListaAtivaView" style="display:none">
+      <div class="mkt-lista-header">
+        <div><span id="mlHeaderItens">0</span> itens</div>
+        <div class="mkt-lista-header-valor">R$ <span id="mlHeaderTotal">0,00</span></div>
+      </div>
+      <div class="mercado-add-card">
+        <div class="mercado-add-row2">
+          <input type="text" id="mlQuantidade" inputmode="decimal" placeholder="Qtd" onkeydown="if(event.key==='Enter') document.getElementById('mlNome').focus()">
+          <input type="text" id="mlNome" placeholder="Nome do item" style="flex:1" onkeydown="if(event.key==='Enter') document.getElementById('mlValor').focus()">
+        </div>
+        <div class="mercado-add-row2" style="margin-top:8px">
+          <input type="text" id="mlValor" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoneyInput(this)" onkeydown="if(event.key==='Enter') adicionarItemListaAtiva()">
+          <button class="mercado-add-btn" onclick="adicionarItemListaAtiva()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+        </div>
+      </div>
+      <div id="mercadoListaCompras" class="mercado-lista"></div>
+      <button class="btn btn-block" id="btnFinalizarListaAtiva" style="max-width:720px;margin:0 auto var(--s3);display:none" onclick="finalizarListaAtiva()">Finalizar e dar baixa no estoque</button>
+    </div>
+  </div>
+
+  <!-- SUB-ABA: Estoque de Casa -->
+  <div id="mercadoSubtabEstoque" class="mercado-subtab" style="display:none">
+    <div class="receita-filter-chips" id="mercadoEstoqueFilterChips" style="padding:var(--s2) var(--s3)"></div>
+    <div id="mercadoEstoqueLista" class="mercado-lista"></div>
+    <button class="receita-fab" onclick="abrirEstoqueForm(null)" title="Novo item" aria-label="Novo item">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+    </button>
+  </div>
+
+  <!-- SUB-ABA: Dashboard -->
+  <div id="mercadoSubtabDashboard" class="mercado-subtab" style="display:none;padding:var(--s2) var(--s3) 100px">
+    <div class="mkt-stat-row">
+      <div class="mkt-stat-card">
+        <div class="mkt-stat-label">Gasto no mês</div>
+        <div class="mkt-stat-value" id="mktGastoMes">R$ 0,00</div>
+      </div>
+      <div class="mkt-stat-card">
+        <div class="mkt-stat-label">Itens em falta</div>
+        <div class="mkt-stat-value" id="mktItensFalta">0</div>
+      </div>
+    </div>
+    <div class="mkt-dash-section">
+      <div class="mkt-dash-title">Giram mais rápido (dias médios até acabar)</div>
+      <div id="mktRankingGiro"></div>
+    </div>
+    <div class="mkt-dash-section">
+      <div class="mkt-dash-title">Gasto por categoria no mês</div>
+      <div id="mktGastoCategoria"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: Item de Estoque (criar/editar) -->
+<div class="modal-overlay" id="modalEstoqueItem">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalEstoqueItemTitulo">Novo item</h3>
+      <button class="modal-close" onclick="closeModal('modalEstoqueItem')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome do item</label>
+      <input type="text" id="estItemNome" placeholder="Ex: Arroz">
+    </div>
+    <div class="field full">
+      <label>Categoria</label>
+      <div class="dificuldade-chips" id="estItemCategoriaChips"></div>
+    </div>
+    <div class="field full">
+      <label>Quantidade atual</label>
+      <input type="number" id="estItemQtdAtual" placeholder="0" min="0" step="0.1">
+    </div>
+    <div class="field full">
+      <label>Unidade</label>
+      <div class="dificuldade-chips" id="estItemUnidadeChips"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Qtd. mínima</label>
+        <input type="number" id="estItemQtdMinima" placeholder="0" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label>Repor quanto</label>
+        <input type="number" id="estItemQtdReposicao" placeholder="0" min="0" step="0.1">
+      </div>
+    </div>
+    <div class="field full" id="estItemPrecoInicialWrap">
+      <label>Preço por unidade (opcional)</label>
+      <input type="number" id="estItemPrecoInicial" placeholder="R$ 0,00" min="0" step="0.01">
+    </div>
+    <div class="field full" id="estItemPrecoAtualWrap" style="display:none">
+      <label>Último preço registrado</label>
+      <div class="lv-tom-box" style="cursor:default;justify-content:flex-start;padding:12px 14px">
+        <span id="estItemPrecoAtualValor" style="font-size:16px"></span>
+      </div>
+    </div>
+    <button type="button" class="btn-mini" id="btnVerHistoricoItem" onclick="abrirHistoricoItem()" style="display:none;margin-bottom:var(--s3)">Ver histórico de compras</button>
+    <button class="btn btn-block" onclick="salvarEstoqueItem()">Salvar</button>
+    <button class="btn-danger-outline" id="btnExcluirEstoqueItem" onclick="excluirEstoqueItemAtual()" style="display:none">Excluir item</button>
+  </div>
+</div>
+
+<!-- MODAL: Finalizar Compra (dá entrada no estoque + registra preço) -->
+<div class="modal-overlay" id="modalFinalizarCompra">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Finalizar Compra</h3>
+      <button class="modal-close" onclick="closeModal('modalFinalizarCompra')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Item</label>
+      <div style="font-size:17px;font-weight:800;color:var(--text)" id="fcItemNome"></div>
+    </div>
+    <div class="field full">
+      <label>Quanto tem agora no estoque (antes de repor)</label>
+      <div class="field-row">
+        <input type="number" id="fcSaldoAtual" min="0" step="0.1" style="flex:2">
+        <button type="button" class="btn-icon-sm" style="flex:1;width:auto;font-size:12px;font-weight:700" onclick="zerarSaldoFinalizar()">Zerou</button>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quantidade comprada</label>
+        <input type="number" id="fcQuantidade" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label>Unidade</label>
+        <div class="lv-tom-box" style="cursor:default;padding:12px"><span id="fcUnidade" style="font-size:14px"></span></div>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Preço por unidade</label>
+      <input type="number" id="fcValor" placeholder="R$ 0,00" min="0" step="0.01" oninput="atualizarComparacaoPreco()">
+    </div>
+    <div class="field full">
+      <label>Data da compra</label>
+      <input type="date" id="fcDataCompra">
+    </div>
+    <div class="lv-hint" id="fcComparacao" style="display:none"></div>
+    <button class="btn btn-block" onclick="confirmarFinalizarCompra()">Finalizar e Repor Estoque</button>
+  </div>
+</div>
+
+<!-- MODAL: Finalizar Compra de item avulso (sem estoque prévio) -->
+<!-- MODAL: Importar / Exportar todos os dados do app -->
+<div class="modal-overlay" id="modalImportExport">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Dados do App</h3>
+      <button class="modal-close" onclick="closeModal('modalImportExport')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div style="margin-bottom:var(--s3)">
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>Armazenamento usado</span>
+        <span id="storagePercent">0%</span>
+      </div>
+      <div style="height:8px;background:var(--card-2);border-radius:4px;overflow:hidden;margin-bottom:6px">
+        <div id="storageBar" style="height:100%;background:linear-gradient(90deg,var(--success),var(--warning));width:0%;transition:width 0.3s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-faint);display:flex;justify-content:space-between">
+        <span id="storageUsed">0 B</span>
+        <span id="storageTotal">5 MB</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn" onclick="exportarDadosApp()">Exportar</button>
+      <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
+    </div>
+    <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEditarItemLista">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Editar Item</h3>
+      <button class="modal-close" onclick="closeModal('modalEditarItemLista')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full"><label>Nome</label><input type="text" id="mlEditNome"></div>
+    <div class="field-row">
+      <div class="field"><label>Quantidade</label><input type="text" id="mlEditQuantidade" inputmode="decimal"></div>
+      <div class="field"><label>Valor por unidade</label><input type="text" id="mlEditValor" inputmode="numeric" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <button class="btn btn-block" onclick="salvarEdicaoItemLista()">Salvar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalFinalizarLote">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Finalizar Compras</h3>
+      <button class="modal-close" onclick="closeModal('modalFinalizarLote')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Data da compra</label>
+      <input type="date" id="loteDataCompra">
+    </div>
+    <div id="loteCategoriasWrap"></div>
+    <button class="btn btn-block" onclick="confirmarFinalizarLote()">Confirmar e Dar Baixa</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalResumoCompra">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Compra Finalizada</h3>
+      <button class="modal-close" onclick="closeModal('modalResumoCompra')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mkt-resumo-valor" id="resumoCompraValor">R$ 0,00</div>
+    <div class="mkt-resumo-itens" id="resumoCompraItens">0 itens registrados</div>
+    <div class="lv-hint" id="resumoCompraComparacao" style="text-align:center;margin-top:var(--s3)"></div>
+    <button class="btn btn-block" style="margin-top:var(--s3)" onclick="closeModal('modalResumoCompra')">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL: Histórico de compras de um item -->
+<div class="modal-overlay" id="modalHistoricoItem">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="histItemTitulo">Histórico</h3>
+      <button class="modal-close" onclick="closeModal('modalHistoricoItem')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="histItemLista"></div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmação estilo iOS (reutilizável) -->
+<div class="ios-confirm-overlay" id="iosConfirmOverlay">
+  <div class="ios-confirm-card">
+    <div class="ios-confirm-msg" id="iosConfirmMsg">Cancelar?</div>
+    <div class="ios-confirm-actions">
+      <button class="ios-confirm-btn" id="iosConfirmBtnNao" onclick="iosConfirmResolver(false)">Não</button>
+      <button class="ios-confirm-btn destructive" id="iosConfirmBtnSim" onclick="iosConfirmResolver(true)">Sim</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalSemanaItem">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Adicionar Item</h3>
+      <button class="modal-close" onclick="closeModal('modalSemanaItem')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="semanaItemDiaKey">
+    <input type="hidden" id="semanaItemPeriodo">
+    <input type="hidden" id="semanaItemId">
+    <div class="field full">
+      <label>Descrição</label>
+      <input type="text" id="semanaItemTexto" placeholder="Ex: Reunião com o time">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalSemanaItem')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarSemanaItem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDetalheAcumulado">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="detalheAcumuladoTitulo">Detalhamento</h3>
+      <button class="modal-close" onclick="closeModal('modalDetalheAcumulado')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="detalheAcumuladoConteudo"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDetalheCategoria">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="detalheCategoriaTitulo">Categoria</h3>
+      <button class="modal-close" onclick="closeModal('modalDetalheCategoria')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="detalheCategoriaConteudo"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRendaExtra">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Renda Extra — <span id="rendaExtraModalUsuario"></span></h3>
+      <button class="modal-close" onclick="closeRendaExtraModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="rendaExtraLista" style="margin-bottom:var(--s4)"></div>
+    <div class="card" style="margin:0">
+      <div class="field full" style="margin-bottom:0">
+        <label id="extraFormTitulo">Novo Extra</label>
+      </div>
+      <input type="hidden" id="extraItemId">
+      <div class="field full">
+        <label>Descrição</label>
+        <input type="text" id="extraItemDesc" placeholder="Ex: Devolução de empréstimo, bico extra...">
+      </div>
+      <div class="field full">
+        <label>Valor</label>
+        <input type="text" inputmode="numeric" id="extraItemValor" placeholder="0,00" oninput="maskMoneyInput(this)">
+      </div>
+      <div class="field full">
+        <label>De (mês inicial)</label>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="extraMesInicioPickerBtn" onclick="toggleMonthPicker('extraMesInicioPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="extraMesInicioPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('extraMesInicioPicker',-1)">‹</button>
+              <span id="extraMesInicioPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('extraMesInicioPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="extraMesInicioPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="extraMesInicio">
+      </div>
+      <div class="field full">
+        <label>Até (mês final)</label>
+        <div class="month-picker">
+          <button type="button" class="month-picker-btn" id="extraMesFimPickerBtn" onclick="toggleMonthPicker('extraMesFimPicker')">Selecione o mês</button>
+          <div class="month-picker-panel" id="extraMesFimPickerPanel" style="display:none">
+            <div class="month-picker-nav">
+              <button type="button" onclick="shiftPickerYear('extraMesFimPicker',-1)">‹</button>
+              <span id="extraMesFimPickerYear"></span>
+              <button type="button" onclick="shiftPickerYear('extraMesFimPicker',1)">›</button>
+            </div>
+            <div class="month-picker-grid" id="extraMesFimPickerGrid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="extraMesFim">
+      </div>
+      <button class="btn btn-block" onclick="salvarExtraItem()">Salvar Extra</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalSimulador">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Gerar Orçamento</h3>
+      <button class="modal-close" onclick="closeSimulador()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+
+    <div class="simulador-painel">
+      <h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>Situação Atual</h4>
+      <div id="simPainelAtual"></div>
+    </div>
+
+    <div class="simulador-painel">
+      <button type="button" class="accordion-toggle" onclick="toggleAccordion('addMetaAccordion')">
+        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Adicionar Metas</span>
+        <svg id="addMetaAccordionChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-body" id="addMetaAccordion" style="display:none">
+      <form id="simuladorMetasForm" onsubmit="return false">
+        <div class="field full">
+          <label>Nome da Compra</label>
+          <input type="text" id="simMetaNome" placeholder="Ex: Máquina de Lavar">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="field" style="margin-bottom:0">
+            <label>Valor Total</label>
+            <div class="input-money"><input type="text" id="simMetaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Parcelas</label>
+            <input type="number" id="simMetaParcelas" min="1" value="1">
+          </div>
+        </div>
+        <div class="field full">
+          <label>Mês de Início</label>
+          <div class="month-picker">
+            <button type="button" class="month-picker-btn" id="simMetaMesPickerBtn" onclick="toggleMonthPicker('simMetaMesPicker')">Selecione o mês</button>
+            <div class="month-picker-panel" id="simMetaMesPickerPanel" style="display:none">
+              <div class="month-picker-nav">
+                <button type="button" onclick="shiftPickerYear('simMetaMesPicker',-1)">‹</button>
+                <span id="simMetaMesPickerYear"></span>
+                <button type="button" onclick="shiftPickerYear('simMetaMesPicker',1)">›</button>
+              </div>
+              <div class="month-picker-grid" id="simMetaMesPickerGrid"></div>
+            </div>
+          </div>
+          <input type="hidden" id="simMetaMes">
+        </div>
+      </form>
+      <button class="btn btn-block" style="margin-top:12px" onclick="adicionarMetaSimulador()">+ Adicionar Meta</button>
+      </div>
+    </div>
+
+    <div class="simulador-painel" id="simMetasLista" style="background:var(--card);border:1px solid var(--slate-200)"></div>
+    <div class="simulador-painel" id="simMetasSalvas" style="background:var(--card);border:1px solid var(--slate-200)"></div>
+
+    <div id="simPainelSimulacao"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeSimulador()">Descartar</button>
+      <button class="btn btn-block" id="btnSalvarMetas" onclick="salvarMetas()">Salvar Metas</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Configuração do Ponto PJ (nome pra exportação) -->
+<div class="modal-overlay" id="modalPontoConfig">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Configurações do Ponto</h3>
+      <button class="modal-close" onclick="closeModal('modalPontoConfig')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome (aparece no PDF exportado)</label>
+      <input type="text" id="pontoConfigNome" placeholder="Ex: Cristiane Silva">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalPontoConfig')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarPontoConfig()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Exportar Ponto PJ em PDF -->
+<div class="modal-overlay" id="modalPontoExport">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Exportar Ponto PJ</h3>
+      <button class="modal-close" onclick="closeModal('modalPontoExport')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Período</label>
+      <div class="dificuldade-chips" id="pontoExportTipoChips">
+        <button type="button" class="dif-chip active" data-val="mes" onclick="selecionarPontoExportTipo('mes')">Mês inteiro</button>
+        <button type="button" class="dif-chip" data-val="semana" onclick="selecionarPontoExportTipo('semana')">Por semana</button>
+      </div>
+    </div>
+    <div class="field full" id="pontoExportSemanaField" style="display:none">
+      <label>Qual semana</label>
+      <div class="dificuldade-chips" id="pontoExportSemanaChips"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalPontoExport')">Cancelar</button>
+      <button class="btn btn-block" onclick="gerarPdfPonto()">Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+// Check de versão para forçar atualização
+const VERSAO_ATUAL = 'v2.1';
+const versaoArmazenada = localStorage.getItem('siloe-versao-anterior');
+if(versaoArmazenada !== VERSAO_ATUAL){
+  localStorage.setItem('siloe-versao-anterior', VERSAO_ATUAL);
+  if(versaoArmazenada){
+    // Se tinha versão anterior, limpar cache e recarregar
+    caches.keys().then(names => {
+      Promise.all(names.map(name => caches.delete(name)));
+    });
+    location.reload(true);
+  }
+}
+</script>
+<script src="core.js"></script>
+<script src="panorama.js"></script>
+<script src="planner.js"></script>
+<script src="ponto.js"></script>
+<script src="receitas.js"></script>
+<script src="louvor.js"></script>
+<script src="mercado.js"></script>
+</body>
+</html>
