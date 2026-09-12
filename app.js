@@ -209,20 +209,8 @@ function handleMoneyKeydown(event){
   if(nextInput){ nextInput.focus(); nextInput.select(); }
 }
 
-/* ================= LOGO PERSONALIZADA ================= */
-function triggerLogoUpload(){ document.getElementById('logoFileInput').click(); }
-function onLogoFileSelected(ev){
-  const file = ev.target.files && ev.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const dataUrl = e.target.result;
-    try{ localStorage.setItem('siloe-logo', dataUrl); }catch(err){ console.error('Erro ao salvar logo', err); }
-    aplicarLogoSalva();
-    showToast('Logo atualizada');
-  };
-  reader.readAsDataURL(file);
-}
+
+/* ================= LOGO PERSONALIZADA (REMOVIDO - já vem no arquivo) ================= */
 function aplicarLogoSalva(){
   try{
     const saved = localStorage.getItem('siloe-logo');
@@ -441,10 +429,18 @@ function confirmarConcluirMes(){
 }
 
 /* ================= MODAIS ================= */
-function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+function closeModal(id){ 
+  document.getElementById(id).classList.remove('active');
+  document.body.style.overflow = '';
+}
 document.addEventListener('DOMContentLoaded', ()=>{
   document.querySelectorAll('.modal-overlay').forEach(ov=>{
-    ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('active'); });
+    ov.addEventListener('click', e=>{ 
+      if(e.target===ov){
+        ov.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    });
   });
 });
 
@@ -476,10 +472,12 @@ function iosConfirmResolver(v){
 function calcularStorageUsage(){
   let usado = 0;
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const logo = localStorage.getItem('siloe-logo');
-    if(raw) usado += new Blob([raw]).size;
-    if(logo) usado += new Blob([logo]).size;
+    // Calcular tamanho de TODOS os items do localStorage
+    for(let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      if(value) usado += key.length + value.length;
+    }
   }catch(e){}
   const total = 5 * 1024 * 1024; // 5MB
   const percentual = Math.min(100, Math.round((usado / total) * 100));
@@ -487,6 +485,7 @@ function calcularStorageUsage(){
 }
 function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
+  document.body.style.overflow = 'hidden';
   const storage = calcularStorageUsage();
   const usedMB = (storage.usado / (1024*1024)).toFixed(2);
   document.getElementById('storageBar').style.width = storage.percentual + '%';
