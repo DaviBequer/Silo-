@@ -1389,6 +1389,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+// Check de versão para forçar atualização
+const VERSAO_ATUAL = 'v2.1';
+const versaoArmazenada = localStorage.getItem('siloe-versao-anterior');
+if(versaoArmazenada !== VERSAO_ATUAL){
+  localStorage.setItem('siloe-versao-anterior', VERSAO_ATUAL);
+  if(versaoArmazenada){
+    // Se tinha versão anterior, limpar cache e recarregar
+    caches.keys().then(names => {
+      Promise.all(names.map(name => caches.delete(name)));
+    });
+    location.reload(true);
+  }
+}
+</script>
 <script src="core.js"></script>
 <script src="panorama.js"></script>
 <script src="planner.js"></script>

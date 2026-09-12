@@ -1,4 +1,4 @@
-const CACHE_NAME = 'siloe-cache-v57';
+const CACHE_NAME = 'siloe-cache-v58';
 const ARQUIVOS = [
   './index.html',
   './style.css',
@@ -34,15 +34,25 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Network first com fallback para cache
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((resp) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, resp.clone());
-          return resp;
-        });
-      }).catch(() => cached);
-    })
+    Promise.race([
+      fetch(event.request).then((resp) => {
+        if (resp.ok) {
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, resp.clone());
+            return resp;
+          });
+        }
+        return caches.match(event.request).then(cached => cached || resp);
+      }),
+      new Promise((resolve) => {
+        setTimeout(() => {
+          caches.match(event.request).then(cached => {
+            resolve(cached);
+          });
+        }, 1500);
+      })
+    ]).catch(() => caches.match(event.request))
   );
 });
