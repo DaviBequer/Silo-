@@ -473,8 +473,25 @@ function iosConfirmResolver(v){
 }
 
 /* ================= IMPORT/EXPORT ================= */
+function calcularStorageUsage(){
+  let usado = 0;
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const logo = localStorage.getItem('siloe-logo');
+    if(raw) usado += new Blob([raw]).size;
+    if(logo) usado += new Blob([logo]).size;
+  }catch(e){}
+  const total = 5 * 1024 * 1024; // 5MB
+  const percentual = Math.min(100, Math.round((usado / total) * 100));
+  return { usado, total, percentual };
+}
 function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
+  const storage = calcularStorageUsage();
+  const usedMB = (storage.usado / (1024*1024)).toFixed(2);
+  document.getElementById('storageBar').style.width = storage.percentual + '%';
+  document.getElementById('storagePercent').textContent = storage.percentual + '%';
+  document.getElementById('storageUsed').textContent = usedMB + ' MB';
 }
 function exportarDadosApp(){
   const versaoEl = document.querySelector('.header-version');
