@@ -242,15 +242,29 @@ const ICON_TREND = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" 
 
 /* ================= NAVEGAÇÃO DE ABAS ================= */
 function switchAba(aba){
-  document.querySelectorAll('.aba').forEach(el=>el.classList.remove('active'));
-  document.getElementById('aba-'+aba).classList.add('active');
+  // Remover active de TODAS as abas e ocultá-las
+  document.querySelectorAll('.aba').forEach(el=>{
+    el.style.display = 'none';
+    el.classList.remove('active');
+  });
+  
+  // Mostrar e ativar APENAS a aba correta
+  const abaEl = document.getElementById('aba-'+aba);
+  if(abaEl){
+    abaEl.style.display = 'block';
+    abaEl.classList.add('active');
+  }
+  
+  // Atualizar nav items
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
+  
+  // Forçar render do conteúdo
   if(aba==='ponto') renderPonto();
-  if(aba==='planner') renderPlanner();
-  if(aba==='panorama') renderPanorama();
-  if(aba==='receitas') renderReceitas();
-  if(aba==='louvor') renderLouvor();
-  if(aba==='mercado') renderMercado();
+  else if(aba==='planner') renderPlanner();
+  else if(aba==='panorama') renderPanorama();
+  else if(aba==='receitas') renderReceitas();
+  else if(aba==='louvor') renderLouvor();
+  else if(aba==='mercado') renderMercado();
 }
 function switchUser(user){
   state.currentUser = user;
@@ -491,11 +505,14 @@ function calcularStorageUsage(){
 function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
-  const storage = calcularStorageUsage();
-  const usedMB = (storage.usado / (1024*1024)).toFixed(2);
-  document.getElementById('storageBar').style.width = storage.percentual + '%';
-  document.getElementById('storagePercent').textContent = storage.percentual + '%';
-  document.getElementById('storageUsed').textContent = usedMB + ' MB';
+  // Garantir que dados foram carregados antes de calcular
+  setTimeout(()=>{
+    const storage = calcularStorageUsage();
+    const usedMB = (storage.usado / (1024*1024)).toFixed(2);
+    document.getElementById('storageBar').style.width = storage.percentual + '%';
+    document.getElementById('storagePercent').textContent = storage.percentual + '%';
+    document.getElementById('storageUsed').textContent = usedMB + ' MB';
+  }, 100);
 }
 function exportarDadosApp(){
   const versaoEl = document.querySelector('.header-version');
