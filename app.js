@@ -495,23 +495,13 @@ function iosConfirmResolver(v){
 function calcularStorageUsage(){
   let usado = 0;
   try{
-    if(navigator.storage && navigator.storage.estimate){
-      const est = navigator.storage.estimate();
-      if(est && est.then){
-        est.then(e => { usado = e.usage || 0; });
-      } else {
-        usado = est.usage || 0;
-      }
-    }
-    if(!usado){
-      for(let i = 0; i < localStorage.length; i++){
-        const key = localStorage.key(i);
-        const value = localStorage.getItem(key);
-        if(value){
-          const keyBytes = new TextEncoder().encode(key).length;
-          const valueBytes = new TextEncoder().encode(value).length;
-          usado += keyBytes + valueBytes;
-        }
+    for(let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      if(key){
+        const value = localStorage.getItem(key) || '';
+        const keyBytes = new TextEncoder().encode(key).length;
+        const valueBytes = new TextEncoder().encode(value).length;
+        usado += keyBytes + valueBytes;
       }
     }
   }catch(e){}
@@ -528,7 +518,13 @@ function abrirImportExportModal(){
   document.body.style.overflow = 'hidden';
   const storage = calcularStorageUsage();
   const usedMB = (storage.usado / (1024*1024)).toFixed(2);
-  document.getElementById('storageBar').style.width = storage.percentual + '%';
+  const bar = document.getElementById('storageBar');
+  bar.style.width = storage.percentual + '%';
+  let gradient;
+  if(storage.percentual <= 33) gradient = '#10b981';
+  else if(storage.percentual <= 66) gradient = '#f59e0b';
+  else gradient = '#ef4444';
+  bar.style.background = gradient;
   document.getElementById('storagePercent').textContent = storage.percentual + '%';
   document.getElementById('storageUsed').textContent = usedMB + ' MB';
 }
