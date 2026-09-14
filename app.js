@@ -504,7 +504,16 @@ function calcularStorageUsage(){
         usado += keyBytes + valueBytes;
       }
     }
-  }catch(e){}
+    console.log('[DEBUG] localStorage.length:', localStorage.length, 'usado:', usado, 'bytes');
+    for(let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key) || '';
+      const bytes = new TextEncoder().encode(value).length;
+      console.log(`[DEBUG] "${key}": ${bytes} bytes`);
+    }
+  }catch(e){
+    console.error('[DEBUG] Erro ao calcular storage:', e);
+  }
   const total = 5 * 1024 * 1024;
   const percentual = Math.min(100, Math.round((usado / total) * 100));
   return { usado, total, percentual };
