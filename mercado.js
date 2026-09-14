@@ -572,9 +572,6 @@ if('serviceWorker' in navigator){
 }
 
 /* ================= IMPORTAR / EXPORTAR TODOS OS DADOS ================= */
-function abrirImportExportModal(){
-  document.getElementById('modalImportExport').classList.add('active');
-}
 function exportarDadosApp(){
   const versaoEl = document.querySelector('.header-version');
   const backup = {
