@@ -391,7 +391,7 @@ function renderPanoCharts(){
 
   const barChart = catsComValor.length ? catsComValor.map(c=>{
     const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
-    return `<div class="bar-row"><div class="bar-label">${catLabels[c]}</div><div class="bar-container"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${catColors[c]}"><div class="bar-percent">${pct.toFixed(0)}%</div></div></div></div>`;
+    return `<div class="bar-row"><div class="bar-label">${catLabels[c]}</div><div class="bar-container"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${catColors[c]}"></div></div><div class="bar-percent-label">${pct.toFixed(0)}%</div></div>`;
   }).join('') : '';
 
   wrap.innerHTML = `
@@ -406,7 +406,7 @@ function renderPanoCharts(){
     </div>
     <div style="margin-top:var(--s4);padding:var(--s3);background:var(--card-2);border-radius:var(--radius-md)">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:var(--s3)">Distribuição por Categoria (Ordenado)</div>
-      <div class="bar-chart">${barChart}</div>
+      <div class="bar-chart" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)">${barChart}</div>
     </div>
   `;
 }

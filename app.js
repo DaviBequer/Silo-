@@ -242,29 +242,15 @@ const ICON_TREND = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" 
 
 /* ================= NAVEGAÇÃO DE ABAS ================= */
 function switchAba(aba){
-  // Remover active de TODAS as abas e ocultá-las
-  document.querySelectorAll('.aba').forEach(el=>{
-    el.style.display = 'none';
-    el.classList.remove('active');
-  });
-  
-  // Mostrar e ativar APENAS a aba correta
-  const abaEl = document.getElementById('aba-'+aba);
-  if(abaEl){
-    abaEl.style.display = 'block';
-    abaEl.classList.add('active');
-  }
-  
-  // Atualizar nav items
+  document.querySelectorAll('.aba').forEach(el=>el.classList.remove('active'));
+  document.getElementById('aba-'+aba).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
-  
-  // Forçar render do conteúdo
   if(aba==='ponto') renderPonto();
-  else if(aba==='planner') renderPlanner();
-  else if(aba==='panorama') renderPanorama();
-  else if(aba==='receitas') renderReceitas();
-  else if(aba==='louvor') renderLouvor();
-  else if(aba==='mercado') renderMercado();
+  if(aba==='planner') renderPlanner();
+  if(aba==='panorama') renderPanorama();
+  if(aba==='receitas') renderReceitas();
+  if(aba==='louvor') renderLouvor();
+  if(aba==='mercado') renderMercado();
 }
 function switchUser(user){
   state.currentUser = user;
@@ -483,36 +469,46 @@ function iosConfirmResolver(v){
 }
 
 /* ================= IMPORT/EXPORT ================= */
-function calcularStorageUsage(){
+async function calcularStorageUsage(){
   let usado = 0;
+  let total = 5 * 1024 * 1024; // Default 5MB
+  
   try{
-    // Calcular tamanho REAL em bytes de TODOS os items do localStorage
-    for(let i = 0; i < localStorage.length; i++){
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      if(value){
-        // Usar TextEncoder para contar bytes REAL (UTF-8)
-        const keyBytes = new TextEncoder().encode(key).length;
-        const valueBytes = new TextEncoder().encode(value).length;
-        usado += keyBytes + valueBytes;
+    // Tentar usar StorageManager API (mais preciso - funciona offline)
+    if(navigator.storage && navigator.storage.estimate){
+      const estimate = await navigator.storage.estimate();
+      usado = estimate.usage || 0;
+      total = estimate.quota || (5 * 1024 * 1024);
+    } else {
+      // Fallback: contar localStorage manualmente
+      for(let i = 0; i < localStorage.length; i++){
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        if(value){
+          const keyBytes = new TextEncoder().encode(key).length;
+          const valueBytes = new TextEncoder().encode(value).length;
+          usado += keyBytes + valueBytes;
+        }
       }
     }
   }catch(e){}
-  const total = 5 * 1024 * 1024; // 5MB
-  const percentual = Math.min(100, Math.round((usado / total) * 100));
+  
+  const percentual = total > 0 ? Math.min(100, Math.round((usado / total) * 100)) : 0;
   return { usado, total, percentual };
 }
-function abrirImportExportModal(){
+async function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
-  // Garantir que dados foram carregados antes de calcular
-  setTimeout(()=>{
-    const storage = calcularStorageUsage();
-    const usedMB = (storage.usado / (1024*1024)).toFixed(2);
-    document.getElementById('storageBar').style.width = storage.percentual + '%';
-    document.getElementById('storagePercent').textContent = storage.percentual + '%';
-    document.getElementById('storageUsed').textContent = usedMB + ' MB';
-  }, 100);
+  
+  // Usar await para calcular storage corretamente (StorageManager API)
+  const storage = await calcularStorageUsage();
+  const usedMB = (storage.usado / (1024*1024)).toFixed(2);
+  const totalMB = (storage.total / (1024*1024)).toFixed(1);
+  
+  document.getElementById('storageBar').style.width = storage.percentual + '%';
+  document.getElementById('storagePercent').textContent = storage.percentual + '%';
+  document.getElementById('storageUsed').textContent = usedMB + ' MB';
+  document.getElementById('storageTotal').textContent = totalMB + ' MB';
 }
 function exportarDadosApp(){
   const versaoEl = document.querySelector('.header-version');
@@ -574,43 +570,9 @@ function onImportFileSelected(event){
   reader.readAsText(file);
 }
 
-/* ================= RESET TOTAL ================= */
-async function resetarTudoSiloe(){
-  const confirm = await iosConfirm('⚠️ ISSO VAI DELETAR TUDO: cache, localStorage, service workers. Seus dados estarão salvos no JSON de backup. Continuar?');
-  if(!confirm) return;
-  
-  // Limpar localStorage
-  localStorage.clear();
-  
-  // Limpar session storage
-  sessionStorage.clear();
-  
-  // Limpar service workers
-  if('serviceWorker' in navigator){
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    registrations.forEach(reg => reg.unregister());
-  }
-  
-  // Limpar cache
-  if('caches' in window){
-    const cacheNames = await caches.keys();
-    await Promise.all(cacheNames.map(name => caches.delete(name)));
-  }
-  
-  // Recarregar limpo
-  setTimeout(() => {
-    location.href = location.origin + location.pathname;
-  }, 500);
-}
-
-function resetarApenasCache(){
-  if('caches' in window){
-    caches.keys().then(names => {
-      Promise.all(names.map(name => caches.delete(name)));
-      setTimeout(() => location.reload(true), 300);
-    });
-  }
-}
+/* ================= INIT ================= */
+carregar();
+aplicarLogoSalva();
 
 /* ================= SERVICE WORKER ================= */
 if('serviceWorker' in navigator){
