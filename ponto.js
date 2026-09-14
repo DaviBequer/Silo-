@@ -298,7 +298,26 @@ function gerarPdfPonto(){
     showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
     return;
   }
+  
+  // Validar se está exportando por semana - verificar se todos os dias estão fechados
   const mKey = pontoMonthKeyAtual();
+  if(pontoExportTipo === 'semana'){
+    const semanas = pontoSemanasDoMes(mKey);
+    const s = semanas[pontoExportSemanaIdx] || semanas[0];
+    let temDiaAberto = false;
+    for(let dia = s.inicio; dia <= s.fim; dia++){
+      const d = getDia(mKey, dia);
+      if(!d.fechado && (d.entrada || d.saida)){
+        temDiaAberto = true;
+        break;
+      }
+    }
+    if(temDiaAberto){
+      showToast('⚠️ Feche todos os dias da semana primeiro');
+      return;
+    }
+  }
+  
   const semanas = pontoSemanasDoMes(mKey);
   let diaIni = 1, diaFim = daysInMonth(mKey);
   let periodoLabel = monthLabelLong(mKey);

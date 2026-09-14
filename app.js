@@ -469,46 +469,37 @@ function iosConfirmResolver(v){
 }
 
 /* ================= IMPORT/EXPORT ================= */
-async function calcularStorageUsage(){
+function calcularStorageUsage(){
   let usado = 0;
-  let total = 5 * 1024 * 1024; // Default 5MB
-  
   try{
-    // Tentar usar StorageManager API (mais preciso - funciona offline)
-    if(navigator.storage && navigator.storage.estimate){
-      const estimate = await navigator.storage.estimate();
-      usado = estimate.usage || 0;
-      total = estimate.quota || (5 * 1024 * 1024);
-    } else {
-      // Fallback: contar localStorage manualmente
-      for(let i = 0; i < localStorage.length; i++){
-        const key = localStorage.key(i);
-        const value = localStorage.getItem(key);
-        if(value){
-          const keyBytes = new TextEncoder().encode(key).length;
-          const valueBytes = new TextEncoder().encode(value).length;
-          usado += keyBytes + valueBytes;
-        }
+    // Calcular tamanho REAL em bytes de TODOS os items do localStorage
+    for(let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      if(value){
+        // Usar TextEncoder para contar bytes REAL (UTF-8)
+        const keyBytes = new TextEncoder().encode(key).length;
+        const valueBytes = new TextEncoder().encode(value).length;
+        usado += keyBytes + valueBytes;
       }
     }
   }catch(e){}
-  
-  const percentual = total > 0 ? Math.min(100, Math.round((usado / total) * 100)) : 0;
+  const total = 5 * 1024 * 1024; // 5MB
+  const percentual = Math.min(100, Math.round((usado / total) * 100));
   return { usado, total, percentual };
 }
-async function abrirImportExportModal(){
+function abrirModalAtualizacoes(){
+  document.getElementById('modalAtualizacoes').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
-  
-  // Usar await para calcular storage corretamente (StorageManager API)
-  const storage = await calcularStorageUsage();
+  const storage = calcularStorageUsage();
   const usedMB = (storage.usado / (1024*1024)).toFixed(2);
-  const totalMB = (storage.total / (1024*1024)).toFixed(1);
-  
   document.getElementById('storageBar').style.width = storage.percentual + '%';
   document.getElementById('storagePercent').textContent = storage.percentual + '%';
   document.getElementById('storageUsed').textContent = usedMB + ' MB';
-  document.getElementById('storageTotal').textContent = totalMB + ' MB';
 }
 function exportarDadosApp(){
   const versaoEl = document.querySelector('.header-version');

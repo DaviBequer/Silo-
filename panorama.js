@@ -391,22 +391,26 @@ function renderPanoCharts(){
 
   const barChart = catsComValor.length ? catsComValor.map(c=>{
     const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
-    return `<div class="bar-row"><div class="bar-label">${catLabels[c]}</div><div class="bar-container"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${catColors[c]}"></div></div><div class="bar-percent-label">${pct.toFixed(0)}%</div></div>`;
+    if(pct >= 20){
+      return `<div class="bar-row"><div class="bar-label">${catLabels[c]}</div><div class="bar-container"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${catColors[c]}"><div class="bar-percent">${pct.toFixed(0)}%</div></div></div></div>`;
+    } else {
+      return `<div class="bar-row"><div class="bar-label">${catLabels[c]}</div><div class="bar-container"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${catColors[c]}"></div></div><div class="bar-percent-label">${pct.toFixed(0)}%</div></div>`;
+    }
   }).join('') : '';
 
   wrap.innerHTML = `
-    <div class="donut-row">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);margin-bottom:var(--s3)">
       <div class="donut-card">
-        <div class="donut-wrap" style="background:${gradGanhos}"><div class="donut-hole"><div class="donut-hole-label">Ganho</div><div class="donut-hole-value">${fmtMoney(renda)}</div></div></div>
+        <div class="donut-wrap" style="background:${gradGanhos}"><div class="donut-hole"><div class="donut-hole-label">Sobra</div><div class="donut-hole-value">${fmtMoney(renda)}</div></div></div>
         <div class="donut-legend">
           <div class="donut-legend-item"><i style="background:var(--success)"></i><span>Sobra</span><b>${fmtMoneySigned(sobra)}</b></div>
           <div class="donut-legend-item"><i style="background:var(--danger)"></i><span>Gastos</span><b>${fmtMoney(gastosTotal)}</b></div>
         </div>
       </div>
-    </div>
-    <div style="margin-top:var(--s4);padding:var(--s3);background:var(--card-2);border-radius:var(--radius-md)">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:var(--s3)">Distribuição por Categoria (Ordenado)</div>
-      <div class="bar-chart" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)">${barChart}</div>
+      <div style="padding:var(--s3);background:var(--card-2);border-radius:var(--radius-md);display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:var(--s3)">Distribuição</div>
+        <div class="bar-chart">${barChart}</div>
+      </div>
     </div>
   `;
 }

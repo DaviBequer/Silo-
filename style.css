@@ -221,7 +221,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .compare-sub{font-size:9px;color:var(--text-faint);margin-top:2px}
 
 .ponto-summary{background:var(--primary-tint);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s4);margin-top:var(--s4);margin-bottom:var(--s4)}
-.ponto-summary .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}
+.ponto-summary .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
 .ponto-summary .summary-item .label{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.3px;font-weight:600;min-height:24px;display:flex;align-items:flex-start}
 .ponto-summary .summary-item .value{font-size:22px;font-weight:800;margin-top:var(--s1);color:var(--text)}
 .ponto-summary .comparacao{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--s2);margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
@@ -301,8 +301,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .compra-tracker-item .ct-bar{margin-top:5px;height:4px;border-radius:4px;background:var(--card-2);overflow:hidden}
 .compra-tracker-item .ct-bar-fill{height:100%;background:var(--success);border-radius:4px}
 .compra-tracker-item .ct-meta{margin-top:4px;font-size:9.5px;color:var(--text-faint)}
-.compra-tracker-item.pago{opacity:.4}
-.compra-tracker-item.pago .ct-nome{text-decoration:line-through}
+.compra-tracker-item.pago{opacity:.6;background:var(--success-tint);padding:var(--s2);border-radius:6px;border:1px solid var(--success)}.compra-tracker-item.pago .ct-nome{text-decoration:line-through;color:var(--success)}.compra-tracker-item.pago .ct-meta{color:var(--success)}
 
 .credo-vista-list{display:flex;flex-direction:column;margin-top:var(--s2);padding-top:var(--s2);border-top:1px solid var(--line)}
 .credo-vista-item{display:flex;justify-content:space-between;align-items:center;padding:var(--s1) 0;font-size:10.5px;border-bottom:1px solid var(--line)}
@@ -809,8 +808,8 @@ body{padding-bottom:calc(84px + var(--safe))}
 
 /* Gráfico de Barras Horizontal */
 .bar-chart{display:flex;flex-direction:column;gap:var(--s2);margin-top:var(--s3)}
-.bar-row{display:flex;align-items:center;gap:var(--s2);min-height:32px}
-.bar-label{font-size:11px;font-weight:600;color:var(--text-dim);width:100px;flex-shrink:0;white-space:nowrap}
-.bar-container{flex:1;height:24px;background:var(--line);border-radius:8px;overflow:hidden;position:relative;min-width:60px}
-.bar-fill{height:100%;border-radius:8px;display:block;transition:width 0.3s var(--ease)}
-.bar-percent-label{font-size:12px;font-weight:700;color:#000;width:40px;text-align:right;flex-shrink:0}
+.bar-row{display:flex;align-items:center;gap:var(--s2)}
+.bar-label{font-size:11px;font-weight:600;color:var(--text-dim);width:70px;flex-shrink:0}
+.bar-container{flex:1;height:20px;background:var(--card-2);border-radius:8px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 0.3s var(--ease)}
+.bar-percent{font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.2)}
