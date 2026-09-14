@@ -395,7 +395,7 @@ function renderCartaoTrackerList(){
         const compraLogo = item.logoUrl
           ? `<img src="${item.logoUrl}" class="conta-logo-sm">`
           : `<div class="conta-logo-sm conta-logo-placeholder">${item.nome.charAt(0).toUpperCase()}</div>`;
-        return `<div class="compra-tracker-item${pagoClass}">
+        return `<div class="compra-tracker-item${pagoClass}" ondblclick="openCompraTrackerModal('${cartao.id}','${item.id}')" data-id="${item.id}" data-cartao="${cartao.id}" data-longpress-timer="">
           <div class="ct-top">
             <div style="display:flex;align-items:center;gap:8px;min-width:0">
               ${compraLogo}
@@ -406,8 +406,6 @@ function renderCartaoTrackerList(){
             </div>
             <div class="ct-actions">
               <button class="btn-icon-sm" title="Marcar como ${item.pago?'pendente':'pago'}" onclick="toggleCompraPago('${item.id}')" style="color:${item.pago?'var(--success)':'var(--slate-400)'}">${item.pago?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>'}</button>
-              <button class="btn-icon-sm" onclick="openCompraTrackerModal('${cartao.id}','${item.id}')">${ICON_EDIT}</button>
-              <button class="btn-icon-sm" onclick="excluirCompraTracker('${item.id}')">${ICON_TRASH}</button>
             </div>
           </div>
           <div class="ct-row">
@@ -502,6 +500,7 @@ function excluirCartaoCard(id){
   }else{
     finalizarExclusao();
   }
+  initCompraTrackerGestures();
 }
 
 /* --- Compra (parcelamento vinculado a um cartão) --- */

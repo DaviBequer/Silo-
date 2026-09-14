@@ -1,26 +1,4 @@
 /* ================= PONTO PJ ================= */
-function openPontoExportModal(){
-  const mKey = pontoMonthKeyAtual();
-  const semanas = pontoSemanasDoMes(mKey);
-  
-  if(pontoExportTipo === 'semana'){
-    const s = semanas[pontoExportSemanaIdx] || semanas[0];
-    let temDiaAberto = false;
-    for(let dia = s.inicio; dia <= s.fim; dia++){
-      const d = getDia(mKey, dia);
-      if(!d.concluido && (d.entrada || d.saida)){
-        temDiaAberto = true;
-        break;
-      }
-    }
-    if(temDiaAberto){
-      showToast('⚠️ Feche todos os dias da semana selecionada primeiro');
-      return;
-    }
-  }
-  
-  document.getElementById('modalPontoExport').classList.add('active');
-}
 function pontoMonthKeyAtual(){ return addMonths(todayKey(), state.pontoOffset); }
 function ensurePontoMonth(mKey){
   if(!state.ponto.days[mKey]) state.ponto.days[mKey] = {};
@@ -434,7 +412,8 @@ function gerarPdfPonto(){
   doc.setFontSize(8);
   doc.text(`Cálculo das horas considerando intervalo de almoço. Valor da hora: ${fmtMoney(valorHora)}.`, marginX, finalY);
 
-  const fileName = `Ponto_${nome ? nome.replace(/\s+/g,'_')+'_' : ''}${mKey}${pontoExportTipo==='semana' ? '_semana'+(pontoExportSemanaIdx+1) : ''}.pdf`;
+  const dataExporto = monthLabel(mKey);
+  const fileName = `Ponto PJ - Davi Bequer - ${dataExporto}.pdf`;
 
   const blob = doc.output('blob');
   const file = new File([blob], fileName, { type:'application/pdf' });

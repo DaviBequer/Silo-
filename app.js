@@ -397,6 +397,29 @@ function renderAll(){
   if(typeof renderPlanner === 'function') renderPlanner();
   if(typeof renderPonto === 'function') renderPonto();
 }
+function initCompraTrackerGestures(){
+  document.addEventListener('touchstart', (e)=>{
+    const item = e.target.closest('[data-longpress-timer]');
+    if(!item) return;
+    const id = item.dataset.id;
+    let timeout = setTimeout(()=>{
+      if(confirm('Excluir compra?')){
+        excluirCompraTracker(id);
+      }
+    }, 4000);
+    item.dataset.lonpressTimer = timeout;
+  });
+  document.addEventListener('touchend', (e)=>{
+    const item = e.target.closest('[data-longpress-timer]');
+    if(!item) return;
+    clearTimeout(parseInt(item.dataset.lonpressTimer));
+  });
+  document.addEventListener('touchmove', (e)=>{
+    const item = e.target.closest('[data-longpress-timer]');
+    if(!item) return;
+    clearTimeout(parseInt(item.dataset.lonpressTimer));
+  });
+}
 function renderPanorama(){}
 function renderPlanner(){}
 function renderPonto(){}
@@ -472,19 +495,27 @@ function iosConfirmResolver(v){
 function calcularStorageUsage(){
   let usado = 0;
   try{
-    // Calcular tamanho REAL em bytes de TODOS os items do localStorage
-    for(let i = 0; i < localStorage.length; i++){
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      if(value){
-        // Usar TextEncoder para contar bytes REAL (UTF-8)
-        const keyBytes = new TextEncoder().encode(key).length;
-        const valueBytes = new TextEncoder().encode(value).length;
-        usado += keyBytes + valueBytes;
+    if(navigator.storage && navigator.storage.estimate){
+      const est = navigator.storage.estimate();
+      if(est && est.then){
+        est.then(e => { usado = e.usage || 0; });
+      } else {
+        usado = est.usage || 0;
+      }
+    }
+    if(!usado){
+      for(let i = 0; i < localStorage.length; i++){
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        if(value){
+          const keyBytes = new TextEncoder().encode(key).length;
+          const valueBytes = new TextEncoder().encode(value).length;
+          usado += keyBytes + valueBytes;
+        }
       }
     }
   }catch(e){}
-  const total = 5 * 1024 * 1024; // 5MB
+  const total = 5 * 1024 * 1024;
   const percentual = Math.min(100, Math.round((usado / total) * 100));
   return { usado, total, percentual };
 }
