@@ -1089,6 +1089,7 @@
   </div>
 </div>
 
+<!-- MODAL: Finalizar Compra de item avulso (sem estoque prévio) -->
 <!-- MODAL: Atualizações -->
 <div class="modal-overlay" id="modalAtualizacoes">
   <div class="modal">
@@ -1103,8 +1104,8 @@
         <div style="font-size:12px;color:var(--text-faint)">Reduzido espaçamento horizontal para melhor preenchimento</div>
       </div>
       <div style="padding:var(--s2);background:var(--card-2);border-radius:6px">
-        <div style="font-weight:600;color:var(--text);margin-bottom:4px">Gráficos lado a lado</div>
-        <div style="font-size:12px;color:var(--text-faint)">Ganho e Distribuição aparecem em 2 colunas com títulos menores</div>
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px">Gráficos padrão</div>
+        <div style="font-size:12px;color:var(--text-faint)">Ganho e Distribuição em layout padrão um acima do outro</div>
       </div>
       <div style="padding:var(--s2);background:var(--card-2);border-radius:6px">
         <div style="font-weight:600;color:var(--text);margin-bottom:4px">Visual de compra concluída</div>
@@ -1112,7 +1113,7 @@
       </div>
       <div style="padding:var(--s2);background:var(--card-2);border-radius:6px">
         <div style="font-weight:600;color:var(--text);margin-bottom:4px">Validação de fechamento</div>
-        <div style="font-size:12px;color:var(--text-faint)">Aviso para fechar dias da semana antes de gerar PDF do Ponto</div>
+        <div style="font-size:12px;color:var(--text-faint)">Aviso para fechar dias selecionados da semana antes de gerar PDF do Ponto</div>
       </div>
       <div style="padding:var(--s2);background:var(--card-2);border-radius:6px">
         <div style="font-weight:600;color:var(--text);margin-bottom:4px">Porcentagens inteligentes</div>
@@ -1120,13 +1121,12 @@
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn btn-outline" onclick="closeModal('modalAtualizacoes')">Cancelar</button>
+      <button class="btn btn-outline" onclick="closeModal('modalAtualizacoes')">Fechar</button>
       <button class="btn" onclick="abrirImportExportModal()">Dados do App</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Finalizar Compra de item avulso (sem estoque prévio) -->
 <!-- MODAL: Importar / Exportar todos os dados do app -->
 <div class="modal-overlay" id="modalImportExport">
   <div class="modal">
