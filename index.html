@@ -1114,6 +1114,10 @@
       <button class="btn" onclick="exportarDadosApp()">Exportar</button>
       <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:var(--s2)">
+      <button class="btn btn-outline" onclick="resetarApenasCache()" style="font-size:11px">Limpar Cache</button>
+      <button class="btn btn-outline" style="border-color:var(--danger);color:var(--danger);font-size:11px" onclick="resetarTudoSiloe()">⚠️ Reset Total</button>
+    </div>
     <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
   </div>
 </div>

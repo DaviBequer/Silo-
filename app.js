@@ -574,9 +574,43 @@ function onImportFileSelected(event){
   reader.readAsText(file);
 }
 
-/* ================= INIT ================= */
-carregar();
-aplicarLogoSalva();
+/* ================= RESET TOTAL ================= */
+async function resetarTudoSiloe(){
+  const confirm = await iosConfirm('⚠️ ISSO VAI DELETAR TUDO: cache, localStorage, service workers. Seus dados estarão salvos no JSON de backup. Continuar?');
+  if(!confirm) return;
+  
+  // Limpar localStorage
+  localStorage.clear();
+  
+  // Limpar session storage
+  sessionStorage.clear();
+  
+  // Limpar service workers
+  if('serviceWorker' in navigator){
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    registrations.forEach(reg => reg.unregister());
+  }
+  
+  // Limpar cache
+  if('caches' in window){
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map(name => caches.delete(name)));
+  }
+  
+  // Recarregar limpo
+  setTimeout(() => {
+    location.href = location.origin + location.pathname;
+  }, 500);
+}
+
+function resetarApenasCache(){
+  if('caches' in window){
+    caches.keys().then(names => {
+      Promise.all(names.map(name => caches.delete(name)));
+      setTimeout(() => location.reload(true), 300);
+    });
+  }
+}
 
 /* ================= SERVICE WORKER ================= */
 if('serviceWorker' in navigator){
