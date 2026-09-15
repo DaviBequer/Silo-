@@ -145,7 +145,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .check-item-compact.paid{border-color:var(--success);background:var(--success-tint)}
 .check-item-compact .info{flex:1;min-width:0;overflow:hidden}
 .check-item-compact .desc{font-size:11.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.check-item-compact .meta{font-size:9px;color:var(--text-faint);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.check-item-compact .meta{font-size:9px;color:var(--text-faint);margin-top:2px;white-space:normal}
 .check-item-compact .valor-linha{font-size:12px;font-weight:800;color:var(--text);margin-top:3px;white-space:nowrap}
 .check-item-compact .valor-parcial{font-size:9px;font-weight:700;color:var(--warning);margin-left:4px}
 .user-tag{font-weight:700;text-transform:uppercase;font-size:8px;letter-spacing:.3px;padding:1px 5px;border-radius:4px;background:var(--card-2);color:var(--text-dim)}
@@ -805,7 +805,7 @@ body{padding-bottom:calc(84px + var(--safe))}
 /* ---------- Planner: toggle renda x saldo em conta ---------- */
 .saldo-modo-btn{width:100%;text-align:left;background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;font-family:inherit;margin-top:-4px;margin-bottom:var(--s2);transition:all var(--dur) var(--ease)}
 .saldo-modo-btn.active{background:var(--success-tint);border-color:var(--success);color:var(--success);font-weight:700}
-.conta-mes-tag{font-size:8.5px;font-weight:800;color:var(--warning);background:var(--warning-tint);padding:2px 6px;border-radius:8px;margin-left:6px;text-transform:uppercase;vertical-align:middle}
+.conta-mes-tag{font-size:8.5px;font-weight:800;color:var(--warning);background:var(--warning-tint);padding:2px 6px;border-radius:8px;margin-left:6px;text-transform:uppercase;vertical-align:middle;white-space:nowrap;display:inline-block}
 .lv-status-btn{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:5px 12px;border-radius:20px;border:1px solid var(--warning);background:var(--warning-tint);color:var(--warning);cursor:pointer;font-family:inherit;white-space:nowrap}
 .lv-status-btn.finalizada{border-color:var(--success);background:var(--success-tint);color:var(--success)}
 

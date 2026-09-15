@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.12', itens: [
+    'Ajustado: tag de mês das contas antigas não corta mais em Contas a Pagar'
+  ]},
   { versao: 'v2.11', itens: [
     'Adicionado: lista de atualizações aqui em cima, mostrando o que foi mexido em cada versão'
   ]},
