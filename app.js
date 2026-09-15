@@ -34,10 +34,34 @@ function calcularStorageUsage(){
   return { usado, total, percentual };
 }
 
+/* ========== CHANGELOG ========== */
+/* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
+const CHANGELOG = [
+  { versao: 'v2.11', itens: [
+    'Adicionado: lista de atualizações aqui em cima, mostrando o que foi mexido em cada versão'
+  ]},
+  { versao: 'v2.10', itens: [
+    'Corrigido: app travava a rolagem depois de fechar alguns avisos/modais',
+    'Ajustado: Contas a Pagar não corta mais dia, nome ou valor'
+  ]}
+];
+
+function renderChangelog(){
+  const el = document.getElementById('changelogList');
+  if(!el) return;
+  el.innerHTML = CHANGELOG.map(v => `
+    <div style="padding:8px 10px;background:var(--card-2);border-radius:8px">
+      <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px">${v.versao}</div>
+      ${v.itens.map(txt => `<div style="font-size:11.5px;color:var(--text-faint);line-height:1.4">• ${txt}</div>`).join('')}
+    </div>
+  `).join('');
+}
+
 function abrirImportExportModal(){
   console.log('[STORAGE DEBUG] Abrindo modal');
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
+  renderChangelog();
   
   console.log('[STORAGE DEBUG] localStorage.length:', localStorage.length);
   const storage = calcularStorageUsage();
