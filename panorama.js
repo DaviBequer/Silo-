@@ -593,8 +593,9 @@ function renderChecklist(){
       onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
       ${logo}
       <div class="info">
-        <div class="desc">${it.desc}${tagMes}</div>
-        <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia} · ${fmtMoney(it.valor)}${isParcial?` <span style="color:var(--warning);font-weight:700">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
+        <div class="desc">${it.desc}</div>
+        <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia}${tagMes}</div>
+        <div class="valor-linha">${fmtMoney(it.valor)}${isParcial?`<span class="valor-parcial">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
       </div>
     </div>`;
   }).join('');

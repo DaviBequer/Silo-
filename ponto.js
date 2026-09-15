@@ -459,10 +459,9 @@ function confirmarConcluirMes(){
   showToast('Mês concluído — avançou para ' + monthLabel(mesFinanceiroAtual()));
 }
 
-/* ================= MODAIS (fechar) ================= */
-function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+/* ================= MODAIS (fechar por clique fora) ================= */
 document.querySelectorAll('.modal-overlay').forEach(ov=>{
-  ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('active'); });
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeModal(ov.id); });
 });
 
 /* ================= TOAST ================= */
