@@ -1,19 +1,36 @@
 /* ================= LOUVOR ================= */
 const LOUVOR_CATEGORIAS = ['Louvor','Harpa Cristã','Corinhos'];
-let louvorFiltroAtivo = 'Todas';
+let louvorFiltroAtivo = 'Atual';
 let louvorSearchTerm = '';
 let louvorAtualId = null;
 let lvSlideIndex = 0;
+let louvorFiltrosVisiveis = true;
 
 function getLouvorAtual(){ return state.louvores.find(l=>l.id===louvorAtualId); }
+
+function lvEstaAtual(l){
+  if(l.status !== 'finalizada') return true;
+  if(!l.dataAgendamento) return false;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const data = new Date(l.dataAgendamento+'T00:00:00');
+  return data >= hoje;
+}
 
 function renderLouvor(){
   renderLouvorFilterChips();
   renderLouvorLista();
 }
+function toggleLouvorFiltros(){
+  louvorFiltrosVisiveis = !louvorFiltrosVisiveis;
+  renderLouvorFilterChips();
+}
 function renderLouvorFilterChips(){
+  const btn = document.getElementById('louvorFiltroToggle');
+  if(btn) btn.classList.toggle('active', louvorFiltrosVisiveis);
   const el = document.getElementById('louvorFilterChips');
-  const chips = ['Todas', ...LOUVOR_CATEGORIAS];
+  if(!louvorFiltrosVisiveis){ el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  const chips = ['Atual', ...LOUVOR_CATEGORIAS];
   el.innerHTML = chips.map(c=>
     `<button class="filter-chip${louvorFiltroAtivo===c?' active':''}" onclick="setLouvorFiltro('${c}')">${c}</button>`
   ).join('');
@@ -37,7 +54,8 @@ function limparLouvorSearch(){
 function renderLouvorLista(){
   const el = document.getElementById('louvorLista');
   let items = state.louvores.slice();
-  if(louvorFiltroAtivo !== 'Todas') items = items.filter(l=>l.categoria===louvorFiltroAtivo);
+  if(louvorFiltroAtivo === 'Atual') items = items.filter(lvEstaAtual);
+  else items = items.filter(l=>l.categoria===louvorFiltroAtivo);
   if(louvorSearchTerm){
     items = items.filter(l=>
       (l.titulo||'').toLowerCase().includes(louvorSearchTerm) ||
@@ -67,9 +85,14 @@ function renderLouvorLista(){
 function openLouvorForm(){
   document.getElementById('lvNovoTitulo').value = '';
   document.getElementById('lvNovoArtista').value = '';
+  document.getElementById('lvNovoData').value = '';
   window.lvNovoCategoriaSelecionada = 'Louvor';
+  window.lvNovoTomOriginal = '';
+  window.lvNovoTomModoMenor = false;
   renderLvNovoCategoriaChips();
+  atualizarLvNovoTomBox();
   document.getElementById('pageLouvorForm').classList.add('active');
+  window.scrollTo(0,0);
 }
 function closeLouvorForm(){
   document.getElementById('pageLouvorForm').classList.remove('active');
@@ -85,7 +108,6 @@ function selecionarLvNovaCategoria(c){
 }
 function criarLouvor(){
   const titulo = document.getElementById('lvNovoTitulo').value.trim();
-  if(!titulo){ document.getElementById('lvNovoTitulo').focus(); return; }
   const id = 'lv_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const novo = {
     id,
@@ -93,7 +115,11 @@ function criarLouvor(){
     artista: document.getElementById('lvNovoArtista').value.trim(),
     categoria: window.lvNovoCategoriaSelecionada || 'Louvor',
     tom: '',
+    tomOriginal: window.lvNovoTomOriginal || '',
+    tomModoMenor: !!window.lvNovoTomModoMenor,
     transpose: 0,
+    dataAgendamento: document.getElementById('lvNovoData').value || '',
+    status: 'producao',
     colunas: 2,
     conteudo: '',
     criadoEm: Date.now()
@@ -115,11 +141,13 @@ function abrirLouvorDetalhe(id){
   document.getElementById('lvTitulo').value = l.titulo || '';
   document.getElementById('lvArtista').value = l.artista || '';
   document.getElementById('lvConteudo').value = l.conteudo || '';
+  document.getElementById('lvDataAgendamento').value = l.dataAgendamento || '';
   renderLvCategoriaChips();
   atualizarLvTomBox();
   renderLvStatusBtn();
   switchLouvorSubtab('edicao');
   document.getElementById('pageLouvorDetalhe').classList.add('active');
+  window.scrollTo(0,0);
 }
 function renderLvStatusBtn(){
   const l = getLouvorAtual(); if(!l) return;
@@ -159,6 +187,11 @@ function salvarLouvorCampo(){
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
   persist();
 }
+function salvarLouvorData(v){
+  const l = getLouvorAtual(); if(!l) return;
+  l.dataAgendamento = v || '';
+  persist();
+}
 function excluirLouvorAtual(){
   const l = getLouvorAtual(); if(!l) return;
   iosConfirm(`Excluir "${l.titulo||'este louvor'}"?`).then(ok=>{
@@ -172,6 +205,8 @@ function excluirLouvorAtual(){
 function switchLouvorSubtab(tab){
   document.querySelectorAll('.lv-subtab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
   document.querySelectorAll('.lv-panel').forEach(el=>el.classList.remove('active'));
+  const conteudo = document.getElementById('louvorDetalheConteudo');
+  if(conteudo) conteudo.scrollTop = 0;
   if(tab==='edicao') document.getElementById('lvPanelEdicao').classList.add('active');
   if(tab==='pdf'){
     document.getElementById('lvPanelPdf').classList.add('active');
@@ -194,9 +229,7 @@ function ensureLouvorConfig(l){
   if(l.pdfEspacamento === undefined) l.pdfEspacamento = 0;
   if(l.pdfMargem === undefined) l.pdfMargem = 40;
   if(l.slideTituloTamanho === undefined) l.slideTituloTamanho = 44;
-  if(l.slideTituloAlinhamento === undefined) l.slideTituloAlinhamento = 'center';
   if(l.slideTextoTamanho === undefined) l.slideTextoTamanho = 32;
-  if(l.slideTextoAlinhamento === undefined) l.slideTextoAlinhamento = 'center';
   if(l.slideAlturaLinha === undefined) l.slideAlturaLinha = 1.4;
   if(l.slideEspacamento === undefined) l.slideEspacamento = 0;
   if(l.transpose === undefined) l.transpose = 0;
@@ -210,6 +243,7 @@ function ensureLouvorConfig(l){
   }
   if(l.tomModoMenor === undefined) l.tomModoMenor = false;
   if(l.status === undefined) l.status = 'producao';
+  if(l.dataAgendamento === undefined) l.dataAgendamento = '';
 }
 function lvTomAtual(l){
   if(!l.tomOriginal) return '';
@@ -258,13 +292,33 @@ function lvNotasEquivalentes(a,b){
   let ib = LV_CHROMATIC.indexOf(b); if(ib===-1) ib = LV_FLAT.indexOf(b);
   return ia!==-1 && ia===ib;
 }
-function abrirLvTomPicker(){
+let lvTomPickerModo = 'edit';
+function abrirLvTomPicker(modo){
+  lvTomPickerModo = modo || 'edit';
   renderLvTomGrid();
   document.getElementById('modalLvTom').classList.add('active');
 }
+function lvNovoTomAtual(){
+  if(!window.lvNovoTomOriginal) return '';
+  if(window.lvNovoTomModoMenor){
+    const idx = LV_CHROMATIC.indexOf(window.lvNovoTomOriginal);
+    const relIdx = idx===-1 ? null : (idx+9)%12;
+    return (relIdx!==null ? LV_CHROMATIC[relIdx] : window.lvNovoTomOriginal) + 'm';
+  }
+  return window.lvNovoTomOriginal;
+}
+function atualizarLvNovoTomBox(){
+  const el = document.getElementById('lvNovoTomBoxValor');
+  if(el) el.textContent = lvNovoTomAtual() || 'Selecione';
+}
 function renderLvTomGrid(){
-  const l = getLouvorAtual(); if(!l) return;
-  const atualBase = lvTomAtual(l).replace(/m$/,'');
+  let atualBase;
+  if(lvTomPickerModo==='novo'){
+    atualBase = lvNovoTomAtual().replace(/m$/,'');
+  }else{
+    const l = getLouvorAtual(); if(!l) return;
+    atualBase = lvTomAtual(l).replace(/m$/,'');
+  }
   document.getElementById('lvTomGrid').innerHTML = LV_TOM_GRID.map(nota=>{
     const isActive = lvNotasEquivalentes(nota, atualBase);
     return `<button type="button" class="lv-tom-grid-btn${isActive?' active':''}" onclick="lvTomGridClick('${nota}')">${nota}</button>`;
@@ -284,6 +338,13 @@ function lvTomGridClick(nota){
   }
 }
 function lvTomGridEscolher(nota, modoMenor){
+  if(lvTomPickerModo==='novo'){
+    window.lvNovoTomOriginal = nota;
+    window.lvNovoTomModoMenor = modoMenor;
+    atualizarLvNovoTomBox();
+    closeModal('modalLvTom');
+    return;
+  }
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
   let idxNota = LV_CHROMATIC.indexOf(nota); if(idxNota===-1) idxNota = LV_FLAT.indexOf(nota);
@@ -632,24 +693,10 @@ function ajustarLvSlideTituloTamanho(delta){
   persist();
   renderLouvorSlidePreview();
 }
-function setLvSlideTituloAlinhamento(v){
-  const l = getLouvorAtual(); if(!l) return;
-  ensureLouvorConfig(l);
-  l.slideTituloAlinhamento = v;
-  persist();
-  renderLouvorSlidePreview();
-}
 function ajustarLvSlideTextoTamanho(delta){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
   l.slideTextoTamanho = Math.max(16, Math.min(56, l.slideTextoTamanho + delta));
-  persist();
-  renderLouvorSlidePreview();
-}
-function setLvSlideTextoAlinhamento(v){
-  const l = getLouvorAtual(); if(!l) return;
-  ensureLouvorConfig(l);
-  l.slideTextoAlinhamento = v;
   persist();
   renderLouvorSlidePreview();
 }
@@ -667,19 +714,11 @@ function ajustarLvSlideEspacamento(delta){
   persist();
   renderLouvorSlidePreview();
 }
-function lvAlinhamentoChips(grupo, valorAtual){
-  const opcoes = [['left','Esquerda'],['center','Centro'],['right','Direita'],['justify','Justificado']];
-  return opcoes.map(([v,label])=>
-    `<button type="button" class="dif-chip${valorAtual===v?' active':''}" onclick="${grupo}('${v}')">${label}</button>`
-  ).join('');
-}
 function renderLouvorSlideConfigPainel(){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
   document.getElementById('lvSlideTituloTamanhoLabel').textContent = l.slideTituloTamanho+'pt';
   document.getElementById('lvSlideTextoTamanhoLabel').textContent = l.slideTextoTamanho+'pt';
-  document.getElementById('lvSlideTituloAlinhamentoChips').innerHTML = lvAlinhamentoChips('setLvSlideTituloAlinhamento', l.slideTituloAlinhamento);
-  document.getElementById('lvSlideTextoAlinhamentoChips').innerHTML = lvAlinhamentoChips('setLvSlideTextoAlinhamento', l.slideTextoAlinhamento);
   document.getElementById('lvSlideAlturaLinhaLabel').textContent = l.slideAlturaLinha.toFixed(1);
   document.getElementById('lvSlideEspacamentoLabel').textContent = l.slideEspacamento.toFixed(1);
 }
@@ -693,16 +732,15 @@ function renderLouvorSlidePreview(){
   if(lvSlideIndex < 0) lvSlideIndex = 0;
   document.getElementById('lvSlideCounter').textContent = `${lvSlideIndex+1} / ${total}`;
   const el = document.getElementById('lvSlidePreview');
-  const alinhaFlex = { left:'flex-start', center:'center', right:'flex-end', justify:'center' };
   const espacamentoStyle = `letter-spacing:${l.slideEspacamento}px`;
   if(lvSlideIndex === 0){
-    el.style.alignItems = alinhaFlex[l.slideTituloAlinhamento] || 'center';
-    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:${l.slideTituloAlinhamento};line-height:${l.slideAlturaLinha};${espacamentoStyle}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist">${l.artista||''}</div>`;
+    el.style.alignItems = 'flex-start';
+    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:left;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist" style="text-align:left">${l.artista||''}</div>`;
   }else{
     const s = slides[lvSlideIndex-1];
     const lyricText = s.lines.join('\n');
-    el.style.alignItems = alinhaFlex[l.slideTextoAlinhamento] || 'center';
-    el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${l.slideTextoTamanho/10}vw;text-align:${l.slideTextoAlinhamento};line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lyricText.replace(/\n/g,'<br>')}</div>`;
+    el.style.alignItems = 'center';
+    el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${l.slideTextoTamanho/10}vw;text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lyricText.replace(/\n/g,'<br>')}</div>`;
   }
 }
 function lvSlideNav(delta){
@@ -724,19 +762,18 @@ function exportarLouvorSlides(){
   pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
   pres.layout = 'WIDE';
   const graphiteHex = '25292E';
-  const alinhaPptx = { left:'left', center:'center', right:'right', justify:'justify' };
 
   const capa = pres.addSlide();
   capa.background = { color: graphiteHex };
-  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTituloAlinhamento]||'center', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
-  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:alinhaPptx[l.slideTituloAlinhamento]||'center' });
+  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:'left', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
+  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:'left' });
 
   const { slides } = lvParseContent(l.conteudo);
   slides.forEach(s=>{
     const slide = pres.addSlide();
     slide.background = { color: graphiteHex };
     const lyricText = s.lines.join('\n');
-    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:l.slideTextoTamanho*0.85, bold:true, color:'FFFFFF', align:alinhaPptx[l.slideTextoAlinhamento]||'center', valign:'middle', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
+    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:l.slideTextoTamanho*0.85, bold:true, color:'FFFFFF', align:'center', valign:'middle', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
   });
 
   const nomePartesSlides = [l.artista, l.titulo||'Sem título'].filter(Boolean);

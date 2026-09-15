@@ -37,6 +37,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.13', itens: [
+    'Corrigido: troca de aba não reseta mais a rolagem (não precisa mais arrastar até o fim pra aba nova aparecer)',
+    'Louvor: filtro "Atual" novo (mostra em produção ou com data de hoje em diante), botão de funil pra mostrar/ocultar os filtros, tom e agendamento já na criação do louvor, permite salvar como rascunho sem título',
+    'Louvor: slides agora sempre com o título à esquerda e o texto centralizado, com margem lateral no preview'
+  ]},
   { versao: 'v2.12', itens: [
     'Ajustado: tag de mês das contas antigas não corta mais em Contas a Pagar'
   ]},

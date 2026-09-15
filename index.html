@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.12</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.13</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -210,10 +210,15 @@
 <div class="aba" id="aba-louvor">
 
   <div class="receitas-header">
-    <div class="receitas-search">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="text" id="louvorSearchInput" placeholder="Buscar por título ou artista..." oninput="onLouvorSearchInput(this.value)">
-      <button id="louvorSearchClear" onclick="limparLouvorSearch()" style="display:none">✕</button>
+    <div class="lv-search-row">
+      <div class="receitas-search">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="louvorSearchInput" placeholder="Buscar por título ou artista..." oninput="onLouvorSearchInput(this.value)">
+        <button id="louvorSearchClear" onclick="limparLouvorSearch()" style="display:none">✕</button>
+      </div>
+      <button type="button" class="lv-filtro-toggle active" id="louvorFiltroToggle" onclick="toggleLouvorFiltros()" title="Mostrar/ocultar filtros" aria-label="Mostrar/ocultar filtros">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      </button>
     </div>
 
     <div class="receita-filter-chips" id="louvorFilterChips"></div>
@@ -726,10 +731,11 @@
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
             <button type="button" class="lv-status-btn" id="lvStatusBtn" onclick="toggleLouvorStatus()"></button>
-            <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker()">
+            <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker('edit')">
               <span class="lv-tom-box-lbl">TOM</span>
               <span id="lvTomBoxValor">—</span>
             </button>
+            <input type="date" id="lvDataAgendamento" class="lv-data-agendamento" onchange="salvarLouvorData(this.value)">
           </div>
         </div>
         <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
@@ -824,20 +830,12 @@
           </div>
         </div>
         <div class="field full">
-          <label>Alinhamento do título</label>
-          <div class="dificuldade-chips" id="lvSlideTituloAlinhamentoChips"></div>
-        </div>
-        <div class="field full">
           <label>Tamanho do texto</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(-2)">−</button>
             <span id="lvSlideTextoTamanhoLabel">32pt</span>
             <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(2)">+</button>
           </div>
-        </div>
-        <div class="field full">
-          <label>Alinhamento do texto</label>
-          <div class="dificuldade-chips" id="lvSlideTextoAlinhamentoChips"></div>
         </div>
         <div class="field full">
           <label>Altura da linha no slide</label>
@@ -850,9 +848,9 @@
         <div class="field full">
           <label>Espaçamento de letras</label>
           <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(-0.2)">−</button>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(-0.1)">−</button>
             <span id="lvSlideEspacamentoLabel">0</span>
-            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(0.2)">+</button>
+            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(0.1)">+</button>
           </div>
         </div>
       </div>
@@ -887,8 +885,18 @@
       <input type="text" id="lvNovoArtista" placeholder="Artista / Autor">
     </div>
     <div class="field full">
+      <label>Tom</label>
+      <button type="button" class="lv-tom-box-header" id="lvNovoTomBox" onclick="abrirLvTomPicker('novo')">
+        <span id="lvNovoTomBoxValor">Selecione</span>
+      </button>
+    </div>
+    <div class="field full">
       <label>Categoria</label>
       <div class="dificuldade-chips" id="lvNovoCategoriaChips"></div>
+    </div>
+    <div class="field full">
+      <label>Agendamento</label>
+      <input type="date" id="lvNovoData">
     </div>
     <button class="btn btn-block" onclick="criarLouvor()">Criar e Abrir</button>
   </div>

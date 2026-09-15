@@ -263,6 +263,7 @@ function switchAba(aba){
   document.querySelectorAll('.aba').forEach(el=>el.classList.remove('active'));
   document.getElementById('aba-'+aba).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
+  window.scrollTo(0,0);
   if(aba==='ponto') renderPonto();
   if(aba==='planner') renderPlanner();
   if(aba==='panorama') renderPanorama();
