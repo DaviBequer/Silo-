@@ -205,6 +205,64 @@ function renderPontoSummary(){
   document.getElementById('pontoImpacto').textContent = (r.impacto>=0?'+':'-')+fmtMoney(Math.abs(r.impacto));
 
   renderPontoCompare();
+  renderPontoMetaDiaria(mKey, r);
+  renderPontoSemanasChart(mKey);
+}
+
+function renderPontoMetaDiaria(mKey, r){
+  const el = document.getElementById('pontoMetaDiaria');
+  if(!el) return;
+  if(mKey !== todayKey()){ el.innerHTML = ''; return; }
+  const totalDias = daysInMonth(mKey);
+  const hoje = new Date();
+  let diasUteisRestantes = 0;
+  for(let dia=hoje.getDate()+1; dia<=totalDias; dia++){
+    const d = keyToDate(mKey); d.setDate(dia);
+    const dow = d.getDay();
+    if(dow>=1 && dow<=5) diasUteisRestantes++;
+  }
+  const faltamMin = r.padraoMin - r.totalMin;
+  if(faltamMin <= 0){
+    el.innerHTML = `<div class="fluxo-alerta positivo">✓ Você já bateu (ou passou) a meta de horas do mês</div>`;
+    return;
+  }
+  if(diasUteisRestantes<=0){
+    el.innerHTML = `<div class="fluxo-alerta negativo">⚠️ Faltam ${minToHoursLabel(faltamMin)} e não há mais dias úteis neste mês</div>`;
+    return;
+  }
+  const metaDia = Math.round(faltamMin/diasUteisRestantes);
+  el.innerHTML = `<div class="fluxo-alerta ${metaDia>540?'negativo':'positivo'}">🎯 Faltam ${minToHoursLabel(faltamMin)} em ${diasUteisRestantes} dias úteis — cerca de <b>${minToHoursLabel(metaDia)}/dia</b> pra bater a meta</div>`;
+}
+
+function renderPontoSemanasChart(mKey){
+  const container = document.getElementById('pontoSemanasChart');
+  if(!container) return;
+  const semanas = pontoSemanasDoMes(mKey);
+  if(semanas.length===0){ container.innerHTML = ''; return; }
+  const dados = semanas.map((s,i)=>{
+    let totalMin=0, padraoMin=0;
+    for(let dia=s.inicio; dia<=s.fim; dia++){
+      const d = getDia(mKey,dia);
+      const dt = keyToDate(mKey); dt.setDate(dia);
+      const dow = dt.getDay();
+      if(dow>=1 && dow<=4) padraoMin += PADRAO_SEGQUI_HORAS*60;
+      else if(dow===5) padraoMin += PADRAO_SEX_HORAS*60;
+      totalMin += dayTotalMinutes(d);
+    }
+    return { label:'S'+(i+1), totalMin, padraoMin };
+  });
+  const maxMin = Math.max(...dados.map(d=>Math.max(d.totalMin,d.padraoMin)), 60);
+  container.innerHTML = dados.map(d=>{
+    const pctTotal = Math.min(100, (d.totalMin/maxMin)*100);
+    const abaixo = d.totalMin < d.padraoMin;
+    return `<div class="ponto-semana-col">
+      <div class="ponto-semana-barra-wrap">
+        <div class="ponto-semana-barra ${abaixo?'abaixo':'ok'}" style="height:${pctTotal}%"></div>
+      </div>
+      <div class="ponto-semana-label">${d.label}</div>
+      <div class="ponto-semana-valor">${minToHoursLabel(d.totalMin)}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderPontoCompare(){

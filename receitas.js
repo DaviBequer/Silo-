@@ -226,7 +226,10 @@ function renderReceitaDetalheConteudo(r){
       </div>
     </div>
     <div class="receita-detalhe-body">
-      <div class="receita-view-section-title">Ingredientes</div>
+      <div class="receita-view-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Ingredientes</span>
+        ${(r.ingredientes&&r.ingredientes.length)?`<button type="button" class="link-btn-sm" onclick="enviarIngredientesParaMercado('${r.id}')">+ lista de compras</button>`:''}
+      </div>
       <div class="receita-check-lista">${ingredientesHtml}</div>
 
       <div class="receita-view-section-title">Modo de Preparo</div>
@@ -242,6 +245,20 @@ function toggleIngredienteCheck(recId, idx){
   vibrar(8);
   const r = (state.receitas||[]).find(r=>r.id===recId);
   if(r) renderReceitaDetalheConteudo(r);
+}
+function enviarIngredientesParaMercado(recId){
+  const r = (state.receitas||[]).find(r=>r.id===recId);
+  if(!r || !r.ingredientes || r.ingredientes.length===0) return;
+  let count = 0;
+  r.ingredientes.forEach((ing,i)=>{
+    const checked = !!receitaChecklistState[recId+':'+i];
+    if(checked || !ing.nome) return;
+    state.preListaCompras.push({ id: uid('mp'), nome: ing.nome, quantidade: parseFloat(ing.quantidade)||1, unidade: ing.unidade||'unidades', criadoEm: Date.now() });
+    count++;
+  });
+  if(count===0){ showToast('Todos os ingredientes já estão marcados como disponíveis'); return; }
+  persist();
+  showToast(count+' ingrediente'+(count===1?'':'s')+' adicionado'+(count===1?'':'s')+' à lista de compras (Mercado)');
 }
 function compartilharReceitaAtual(){
   const r = (state.receitas||[]).find(r=>r.id===receitaDetalheAtualId);

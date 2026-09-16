@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.19">
+<link rel="stylesheet" href="style.css?v=2.21">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.19</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.21</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -139,6 +139,7 @@
       <button class="section-add" onclick="openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-moradia"></div>
+    <div id="grid-moradia-arquivados" class="grid-arquivados"></div>
   </div>
 
   <div class="section">
@@ -147,6 +148,7 @@
       <button class="section-add" onclick="openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-assinatura"></div>
+    <div id="grid-assinatura-arquivados" class="grid-arquivados"></div>
   </div>
 
   <div class="section">
@@ -155,14 +157,19 @@
       <button class="section-add" onclick="openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-fixo"></div>
+    <div id="grid-fixo-arquivados" class="grid-arquivados"></div>
   </div>
 
   <div class="section">
     <div class="section-head">
       <div class="section-title">Contas Futuras</div>
-      <button class="section-add" onclick="openGastoModal('futuro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <div style="display:flex;gap:6px">
+        <button class="section-add-label" onclick="openGastoModal('futuro', null, 'simples')">+ Simples</button>
+        <button class="section-add-label" onclick="openGastoModal('futuro', null, 'parcelada')">+ Parcelada</button>
+      </div>
     </div>
     <div id="grid-futuro"></div>
+    <div id="grid-futuro-arquivados" class="grid-arquivados"></div>
   </div>
 
   <div class="card">
@@ -197,6 +204,13 @@
     </div>
 
     <div class="ponto-compare" id="pontoCompareStrip"></div>
+
+    <div id="pontoMetaDiaria" class="ponto-meta-diaria"></div>
+
+    <div class="ponto-semanas-card">
+      <div class="ponto-semanas-titulo">Tendência semanal</div>
+      <div id="pontoSemanasChart" class="ponto-semanas-chart"></div>
+    </div>
 
     <div class="ponto-mes-nav">
       <button onclick="pontoNavMes(-1)">◀</button>
@@ -1501,13 +1515,13 @@ if(versaoArmazenada !== VERSAO_ATUAL){
   }
 }
 </script>
-<script src="core.js?v=2.19"></script>
-<script src="app.js?v=2.19"></script>
-<script src="panorama.js?v=2.19"></script>
-<script src="planner.js?v=2.19"></script>
-<script src="ponto.js?v=2.19"></script>
-<script src="receitas.js?v=2.19"></script>
-<script src="louvor.js?v=2.19"></script>
-<script src="mercado.js?v=2.19"></script>
+<script src="core.js?v=2.21"></script>
+<script src="app.js?v=2.21"></script>
+<script src="panorama.js?v=2.21"></script>
+<script src="planner.js?v=2.21"></script>
+<script src="ponto.js?v=2.21"></script>
+<script src="receitas.js?v=2.21"></script>
+<script src="louvor.js?v=2.21"></script>
+<script src="mercado.js?v=2.21"></script>
 </body>
 </html>

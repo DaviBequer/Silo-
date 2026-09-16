@@ -37,6 +37,19 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.21', itens: [
+    'Novo: gráfico de tendência semanal no Ponto PJ (compara cada semana com o padrão)',
+    'Novo: meta diária sugerida no Ponto PJ (quanto trabalhar por dia útil pra bater a meta do mês)',
+    'Novo: botão nas Receitas pra mandar os ingredientes que faltam direto pra lista de compras do Mercado',
+    'Histórico de preço por item no Mercado já existia — conferido e funcionando'
+  ]},
+  { versao: 'v2.20', itens: [
+    'Novo: duplicar uma conta com 1 toque',
+    'Novo: arquivar conta em vez de excluir (com opção de restaurar depois)',
+    'Novo: "Contas Futuras" agora tem botões separados pra conta simples e conta parcelada/recorrente',
+    'Novo: aviso quando 2 ou mais parcelas (de conta ou cartão) terminam no mesmo mês',
+    'Limite do cartão com barra de comprometimento já existia — conferido e funcionando'
+  ]},
   { versao: 'v2.19', itens: [
     'Novo: "Vilão do Orçamento" mostra qual categoria mais cresceu em relação ao mês anterior',
     'Novo: gasto essencial mínimo do mês, calculado automaticamente',

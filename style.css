@@ -60,6 +60,11 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .section-add{width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur) var(--ease);flex-shrink:0}
 .section-add:hover{border-color:var(--primary);color:var(--primary)}
 .section-add svg{width:14px;height:14px}
+.section-add-label{font-size:10.5px;font-weight:700;color:var(--text-dim);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+.section-add-label:hover{border-color:var(--primary);color:var(--primary)}
+.grid-arquivados{margin-top:4px}
+.link-btn-sm{background:none;border:none;color:var(--text-faint);font-size:11px;font-weight:600;text-decoration:underline;cursor:pointer;padding:6px 2px}
+.list-row-arquivado{opacity:.6}
 
 .list-row{display:flex;align-items:center;justify-content:space-between;padding:var(--s3) var(--s1);border-bottom:1px solid var(--line);gap:var(--s2)}
 .list-row:last-child{border-bottom:none}
@@ -500,6 +505,16 @@ body{padding-bottom:calc(84px + var(--safe))}
 .reserva-proj-barra-fill{height:100%;background:var(--warning);border-radius:6px;transition:width .2s var(--ease)}
 .reserva-proj-linha{font-size:11.5px;color:var(--text-dim);margin-bottom:3px}
 .reserva-proj-ok{color:var(--success);font-weight:700}
+.ponto-meta-diaria{margin-bottom:var(--s3)}
+.ponto-semanas-card{background:var(--card);border-radius:var(--radius-md);padding:var(--s3);margin-bottom:var(--s3)}
+.ponto-semanas-titulo{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:var(--s3)}
+.ponto-semanas-chart{display:flex;align-items:flex-end;gap:10px;height:110px}
+.ponto-semana-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end}
+.ponto-semana-barra-wrap{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;max-width:36px;margin:0 auto}
+.ponto-semana-barra{width:100%;border-radius:6px 6px 0 0;background:var(--success);transition:height .3s var(--ease)}
+.ponto-semana-barra.abaixo{background:var(--warning)}
+.ponto-semana-label{font-size:10px;font-weight:700;color:var(--text-dim);margin-top:6px}
+.ponto-semana-valor{font-size:9.5px;color:var(--text-faint)}
 
 /* ============ RECEITAS — módulo redesenhado ============ */
 
