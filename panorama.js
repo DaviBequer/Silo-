@@ -248,6 +248,8 @@ function renderPanorama(){
   renderAcumTable(months);
   renderPanoCharts();
   renderPanoPonto();
+  renderFluxoCaixa();
+  renderParcelasTerminando();
 
   const userSection = document.getElementById('panoUserSection');
   const colsHtml = ['davi','cris'].map(u=>{
@@ -265,6 +267,7 @@ function renderPanorama(){
 
   document.getElementById('contasMesLabel').textContent = monthLabel(state.focusMonth);
   renderChecklist();
+  renderVencendoEmBreve();
   renderSumarioPanorama();
 }
 
@@ -534,19 +537,153 @@ function getContasDoMes(mKey){
     ['moradia','assinatura','fixo'].forEach(cat=>{
       state.users[u].expenses[cat].forEach(item=>{
         if(item.mesInicio && mKey < item.mesInicio) return;
-        items.push({ user:u, cat, id:item.id, desc:item.desc, valor:item.valor, dia:item.dia||1, logoUrl:item.logoUrl||null });
+        items.push({ user:u, cat, id:item.id, desc:item.desc, valor:item.valor, dia:item.dia||1, logoUrl:item.logoUrl||null, mesInicio:item.mesInicio||null });
       });
     });
     state.users[u].expenses.futuro.forEach(item=>{
       const v = futuroValorNoMes(item, mKey);
       if(v > 0){
         const p = futuroParcelaNoMes(item, mKey);
-        items.push({ user:u, cat:'futuro', id:item.id, desc:item.desc + (p?' ('+p.atual+'/'+p.total+')':''), valor:v, dia:item.dia||1, logoUrl:item.logoUrl||null });
+        items.push({ user:u, cat:'futuro', id:item.id, desc:item.desc + (p?' ('+p.atual+'/'+p.total+')':''), valor:v, dia:item.dia||1, logoUrl:item.logoUrl||null, mesInicio:item.mesInicio||null });
       }
     });
   });
   items.sort((a,b)=> (a.dia||1) - (b.dia||1));
   return items;
+}
+
+/* ================= FLUXO DE CAIXA DIÁRIO ================= */
+function calcularFluxoCaixa(mKey){
+  const eventos = {};
+  const diaRecebimento = state.diaRecebimentoRenda || 5;
+  const renda = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
+  if(renda) eventos[diaRecebimento] = (eventos[diaRecebimento]||0) + renda;
+  getContasDoMes(mKey).forEach(it=>{
+    const d = Math.min(Math.max(parseInt(it.dia)||1,1),28);
+    eventos[d] = (eventos[d]||0) - (Number(it.valor)||0);
+  });
+  const dias = Object.keys(eventos).map(Number).sort((a,b)=>a-b);
+  let acumulado = 0;
+  let pontos = [];
+  let minPonto = null;
+  dias.forEach(d=>{
+    acumulado += eventos[d];
+    const p = { dia:d, delta:eventos[d], saldo:acumulado };
+    pontos.push(p);
+    if(!minPonto || p.saldo < minPonto.saldo) minPonto = p;
+  });
+  return { pontos, minPonto, diaRecebimento };
+}
+function editarDiaRecebimento(){
+  const atual = state.diaRecebimentoRenda || 5;
+  const novo = prompt('Em que dia do mês a renda entra? (usado só pra estimar o fluxo de caixa)', atual);
+  if(novo === null) return;
+  const n = Math.min(28, Math.max(1, parseInt(novo)||5));
+  state.diaRecebimentoRenda = n;
+  persist();
+  renderFluxoCaixa();
+}
+function renderFluxoCaixa(){
+  const mKey = state.focusMonth;
+  const labelEl = document.getElementById('fluxoCaixaMesLabel');
+  if(!labelEl) return;
+  labelEl.textContent = monthLabel(mKey);
+  const { pontos, minPonto } = calcularFluxoCaixa(mKey);
+  const resumoEl = document.getElementById('fluxoCaixaResumo');
+  const listaEl = document.getElementById('fluxoCaixaLista');
+  if(pontos.length===0){
+    resumoEl.innerHTML = `<div class="empty-state-sm">Sem movimentações neste mês</div>`;
+    listaEl.innerHTML = '';
+    return;
+  }
+  if(minPonto && minPonto.saldo < 0){
+    resumoEl.innerHTML = `<div class="fluxo-alerta negativo">⚠️ Ponto mais apertado: dia ${minPonto.dia}, saldo projetado ${fmtMoneySigned(minPonto.saldo)}</div>`;
+  } else {
+    resumoEl.innerHTML = `<div class="fluxo-alerta positivo">✓ O saldo projetado não fica negativo em nenhum dia deste mês</div>`;
+  }
+  listaEl.innerHTML = pontos.map(p=>{
+    const isMin = minPonto && p.dia===minPonto.dia && p.saldo===minPonto.saldo;
+    return `<div class="fluxo-linha${isMin?' fluxo-linha-min':''}">
+      <span class="fluxo-dia">Dia ${p.dia}</span>
+      <span class="fluxo-delta ${p.delta>=0?'positive':'negative'}">${fmtMoneySigned(p.delta)}</span>
+      <span class="fluxo-saldo ${p.saldo>=0?'positive':'negative'}">${fmtMoneySigned(p.saldo)}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ================= PARCELAS TERMINANDO ================= */
+function getParcelasTerminando(mKeyRef, janelaMeses){
+  const resultado = [];
+  ['davi','cris'].forEach(u=>{
+    (state.users[u].expenses.futuro||[]).forEach(item=>{
+      if(item.recorrente) return;
+      const parcelas = item.parcelas || 1;
+      if(parcelas<=1 || !item.mesInicio) return;
+      const mesFim = addMonths(item.mesInicio, parcelas-1);
+      let dentro = false;
+      let m = mKeyRef;
+      for(let i=0;i<janelaMeses;i++){
+        if(m===mesFim){ dentro = true; break; }
+        m = addMonths(m,1);
+      }
+      if(dentro){
+        resultado.push({ user:u, desc:item.desc, valor: futuroValorNoMes(item, mesFim), mesFim });
+      }
+    });
+  });
+  resultado.sort((a,b)=> a.mesFim < b.mesFim ? -1 : 1);
+  return resultado;
+}
+function renderParcelasTerminando(){
+  const card = document.getElementById('cardParcelasTerminando');
+  if(!card) return;
+  const lista = getParcelasTerminando(state.focusMonth, 4);
+  if(lista.length===0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('parcelasTerminandoLista').innerHTML = lista.map(p=>
+    `<div class="parcela-fim-item">
+      <span class="user-tag ${p.user}">${p.user==='davi'?'Davi':'Cris'}</span>
+      <span class="parcela-fim-desc">${p.desc}</span>
+      <span class="parcela-fim-info">termina em <b>${monthLabel(p.mesFim)}</b> · libera ${fmtMoney(p.valor)}/mês</span>
+    </div>`
+  ).join('');
+}
+
+/* ================= LEMBRETE DE VENCIMENTO ================= */
+function diasParaVencimento(it, mKey){
+  if(mKey !== mesFinanceiroAtual()) return null;
+  const d = keyToDate(mKey);
+  const alvo = new Date(d.getFullYear(), d.getMonth(), parseInt(it.dia)||1);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  return Math.round((alvo - hoje) / 86400000);
+}
+function editarDiasAviso(){
+  const atual = state.diasAvisoVencimento ?? 3;
+  const novo = prompt('Avisar com quantos dias de antecedência antes do vencimento?', atual);
+  if(novo === null) return;
+  const n = Math.min(15, Math.max(0, parseInt(novo)||0));
+  state.diasAvisoVencimento = n;
+  persist();
+  renderChecklist();
+}
+function renderVencendoEmBreve(){
+  const el = document.getElementById('vencendoEmBreveBanner');
+  if(!el) return;
+  const mKey = state.focusMonth;
+  const diasAviso = state.diasAvisoVencimento ?? 3;
+  const itens = getContasDoMes(mKey).filter(it=>{
+    const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
+    if(state.paid[paidKey]) return false;
+    const dias = diasParaVencimento(it, mKey);
+    return dias !== null && dias >= 0 && dias <= diasAviso;
+  });
+  if(itens.length===0){ el.style.display = 'none'; el.innerHTML=''; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div class="vencendo-titulo">⏰ Vencendo em breve</div>` + itens.map(it=>{
+    const dias = diasParaVencimento(it, mKey);
+    const label = dias===0 ? 'vence hoje' : (dias===1 ? 'vence amanhã' : `vence em ${dias}d`);
+    return `<div class="vencendo-item"><span>${it.desc}</span><span class="vencendo-tag">${label}</span></div>`;
+  }).join('');
 }
 function contasEmAbertoNoMes(mKey){
   return getContasDoMes(mKey).filter(it=>{
@@ -589,6 +726,11 @@ function renderChecklist(){
       ? `<img src="${it.logoUrl}" class="conta-logo">`
       : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
     const tagMes = it.mesOrigem !== mKey ? `<span class="conta-mes-tag">${monthLabel(it.mesOrigem)}</span>` : '';
+    const isNova = it.mesInicio && it.mesInicio === it.mesOrigem;
+    const diasAviso = state.diasAvisoVencimento ?? 3;
+    const diasVenc = !isPaid ? diasParaVencimento(it, it.mesOrigem) : null;
+    const venceEmBreve = diasVenc !== null && diasVenc >= 0 && diasVenc <= diasAviso;
+    const badges = `${isNova?'<span class="badge-nova">NOVA</span>':''}${venceEmBreve?`<span class="badge-vence">${diasVenc===0?'vence hoje':diasVenc===1?'vence amanhã':'vence em '+diasVenc+'d'}</span>`:''}`;
     return `<div class="check-item-compact ${isPaid?'paid':''}"
       onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
       ${logo}
@@ -596,6 +738,7 @@ function renderChecklist(){
         <div class="desc">${it.desc}</div>
         <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia}${tagMes}</div>
         <div class="valor-linha">${fmtMoney(it.valor)}${isParcial?`<span class="valor-parcial">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
+        ${badges?`<div class="badges-linha">${badges}</div>`:''}
       </div>
     </div>`;
   }).join('');

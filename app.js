@@ -37,6 +37,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.16', itens: [
+    'Novo: Fluxo de Caixa do mês (dia a dia, mostra se o saldo fica apertado em algum ponto antes do fim do mês)',
+    'Novo: aviso de "Parcelas Terminando" (quando uma parcela acaba, mostra quanto isso libera de sobra)',
+    'Novo: selo "NOVA" em contas que apareceram pela primeira vez',
+    'Novo: aviso "Vencendo em breve" configurável (quantos dias antes avisar) em Contas a Pagar'
+  ]},
   { versao: 'v2.15', itens: [
     'Corrigido: arquivos do app ficavam presos em cache antigo mesmo depois de atualizar — agora cada versão força o navegador a baixar os arquivos certos'
   ]},
