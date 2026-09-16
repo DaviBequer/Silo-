@@ -1,15 +1,16 @@
-const CACHE_NAME = 'siloe-cache-v6';
+const CACHE_NAME = 'siloe-cache-v7';
+const APP_VERSION = '2.15';
 const ARQUIVOS = [
   './index.html',
-  './style.css',
-  './app.js',
-  './core.js',
-  './panorama.js',
-  './planner.js',
-  './ponto.js',
-  './receitas.js',
-  './louvor.js',
-  './mercado.js',
+  `./style.css?v=${APP_VERSION}`,
+  `./app.js?v=${APP_VERSION}`,
+  `./core.js?v=${APP_VERSION}`,
+  `./panorama.js?v=${APP_VERSION}`,
+  `./planner.js?v=${APP_VERSION}`,
+  `./ponto.js?v=${APP_VERSION}`,
+  `./receitas.js?v=${APP_VERSION}`,
+  `./louvor.js?v=${APP_VERSION}`,
+  `./mercado.js?v=${APP_VERSION}`,
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
