@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.14', itens: [
+    'Corrigido: navegação travava no Panorama e as outras abas só apareciam rolando pra baixo — havia uma função de troca de aba antiga e duplicada; removidas todas as duplicatas escondidas no código (mesma causa do bug de rolagem anterior)'
+  ]},
   { versao: 'v2.13', itens: [
     'Corrigido: troca de aba não reseta mais a rolagem (não precisa mais arrastar até o fim pra aba nova aparecer)',
     'Louvor: filtro "Atual" novo (mostra em produção ou com data de hoje em diante), botão de funil pra mostrar/ocultar os filtros, tom e agendamento já na criação do louvor, permite salvar como rascunho sem título',
@@ -97,68 +100,9 @@ function abrirImportExportModal(){
   console.log('[STORAGE DEBUG] Done!');
 }
 
-function exportarDadosApp(){
-  const versaoEl = document.querySelector('.header-version');
-  const backup = {
-    app: 'Siloe',
-    versaoApp: versaoEl ? versaoEl.textContent.trim() : '',
-    exportadoEm: new Date().toISOString(),
-    mesAtual: mesAtualRef,
-    logo: localStorage.getItem('siloe-logo') || null,
-    state: state
-  };
-  const dataStr = JSON.stringify(backup, null, 2);
-  const blob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Siloe-backup-${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  closeModal('modalImportExport');
-}
+/* exportarDadosApp / triggerImportarDados / onImportFileSelected vivem em mercado.js */
 
-function triggerImportarDados(){
-  document.getElementById('importFileInput').click();
-}
-
-function onImportFileSelected(event){
-  const file = event.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try{
-      const backup = JSON.parse(e.target.result);
-      if(!backup || !backup.state){
-        showToast('Arquivo inválido');
-        return;
-      }
-      const msg = `Importar ${backup.versaoApp}? Dados atuais serão sobrescritos.`;
-      if(iosConfirm(msg)){
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.state));
-        if(backup.mesAtual) localStorage.setItem(MES_ATUAL_KEY, backup.mesAtual);
-        if(backup.logo) localStorage.setItem('siloe-logo', backup.logo);
-        mesAtualRef = backup.mesAtual || mesAtualRef;
-        carregar();
-        renderAll();
-        showToast('Importado com sucesso!');
-        closeModal('modalImportExport');
-      }
-    }catch(err){
-      console.error('Erro ao importar:', err);
-      showToast('Erro ao importar arquivo');
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-function abrirModalAtualizacoes(){
-  document.getElementById('modalAtualizacoes').classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
-
-/* ========== MODAIS ========== */
+/* ========== MODAIS ================= */
 function closeModal(modalId){
   const modal = document.getElementById(modalId);
   if(modal){
@@ -167,47 +111,5 @@ function closeModal(modalId){
   }
 }
 
-function showToast(msg){
-  const existing = document.getElementById('toast');
-  if(existing) existing.remove();
-  const toast = document.createElement('div');
-  toast.id = 'toast';
-  toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 20px;border-radius:6px;font-size:14px;z-index:10000;animation:slideUp 0.3s';
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
-
-function iosConfirm(msg){
-  return confirm(msg);
-}
-
-function iosConfirmResolver(msg){
-  return new Promise(resolve => {
-    if(confirm(msg)) resolve(true);
-    else resolve(false);
-  });
-}
-
 /* ========== NAVEGAÇÃO ========== */
-function switchAba(aba){
-  const abas = ['pano', 'plan', 'ponto', 'receitas', 'louvor', 'mercado'];
-  abas.forEach(a => {
-    const el = document.getElementById(`aba-${a}`);
-    if(el) el.style.display = a === aba ? 'block' : 'none';
-  });
-  const buttons = document.querySelectorAll('.bottom-nav button');
-  buttons.forEach(btn => btn.style.opacity = btn.dataset.aba === aba ? '1' : '0.6');
-  if(aba === 'pano') renderPanorama();
-  else if(aba === 'plan') renderPlanner();
-  else if(aba === 'ponto') renderPonto();
-  else if(aba === 'receitas') renderReceitas();
-  else if(aba === 'louvor') renderLouvor();
-  else if(aba === 'mercado') renderMercado();
-}
-
-function switchUser(user){
-  state.currentUser = user;
-  persist();
-  renderAll();
-}
+/* switchAba e switchUser vivem em core.js */

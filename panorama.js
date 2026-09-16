@@ -237,7 +237,7 @@ function salvarMetas(){
   showToast('Metas salvas com sucesso!');
 }
 
-function renderAll(){ renderPanorama(); renderPlanner(); renderPonto(); }
+/* renderAll vive em app.js (chama todas as 6 abas) */
 
 function renderPanorama(){
   const months = getPanoWindowMonths();

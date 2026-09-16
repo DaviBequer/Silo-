@@ -275,8 +275,8 @@ function switchUser(user){
   state.currentUser = user;
   document.getElementById('tabDavi').classList.toggle('active', user==='davi');
   document.getElementById('tabCris').classList.toggle('active', user==='cris');
-  renderPlanner();
   persist();
+  renderAll();
 }
 
 /* ================= CÁLCULOS FINANCEIROS ================= */
