@@ -37,6 +37,22 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.19', itens: [
+    'Novo: "Vilão do Orçamento" mostra qual categoria mais cresceu em relação ao mês anterior',
+    'Novo: gasto essencial mínimo do mês, calculado automaticamente',
+    'Novo: marcar conta como essencial ou não-essencial',
+    'Novo: aviso quando uma assinatura muda de valor (compara com o valor anterior)',
+    'Novo: o dia de vencimento agora muda de cor conforme a proximidade (vermelho = urgente, laranja = próximo)'
+  ]},
+  { versao: 'v2.18', itens: [
+    'Novo: comparativo do mês atual com o mesmo mês do ano passado',
+    'Novo: simulador de aumento de renda dentro do "Gerar Orçamento" (não altera seus dados reais)',
+    'Novo: gastos podem ser marcados como Fixa ou Variável, com sugestão de média das últimas alterações',
+    'Novo: Reserva agora tem meta e "quanto guardar por mês", com barra de progresso e previsão de quando bate a meta'
+  ]},
+  { versao: 'v2.17', itens: [
+    'Removida a aba de Tarefas do Planner'
+  ]},
   { versao: 'v2.16', itens: [
     'Novo: Fluxo de Caixa do mês (dia a dia, mostra se o saldo fica apertado em algum ponto antes do fim do mês)',
     'Novo: aviso de "Parcelas Terminando" (quando uma parcela acaba, mostra quanto isso libera de sobra)',

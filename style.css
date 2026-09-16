@@ -115,11 +115,20 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .parcela-fim-item:last-child{border-bottom:none}
 .parcela-fim-desc{font-weight:600;color:var(--text)}
 .parcela-fim-info{color:var(--text-faint);font-size:11px}
+.comp-ano-linha{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 2px;font-size:12.5px;border-bottom:1px solid var(--line)}
+.comp-ano-linha:last-child{border-bottom:none}
 
 /* Badges de conta (nova / vencendo) */
 .badges-linha{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}
 .badge-nova{font-size:8.5px;font-weight:800;color:#fff;background:var(--primary);padding:2px 6px;border-radius:8px;text-transform:uppercase}
 .badge-vence{font-size:8.5px;font-weight:800;color:var(--warning);background:var(--warning-tint);padding:2px 6px;border-radius:8px;text-transform:uppercase}
+.badge-variavel{font-size:8.5px;font-weight:800;color:#7B5FA6;background:rgba(123,95,166,.12);padding:2px 6px;border-radius:8px;text-transform:uppercase}
+.badge-nao-essencial{font-size:8.5px;font-weight:800;color:var(--text-dim);background:var(--card-2);border:1px solid var(--line);padding:2px 6px;border-radius:8px;text-transform:uppercase}
+.badge-mudou{font-size:8.5px;font-weight:800;color:var(--danger);background:var(--danger-tint);padding:2px 6px;border-radius:8px;text-transform:uppercase}
+.dia-tag.dia-urgente{color:var(--danger);font-weight:800}
+.dia-tag.dia-proximo{color:var(--warning);font-weight:800}
+.dia-tag.dia-distante{color:var(--text-faint)}
+.gasto-media-hint-btn{margin-top:6px;font-size:11px;font-weight:600;color:var(--primary);background:var(--primary-tint);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;width:100%;text-align:left}
 
 /* Vencendo em breve (banner) */
 #vencendoEmBreveBanner{background:var(--warning-tint);border-radius:10px;padding:10px 12px;margin-bottom:var(--s3)}
@@ -486,6 +495,11 @@ body{padding-bottom:calc(84px + var(--safe))}
 
 .reserva-badge{display:flex;justify-content:space-between;align-items:center;margin-top:var(--s2);padding:var(--s2) var(--s3);border-radius:var(--radius-sm);background:var(--warning-tint);cursor:pointer;font-size:11.5px;color:var(--text-dim);font-weight:600}
 .reserva-badge b{color:var(--text);font-weight:800;font-size:13px}
+.reserva-badge-pct{background:var(--warning);color:#fff;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:800}
+.reserva-proj-barra{height:8px;border-radius:6px;background:var(--card-2);overflow:hidden;margin-bottom:6px}
+.reserva-proj-barra-fill{height:100%;background:var(--warning);border-radius:6px;transition:width .2s var(--ease)}
+.reserva-proj-linha{font-size:11.5px;color:var(--text-dim);margin-bottom:3px}
+.reserva-proj-ok{color:var(--success);font-weight:700}
 
 /* ============ RECEITAS — módulo redesenhado ============ */
 

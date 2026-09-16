@@ -251,10 +251,37 @@ function renderPlannerSaldoModoBtn(){
 
 function openReservaModal(){
   document.getElementById('reservaValorInput').value = state.reserva ? state.reserva.toFixed(2).replace('.',',') : '';
+  document.getElementById('reservaMetaInput').value = state.reservaMeta ? state.reservaMeta.toFixed(2).replace('.',',') : '';
+  document.getElementById('reservaAporteInput').value = state.reservaAporte ? state.reservaAporte.toFixed(2).replace('.',',') : '';
+  atualizarReservaProjecao();
   document.getElementById('modalReserva').classList.add('active');
+}
+function atualizarReservaProjecao(){
+  const el = document.getElementById('reservaProjecao');
+  if(!el) return;
+  const atual = parseMoney(document.getElementById('reservaValorInput').value) || 0;
+  const meta = parseMoney(document.getElementById('reservaMetaInput').value) || 0;
+  const aporte = parseMoney(document.getElementById('reservaAporteInput').value) || 0;
+  if(meta <= 0){ el.innerHTML = ''; return; }
+  const falta = Math.max(0, meta - atual);
+  const pct = Math.min(100, Math.round((atual/meta)*100));
+  let linhaMeses = '';
+  if(falta > 0 && aporte > 0){
+    const meses = Math.ceil(falta/aporte);
+    linhaMeses = `<div class="reserva-proj-linha">No ritmo de ${fmtMoney(aporte)}/mês, faltam <b>${meses} ${meses===1?'mês':'meses'}</b> pra bater a meta</div>`;
+  } else if(falta === 0){
+    linhaMeses = `<div class="reserva-proj-linha reserva-proj-ok">🎉 Meta batida!</div>`;
+  }
+  el.innerHTML = `
+    <div class="reserva-proj-barra"><div class="reserva-proj-barra-fill" style="width:${pct}%"></div></div>
+    <div class="reserva-proj-linha">${fmtMoney(atual)} de ${fmtMoney(meta)} (${pct}%)${falta>0?' · faltam '+fmtMoney(falta):''}</div>
+    ${linhaMeses}
+  `;
 }
 function salvarReserva(){
   state.reserva = parseMoney(document.getElementById('reservaValorInput').value);
+  state.reservaMeta = parseMoney(document.getElementById('reservaMetaInput').value) || 0;
+  state.reservaAporte = parseMoney(document.getElementById('reservaAporteInput').value) || 0;
   persist();
   closeModal('modalReserva');
   renderReservaBadge();
@@ -265,7 +292,9 @@ function renderReservaBadge(){
   if(!el) return;
   if(state.reserva && state.reserva > 0){
     el.style.display = 'flex';
-    el.innerHTML = `<span>Reservado</span><b>${fmtMoney(state.reserva)}</b>`;
+    const meta = state.reservaMeta || 0;
+    const pctTxt = meta > 0 ? ` <span class="reserva-badge-pct">${Math.min(100,Math.round((state.reserva/meta)*100))}%</span>` : '';
+    el.innerHTML = `<span>Reservado</span><b>${fmtMoney(state.reserva)}</b>${pctTxt}`;
   } else {
     el.style.display = 'none';
   }
@@ -752,6 +781,52 @@ function renderParcelasValoresInputs(existingValores){
 }
 
 let gastoLogoUrlAtual = null;
+let gastoTipoAtual = 'fixa';
+let gastoEssencialAtual = true;
+function renderGastoTipoChips(){
+  const el = document.getElementById('gastoTipoChips');
+  if(!el) return;
+  el.innerHTML = ['fixa','variavel'].map(t=>
+    `<button type="button" class="dif-chip${gastoTipoAtual===t?' active':''}" onclick="setGastoTipo('${t}')">${t==='fixa'?'Fixa':'Variável'}</button>`
+  ).join('');
+}
+function renderGastoEssencialChips(){
+  const el = document.getElementById('gastoEssencialChips');
+  if(!el) return;
+  el.innerHTML = [[true,'Essencial'],[false,'Não essencial']].map(([v,label])=>
+    `<button type="button" class="dif-chip${gastoEssencialAtual===v?' active':''}" onclick="setGastoEssencial(${v})">${label}</button>`
+  ).join('');
+}
+function setGastoEssencial(v){
+  gastoEssencialAtual = v;
+  renderGastoEssencialChips();
+}
+function setGastoTipo(t){
+  gastoTipoAtual = t;
+  renderGastoTipoChips();
+  atualizarGastoMediaHint();
+}
+function mediaHistoricoGasto(item){
+  if(!item || !item.historico || item.historico.length===0) return null;
+  const ultimos = item.historico.slice(-3);
+  const soma = ultimos.reduce((s,h)=>s+(Number(h.valor)||0),0);
+  return soma / ultimos.length;
+}
+function atualizarGastoMediaHint(){
+  const hint = document.getElementById('gastoMediaHint');
+  if(!hint) return;
+  const id = document.getElementById('gastoId').value;
+  const cat = document.getElementById('gastoCat').value;
+  if(gastoTipoAtual!=='variavel' || !id){ hint.style.display='none'; hint.innerHTML=''; return; }
+  const item = state.users[state.currentUser].expenses[cat].find(i=>i.id===id);
+  const media = mediaHistoricoGasto(item);
+  if(media===null){ hint.style.display='none'; hint.innerHTML=''; return; }
+  hint.style.display = 'block';
+  hint.innerHTML = `<button type="button" class="gasto-media-hint-btn" onclick="usarMediaGasto(${media.toFixed(2)})">Média das últimas alterações: ${fmtMoney(media)} · usar</button>`;
+}
+function usarMediaGasto(valor){
+  document.getElementById('gastoValor').value = valor.toFixed(2).replace('.',',');
+}
 function renderGastoLogoPreview(){
   const el = document.getElementById('gastoLogoPreview');
   const desc = document.getElementById('gastoDesc').value || '?';
@@ -784,6 +859,8 @@ function openGastoModal(cat, id){
       gastoLogoUrlAtual = item.logoUrl || null;
       document.getElementById('gastoValor').value = (item.valor||0).toFixed(2).replace('.',',');
       document.getElementById('gastoDia').value = item.dia || '';
+      gastoTipoAtual = item.tipo || 'fixa';
+      gastoEssencialAtual = item.essencial !== false;
       createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', item.mesInicio || null);
 
       if(cat==='futuro'){
@@ -804,12 +881,19 @@ function openGastoModal(cat, id){
     gastoLogoUrlAtual = null;
     document.getElementById('gastoValor').value = '';
     document.getElementById('gastoDia').value = '';
+    gastoTipoAtual = 'fixa';
+    gastoEssencialAtual = true;
     createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', null);
     document.getElementById('gastoRecorrente').checked = false;
     createMonthPicker('gastoMesInicioPicker', 'gastoMesInicio', mesFinanceiroAtual(), onGastoMesInicioChange);
     document.getElementById('gastoParcelas').value = 1;
     document.getElementById('gastoReplicar').checked = true;
   }
+  document.getElementById('gastoTipoWrap').style.display = cat==='futuro' ? 'none' : 'block';
+  document.getElementById('gastoEssencialWrap').style.display = cat==='futuro' ? 'none' : 'block';
+  renderGastoTipoChips();
+  renderGastoEssencialChips();
+  atualizarGastoMediaHint();
   renderGastoLogoPreview();
   updateGastoFieldsVisibility();
   document.getElementById('modalGasto').classList.add('active');
@@ -842,13 +926,18 @@ function saveGasto(){
   }else{
     const valor = parseMoney(document.getElementById('gastoValor').value);
     const mesInicio = document.getElementById('gastoMesInicioSimples').value || null;
-    novo = { desc, descricao, logoUrl, valor, dia, mesInicio };
+    novo = { desc, descricao, logoUrl, valor, dia, mesInicio, tipo: gastoTipoAtual, essencial: gastoEssencialAtual };
   }
 
   const list = state.users[state.currentUser].expenses[cat];
   if(id){
     const item = list.find(i=>i.id===id);
-    if(item) Object.assign(item, novo);
+    if(item){
+      if(cat!=='futuro' && Number(item.valor)!==novo.valor && Number(item.valor)>0){
+        item.historico = (item.historico||[]).concat([{ mKey: mesFinanceiroAtual(), valor: item.valor }]).slice(-6);
+      }
+      Object.assign(item, novo);
+    }
   }else{
     list.push(Object.assign({ id: 'g'+Date.now()+Math.floor(Math.random()*1000) }, novo));
   }
