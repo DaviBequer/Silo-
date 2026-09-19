@@ -37,6 +37,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.22', itens: [
+    'Novo: Panorama dividido em abas internas (Resumo / Contas / Ponto) pra não depender só de scroll',
+    'Novo: busca única (ícone de lupa no topo) que procura em contas, receitas, louvor e mercado de uma vez',
+    'Novo: backup automático diário guardado neste navegador, com opção de restaurar (não substitui exportar de vez em quando)',
+    'Ajustado: telas grandes de computador agora aproveitam melhor o espaço',
+    'Novo: barra "Biblioteca / Estúdio" no Louvor pra alternar rápido entre a lista de músicas e a música que você está editando'
+  ]},
   { versao: 'v2.21', itens: [
     'Novo: gráfico de tendência semanal no Ponto PJ (compara cada semana com o padrão)',
     'Novo: meta diária sugerida no Ponto PJ (quanto trabalhar por dia útil pra bater a meta do mês)',
@@ -106,11 +113,30 @@ function renderChangelog(){
   `).join('');
 }
 
+function renderBackupsAutoLista(){
+  const el = document.getElementById('backupsAutoLista');
+  if(!el) return;
+  const backups = listarBackupsAutomaticos();
+  if(backups.length===0){
+    el.innerHTML = `<div class="empty-state-sm" style="padding:8px 0">Nenhum backup automático ainda</div>`;
+    return;
+  }
+  el.innerHTML = backups.map(b=>{
+    const dataLabel = new Date(b.dia+'T00:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+    return `<div class="busca-resultado-item" style="padding:8px 4px">
+      <span class="busca-resultado-icon">🕐</span>
+      <div class="busca-resultado-info"><div class="busca-resultado-label">${dataLabel}</div><div class="busca-resultado-meta">${b.versao||''}</div></div>
+      <button class="link-btn-sm" onclick="restaurarBackupAutomatico('${b.dia}')">Restaurar</button>
+    </div>`;
+  }).join('');
+}
+
 function abrirImportExportModal(){
   console.log('[STORAGE DEBUG] Abrindo modal');
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
   renderChangelog();
+  renderBackupsAutoLista();
   
   console.log('[STORAGE DEBUG] localStorage.length:', localStorage.length);
   const storage = calcularStorageUsage();
@@ -140,7 +166,82 @@ function abrirImportExportModal(){
 
 /* exportarDadosApp / triggerImportarDados / onImportFileSelected vivem em mercado.js */
 
-/* ========== MODAIS ================= */
+/* ========== BUSCA GLOBAL ========== */
+function abrirBuscaGlobal(){
+  document.getElementById('buscaGlobalInput').value = '';
+  document.getElementById('buscaGlobalResultados').innerHTML = '';
+  document.getElementById('modalBuscaGlobal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(()=>{ const el = document.getElementById('buscaGlobalInput'); if(el) el.focus(); }, 150);
+}
+function onBuscaGlobalInput(v){
+  const termo = v.trim().toLowerCase();
+  const el = document.getElementById('buscaGlobalResultados');
+  if(termo.length < 2){ el.innerHTML = ''; return; }
+  const resultados = [];
+
+  ['davi','cris'].forEach(u=>{
+    ['moradia','fixo','assinatura','futuro'].forEach(cat=>{
+      (state.users[u].expenses[cat]||[]).forEach(item=>{
+        if(item.arquivado) return;
+        if((item.desc||'').toLowerCase().includes(termo)){
+          resultados.push({ label:item.desc, meta:'Conta · '+(u==='davi'?'Davi':'Cris')+' · '+fmtMoney(item.valor), icon:'💰', onclick:`irParaBuscaConta('${u}','${cat}','${item.id}')` });
+        }
+      });
+    });
+  });
+
+  (state.receitas||[]).forEach(r=>{
+    if((r.nome||'').toLowerCase().includes(termo)){
+      resultados.push({ label:r.nome, meta:'Receita', icon:'🍲', onclick:`irParaBuscaReceita('${r.id}')` });
+    }
+  });
+
+  (state.louvores||[]).forEach(l=>{
+    if((l.titulo||'').toLowerCase().includes(termo) || (l.artista||'').toLowerCase().includes(termo)){
+      resultados.push({ label:l.titulo||'Sem título', meta:'Louvor · '+(l.artista||''), icon:'🎵', onclick:`irParaBuscaLouvor('${l.id}')` });
+    }
+  });
+
+  (state.estoque||[]).forEach(e=>{
+    if((e.nome||'').toLowerCase().includes(termo)){
+      resultados.push({ label:e.nome, meta:'Mercado', icon:'🛒', onclick:`irParaBuscaMercado('${e.id}')` });
+    }
+  });
+
+  if(resultados.length===0){
+    el.innerHTML = `<div class="empty-state-sm">Nada encontrado</div>`;
+    return;
+  }
+  el.innerHTML = resultados.slice(0,40).map(r=>
+    `<div class="busca-resultado-item" onclick="${r.onclick}">
+      <span class="busca-resultado-icon">${r.icon}</span>
+      <div class="busca-resultado-info"><div class="busca-resultado-label">${r.label}</div><div class="busca-resultado-meta">${r.meta}</div></div>
+    </div>`
+  ).join('');
+}
+function irParaBuscaConta(user, cat, id){
+  closeModal('modalBuscaGlobal');
+  state.currentUser = user;
+  switchAba('planner');
+  setTimeout(()=>editGasto(cat, id), 200);
+}
+function irParaBuscaReceita(id){
+  closeModal('modalBuscaGlobal');
+  switchAba('receitas');
+  setTimeout(()=>abrirReceitaDetalhe(id), 200);
+}
+function irParaBuscaLouvor(id){
+  closeModal('modalBuscaGlobal');
+  switchAba('louvor');
+  setTimeout(()=>abrirLouvorDetalhe(id), 200);
+}
+function irParaBuscaMercado(id){
+  closeModal('modalBuscaGlobal');
+  switchAba('mercado');
+  setTimeout(()=>abrirEstoqueForm(id), 200);
+}
+
 function closeModal(modalId){
   const modal = document.getElementById(modalId);
   if(modal){

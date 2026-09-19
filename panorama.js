@@ -1,5 +1,15 @@
 /* ================= RENDER: PANORAMA ================= */
 /* ================= PLANEJADOR DE METAS / SIMULADOR ================= */
+let panoSubtabAtiva = 'resumo';
+function switchPanoSubtab(tab){
+  panoSubtabAtiva = tab;
+  document.querySelectorAll('.pano-subtab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
+  document.getElementById('panoPanelResumo').classList.toggle('active', tab==='resumo');
+  document.getElementById('panoPanelContas').classList.toggle('active', tab==='contas');
+  document.getElementById('panoPanelPonto').classList.toggle('active', tab==='ponto');
+  window.scrollTo(0,0);
+}
+
 let simuladorMetas = [];
 let simuladorAumentoRendaPercent = 0;
 
@@ -701,9 +711,23 @@ function getParcelasTerminando(mKeyRef, janelaMeses){
         m = addMonths(m,1);
       }
       if(dentro){
-        resultado.push({ user:u, desc:item.desc, valor: futuroValorNoMes(item, mesFim), mesFim });
+        resultado.push({ user:u, desc:item.desc, valor: futuroValorNoMes(item, mesFim), mesFim, origem:'conta' });
       }
     });
+  });
+  (state.comprasTracker||[]).forEach(item=>{
+    if(item.pago || !item.mesInicio) return;
+    const c = compraTrackerCalc(item);
+    if(!c.mesFim || c.parcelas<=1) return;
+    let dentro = false;
+    let m = mKeyRef;
+    for(let i=0;i<janelaMeses;i++){
+      if(m===c.mesFim){ dentro = true; break; }
+      m = addMonths(m,1);
+    }
+    if(dentro){
+      resultado.push({ user:null, desc:item.nome+' (cartão)', valor:c.valorParcela, mesFim:c.mesFim, origem:'cartao' });
+    }
   });
   resultado.sort((a,b)=> a.mesFim < b.mesFim ? -1 : 1);
   return resultado;
@@ -714,9 +738,14 @@ function renderParcelasTerminando(){
   const lista = getParcelasTerminando(state.focusMonth, 4);
   if(lista.length===0){ card.style.display = 'none'; return; }
   card.style.display = 'block';
-  document.getElementById('parcelasTerminandoLista').innerHTML = lista.map(p=>
+  const porMes = {};
+  lista.forEach(p=>{ porMes[p.mesFim] = (porMes[p.mesFim]||0)+1; });
+  const avisoJuntas = Object.keys(porMes).filter(m=>porMes[m]>=2)
+    .map(m=>`<div class="fluxo-alerta negativo">⚠️ ${porMes[m]} parcelas terminam juntas em ${monthLabel(m)} — cuidado pra não gastar o alívio todo em outra coisa</div>`)
+    .join('');
+  document.getElementById('parcelasTerminandoLista').innerHTML = avisoJuntas + lista.map(p=>
     `<div class="parcela-fim-item">
-      <span class="user-tag ${p.user}">${p.user==='davi'?'Davi':'Cris'}</span>
+      ${p.user?`<span class="user-tag ${p.user}">${p.user==='davi'?'Davi':'Cris'}</span>`:''}
       <span class="parcela-fim-desc">${p.desc}</span>
       <span class="parcela-fim-info">termina em <b>${monthLabel(p.mesFim)}</b> · libera ${fmtMoney(p.valor)}/mês</span>
     </div>`

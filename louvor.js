@@ -1,3 +1,38 @@
+function lvContextoAtivo(){
+  const abaLouvorAtiva = document.getElementById('aba-louvor')?.classList.contains('active');
+  const detalheAtivo = document.getElementById('pageLouvorDetalhe')?.classList.contains('active');
+  const formAtivo = document.getElementById('pageLouvorForm')?.classList.contains('active');
+  return abaLouvorAtiva || detalheAtivo || formAtivo;
+}
+function atualizarLvNavBar(){
+  const bar = document.getElementById('lvNavBar');
+  if(!bar) return;
+  const ativo = lvContextoAtivo();
+  bar.classList.toggle('show', ativo);
+  document.body.classList.toggle('lv-nav-active', ativo);
+  const naBiblioteca = document.getElementById('aba-louvor')?.classList.contains('active');
+  document.getElementById('lvNavBiblioteca')?.classList.toggle('active', !!naBiblioteca);
+  document.getElementById('lvNavEstudio')?.classList.toggle('active', !naBiblioteca && ativo);
+}
+function lvIrParaBiblioteca(){
+  document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
+  document.getElementById('pageLouvorForm')?.classList.remove('active');
+  document.body.style.overflow = '';
+  switchAba('louvor');
+  atualizarLvNavBar();
+}
+function lvIrParaEstudio(){
+  if(louvorAtualId && getLouvorAtual()){
+    abrirLouvorDetalhe(louvorAtualId);
+  } else if(state.louvores && state.louvores.length>0){
+    const maisRecente = state.louvores.slice().sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0))[0];
+    abrirLouvorDetalhe(maisRecente.id);
+  } else {
+    openLouvorForm();
+  }
+  atualizarLvNavBar();
+}
+
 /* ================= LOUVOR ================= */
 const LOUVOR_CATEGORIAS = ['Louvor','Harpa Cristã','Corinhos'];
 let louvorFiltroAtivo = 'Atual';
@@ -93,9 +128,12 @@ function openLouvorForm(){
   atualizarLvNovoTomBox();
   document.getElementById('pageLouvorForm').classList.add('active');
   window.scrollTo(0,0);
+  atualizarLvNavBar();
 }
 function closeLouvorForm(){
   document.getElementById('pageLouvorForm').classList.remove('active');
+  document.body.style.overflow = '';
+  atualizarLvNavBar();
 }
 function renderLvNovoCategoriaChips(){
   document.getElementById('lvNovoCategoriaChips').innerHTML = LOUVOR_CATEGORIAS.map(c=>
@@ -148,6 +186,7 @@ function abrirLouvorDetalhe(id){
   switchLouvorSubtab('edicao');
   document.getElementById('pageLouvorDetalhe').classList.add('active');
   window.scrollTo(0,0);
+  atualizarLvNavBar();
 }
 function renderLvStatusBtn(){
   const l = getLouvorAtual(); if(!l) return;
@@ -166,6 +205,7 @@ function closeLouvorDetalhe(){
   document.getElementById('pageLouvorDetalhe').classList.remove('active');
   louvorAtualId = null;
   renderLouvor();
+  atualizarLvNavBar();
 }
 function renderLvCategoriaChips(){
   const l = getLouvorAtual(); if(!l) return;
