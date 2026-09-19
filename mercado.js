@@ -6,6 +6,78 @@ let estoqueItemAtualId = null;
 
 function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
+/* ================= SCANNER DE QR (cupom fiscal) — EXPERIMENTAL ================= */
+let scannerQRStream = null;
+let scannerQRRAF = null;
+let scannerQRUrlEncontrada = null;
+
+function abrirScannerQR(){
+  document.getElementById('scannerQRResultado').style.display = 'none';
+  const statusEl = document.getElementById('scannerQRStatus');
+  statusEl.textContent = 'Aponte a câmera pro QR Code do cupom';
+  statusEl.style.display = 'block';
+  scannerQRUrlEncontrada = null;
+  document.getElementById('modalScannerQR').classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    statusEl.textContent = 'Este navegador não permite acessar a câmera aqui.';
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream=>{
+    scannerQRStream = stream;
+    const video = document.getElementById('scannerQRVideo');
+    video.srcObject = stream;
+    video.play();
+    scannerQRRAF = requestAnimationFrame(scannerQRLoop);
+  }).catch(()=>{
+    statusEl.textContent = 'Não consegui acessar a câmera — verifique a permissão do navegador.';
+  });
+}
+
+function scannerQRLoop(){
+  const video = document.getElementById('scannerQRVideo');
+  if(video && video.readyState === video.HAVE_ENOUGH_DATA && typeof jsQR==='function'){
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if(code && code.data){
+      scannerQRUrlEncontrada = code.data;
+      document.getElementById('scannerQRLink').textContent = code.data;
+      document.getElementById('scannerQRResultado').style.display = 'block';
+      document.getElementById('scannerQRStatus').style.display = 'none';
+      pararScannerQRStream();
+      return;
+    }
+  }
+  scannerQRRAF = requestAnimationFrame(scannerQRLoop);
+}
+
+function pararScannerQRStream(){
+  if(scannerQRRAF) cancelAnimationFrame(scannerQRRAF);
+  scannerQRRAF = null;
+  if(scannerQRStream){
+    scannerQRStream.getTracks().forEach(t=>t.stop());
+    scannerQRStream = null;
+  }
+}
+
+function fecharScannerQR(){
+  pararScannerQRStream();
+  document.getElementById('modalScannerQR').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function abrirLinkScanner(){
+  if(!scannerQRUrlEncontrada) return;
+  window.open(scannerQRUrlEncontrada, '_blank');
+}
+
+
 function renderMercado(){
   renderPreListaView();
   renderListaComprasView();

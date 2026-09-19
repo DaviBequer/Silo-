@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.23', itens: [
+    '[Teste] Escanear QR de cupom fiscal no Mercado, abre o link no navegador pra você conferir o que dá pra aproveitar'
+  ]},
   { versao: 'v2.22', itens: [
     'Novo: Panorama dividido em abas internas (Resumo / Contas / Ponto) pra não depender só de scroll',
     'Novo: busca única (ícone de lupa no topo) que procura em contas, receitas, louvor e mercado de uma vez',
