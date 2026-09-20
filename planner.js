@@ -324,14 +324,53 @@ function futuroDescricaoMeta(item){
   return monthLabel(item.mesInicio)+' a '+monthLabel(fim)+(p?' · '+p.atual+'/'+p.total:' · '+parcelas+'x');
 }
 
+let gastoMostrarArquivados = {};
+function toggleArquivadosGasto(cat){
+  gastoMostrarArquivados[cat] = !gastoMostrarArquivados[cat];
+  renderGastoGrid(cat);
+}
+function duplicarGasto(cat, id){
+  const list = state.users[state.currentUser].expenses[cat];
+  const item = list.find(i=>i.id===id);
+  if(!item) return;
+  const copia = JSON.parse(JSON.stringify(item));
+  copia.id = 'g'+Date.now()+Math.floor(Math.random()*1000);
+  copia.desc = item.desc + ' (cópia)';
+  copia.arquivado = false;
+  delete copia.historico;
+  list.push(copia);
+  renderGastoGrid(cat);
+  renderPanorama();
+  persist();
+  showToast('Conta duplicada');
+}
+function arquivarGasto(cat, id){
+  const item = state.users[state.currentUser].expenses[cat].find(i=>i.id===id);
+  if(!item) return;
+  item.arquivado = true;
+  renderGastoGrid(cat);
+  renderPanorama();
+  persist();
+  showToast('Conta arquivada');
+}
+function desarquivarGasto(cat, id){
+  const item = state.users[state.currentUser].expenses[cat].find(i=>i.id===id);
+  if(!item) return;
+  item.arquivado = false;
+  renderGastoGrid(cat);
+  renderPanorama();
+  persist();
+  showToast('Conta restaurada');
+}
 function renderGastoGrid(cat){
   const u = state.currentUser;
-  const items = state.users[u].expenses[cat];
+  const todos = state.users[u].expenses[cat];
+  const items = todos.filter(i=>!i.arquivado);
+  const arquivados = todos.filter(i=>i.arquivado);
   const grid = document.getElementById('grid-'+cat);
   if(!items || items.length===0){
     grid.innerHTML = `<div class="empty-state"><div class="title">Nada por aqui</div><div class="desc">Toque em + para incluir um gasto</div></div>`;
-    return;
-  }
+  }else{
   grid.innerHTML = items.map(item=>{
     const metaTxt = cat==='futuro' ? futuroDescricaoMeta(item) : ('dia '+(item.dia||1)+(item.mesInicio?' · a partir de '+monthLabel(item.mesInicio):''));
     const valorTxt = cat==='futuro'
@@ -351,11 +390,30 @@ function renderGastoGrid(cat){
       </div>
       <div class="lr-value">${valorTxt}</div>
       <div class="lr-actions">
+        <button class="btn-icon-sm" title="Duplicar" onclick="duplicarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
         <button class="btn-icon-sm" onclick="editGasto('${cat}','${item.id}')">${ICON_EDIT}</button>
+        <button class="btn-icon-sm" title="Arquivar" onclick="arquivarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
         <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
       </div>
     </div>`;
   }).join('');
+  }
+  const arqEl = document.getElementById('grid-'+cat+'-arquivados');
+  if(arqEl){
+    if(arquivados.length===0){ arqEl.innerHTML = ''; }
+    else{
+      const aberto = !!gastoMostrarArquivados[cat];
+      arqEl.innerHTML = `<button class="link-btn-sm" onclick="toggleArquivadosGasto('${cat}')">${aberto?'Ocultar':'Ver'} arquivados (${arquivados.length})</button>` +
+        (aberto ? arquivados.map(item=>`<div class="list-row list-row-arquivado">
+          <div class="lr-info"><div class="lr-desc">${item.desc}</div></div>
+          <div class="lr-value">${fmtMoney(item.valor)}</div>
+          <div class="lr-actions">
+            <button class="btn-icon-sm" title="Restaurar" onclick="desarquivarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+            <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
+          </div>
+        </div>`).join('') : '');
+    }
+  }
 }
 
 /* ================= CARTÕES DE CRÉDITO — RASTREADOR (visual, não entra em nenhum cálculo) ================= */
@@ -391,6 +449,7 @@ function popularSelectCartoes(selectId, selecionado){
     : '<option value="">Cadastre um cartão primeiro</option>';
   if(selecionado) el.value = selecionado;
 }
+let cartoesExpandidos = {};
 function renderCartaoTrackerList(){
   const list = document.getElementById('cartaoTrackerList');
   if(!list) return;
@@ -434,6 +493,7 @@ function renderCartaoTrackerList(){
               </div>
             </div>
             <div class="ct-actions">
+              <button class="btn-icon-sm" title="Editar" onclick="openCompraTrackerModal('${cartao.id}','${item.id}')">${ICON_EDIT}</button>
               <button class="btn-icon-sm" title="Marcar como ${item.pago?'pendente':'pago'}" onclick="toggleCompraPago('${item.id}')" style="color:${item.pago?'var(--success)':'var(--slate-400)'}">${item.pago?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>'}</button>
             </div>
           </div>
@@ -448,7 +508,10 @@ function renderCartaoTrackerList(){
 
     return `<div class="cartao-card-item">
       <div class="ct-top">
-        <div class="ct-nome-cartao">${cartao.nome}</div>
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          ${cartao.logoUrl?`<img src="${cartao.logoUrl}" class="conta-logo-sm">`:`<div class="conta-logo-sm conta-logo-placeholder">${cartao.nome.charAt(0).toUpperCase()}</div>`}
+          <div class="ct-nome-cartao">${cartao.nome}</div>
+        </div>
         <div class="ct-actions">
           <button class="btn-icon-sm" onclick="openCartaoCardModal('${cartao.id}')">${ICON_EDIT}</button>
           <button class="btn-icon-sm" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
@@ -459,7 +522,7 @@ function renderCartaoTrackerList(){
       <div class="ct-bar"><div class="ct-bar-fill" style="width:${percentUsado}%"></div></div>
       <div class="ct-foot"><span>Gasto ${fmtMoney(usado)}</span><span>Fecha dia ${cartao.fechamento||'—'} · Total ${fmtMoney(limite)}</span></div>
       <div class="ct-toggle-compras" onclick="toggleCartaoDetalhes('${cartao.id}')">Ver detalhes</div>
-      <div class="compras-do-cartao" id="cartaoDetalhes-${cartao.id}">
+      <div class="compras-do-cartao${cartoesExpandidos[cartao.id]?' expanded':''}" id="cartaoDetalhes-${cartao.id}">
         ${comprasHtml}
         <div class="credo-vista-list">
           ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item"><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
@@ -471,8 +534,9 @@ function renderCartaoTrackerList(){
   }).join('');
 }
 function toggleCartaoDetalhes(cartaoId){
+  cartoesExpandidos[cartaoId] = !cartoesExpandidos[cartaoId];
   const el = document.getElementById('cartaoDetalhes-'+cartaoId);
-  if(el) el.classList.toggle('expanded');
+  if(el) el.classList.toggle('expanded', cartoesExpandidos[cartaoId]);
 }
 
 /* --- Cartão (fechamento/vencimento/limite) --- */
@@ -486,14 +550,37 @@ function openCartaoCardModal(id){
       document.getElementById('cartaoCardFechamento').value = item.fechamento || '';
       document.getElementById('cartaoCardVencimento').value = item.vencimento || '';
       document.getElementById('cartaoCardLimite').value = (item.limite||0).toFixed(2).replace('.',',');
+      cartaoCardLogoUrlAtual = item.logoUrl || null;
     }
   }else{
     document.getElementById('cartaoCardNome').value = '';
     document.getElementById('cartaoCardFechamento').value = '';
     document.getElementById('cartaoCardVencimento').value = '';
     document.getElementById('cartaoCardLimite').value = '';
+    cartaoCardLogoUrlAtual = null;
   }
+  renderCartaoCardLogoPreview();
   document.getElementById('modalCartaoCard').classList.add('active');
+}
+let cartaoCardLogoUrlAtual = null;
+function renderCartaoCardLogoPreview(){
+  const el = document.getElementById('cartaoCardLogoPreview');
+  if(!el) return;
+  const nome = document.getElementById('cartaoCardNome').value || '?';
+  el.innerHTML = cartaoCardLogoUrlAtual
+    ? `<img src="${cartaoCardLogoUrlAtual}" class="conta-logo-grande">`
+    : `<div class="conta-logo-grande conta-logo-placeholder">${nome.charAt(0).toUpperCase()}</div>`;
+}
+function onCartaoCardLogoSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{ cartaoCardLogoUrlAtual = e.target.result; renderCartaoCardLogoPreview(); };
+  reader.readAsDataURL(file);
+}
+function removerCartaoCardLogo(){
+  cartaoCardLogoUrlAtual = null;
+  renderCartaoCardLogoPreview();
 }
 function salvarCartaoCard(){
   const id = document.getElementById('cartaoCardId').value;
@@ -501,13 +588,14 @@ function salvarCartaoCard(){
   const fechamento = Math.min(31, Math.max(1, parseInt(document.getElementById('cartaoCardFechamento').value) || 1));
   const vencimento = Math.min(31, Math.max(1, parseInt(document.getElementById('cartaoCardVencimento').value) || 1));
   const limite = parseMoney(document.getElementById('cartaoCardLimite').value);
+  const logoUrl = cartaoCardLogoUrlAtual;
   if(!nome){ showToast('Digite o nome do cartão'); return; }
   if(!state.cartoesTracker) state.cartoesTracker = [];
   if(id){
     const item = state.cartoesTracker.find(i=>i.id===id);
-    if(item) Object.assign(item, { nome, fechamento, vencimento, limite });
+    if(item) Object.assign(item, { nome, fechamento, vencimento, limite, logoUrl });
   } else {
-    state.cartoesTracker.push({ id: 'crd'+Date.now(), nome, fechamento, vencimento, limite });
+    state.cartoesTracker.push({ id: 'crd'+Date.now(), nome, fechamento, vencimento, limite, logoUrl });
   }
   persist();
   closeModal('modalCartaoCard');
@@ -724,10 +812,22 @@ function updateGastoFieldsVisibility(){
   const isFuturo = cat === 'futuro';
   document.getElementById('gastoDiaWrap').style.display = isFuturo ? 'none' : '';
   document.getElementById('gastoMesInicioSimplesWrap').style.display = isFuturo ? 'none' : '';
-  document.getElementById('gastoRecorrenteWrap').style.display = isFuturo ? '' : 'none';
+  document.getElementById('gastoRecorrenteWrap').style.display = (isFuturo && gastoFuturoModo==='parcelada') ? '' : 'none';
   document.getElementById('gastoMesInicioWrap').style.display = isFuturo ? '' : 'none';
 
   if(!isFuturo){
+    document.getElementById('gastoParcelasWrap').style.display = 'none';
+    document.getElementById('gastoReplicarWrap').style.display = 'none';
+    document.getElementById('gastoParcelasValoresWrap').style.display = 'none';
+    document.getElementById('gastoValorWrap').style.display = '';
+    return;
+  }
+
+  if(gastoFuturoModo === 'simples'){
+    document.getElementById('gastoRecorrente').checked = false;
+    document.getElementById('gastoParcelas').value = 1;
+    document.getElementById('gastoReplicar').checked = true;
+    document.getElementById('gastoMesInicioLabel').textContent = 'Mês';
     document.getElementById('gastoParcelasWrap').style.display = 'none';
     document.getElementById('gastoReplicarWrap').style.display = 'none';
     document.getElementById('gastoParcelasValoresWrap').style.display = 'none';
@@ -846,10 +946,11 @@ function removerGastoLogo(){
   renderGastoLogoPreview();
 }
 
-function openGastoModal(cat, id){
+let gastoFuturoModo = 'parcelada';
+function openGastoModal(cat, id, modo){
   document.getElementById('gastoCat').value = cat;
   document.getElementById('gastoId').value = id || '';
-  document.getElementById('modalGastoTitle').textContent = id ? 'Editar Gasto' : 'Adicionar Gasto';
+  document.getElementById('modalGastoTitle').textContent = id ? 'Editar Gasto' : (cat==='futuro' ? (modo==='simples' ? 'Nova Conta Simples' : 'Nova Conta Parcelada/Recorrente') : 'Adicionar Gasto');
 
   if(id){
     const item = state.users[state.currentUser].expenses[cat].find(i=>i.id===id);
@@ -865,6 +966,7 @@ function openGastoModal(cat, id){
 
       if(cat==='futuro'){
         const isLegado = item.mes !== undefined && item.recorrente === undefined && item.parcelas === undefined;
+        gastoFuturoModo = (item.recorrente || (item.parcelas||1)>1) ? 'parcelada' : 'simples';
         document.getElementById('gastoRecorrente').checked = !!item.recorrente;
         createMonthPicker('gastoMesInicioPicker', 'gastoMesInicio', isLegado ? (item.mes||null) : (item.mesInicio||null), onGastoMesInicioChange);
         document.getElementById('gastoParcelas').value = item.parcelas || 1;
@@ -883,6 +985,7 @@ function openGastoModal(cat, id){
     document.getElementById('gastoDia').value = '';
     gastoTipoAtual = 'fixa';
     gastoEssencialAtual = true;
+    gastoFuturoModo = modo || 'parcelada';
     createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', null);
     document.getElementById('gastoRecorrente').checked = false;
     createMonthPicker('gastoMesInicioPicker', 'gastoMesInicio', mesFinanceiroAtual(), onGastoMesInicioChange);

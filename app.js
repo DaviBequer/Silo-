@@ -37,6 +37,18 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.24', itens: [
+    'Panorama virou Dashboard, com ícone novo e cor corrigida quando selecionado',
+    'Dashboard: gráficos com legenda ao lado (não mais embaixo), textos maiores, mais espaçamento entre as seções',
+    '"Planeje Suas Compras Futuras" mudou do Dashboard pro Planner',
+    'Dashboard agora só tem 2 abas (Resumo e Contas) — o Ponto PJ entrou dentro do Resumo',
+    'Comparativo agora mostra mês anterior E 3 meses atrás, e o app passou a guardar de verdade os números de cada mês fechado',
+    'Vilão do Orçamento ganhou um "i" explicando o que ele mostra',
+    'Cor de alerta ajustada pra combinar melhor com o resto do app',
+    'Dashboard em telas de computador agora usa 2 colunas em vez de ficar tudo esticado numa coluna só',
+    'Extras (Planner) podem ter o dia do mês que costumam cair, usado no Fluxo de Caixa',
+    'Cartão de crédito: agora dá pra editar a logo da compra direto pela lista, ver detalhes não fecha mais sozinho ao marcar como pago, cartão ganhou ícone próprio, e a tela de editar cartão ficou melhor organizada em telas grandes'
+  ]},
   { versao: 'v2.23', itens: [
     '[Teste] Escanear QR de cupom fiscal no Mercado, abre o link no navegador pra você conferir o que dá pra aproveitar'
   ]},

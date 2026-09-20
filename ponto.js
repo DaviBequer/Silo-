@@ -507,11 +507,18 @@ function openConcluirMesModal(){
   document.getElementById('modalConcluirMes').classList.add('active');
 }
 function confirmarConcluirMes(){
+  const mesQueFecha = mesFinanceiroAtual();
+  const renda = incomeForMonth('davi', mesQueFecha) + incomeForMonth('cris', mesQueFecha);
+  const gastoTotal = expensesForMonth('davi', mesQueFecha) + expensesForMonth('cris', mesQueFecha);
+  if(!state.historicoMeses) state.historicoMeses = {};
+  state.historicoMeses[mesQueFecha] = { renda, gastoTotal, sobra: renda-gastoTotal, fechadoEm: Date.now() };
+
   mesAtualRef = addMonths(mesAtualRef, 1);
   localStorage.setItem(MES_ATUAL_KEY, mesAtualRef);
   state.panoOffset = 0;
   state.pontoOffset = 0;
   state.focusMonth = mesFinanceiroAtual();
+  persist();
   closeModal('modalConcluirMes');
   renderAll();
   showToast('Mês concluído — avançou para ' + monthLabel(mesFinanceiroAtual()));

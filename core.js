@@ -25,6 +25,7 @@ function novoEstado(){
     paid:{},
     contasArquivadas:{},
     pagamentosParciais:{},
+    historicoMeses:{},
     reserva:0,
     cartoesTracker:[],
     comprasTracker:[],
@@ -399,6 +400,7 @@ function editarExtraItem(id){
   document.getElementById('extraItemId').value = item.id;
   document.getElementById('extraItemDesc').value = item.desc;
   document.getElementById('extraItemValor').value = Number(item.valor).toFixed(2).replace('.',',');
+  document.getElementById('extraItemDia').value = item.dia || '';
   selectPickerMonth('extraMesInicioPicker', item.mesInicio);
   selectPickerMonth('extraMesFimPicker', item.mesFim||item.mesInicio);
   document.getElementById('extraFormTitulo').textContent = 'Editar Extra';
@@ -407,6 +409,7 @@ function salvarExtraItem(){
   const id = document.getElementById('extraItemId').value;
   const desc = document.getElementById('extraItemDesc').value.trim();
   const valor = parseMoney(document.getElementById('extraItemValor').value);
+  const dia = parseInt(document.getElementById('extraItemDia').value) || null;
   const mesInicio = document.getElementById('extraMesInicio').value;
   const mesFim = document.getElementById('extraMesFim').value;
   if(!desc){ showToast('Digite uma descrição'); return; }
@@ -416,9 +419,9 @@ function salvarExtraItem(){
   if(!state.users[rendaExtraUser].extras) state.users[rendaExtraUser].extras = [];
   if(id){
     const item = state.users[rendaExtraUser].extras.find(e=>e.id===id);
-    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; }
+    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; item.dia=dia; }
   } else {
-    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim });
+    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim, dia });
   }
   persist();
   resetarFormExtraItem();

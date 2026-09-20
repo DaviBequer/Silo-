@@ -6,7 +6,6 @@ function switchPanoSubtab(tab){
   document.querySelectorAll('.pano-subtab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
   document.getElementById('panoPanelResumo').classList.toggle('active', tab==='resumo');
   document.getElementById('panoPanelContas').classList.toggle('active', tab==='contas');
-  document.getElementById('panoPanelPonto').classList.toggle('active', tab==='ponto');
   window.scrollTo(0,0);
 }
 
@@ -574,33 +573,52 @@ function getContasDoMes(mKey){
   return items;
 }
 
-/* ================= COMPARATIVO ANO ANTERIOR ================= */
+/* ================= COMPARATIVO COM MESES ANTERIORES ================= */
+function dadosDoMes(mKey){
+  if(state.historicoMeses && state.historicoMeses[mKey]) return state.historicoMeses[mKey];
+  const renda = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
+  const gastoTotal = expensesForMonth('davi', mKey) + expensesForMonth('cris', mKey);
+  return { renda, gastoTotal, sobra: renda-gastoTotal };
+}
 function renderComparativoAno(){
   const card = document.getElementById('cardComparativoAno');
   if(!card) return;
   const mKey = state.focusMonth;
-  const mesAnoAnterior = addMonths(mKey, -12);
-  const gastoAtual = expensesForMonth('davi', mKey) + expensesForMonth('cris', mKey);
-  const gastoAnterior = expensesForMonth('davi', mesAnoAnterior) + expensesForMonth('cris', mesAnoAnterior);
-  const rendaAtual = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
-  const rendaAnterior = incomeForMonth('davi', mesAnoAnterior) + incomeForMonth('cris', mesAnoAnterior);
-  if(gastoAnterior <= 0 && rendaAnterior <= 0){
+  const mesAnterior = addMonths(mKey, -1);
+  const mes3Atras = addMonths(mKey, -3);
+  const atual = dadosDoMes(mKey);
+  const anterior = dadosDoMes(mesAnterior);
+  const tresAtras = dadosDoMes(mes3Atras);
+
+  const temAnterior = anterior.gastoTotal>0 || anterior.renda>0;
+  const tem3Atras = tresAtras.gastoTotal>0 || tresAtras.renda>0;
+  if(!temAnterior && !tem3Atras){
     card.style.display = 'none';
     return;
   }
   card.style.display = 'block';
-  document.getElementById('comparativoAnoLabel').textContent = monthLabel(mesAnoAnterior);
-  const diffGasto = gastoAnterior>0 ? ((gastoAtual-gastoAnterior)/gastoAnterior*100) : null;
-  const sobraAtual = rendaAtual - gastoAtual;
-  const sobraAnterior = rendaAnterior - gastoAnterior;
-  const setaGasto = diffGasto===null ? '' : (diffGasto>0 ? '▲' : (diffGasto<0 ? '▼' : '–'));
-  const corGasto = diffGasto===null ? 'var(--text-dim)' : (diffGasto>0 ? 'var(--danger)' : 'var(--success)');
-  document.getElementById('comparativoAnoBody').innerHTML = `
-    <div class="comp-ano-linha"><span>Gastos</span><span>${fmtMoney(gastoAnterior)} → ${fmtMoney(gastoAtual)}</span>${diffGasto!==null?`<span style="color:${corGasto};font-weight:800">${setaGasto} ${Math.abs(diffGasto).toFixed(0)}%</span>`:''}</div>
-    <div class="comp-ano-linha"><span>Sobra</span><span>${fmtMoneySigned(sobraAnterior)} → ${fmtMoneySigned(sobraAtual)}</span></div>
-  `;
+
+  function linhaComparativo(label, base){
+    const diffGasto = base.gastoTotal>0 ? ((atual.gastoTotal-base.gastoTotal)/base.gastoTotal*100) : null;
+    const seta = diffGasto===null ? '' : (diffGasto>0 ? '▲' : (diffGasto<0 ? '▼' : '–'));
+    const cor = diffGasto===null ? 'var(--text-dim)' : (diffGasto>0 ? 'var(--warning)' : 'var(--success)');
+    return `
+      <div style="font-size:11px;color:var(--text-faint);font-weight:700;text-transform:uppercase;margin-top:var(--s2);margin-bottom:2px">${label}</div>
+      <div class="comp-ano-linha"><span>Gastos</span><span>${fmtMoney(base.gastoTotal)} → ${fmtMoney(atual.gastoTotal)}</span>${diffGasto!==null?`<span style="color:${cor};font-weight:800">${seta} ${Math.abs(diffGasto).toFixed(0)}%</span>`:''}</div>
+      <div class="comp-ano-linha"><span>Sobra</span><span>${fmtMoneySigned(base.sobra)} → ${fmtMoneySigned(atual.sobra)}</span></div>
+    `;
+  }
+
+  let html = '';
+  if(temAnterior) html += linhaComparativo('Comparado a '+monthLabel(mesAnterior), anterior);
+  if(tem3Atras) html += linhaComparativo('Comparado a '+monthLabel(mes3Atras)+' (3 meses atrás)', tresAtras);
+  document.getElementById('comparativoAnoBody').innerHTML = html;
 }
 
+function toggleVilaoInfo(){
+  const el = document.getElementById('vilaoInfoPopup');
+  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
 /* ================= VILÃO DO ORÇAMENTO ================= */
 function calcularVilaoOrcamento(mKey){
   const categorias = ['moradia','fixo','assinatura','futuro'];
@@ -640,8 +658,23 @@ function renderVilaoOrcamento(){
 function calcularFluxoCaixa(mKey){
   const eventos = {};
   const diaRecebimento = state.diaRecebimentoRenda || 5;
-  const renda = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
-  if(renda) eventos[diaRecebimento] = (eventos[diaRecebimento]||0) + renda;
+  ['davi','cris'].forEach(u=>{
+    const isAtual = mKey === mesFinanceiroAtual();
+    if(isAtual && state.users[u].usarSaldoComoBase){
+      const saldo = state.users[u].saldoAtual || 0;
+      if(saldo) eventos[diaRecebimento] = (eventos[diaRecebimento]||0) + saldo;
+      return;
+    }
+    const base = rendaBaseForMonth(u, mKey) + (isAtual ? (state.users[u].saldoAtual||0) : 0);
+    if(base) eventos[diaRecebimento] = (eventos[diaRecebimento]||0) + base;
+    (state.users[u].extras||[]).forEach(e=>{
+      const fim = e.mesFim || e.mesInicio;
+      if(mKey >= e.mesInicio && mKey <= fim){
+        const d = Math.min(Math.max(parseInt(e.dia)||diaRecebimento,1),28);
+        eventos[d] = (eventos[d]||0) + (Number(e.valor)||0);
+      }
+    });
+  });
   getContasDoMes(mKey).forEach(it=>{
     const d = Math.min(Math.max(parseInt(it.dia)||1,1),28);
     eventos[d] = (eventos[d]||0) - (Number(it.valor)||0);
