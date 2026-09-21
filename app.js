@@ -37,6 +37,14 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.25', itens: [
+    'Corrigido: não dava mais pra sair do Estúdio do Louvor no computador (o painel ficava com prioridade errada e cobria o botão de voltar)',
+    'Corrigido: campo harmônico mostrava a "preparação" errada — agora mostra de verdade a dominante de cada acorde (ex: acorde C tem G7 embaixo, não C7)',
+    'Novo: mudar o tom agora transpõe de verdade o texto da música (não só o PDF)',
+    'Louvor: página de edição não parece mais uma caixa de texto dentro da folha — o texto flui direto na "folha"',
+    'Louvor: acorde de preparação agora aparece separado, com borda pontilhada, igual o modelo de referência',
+    'Dashboard no computador aproveita melhor a largura da tela, em 3 colunas'
+  ]},
   { versao: 'v2.24', itens: [
     'Panorama virou Dashboard, com ícone novo e cor corrigida quando selecionado',
     'Dashboard: gráficos com legenda ao lado (não mais embaixo), textos maiores, mais espaçamento entre as seções',

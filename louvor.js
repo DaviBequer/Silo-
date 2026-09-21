@@ -317,10 +317,15 @@ function renderLvHarmonicBar(l){
   const rootIdx = LV_CHROMATIC.indexOf(rootAtual);
   if(rootIdx===-1){ el.innerHTML = ''; return; }
   el.innerHTML = LV_GRAUS_MAIOR.map(g=>{
-    const nota = LV_CHROMATIC[(rootIdx+g.semitom)%12];
+    const notaIdx = (rootIdx+g.semitom)%12;
+    const nota = LV_CHROMATIC[notaIdx];
     const acorde = nota + g.qualidade;
-    const alt = nota + '7';
-    return `<div class="lv-grau-chip"><div class="lv-grau-num">${g.grau}</div><div class="lv-grau-chord">${acorde}</div><div class="lv-grau-alt">${alt}</div></div>`;
+    const notaAlt = LV_CHROMATIC[(notaIdx+7)%12];
+    const alt = notaAlt + '7';
+    return `<div class="lv-grau-col">
+      <div class="lv-grau-chip"><div class="lv-grau-num">${g.grau}</div><div class="lv-grau-chord">${acorde}</div></div>
+      <div class="lv-grau-alt">${alt}</div>
+    </div>`;
   }).join('');
 }
 
@@ -377,6 +382,14 @@ function lvTomGridClick(nota){
     }, 280);
   }
 }
+function lvTransposeConteudoTexto(conteudo, delta){
+  if(!delta) return conteudo;
+  return (conteudo||'').split('\n').map(line=>{
+    const trimmed = line.trim();
+    if(isChordLine(trimmed)) return lvTransposeChordLine(line, delta);
+    return line;
+  }).join('\n');
+}
 function lvTomGridEscolher(nota, modoMenor){
   if(lvTomPickerModo==='novo'){
     window.lvNovoTomOriginal = nota;
@@ -393,7 +406,14 @@ function lvTomGridEscolher(nota, modoMenor){
     l.tomOriginal = nota;
     l.transpose = 0;
   }else{
-    l.transpose = ((idxNota - idxOriginal)%12+12)%12;
+    const delta = ((idxNota - idxOriginal)%12+12)%12;
+    if(delta){
+      l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta);
+      const conteudoEl = document.getElementById('lvConteudo');
+      if(conteudoEl) conteudoEl.value = l.conteudo;
+    }
+    l.tomOriginal = nota;
+    l.transpose = 0;
   }
   l.tomModoMenor = modoMenor;
   persist();
