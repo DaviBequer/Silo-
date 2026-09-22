@@ -128,6 +128,8 @@ function carregar(){
       if(state.reserva === undefined) state.reserva = 0;
       if(!state.receitas) state.receitas = [];
       if(!state.receitaCategorias) state.receitaCategorias = [];
+      if(!state.mercadoCategoriasCustom) state.mercadoCategoriasCustom = [];
+      if(!state.credoVistaCategoriasCustom) state.credoVistaCategoriasCustom = [];
       if(!state.louvores) state.louvores = [];
       if(!state.estoque) state.estoque = [];
       state.estoque.forEach(e=>{ if(!e.precos) e.precos = []; if(!e.historicoCompras) e.historicoCompras = []; });
@@ -347,6 +349,10 @@ function incomeForMonth(user, mKey){
   const base = rendaBaseForMonth(user, mKey);
   const extra = extraTotalForMonth(user, mKey);
   return base + extra + saldo;
+}
+/* Categorias fixas de um chip-picker + categorias que o usuário criou (guardadas em state[customKey]) */
+function getCategoriasComCustom(base, customKey){
+  return base.concat(state[customKey]||[]);
 }
 function dizimoForMonth(user, mKey){
   if(user !== 'davi') return 0;

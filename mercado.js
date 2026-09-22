@@ -302,7 +302,7 @@ function renderLoteCategorizacao(){
     <div class="field full">
       <label>${it.nome}</label>
       <div class="dificuldade-chips">
-        ${MERCADO_CATEGORIAS.map(c=>`<button type="button" class="dif-chip${loteCategorias[it.id]===c?' active':''}" onclick="selecionarLoteCategoria('${it.id}','${c}')">${c}</button>`).join('')}
+        ${getCategoriasComCustom(MERCADO_CATEGORIAS, 'mercadoCategoriasCustom').map(c=>`<button type="button" class="dif-chip${loteCategorias[it.id]===c?' active':''}" onclick="selecionarLoteCategoria('${it.id}','${c}')">${c}</button>`).join('')}
       </div>
     </div>
   `).join('');
@@ -438,7 +438,7 @@ function confirmarFinalizarCompra(){
 
 /* ---------- Estoque de Casa ---------- */
 function renderMercadoEstoqueFilterChips(){
-  const chips = ['Todas', ...MERCADO_CATEGORIAS];
+  const chips = ['Todas', ...getCategoriasComCustom(MERCADO_CATEGORIAS, 'mercadoCategoriasCustom')];
   document.getElementById('mercadoEstoqueFilterChips').innerHTML = chips.map(c=>
     `<button class="filter-chip${mercadoEstoqueFiltroAtivo===c?' active':''}" onclick="setMercadoEstoqueFiltro('${c}')">${c}</button>`
   ).join('');
@@ -507,9 +507,10 @@ function abrirEstoqueForm(id){
   document.getElementById('modalEstoqueItem').classList.add('active');
 }
 function renderEstFormCategoriaChips(){
-  document.getElementById('estItemCategoriaChips').innerHTML = MERCADO_CATEGORIAS.map(c=>
+  const cats = getCategoriasComCustom(MERCADO_CATEGORIAS, 'mercadoCategoriasCustom');
+  document.getElementById('estItemCategoriaChips').innerHTML = cats.map(c=>
     `<button type="button" class="dif-chip${window.estFormCategoriaSelecionada===c?' active':''}" onclick="selecionarEstFormCategoria('${c}')">${c}</button>`
-  ).join('');
+  ).join('') + `<button type="button" class="dif-chip cat-chip-add" onclick="abrirNovaCategoriaExtra('mercado')">+ Nova</button>`;
 }
 function selecionarEstFormCategoria(c){
   window.estFormCategoriaSelecionada = c;

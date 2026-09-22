@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.25">
+<link rel="stylesheet" href="style.css?v=2.28">
 </head>
 <body>
 
@@ -24,11 +24,12 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.25</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.28</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
   <div style="display:flex;gap:8px;flex-shrink:0">
+    <button class="header-btn" onclick="abrirResumoGeral()" title="Resumo Geral"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></button>
     <button class="header-btn" onclick="abrirBuscaGlobal()" title="Buscar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
     <button class="header-btn" onclick="openConcluirMesModal()" title="Concluir mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
   </div>
@@ -71,6 +72,11 @@
   <div class="card" id="cardComparativoAno" style="display:none">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 12l4-4 4 4 5-5"/></svg>Comparativo</div></div>
     <div id="comparativoAnoBody"></div>
+  </div>
+
+  <div class="card" id="cardPrevisaoProximoMes" style="display:none">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span id="previsaoProximoMesTitulo">Previsão</span></div></div>
+    <div id="previsaoProximoMesBody"></div>
   </div>
 
   <div class="card" id="cardVilaoOrcamento" style="display:none">
@@ -577,6 +583,25 @@
       <label>Valor</label>
       <div class="input-money"><input type="text" id="credoVistaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
     </div>
+    <div class="field full">
+      <label>Categoria</label>
+      <div class="dificuldade-chips" id="credoVistaCategoriaChips"></div>
+    </div>
+    <div class="field full">
+      <label>Mês da compra</label>
+      <div class="month-picker">
+        <button type="button" class="month-picker-btn" id="credoVistaMesPickerBtn" onclick="toggleMonthPicker('credoVistaMesPicker')">Selecione o mês</button>
+        <div class="month-picker-panel" id="credoVistaMesPickerPanel" style="display:none">
+          <div class="month-picker-nav">
+            <button type="button" onclick="shiftPickerYear('credoVistaMesPicker',-1)">‹</button>
+            <span id="credoVistaMesPickerYear"></span>
+            <button type="button" onclick="shiftPickerYear('credoVistaMesPicker',1)">›</button>
+          </div>
+          <div class="month-picker-grid" id="credoVistaMesPickerGrid"></div>
+        </div>
+      </div>
+      <input type="hidden" id="credoVistaMes">
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalCredoVista')">Cancelar</button>
       <button class="btn btn-block" onclick="salvarCredoVista()">Salvar</button>
@@ -641,6 +666,34 @@
       <button class="btn btn-block" onclick="salvarReceitaCategoria()">Salvar</button>
     </div>
   </div>
+</div>
+
+<div class="modal-overlay" id="modalCategoriaExtra">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nova Categoria</h3>
+      <button class="modal-close" onclick="closeModal('modalCategoriaExtra')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="categoriaExtraAlvo">
+    <div class="field full">
+      <label>Nome da Categoria</label>
+      <input type="text" id="categoriaExtraNome" placeholder="Ex: Pet, Streaming, Combustível...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalCategoriaExtra')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarCategoriaExtra()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FULLPAGE: Resumo Geral -->
+<div class="fullpage" id="pageResumoGeral">
+  <div class="fullpage-header">
+    <button class="header-btn" onclick="closeResumoGeral()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title">Resumo Geral</div>
+    <button class="header-btn" onclick="exportarResumoFinanceiroPDF()" title="Exportar PDF"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg></button>
+  </div>
+  <div class="fullpage-content" id="resumoGeralConteudo" style="padding-bottom:60px"></div>
 </div>
 
 <!-- FULLPAGE: Detalhes da Receita -->
@@ -1596,13 +1649,13 @@ if(versaoArmazenada !== VERSAO_ATUAL){
   }
 }
 </script>
-<script src="core.js?v=2.25"></script>
-<script src="app.js?v=2.25"></script>
-<script src="panorama.js?v=2.25"></script>
-<script src="planner.js?v=2.25"></script>
-<script src="ponto.js?v=2.25"></script>
-<script src="receitas.js?v=2.25"></script>
-<script src="louvor.js?v=2.25"></script>
-<script src="mercado.js?v=2.25"></script>
+<script src="core.js?v=2.28"></script>
+<script src="app.js?v=2.28"></script>
+<script src="panorama.js?v=2.28"></script>
+<script src="planner.js?v=2.28"></script>
+<script src="ponto.js?v=2.28"></script>
+<script src="receitas.js?v=2.28"></script>
+<script src="louvor.js?v=2.28"></script>
+<script src="mercado.js?v=2.28"></script>
 </body>
 </html>

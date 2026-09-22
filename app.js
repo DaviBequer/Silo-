@@ -37,6 +37,17 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.28', itens: [
+    'Categorias do Mercado/Estoque e do Crédito à Vista do cartão agora podem ser criadas por você (chip "+ Nova"), além das categorias padrão'
+  ]},
+  { versao: 'v2.27', itens: [
+    'Novo botão "Resumo" no topo: página dedicada com saldo do mês, Vilão do Orçamento, comparativo, previsão do próximo mês, gasto por categoria e Contas Futuras',
+    'Exportar PDF do resumo financeiro completo, com tabelas de texto (não imagem), pronto pra mandar pra análise'
+  ]},
+  { versao: 'v2.26', itens: [
+    'Crédito à Vista do cartão agora tem categoria e mês, pra achar o gargalo real das comprinhas do dia a dia',
+    'Novo card "Previsão do próximo mês" no Dashboard, com peso maior pras Contas Futuras (o dado mais confiável)'
+  ]},
   { versao: 'v2.25', itens: [
     'Corrigido: não dava mais pra sair do Estúdio do Louvor no computador (o painel ficava com prioridade errada e cobria o botão de voltar)',
     'Corrigido: campo harmônico mostrava a "preparação" errada — agora mostra de verdade a dominante de cada acorde (ex: acorde C tem G7 embaixo, não C7)',
@@ -190,6 +201,34 @@ function abrirImportExportModal(){
 /* exportarDadosApp / triggerImportarDados / onImportFileSelected vivem em mercado.js */
 
 /* ========== BUSCA GLOBAL ========== */
+/* ---------- Nova categoria (genérico: Mercado/Estoque e Cartão à vista) ---------- */
+function abrirNovaCategoriaExtra(alvo){
+  document.getElementById('categoriaExtraAlvo').value = alvo;
+  document.getElementById('categoriaExtraNome').value = '';
+  document.getElementById('modalCategoriaExtra').classList.add('active');
+}
+function salvarCategoriaExtra(){
+  const alvo = document.getElementById('categoriaExtraAlvo').value;
+  const nome = document.getElementById('categoriaExtraNome').value.trim();
+  if(!nome){ showToast('Digite o nome da categoria'); return; }
+  const config = alvo==='mercado'
+    ? { customKey:'mercadoCategoriasCustom', base:MERCADO_CATEGORIAS }
+    : { customKey:'credoVistaCategoriasCustom', base:CREDOVISTA_CATEGORIAS };
+  if(!state[config.customKey]) state[config.customKey] = [];
+  const jaExiste = config.base.some(c=>c.toLowerCase()===nome.toLowerCase()) || state[config.customKey].some(c=>c.toLowerCase()===nome.toLowerCase());
+  if(jaExiste){ showToast('Essa categoria já existe'); closeModal('modalCategoriaExtra'); return; }
+  state[config.customKey].push(nome);
+  persist();
+  closeModal('modalCategoriaExtra');
+  if(alvo==='mercado'){
+    window.estFormCategoriaSelecionada = nome;
+    renderEstFormCategoriaChips();
+  } else {
+    window.credoVistaCategoriaSelecionada = nome;
+    renderCredoVistaCategoriaChips();
+  }
+  showToast('Categoria criada');
+}
 function abrirBuscaGlobal(){
   document.getElementById('buscaGlobalInput').value = '';
   document.getElementById('buscaGlobalResultados').innerHTML = '';

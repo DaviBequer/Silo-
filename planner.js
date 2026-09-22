@@ -440,6 +440,16 @@ function compraTrackerCalc(item){
   const restante = valorParcela*restam;
   return { total, parcelas, valorParcela, parcelaAtual, pagas, restam, mesFim, percentPago, status, restante };
 }
+/* Valor da parcela de uma compra do cartão (Tracker) num mês qualquer, não só "hoje" */
+function compraTrackerValorNoMes(item, mKey){
+  if(item.pago) return 0;
+  const parcelas = Math.max(1, Number(item.parcelas)||1);
+  if(!item.mesInicio) return 0;
+  const valorParcela = (Number(item.valorTotal)||0) / parcelas;
+  const meses = [];
+  for(let i=0;i<parcelas;i++) meses.push(addMonths(item.mesInicio, i));
+  return meses.includes(mKey) ? valorParcela : 0;
+}
 function popularSelectCartoes(selectId, selecionado){
   const el = document.getElementById(selectId);
   if(!el) return;
@@ -525,7 +535,7 @@ function renderCartaoTrackerList(){
       <div class="compras-do-cartao${cartoesExpandidos[cartao.id]?' expanded':''}" id="cartaoDetalhes-${cartao.id}">
         ${comprasHtml}
         <div class="credo-vista-list">
-          ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item"><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
+          ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item" ondblclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
         </div>
         <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="openCompraTrackerModal('${cartao.id}')">+ Compra parcelada</button>
         <button class="btn btn-sm btn-outline" style="width:100%;margin-top:6px" onclick="openCredoVistaModal('${cartao.id}')">+ Crédito à vista</button>
@@ -700,6 +710,20 @@ function toggleCompraPago(id){
     renderPanorama();
   }
 }
+const CREDOVISTA_CATEGORIAS = ['Alimentação','Transporte','Farmácia','Lazer','Mercado','Outros'];
+window.credoVistaCategoriaSelecionada = 'Outros';
+function selecionarCredoVistaCategoria(c){
+  window.credoVistaCategoriaSelecionada = c;
+  renderCredoVistaCategoriaChips();
+}
+function renderCredoVistaCategoriaChips(){
+  const el = document.getElementById('credoVistaCategoriaChips');
+  if(!el) return;
+  const cats = getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom');
+  el.innerHTML = cats.map(c=>
+    `<button type="button" class="dif-chip${window.credoVistaCategoriaSelecionada===c?' active':''}" onclick="selecionarCredoVistaCategoria('${c}')">${c}</button>`
+  ).join('') + `<button type="button" class="dif-chip cat-chip-add" onclick="abrirNovaCategoriaExtra('credoVista')">+ Nova</button>`;
+}
 function openCredoVistaModal(cartaoId, credoId){
   document.getElementById('credoVistaCartaoId').value = cartaoId;
   document.getElementById('credoVistaId').value = credoId || '';
@@ -710,11 +734,16 @@ function openCredoVistaModal(cartaoId, credoId){
     if(item){
       document.getElementById('credoVistaDescricao').value = item.descricao || '';
       document.getElementById('credoVistaValor').value = (item.valor||0).toFixed(2).replace('.',',');
+      window.credoVistaCategoriaSelecionada = item.categoria || 'Outros';
+      createMonthPicker('credoVistaMesPicker', 'credoVistaMes', item.mKey || mesFinanceiroAtual());
     }
   }else{
     document.getElementById('credoVistaDescricao').value = '';
     document.getElementById('credoVistaValor').value = '';
+    window.credoVistaCategoriaSelecionada = 'Outros';
+    createMonthPicker('credoVistaMesPicker', 'credoVistaMes', mesFinanceiroAtual());
   }
+  renderCredoVistaCategoriaChips();
   document.getElementById('modalCredoVista').classList.add('active');
 }
 function salvarCredoVista(){
@@ -722,21 +751,46 @@ function salvarCredoVista(){
   const credoId = document.getElementById('credoVistaId').value;
   const descricao = document.getElementById('credoVistaDescricao').value.trim();
   const valor = parseMoney(document.getElementById('credoVistaValor').value);
+  const categoria = window.credoVistaCategoriaSelecionada || 'Outros';
+  const mKey = document.getElementById('credoVistaMes').value || mesFinanceiroAtual();
   if(!valor){ showToast('Digite o valor'); return; }
   const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
   if(!cartao){ showToast('Cartão não encontrado'); return; }
   if(!cartao.credoVista) cartao.credoVista = [];
   if(credoId){
     const item = cartao.credoVista.find(cv=>cv.id===credoId);
-    if(item) Object.assign(item, { descricao, valor });
+    if(item) Object.assign(item, { descricao, valor, categoria, mKey });
   } else {
-    cartao.credoVista.push({ id: 'cv'+Date.now(), descricao, valor });
+    cartao.credoVista.push({ id: 'cv'+Date.now(), descricao, valor, categoria, mKey });
   }
   persist();
   closeModal('modalCredoVista');
   renderCartaoTrackerList();
   renderPanorama();
   showToast('Crédito salvo');
+}
+/* Total de crédito à vista por categoria, num mês de referência (fallback 'Outros'/mês atual pra itens antigos) */
+function credoVistaTotalPorCategoria(mKey){
+  const totais = {};
+  (state.cartoesTracker||[]).forEach(cartao=>{
+    (cartao.credoVista||[]).forEach(cv=>{
+      const catRef = cv.categoria || 'Outros';
+      const mesRef = cv.mKey || mesFinanceiroAtual();
+      if(mesRef !== mKey) return;
+      totais[catRef] = (totais[catRef]||0) + Number(cv.valor||0);
+    });
+  });
+  return totais;
+}
+/* Média de crédito à vista nos últimos N meses (referência p/ previsão) */
+function credoVistaMediaUltimosMeses(nMeses){
+  let soma = 0;
+  for(let i=1;i<=nMeses;i++){
+    const mKey = addMonths(mesFinanceiroAtual(), -i);
+    const totais = credoVistaTotalPorCategoria(mKey);
+    soma += Object.values(totais).reduce((s,v)=>s+v,0);
+  }
+  return nMeses>0 ? soma/nMeses : 0;
 }
 function excluirCredoVista(cartaoId, credoId){
   const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
