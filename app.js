@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.29', itens: [
+    'Corrigido: botão "Resumo Geral" agora sempre abre a página (antes, se algum cálculo desse errado, o clique não fazia nada; agora mostra o erro na tela em vez de travar em silêncio)',
+    'Resumo Geral em 2 colunas no computador, aproveitando a tela larga'
+  ]},
   { versao: 'v2.28', itens: [
     'Categorias do Mercado/Estoque e do Crédito à Vista do cartão agora podem ser criadas por você (chip "+ Nova"), além das categorias padrão'
   ]},

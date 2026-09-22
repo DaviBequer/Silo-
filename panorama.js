@@ -271,6 +271,7 @@ function renderPanorama(){
   renderParcelasTerminando();
   renderComparativoAno();
   renderVilaoOrcamento();
+  renderPrevisaoProximoMes();
 
   const userSection = document.getElementById('panoUserSection');
   const colsHtml = ['davi','cris'].map(u=>{
@@ -613,6 +614,240 @@ function renderComparativoAno(){
   if(temAnterior) html += linhaComparativo('Comparado a '+monthLabel(mesAnterior), anterior);
   if(tem3Atras) html += linhaComparativo('Comparado a '+monthLabel(mes3Atras)+' (3 meses atrás)', tresAtras);
   document.getElementById('comparativoAnoBody').innerHTML = html;
+}
+
+/* ================= PREVISÃO DO PRÓXIMO MÊS ================= */
+/* "Certo": moradia/fixo/assinatura recorrentes + Contas Futuras + parcelas de cartão já agendadas (datas conhecidas).
+   "Estimado": crédito à vista do cartão, projetado pela média dos últimos 3 meses (é o único gasto sem data previsível). */
+function calcularPrevisaoProximoMes(){
+  const mKey = addMonths(mesFinanceiroAtual(), 1);
+  let certo = 0;
+  ['davi','cris'].forEach(user=>{
+    ['moradia','fixo','assinatura'].forEach(cat=> certo += categoryTotalForMonth(cat, mKey));
+  });
+  const futuro = categoryTotalForMonth('futuro', mKey);
+  certo += futuro;
+  let cartaoParcelas = 0;
+  (state.comprasTracker||[]).forEach(item=> cartaoParcelas += compraTrackerValorNoMes(item, mKey));
+  certo += cartaoParcelas;
+  const estimado = credoVistaMediaUltimosMeses(3);
+  return { mKey, certo, estimado, total: certo+estimado, futuro, cartaoParcelas };
+}
+function renderPrevisaoProximoMes(){
+  const card = document.getElementById('cardPrevisaoProximoMes');
+  if(!card) return;
+  const p = calcularPrevisaoProximoMes();
+  card.style.display = 'block';
+  document.getElementById('previsaoProximoMesTitulo').textContent = 'Previsão para ' + monthLabel(p.mKey);
+  document.getElementById('previsaoProximoMesBody').innerHTML = `
+    <div class="comp-ano-linha"><span>Total previsto</span><span style="font-weight:800">${fmtMoney(p.total)}</span></div>
+    <div class="comp-ano-linha"><span>· Contas conhecidas (fixos, futuras, parcelas)</span><span>${fmtMoney(p.certo)}</span></div>
+    <div class="comp-ano-linha"><span>· Estimativa cartão à vista (média 3 meses)</span><span>${fmtMoney(p.estimado)}</span></div>
+    <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Contas Futuras já agendadas: ${fmtMoney(p.futuro)} — é a parte mais confiável dessa previsão.</div>
+  `;
+}
+/* ================= RESUMO GERAL (página dedicada) ================= */
+function abrirResumoGeral(){
+  document.getElementById('pageResumoGeral').classList.add('active');
+  try{
+    renderResumoGeral();
+  }catch(e){
+    console.error('[RESUMO-GERAL] erro ao montar a página:', e);
+    document.getElementById('resumoGeralConteudo').innerHTML = `<div class="card"><div class="card-title"><div class="left">Não deu pra montar o Resumo Geral</div></div><div class="comp-ano-linha"><span>Erro: ${(e && e.message) ? e.message : e}</span></div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Manda um print dessa tela pro Claude poder corrigir.</div></div>`;
+  }
+}
+function closeResumoGeral(){
+  document.getElementById('pageResumoGeral').classList.remove('active');
+}
+function totalCartoesNoMesAtual(){
+  return (state.cartoesTracker||[]).reduce((s,c)=>{
+    const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
+    const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
+    return s + usado;
+  },0);
+}
+function renderResumoGeral(){
+  const mKey = state.focusMonth;
+  const dados = dadosDoMes(mKey);
+  const vilao = calcularVilaoOrcamento(mKey);
+  const essencialMin = calcularGastoEssencialMinimo(mKey);
+  const mesAnterior = addMonths(mKey, -1);
+  const anterior = dadosDoMes(mesAnterior);
+  const previsao = calcularPrevisaoProximoMes();
+  const contasFuturas = getContasDoMes(mKey).filter(it=>it.cat==='futuro');
+  const totalCartoes = totalCartoesNoMesAtual();
+  const categorias = [
+    { label:'Moradia', valor: categoryTotalForMonth('moradia', mKey) },
+    { label:'Fixos', valor: categoryTotalForMonth('fixo', mKey) },
+    { label:'Assinaturas', valor: categoryTotalForMonth('assinatura', mKey) },
+    { label:'Contas Futuras', valor: categoryTotalForMonth('futuro', mKey) },
+    { label:'Cartão', valor: totalCartoes },
+  ];
+  const maiorCategoria = Math.max(1, ...categorias.map(c=>c.valor));
+  const credoVistaCats = credoVistaTotalPorCategoria(mKey);
+  const credoVistaEntries = Object.entries(credoVistaCats).sort((a,b)=>b[1]-a[1]);
+  const maiorCredoVista = Math.max(1, ...credoVistaEntries.map(e=>e[1]));
+
+  let html = `
+    <div class="rg-hero">
+      <div class="rg-hero-lbl">Saldo de ${monthLabel(mKey)}</div>
+      <div class="rg-hero-val">${fmtMoneySigned(dados.sobra)}</div>
+      <div class="rg-hero-row"><span>Renda ${fmtMoney(dados.renda)}</span><span>Gastos ${fmtMoney(dados.gastoTotal)}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="left">Vilão do Orçamento</div></div>
+      ${vilao ? `<div class="comp-ano-linha"><span>🔺 ${CATEGORIA_LABELS[vilao.cat]}</span><span>${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)}</span><span style="color:var(--danger);font-weight:800">+${vilao.diffPct.toFixed(0)}%</span></div>` : `<div class="comp-ano-linha"><span>Nenhuma categoria disparou em relação ao mês passado</span></div>`}
+      <div class="comp-ano-linha"><span>Gasto essencial mínimo</span><span style="font-weight:800">${fmtMoney(essencialMin)}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="left">Comparado a ${monthLabel(mesAnterior)}</div></div>
+      <div class="comp-ano-linha"><span>Gastos</span><span>${fmtMoney(anterior.gastoTotal)} → ${fmtMoney(dados.gastoTotal)}</span></div>
+      <div class="comp-ano-linha"><span>Sobra</span><span>${fmtMoneySigned(anterior.sobra)} → ${fmtMoneySigned(dados.sobra)}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="left">Previsão para ${monthLabel(previsao.mKey)}</div></div>
+      <div class="comp-ano-linha"><span>Total previsto</span><span style="font-weight:800">${fmtMoney(previsao.total)}</span></div>
+      <div class="comp-ano-linha"><span>· Contas conhecidas</span><span>${fmtMoney(previsao.certo)}</span></div>
+      <div class="comp-ano-linha"><span>· Estimativa cartão à vista</span><span>${fmtMoney(previsao.estimado)}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="left">Gasto por categoria — ${monthLabel(mKey)}</div></div>
+      ${categorias.map(c=>`<div class="rg-cat-bar-row"><span>${c.label}</span><div class="rg-cat-bar-track"><div class="rg-cat-bar-fill" style="width:${Math.round(c.valor/maiorCategoria*100)}%"></div></div><span style="font-weight:700">${fmtMoney(c.valor)}</span></div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="left">Contas Futuras de ${monthLabel(mKey)}</div></div>
+      ${contasFuturas.length===0 ? '<div class="comp-ano-linha"><span>Nenhuma conta futura neste mês</span></div>' : contasFuturas.map(it=>`<div class="comp-ano-linha"><span>${it.desc}</span><span style="font-weight:700">${fmtMoney(it.valor)}</span></div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="left">Cartão — à vista por categoria (${monthLabel(mKey)})</div></div>
+      ${credoVistaEntries.length===0 ? '<div class="comp-ano-linha"><span>Nenhum crédito à vista lançado neste mês</span></div>' : credoVistaEntries.map(([cat,valor])=>`<div class="rg-cat-bar-row"><span>${cat}</span><div class="rg-cat-bar-track"><div class="rg-cat-bar-fill" style="width:${Math.round(valor/maiorCredoVista*100)}%"></div></div><span style="font-weight:700">${fmtMoney(valor)}</span></div>`).join('')}
+    </div>
+  `;
+  document.getElementById('resumoGeralConteudo').innerHTML = html;
+}
+
+/* ================= EXPORTAR RESUMO FINANCEIRO EM PDF ================= */
+function exportarResumoFinanceiroPDF(){
+  if(typeof window.jspdf === 'undefined'){
+    showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
+    return;
+  }
+  const mKey = state.focusMonth;
+  const dados = dadosDoMes(mKey);
+  const vilao = calcularVilaoOrcamento(mKey);
+  const previsao = calcularPrevisaoProximoMes();
+  const contasFuturas = getContasDoMes(mKey).filter(it=>it.cat==='futuro');
+  const totalCartoes = totalCartoesNoMesAtual();
+  const credoVistaCats = credoVistaTotalPorCategoria(mKey);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const graphite = [37,41,46];
+  const pageW = 595;
+  const marginX = 40;
+
+  doc.setFillColor(...graphite);
+  doc.rect(0,0,pageW,70,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(15);
+  doc.text('RESUMO FINANCEIRO — SILOÉ', marginX, 32);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10.5);
+  doc.text(monthLabelLong(mKey), marginX, 50);
+
+  let y = 96;
+  doc.setTextColor(30,30,32);
+  doc.setFontSize(11);
+  doc.setFont('helvetica','bold');
+  doc.text(`Renda: ${fmtMoney(dados.renda)}   Gastos: ${fmtMoney(dados.gastoTotal)}   Sobra: ${fmtMoneySigned(dados.sobra)}`, marginX, y);
+  y += 24;
+
+  doc.autoTable({
+    startY: y,
+    head: [['Categoria','Valor no mês']],
+    body: [
+      ['Moradia', fmtMoney(categoryTotalForMonth('moradia', mKey))],
+      ['Fixos', fmtMoney(categoryTotalForMonth('fixo', mKey))],
+      ['Assinaturas', fmtMoney(categoryTotalForMonth('assinatura', mKey))],
+      ['Contas Futuras', fmtMoney(categoryTotalForMonth('futuro', mKey))],
+      ['Cartão (parcelas + à vista)', fmtMoney(totalCartoes)],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
+    bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
+    styles: { lineColor:[230,230,232], lineWidth:0.5 },
+    margin: { left:marginX, right:marginX }
+  });
+  y = doc.lastAutoTable.finalY + 24;
+
+  if(contasFuturas.length){
+    doc.autoTable({
+      startY: y,
+      head: [['Contas Futuras — ' + monthLabel(mKey), 'Valor']],
+      body: contasFuturas.map(it=>[it.desc, fmtMoney(it.valor)]),
+      theme: 'grid',
+      headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
+      bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
+      styles: { lineColor:[230,230,232], lineWidth:0.5 },
+      margin: { left:marginX, right:marginX }
+    });
+    y = doc.lastAutoTable.finalY + 24;
+  }
+
+  const credoRows = Object.entries(credoVistaCats);
+  if(credoRows.length){
+    doc.autoTable({
+      startY: y,
+      head: [['Cartão à vista por categoria', 'Valor']],
+      body: credoRows.map(([cat,valor])=>[cat, fmtMoney(valor)]),
+      theme: 'grid',
+      headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
+      bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
+      styles: { lineColor:[230,230,232], lineWidth:0.5 },
+      margin: { left:marginX, right:marginX }
+    });
+    y = doc.lastAutoTable.finalY + 24;
+  }
+
+  doc.autoTable({
+    startY: y,
+    head: [['Previsão — ' + monthLabel(previsao.mKey), 'Valor']],
+    body: [
+      ['Contas conhecidas (fixos, futuras, parcelas)', fmtMoney(previsao.certo)],
+      ['Estimativa cartão à vista (média 3 meses)', fmtMoney(previsao.estimado)],
+      ['Total previsto', fmtMoney(previsao.total)],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
+    bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
+    styles: { lineColor:[230,230,232], lineWidth:0.5 },
+    margin: { left:marginX, right:marginX }
+  });
+  y = doc.lastAutoTable.finalY + 20;
+
+  doc.setFontSize(8);
+  doc.setTextColor(140,140,144);
+  if(vilao){
+    doc.text(`Vilão do orçamento: ${CATEGORIA_LABELS[vilao.cat]} subiu ${vilao.diffPct.toFixed(0)}% (${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)})`, marginX, y);
+  }
+
+  const fileName = `Resumo Financeiro - ${monthLabel(mKey)}.pdf`;
+  const blob = doc.output('blob');
+  const file = new File([blob], fileName, { type:'application/pdf' });
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    navigator.share({ files:[file], title:'Resumo Financeiro', text:monthLabel(mKey) }).catch(()=>{
+      doc.save(fileName);
+    });
+  }else{
+    doc.save(fileName);
+  }
 }
 
 function toggleVilaoInfo(){

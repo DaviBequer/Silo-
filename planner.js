@@ -443,7 +443,7 @@ function compraTrackerCalc(item){
 /* Valor da parcela de uma compra do cartão (Tracker) num mês qualquer, não só "hoje" */
 function compraTrackerValorNoMes(item, mKey){
   if(item.pago) return 0;
-  const parcelas = Math.max(1, Number(item.parcelas)||1);
+  const parcelas = Math.min(120, Math.max(1, Number(item.parcelas)||1));
   if(!item.mesInicio) return 0;
   const valorParcela = (Number(item.valorTotal)||0) / parcelas;
   const meses = [];
