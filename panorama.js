@@ -272,6 +272,7 @@ function renderPanorama(){
   renderComparativoAno();
   renderVilaoOrcamento();
   renderPrevisaoProximoMes();
+  renderMetaPJ();
 
   const userSection = document.getElementById('panoUserSection');
   const colsHtml = ['davi','cris'].map(u=>{
@@ -303,14 +304,14 @@ function categoryTotalForMonth(cat, mKey){
         if(v<=0) return;
         const paidKey = mKey+'_'+user+'_futuro_'+item.id;
         if(state.paid[paidKey]) return;
-        total += v;
+        total += restanteConta(paidKey, v);
       });
     } else {
       ex[cat].forEach(item=>{
         if(item.mesInicio && mKey < item.mesInicio) return;
         const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
         if(state.paid[paidKey]) return;
-        total += Number(item.valor)||0;
+        total += restanteConta(paidKey, Number(item.valor)||0);
       });
     }
   });
@@ -444,7 +445,7 @@ function expenseBreakdownForMonth(user, mKey){
       if(item.mesInicio && mKey < item.mesInicio) return;
       const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
       if(state.paid[paidKey]) return;
-      breakdown[cat] += Number(item.valor)||0;
+      breakdown[cat] += restanteConta(paidKey, Number(item.valor)||0);
     });
   });
   ex.futuro.forEach(item=>{
@@ -452,7 +453,7 @@ function expenseBreakdownForMonth(user, mKey){
     if(v<=0) return;
     const paidKey = mKey+'_'+user+'_futuro_'+item.id;
     if(state.paid[paidKey]) return;
-    breakdown.futuro += v;
+    breakdown.futuro += restanteConta(paidKey, v);
   });
   (state.users[user].cartoes||[]).forEach(c=>{ breakdown.cartao += Number((c.gastos||{})[mKey]) || 0; });
   breakdown.dizimo = dizimoForMonth(user, mKey);
@@ -1247,6 +1248,49 @@ function salvarPagamentoConta(){
   persist();
   closeEditarConta();
   renderPanorama();
+  renderPlanner();
   showToast('Conta atualizada');
 }
 
+/* ================= META PARA SAIR DO PJ ================= */
+function gastosBrutosMes(user, mKey){
+  const ex = state.users[user].expenses;
+  let t = 0;
+  ['moradia','assinatura','fixo'].forEach(cat=> ex[cat].forEach(i=>{
+    if(i.mesInicio && mKey < i.mesInicio) return;
+    t += Number(i.valor)||0;
+  }));
+  ex.futuro.forEach(i=>{ t += futuroValorNoMes(i, mKey); });
+  (state.users[user].cartoes||[]).forEach(c=>{ t += Number((c.gastos||{})[mKey]) || 0; });
+  return t;
+}
+function setMetaContribCris(valStr){
+  if(!state.metaPJ) state.metaPJ = { contribCris:0 };
+  state.metaPJ.contribCris = parseMoney(valStr);
+  persist();
+  renderMetaPJ();
+}
+function renderMetaPJ(){
+  const el = document.getElementById('cardMetaPJ');
+  if(!el) return;
+  if(!state.metaPJ) state.metaPJ = { contribCris:0 };
+  const contrib = state.metaPJ.contribCris || 0;
+  const meses = [0,1,2].map(i=> addMonths(mesFinanceiroAtual(), i));
+  const linhas = meses.map((m,i)=>{
+    const gastos = gastosBrutosMes('davi', m);
+    const precisa = Math.max(gastos - contrib, 0) / (1 - DIZIMO_PERCENT);
+    const crisRenda = (state.users.cris.income[m]||0) + extraTotalForMonth('cris', m);
+    const crisSobra = crisRenda - gastosBrutosMes('cris', m) - contrib;
+    return `<tr><td class="row-label">${monthLabel(m).slice(0,3)}${i===0?'<small> atual</small>':''}</td>
+      <td>${fmtMoney(gastos)}</td>
+      <td style="font-weight:800">${fmtMoney(precisa)}</td>
+      <td style="color:${crisSobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(crisSobra)}</td></tr>`;
+  }).join('');
+  el.innerHTML = `<div class="card-title"><div class="left">Meta para sair do PJ</div></div>
+    <div class="field" style="margin-bottom:var(--s2)"><label style="font-size:11px;font-weight:700;color:var(--text-dim)">Contribuição da Cris por mês</label>
+      <div class="input-money"><input type="text" inputmode="numeric" placeholder="0,00" value="${contrib?contrib.toFixed(2).replace('.',','):''}" oninput="maskMoneyInput(this)" onchange="setMetaContribCris(this.value)"></div></div>
+    <div class="ponto-table-wrap"><table class="money-table">
+      <thead><tr><th style="text-align:left;padding-left:10px">Mês</th><th>Seus gastos</th><th>Precisa ganhar</th><th>Sobra da Cris</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>
+    <div class="meta" style="margin-top:8px;color:var(--text-dim);font-size:11px">Precisa ganhar = (seus gastos − contribuição da Cris) mais 10% de dízimo sobre o que entrar.</div>`;
+}

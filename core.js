@@ -348,7 +348,8 @@ function incomeForMonth(user, mKey){
   }
   const base = rendaBaseForMonth(user, mKey);
   const extra = extraTotalForMonth(user, mKey);
-  return base + extra + saldo;
+  const jaRec = (state.users[user].jaRecebido||{})[mKey] || 0; // parte da renda que já entrou no saldo
+  return Math.max(base + extra - jaRec, 0) + saldo;
 }
 /* Categorias fixas de um chip-picker + categorias que o usuário criou (guardadas em state[customKey]) */
 function getCategoriasComCustom(base, customKey){
@@ -465,6 +466,11 @@ function futuroValorNoMes(item, mKey){
   }
   return Number(item.valor) || 0;
 }
+/* Conta com pagamento parcial: só o que falta pagar entra na previsão */
+function restanteConta(paidKey, valor){
+  const pago = (state.pagamentosParciais||{})[paidKey] || 0;
+  return Math.max(valor - pago, 0);
+}
 function expensesForMonth(user, mKey){
   const ex = state.users[user].expenses;
   let total = 0;
@@ -473,7 +479,7 @@ function expensesForMonth(user, mKey){
       if(item.mesInicio && mKey < item.mesInicio) return; // ainda não começou a contar
       const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
       if(state.paid[paidKey]) return; // já pago neste mês, não conta mais
-      total += Number(item.valor)||0;
+      total += restanteConta(paidKey, Number(item.valor)||0);
     });
   });
   ex.futuro.forEach(item=>{
@@ -481,7 +487,7 @@ function expensesForMonth(user, mKey){
     if(v<=0) return;
     const paidKey = mKey+'_'+user+'_futuro_'+item.id;
     if(state.paid[paidKey]) return;
-    total += v;
+    total += restanteConta(paidKey, v);
   });
   (state.users[user].cartoes||[]).forEach(c=>{ total += Number((c.gastos||{})[mKey]) || 0; });
   total += dizimoForMonth(user, mKey);

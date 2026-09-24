@@ -161,6 +161,7 @@ function renderPlanner(){
   document.getElementById('btnAddCartao').style.display = (u==='davi') ? '' : 'none';
 
   renderRendaTable();
+  renderPlannerFaixa();
   ['moradia','assinatura','fixo','futuro'].forEach(cat=> renderGastoGrid(cat));
   renderCartaoTrackerList();
   renderReservaBadge();
@@ -185,6 +186,12 @@ function renderRendaTable(){
     }
     const val = state.users[u].income[mKey] || 0;
     return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
+  }).join('')}<td></td></tr>`;
+
+  const jaRecRow = `<tr><td class="row-label">Já recebi</td>${months.map(mKey=>{
+    if(mKey!==hoje) return `<td>—</td>`;
+    const val = (state.users[u].jaRecebido||{})[mKey] || 0;
+    return `<td class="cell-money current-col"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setJaRecebido('${u}','${mKey}', this.value)"></td>`;
   }).join('')}<td></td></tr>`;
 
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
@@ -212,9 +219,40 @@ function renderRendaTable(){
   }).join('')}<td></td></tr>`;
 
   document.getElementById('rendaTableThead').innerHTML = thead;
-  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + cartaoRows + sobraRow;
+  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + jaRecRow + dizimoRow + cartaoRows + sobraRow;
+  renderPlannerFaixa();
 }
 
+/* Faixa fixa no topo do Planner: mostra o resultado do mês enquanto edita (usa os mesmos cálculos do Dashboard) */
+function renderPlannerFaixa(){
+  const el = document.getElementById('planFaixa');
+  if(!el) return;
+  const hdr = document.querySelector('.header');
+  if(hdr) document.documentElement.style.setProperty('--header-h', hdr.offsetHeight+'px');
+  const u = state.currentUser;
+  const mKey = mesFinanceiroAtual();
+  const emConta = state.users[u].saldoAtual || 0;
+  const total = incomeForMonth(u, mKey);
+  const aReceber = total - emConta;
+  const aPagar = expensesForMonth(u, mKey);
+  const sobra = total - aPagar;
+  const cor = v => v>=0 ? 'var(--success)' : 'var(--danger)';
+  el.innerHTML = `<div class="plan-faixa-mes"><span>${monthLabelExtenso(mKey)}</span><button type="button" class="section-add-label" onclick="openGastoModal('futuro', null, 'simples')">+ Gasto futuro</button></div>
+    <div class="plan-faixa-grid">
+      <div><span>Em conta</span><b>${fmtMoney(emConta)}</b></div>
+      <div><span>A receber</span><b>${fmtMoney(aReceber)}</b></div>
+      <div><span>A pagar</span><b>${fmtMoney(aPagar)}</b></div>
+      <div><span>Sobra prevista</span><b style="color:${cor(sobra)}">${fmtMoneySigned(sobra)}</b></div>
+    </div>`;
+}
+
+function setJaRecebido(user, mKey, valStr){
+  if(!state.users[user].jaRecebido) state.users[user].jaRecebido = {};
+  state.users[user].jaRecebido[mKey] = parseMoney(valStr);
+  renderRendaTable();
+  renderPanorama();
+  persist();
+}
 function setIncome(user, mKey, valStr){
   if(user === 'davi') return; // renda do Davi é automática (vem do Ponto PJ)
   const v = parseMoney(valStr);
@@ -381,15 +419,23 @@ function renderGastoGrid(cat){
     const logo = item.logoUrl
       ? `<img src="${item.logoUrl}" class="conta-logo">`
       : `<div class="conta-logo conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`;
+    const mAtual = mesFinanceiroAtual();
+    const pk = mAtual+'_'+u+'_'+cat+'_'+item.id;
+    const ativoNoMes = cat==='futuro' ? futuroValorNoMes(item, mAtual)>0 : !(item.mesInicio && mAtual < item.mesInicio);
+    const pago = !!state.paid[pk];
+    const parc = (state.pagamentosParciais||{})[pk] || 0;
+    const statusTxt = !ativoNoMes ? '' : (pago ? ' · <b style="color:var(--success)">paga</b>' : (parc>0 ? ' · <b style="color:var(--warning)">pago '+fmtMoney(parc)+'</b>' : ' · aberta'));
+    const btnPagar = !ativoNoMes ? '' : `<button class="btn-icon-sm" title="Registrar pagamento" onclick="abrirEditarConta('${pk}','${u}','${cat}','${item.id}','${mAtual}')">$</button>`;
     return `<div class="list-row">
       ${logo}
       <div class="lr-info">
         <div class="lr-desc">${item.desc}</div>
         ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
-        <div class="lr-meta">${metaTxt}</div>
+        <div class="lr-meta">${metaTxt}${statusTxt}</div>
       </div>
       <div class="lr-value">${valorTxt}</div>
       <div class="lr-actions">
+        ${btnPagar}
         <button class="btn-icon-sm" title="Duplicar" onclick="duplicarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
         <button class="btn-icon-sm" onclick="editGasto('${cat}','${item.id}')">${ICON_EDIT}</button>
         <button class="btn-icon-sm" title="Arquivar" onclick="arquivarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>

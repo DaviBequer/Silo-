@@ -37,6 +37,14 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.32', itens: [
+    'Planner: status das contas (aberta, parcial, paga) com botão para registrar pagamento; pagamento parcial agora reduz o que falta pagar',
+    'Planner: campo "Já recebi" para a renda do mês e botão "+ Gasto futuro" na faixa',
+    'Dashboard: cartão "Meta para sair do PJ" com contribuição da Cris e projeção de 3 meses'
+  ]},
+  { versao: 'v2.31', itens: [
+    'Planner: faixa fixa no topo com saldo em conta, a receber, a pagar e sobra prevista do mês, sempre visível enquanto você edita'
+  ]},
   { versao: 'v2.30', itens: [
     'Corrigido: no computador, o Dashboard ficava aparecendo em cima das outras abas',
     'Dashboard no computador agora ocupa a tela toda, com os cartões distribuídos em colunas'
