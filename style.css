@@ -937,6 +937,16 @@ body.lv-nav-active #pageLouvorForm .fullpage-content{padding-bottom:calc(84px + 
 body:has(#aba-panorama.active) .header{padding-left:var(--s4);padding-right:var(--s4)}
 }
 
+/* Planner no desktop: organiza os cartões e seções em colunas, em vez de empilhar tudo */
+@media(min-width:1024px){
+#aba-planner.active{max-width:none;width:100%;box-sizing:border-box;padding:var(--s4);column-count:2;column-gap:var(--s4)}
+#aba-planner.active > .user-tabs,#aba-planner.active > .plan-faixa{column-span:all}
+#aba-planner.active > .card,#aba-planner.active > .section{break-inside:avoid;-webkit-column-break-inside:avoid;margin-bottom:var(--s4)}
+}
+@media(min-width:1600px){
+#aba-planner.active{column-count:3}
+}
+
 /* Faixa fixa do Planner */
 .plan-faixa{position:sticky;top:var(--header-h,53px);z-index:90;background:var(--bg);padding:var(--s2) 0;margin-bottom:var(--s3);border-bottom:1px solid var(--line)}
 .plan-faixa-mes{font-size:10.5px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
