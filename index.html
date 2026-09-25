@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.32">
+<link rel="stylesheet" href="style.css?v=2.33">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.32</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.33</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -156,36 +156,39 @@
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-head">
+  <div class="section" id="secao-moradia">
+    <div class="section-head" onclick="toggleSecaoGasto('moradia')" style="cursor:pointer">
       <div class="section-title">Moradia</div>
-      <button class="section-add" onclick="openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <button type="button" class="section-toggle" onclick="toggleSecaoGasto('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="section-add" onclick="event.stopPropagation();openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-moradia"></div>
     <div id="grid-moradia-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section">
-    <div class="section-head">
+  <div class="section" id="secao-assinatura">
+    <div class="section-head" onclick="toggleSecaoGasto('assinatura')" style="cursor:pointer">
       <div class="section-title">Assinaturas</div>
-      <button class="section-add" onclick="openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <button type="button" class="section-toggle" onclick="toggleSecaoGasto('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="section-add" onclick="event.stopPropagation();openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-assinatura"></div>
     <div id="grid-assinatura-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section">
-    <div class="section-head">
+  <div class="section" id="secao-fixo">
+    <div class="section-head" onclick="toggleSecaoGasto('fixo')" style="cursor:pointer">
       <div class="section-title">Fixos</div>
-      <button class="section-add" onclick="openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <button type="button" class="section-toggle" onclick="toggleSecaoGasto('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="section-add" onclick="event.stopPropagation();openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-fixo"></div>
     <div id="grid-fixo-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section">
+  <div class="section" id="secao-futuro">
     <div class="section-head">
-      <div class="section-title">Contas Futuras</div>
+      <div class="section-title" onclick="toggleSecaoGasto('futuro')" style="cursor:pointer;flex:1">Contas Futuras</div>
       <div style="display:flex;gap:6px">
         <button class="section-add-label" onclick="openGastoModal('futuro', null, 'simples')">+ Simples</button>
         <button class="section-add-label" onclick="openGastoModal('futuro', null, 'parcelada')">+ Parcelada</button>
@@ -1483,6 +1486,9 @@
         <label>Dia do mês que costuma cair (opcional)</label>
         <input type="number" id="extraItemDia" min="1" max="31" placeholder="Ex: 15">
       </div>
+      <div class="field full" id="extraAjudaDaviField" style="display:none">
+        <label class="checkbox-field"><input type="checkbox" id="extraItemAjudaDavi"> Vai ajudar o Davi (conta na Meta pra sair do PJ)</label>
+      </div>
       <div class="field full">
         <label>De (mês inicial)</label>
         <div class="month-picker">
@@ -1653,13 +1659,13 @@ if(versaoArmazenada !== VERSAO_ATUAL){
   }
 }
 </script>
-<script src="core.js?v=2.32"></script>
-<script src="app.js?v=2.32"></script>
-<script src="panorama.js?v=2.32"></script>
-<script src="planner.js?v=2.32"></script>
-<script src="ponto.js?v=2.32"></script>
-<script src="receitas.js?v=2.32"></script>
-<script src="louvor.js?v=2.32"></script>
-<script src="mercado.js?v=2.32"></script>
+<script src="core.js?v=2.33"></script>
+<script src="app.js?v=2.33"></script>
+<script src="panorama.js?v=2.33"></script>
+<script src="planner.js?v=2.33"></script>
+<script src="ponto.js?v=2.33"></script>
+<script src="receitas.js?v=2.33"></script>
+<script src="louvor.js?v=2.33"></script>
+<script src="mercado.js?v=2.33"></script>
 </body>
 </html>

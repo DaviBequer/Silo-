@@ -348,8 +348,7 @@ function incomeForMonth(user, mKey){
   }
   const base = rendaBaseForMonth(user, mKey);
   const extra = extraTotalForMonth(user, mKey);
-  const jaRec = (state.users[user].jaRecebido||{})[mKey] || 0; // parte da renda que já entrou no saldo
-  return Math.max(base + extra - jaRec, 0) + saldo;
+  return base + extra + saldo;
 }
 /* Categorias fixas de um chip-picker + categorias que o usuário criou (guardadas em state[customKey]) */
 function getCategoriasComCustom(base, customKey){
@@ -366,6 +365,7 @@ let rendaExtraUser = null;
 function abrirRendaExtraModal(user, mKey){
   rendaExtraUser = user;
   document.getElementById('rendaExtraModalUsuario').textContent = user==='davi'?'Davi':'Cris';
+  document.getElementById('extraAjudaDaviField').style.display = user==='cris' ? 'block' : 'none';
   resetarFormExtraItem();
   createMonthPicker('extraMesInicioPicker','extraMesInicio', mKey);
   createMonthPicker('extraMesFimPicker','extraMesFim', mKey);
@@ -376,6 +376,7 @@ function resetarFormExtraItem(){
   document.getElementById('extraItemId').value = '';
   document.getElementById('extraItemDesc').value = '';
   document.getElementById('extraItemValor').value = '';
+  document.getElementById('extraItemAjudaDavi').checked = false;
   document.getElementById('extraFormTitulo').textContent = 'Novo Extra';
 }
 function renderRendaExtraLista(){
@@ -408,6 +409,7 @@ function editarExtraItem(id){
   document.getElementById('extraItemDesc').value = item.desc;
   document.getElementById('extraItemValor').value = Number(item.valor).toFixed(2).replace('.',',');
   document.getElementById('extraItemDia').value = item.dia || '';
+  document.getElementById('extraItemAjudaDavi').checked = !!item.ajudaDavi;
   selectPickerMonth('extraMesInicioPicker', item.mesInicio);
   selectPickerMonth('extraMesFimPicker', item.mesFim||item.mesInicio);
   document.getElementById('extraFormTitulo').textContent = 'Editar Extra';
@@ -417,6 +419,7 @@ function salvarExtraItem(){
   const desc = document.getElementById('extraItemDesc').value.trim();
   const valor = parseMoney(document.getElementById('extraItemValor').value);
   const dia = parseInt(document.getElementById('extraItemDia').value) || null;
+  const ajudaDavi = rendaExtraUser==='cris' && document.getElementById('extraItemAjudaDavi').checked;
   const mesInicio = document.getElementById('extraMesInicio').value;
   const mesFim = document.getElementById('extraMesFim').value;
   if(!desc){ showToast('Digite uma descrição'); return; }
@@ -426,15 +429,16 @@ function salvarExtraItem(){
   if(!state.users[rendaExtraUser].extras) state.users[rendaExtraUser].extras = [];
   if(id){
     const item = state.users[rendaExtraUser].extras.find(e=>e.id===id);
-    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; item.dia=dia; }
+    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; item.dia=dia; item.ajudaDavi=ajudaDavi; }
   } else {
-    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim, dia });
+    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim, dia, ajudaDavi });
   }
   persist();
   resetarFormExtraItem();
   renderRendaExtraLista();
   renderRendaTable();
   renderPanorama();
+  renderMetaPJ();
   showToast('Extra salvo');
 }
 function excluirExtraItem(id){
@@ -494,7 +498,7 @@ function expensesForMonth(user, mKey){
   return total;
 }
 function saldoForMonth(user, mKey){ return incomeForMonth(user,mKey) - expensesForMonth(user,mKey); }
-function saldoHouseholdForMonth(mKey){ return saldoForMonth('davi',mKey) + saldoForMonth('cris',mKey); }
+function saldoHouseholdForMonth(mKey){ return saldoForMonth('davi',mKey); } // Dashboard: só Davi
 
 function getPanoWindowMonths(){
   if(state.panoOffset < 0) state.panoOffset = 0;
@@ -504,3 +508,12 @@ function getPanoWindowMonths(){
   return arr;
 }
 
+/* Contribuição da Cris pro Davi: soma dos extras dela marcados "vai ajudar o Davi" */
+function contribCrisForMonth(mKey){
+  return (state.users.cris.extras||[]).reduce((sum,e)=>{
+    if(!e.ajudaDavi) return sum;
+    const fim = e.mesFim || e.mesInicio;
+    if(mKey >= e.mesInicio && mKey <= fim) return sum + (Number(e.valor)||0);
+    return sum;
+  }, 0);
+}

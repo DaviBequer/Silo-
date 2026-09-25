@@ -275,18 +275,14 @@ function renderPanorama(){
   renderMetaPJ();
 
   const userSection = document.getElementById('panoUserSection');
-  const colsHtml = ['davi','cris'].map(u=>{
-    const receita = incomeForMonth(u, state.focusMonth);
-    const gastos = expensesForMonth(u, state.focusMonth);
-    const sobra = receita - gastos;
-    return `<div class="ucc-col">
-      <div class="u-name">${u==='davi'?'Davi':'Cris'}</div>
-      <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Receita</span><span class="u-receita">${fmtMoney(receita)}</span></div>
-      <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Gastos</span><span class="u-gastos">${fmtMoney(gastos)}</span></div>
-      <div class="u-sobra ${sobra>=0?'positive':'negative'}"><span class="lbl">Sobra</span><span>${fmtMoneySigned(sobra)}</span></div>
-    </div>`;
-  }).join('<div class="ucc-divider"></div>');
-  userSection.innerHTML = `<div class="user-card-combined">${colsHtml}</div>`;
+  const receitaDavi = incomeForMonth('davi', state.focusMonth);
+  const gastosDavi = expensesForMonth('davi', state.focusMonth);
+  const sobraDavi = receitaDavi - gastosDavi;
+  userSection.innerHTML = `<div class="user-card-combined"><div class="ucc-col">
+    <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Receita</span><span class="u-receita">${fmtMoney(receitaDavi)}</span></div>
+    <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Gastos</span><span class="u-gastos">${fmtMoney(gastosDavi)}</span></div>
+    <div class="u-sobra ${sobraDavi>=0?'positive':'negative'}"><span class="lbl">Sobra</span><span>${fmtMoneySigned(sobraDavi)}</span></div>
+  </div></div>`;
 
   document.getElementById('contasMesLabel').textContent = monthLabel(state.focusMonth);
   renderChecklist();
@@ -296,7 +292,7 @@ function renderPanorama(){
 
 function categoryTotalForMonth(cat, mKey){
   let total = 0;
-  ['davi','cris'].forEach(user=>{
+  ['davi'].forEach(user=>{ // Dashboard: só Davi
     const ex = state.users[user].expenses;
     if(cat==='futuro'){
       ex.futuro.forEach(item=>{
@@ -321,7 +317,7 @@ function renderSumarioPanorama(){
   const summary = document.getElementById('sumarioPanorama');
   if(!summary) return;
   const mKeyAtual = state.focusMonth;
-  const rendaTotal = (incomeForMonth('davi', mKeyAtual) || 0) + (incomeForMonth('cris', mKeyAtual) || 0);
+  const rendaTotal = incomeForMonth('davi', mKeyAtual) || 0; // Dashboard: só Davi
   const totalCartoes = (state.cartoesTracker||[]).reduce((s,c)=>{
     const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
     const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
@@ -387,15 +383,14 @@ function renderPanoCharts(){
   const wrap = document.getElementById('trendChartWrap');
   if(!wrap) return;
   const mKey = state.focusMonth;
-  const renda = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
+  const renda = incomeForMonth('davi', mKey); // Dashboard: só Davi
   const bdDavi = expenseBreakdownForMonth('davi', mKey);
-  const bdCris = expenseBreakdownForMonth('cris', mKey);
   const cats = ['moradia','fixo','assinatura','futuro','cartao','dizimo'];
   const catColors = { moradia:'#2B3038', fixo:'#0EA5E9', assinatura:'#DB8B18', futuro:'#E0342B', cartao:'#1C9D5B', dizimo:'#7B5FA6' };
   const catLabels = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras', cartao:'Cartão', dizimo:'Dízimo' };
   const totals = {};
   let gastosTotal = 0;
-  cats.forEach(c=>{ totals[c] = (bdDavi[c]||0)+(bdCris[c]||0); gastosTotal += totals[c]; });
+  cats.forEach(c=>{ totals[c] = bdDavi[c]||0; gastosTotal += totals[c]; });
   const sobra = renda - gastosTotal;
 
   const pctGasto = renda>0 ? Math.min(100,(gastosTotal/renda)*100) : (gastosTotal>0?100:0);
@@ -469,7 +464,7 @@ function abrirDetalheAcumulado(mKey){
 
   // Composição do mês selecionado
   let composicaoHtml = '';
-  ['davi','cris'].forEach(user=>{
+  ['davi'].forEach(user=>{ // Dashboard: só Davi
     const renda = incomeForMonth(user, mKey);
     const bd = expenseBreakdownForMonth(user, mKey);
     composicaoHtml += `
@@ -556,7 +551,7 @@ function futuroParcelaNoMes(item, mKey){
 }
 function getContasDoMes(mKey){
   let items = [];
-  ['davi','cris'].forEach(u=>{
+  ['davi'].forEach(u=>{ // Dashboard: só Davi
     ['moradia','assinatura','fixo'].forEach(cat=>{
       state.users[u].expenses[cat].forEach(item=>{
         if(item.mesInicio && mKey < item.mesInicio) return;
@@ -578,8 +573,8 @@ function getContasDoMes(mKey){
 /* ================= COMPARATIVO COM MESES ANTERIORES ================= */
 function dadosDoMes(mKey){
   if(state.historicoMeses && state.historicoMeses[mKey]) return state.historicoMeses[mKey];
-  const renda = incomeForMonth('davi', mKey) + incomeForMonth('cris', mKey);
-  const gastoTotal = expensesForMonth('davi', mKey) + expensesForMonth('cris', mKey);
+  const renda = incomeForMonth('davi', mKey); // Dashboard: só Davi
+  const gastoTotal = expensesForMonth('davi', mKey);
   return { renda, gastoTotal, sobra: renda-gastoTotal };
 }
 function renderComparativoAno(){
@@ -623,7 +618,7 @@ function renderComparativoAno(){
 function calcularPrevisaoProximoMes(){
   const mKey = addMonths(mesFinanceiroAtual(), 1);
   let certo = 0;
-  ['davi','cris'].forEach(user=>{
+  ['davi'].forEach(user=>{ // Dashboard: só Davi
     ['moradia','fixo','assinatura'].forEach(cat=> certo += categoryTotalForMonth(cat, mKey));
   });
   const futuro = categoryTotalForMonth('futuro', mKey);
@@ -894,7 +889,7 @@ function renderVilaoOrcamento(){
 function calcularFluxoCaixa(mKey){
   const eventos = {};
   const diaRecebimento = state.diaRecebimentoRenda || 5;
-  ['davi','cris'].forEach(u=>{
+  ['davi'].forEach(u=>{ // Dashboard: só Davi
     const isAtual = mKey === mesFinanceiroAtual();
     if(isAtual && state.users[u].usarSaldoComoBase){
       const saldo = state.users[u].saldoAtual || 0;
@@ -1023,7 +1018,6 @@ function renderParcelasTerminando(){
 
 /* ================= LEMBRETE DE VENCIMENTO ================= */
 function diasParaVencimento(it, mKey){
-  if(mKey !== mesFinanceiroAtual()) return null;
   const d = keyToDate(mKey);
   const alvo = new Date(d.getFullYear(), d.getMonth(), parseInt(it.dia)||1);
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -1264,33 +1258,25 @@ function gastosBrutosMes(user, mKey){
   (state.users[user].cartoes||[]).forEach(c=>{ t += Number((c.gastos||{})[mKey]) || 0; });
   return t;
 }
-function setMetaContribCris(valStr){
-  if(!state.metaPJ) state.metaPJ = { contribCris:0 };
-  state.metaPJ.contribCris = parseMoney(valStr);
-  persist();
-  renderMetaPJ();
-}
 function renderMetaPJ(){
   const el = document.getElementById('cardMetaPJ');
   if(!el) return;
-  if(!state.metaPJ) state.metaPJ = { contribCris:0 };
-  const contrib = state.metaPJ.contribCris || 0;
   const meses = [0,1,2].map(i=> addMonths(mesFinanceiroAtual(), i));
   const linhas = meses.map((m,i)=>{
     const gastos = gastosBrutosMes('davi', m);
+    const contrib = contribCrisForMonth(m);
     const precisa = Math.max(gastos - contrib, 0) / (1 - DIZIMO_PERCENT);
     const crisRenda = (state.users.cris.income[m]||0) + extraTotalForMonth('cris', m);
     const crisSobra = crisRenda - gastosBrutosMes('cris', m) - contrib;
     return `<tr><td class="row-label">${monthLabel(m).slice(0,3)}${i===0?'<small> atual</small>':''}</td>
       <td>${fmtMoney(gastos)}</td>
+      <td>${fmtMoney(contrib)}</td>
       <td style="font-weight:800">${fmtMoney(precisa)}</td>
       <td style="color:${crisSobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(crisSobra)}</td></tr>`;
   }).join('');
   el.innerHTML = `<div class="card-title"><div class="left">Meta para sair do PJ</div></div>
-    <div class="field" style="margin-bottom:var(--s2)"><label style="font-size:11px;font-weight:700;color:var(--text-dim)">Contribuição da Cris por mês</label>
-      <div class="input-money"><input type="text" inputmode="numeric" placeholder="0,00" value="${contrib?contrib.toFixed(2).replace('.',','):''}" oninput="maskMoneyInput(this)" onchange="setMetaContribCris(this.value)"></div></div>
     <div class="ponto-table-wrap"><table class="money-table">
-      <thead><tr><th style="text-align:left;padding-left:10px">Mês</th><th>Seus gastos</th><th>Precisa ganhar</th><th>Sobra da Cris</th></tr></thead>
+      <thead><tr><th style="text-align:left;padding-left:10px">Mês</th><th>Seus gastos</th><th>Ajuda Cris</th><th>Precisa ganhar</th><th>Sobra da Cris</th></tr></thead>
       <tbody>${linhas}</tbody></table></div>
-    <div class="meta" style="margin-top:8px;color:var(--text-dim);font-size:11px">Precisa ganhar = (seus gastos − contribuição da Cris) mais 10% de dízimo sobre o que entrar.</div>`;
+    <div class="meta" style="margin-top:8px;color:var(--text-dim);font-size:11px">Precisa ganhar = (seus gastos − ajuda da Cris) mais 10% de dízimo sobre o que entrar. A ajuda da Cris é a soma dos extras dela marcados "vai ajudar o Davi" no Planner.</div>`;
 }

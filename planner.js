@@ -188,12 +188,6 @@ function renderRendaTable(){
     return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
   }).join('')}<td></td></tr>`;
 
-  const jaRecRow = `<tr><td class="row-label">Já recebi</td>${months.map(mKey=>{
-    if(mKey!==hoje) return `<td>—</td>`;
-    const val = (state.users[u].jaRecebido||{})[mKey] || 0;
-    return `<td class="cell-money current-col"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setJaRecebido('${u}','${mKey}', this.value)"></td>`;
-  }).join('')}<td></td></tr>`;
-
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
     const val = extraTotalForMonth(u, mKey);
     return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirRendaExtraModal('${u}','${mKey}')">${val?fmtMoney(val):'<span class="cell-money-empty">+ Extra</span>'}</td>`;
@@ -219,7 +213,7 @@ function renderRendaTable(){
   }).join('')}<td></td></tr>`;
 
   document.getElementById('rendaTableThead').innerHTML = thead;
-  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + jaRecRow + dizimoRow + cartaoRows + sobraRow;
+  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + cartaoRows + sobraRow;
   renderPlannerFaixa();
 }
 
@@ -400,11 +394,22 @@ function desarquivarGasto(cat, id){
   persist();
   showToast('Conta restaurada');
 }
+function toggleSecaoGasto(cat){
+  const atual = secoesGastoColapsadas[cat];
+  const colapsadaAgora = atual===undefined ? (state.users[state.currentUser].expenses[cat].filter(i=>!i.arquivado).length===0) : atual;
+  secoesGastoColapsadas[cat] = !colapsadaAgora;
+  renderGastoGrid(cat);
+}
 function renderGastoGrid(cat){
   const u = state.currentUser;
   const todos = state.users[u].expenses[cat];
   const items = todos.filter(i=>!i.arquivado);
   const arquivados = todos.filter(i=>i.arquivado);
+  const secao = document.getElementById('secao-'+cat);
+  if(secao){
+    const colapsada = secoesGastoColapsadas[cat]!==undefined ? secoesGastoColapsadas[cat] : items.length===0;
+    secao.classList.toggle('collapsed', colapsada);
+  }
   const grid = document.getElementById('grid-'+cat);
   if(!items || items.length===0){
     grid.innerHTML = `<div class="empty-state"><div class="title">Nada por aqui</div><div class="desc">Toque em + para incluir um gasto</div></div>`;
@@ -506,6 +511,7 @@ function popularSelectCartoes(selectId, selecionado){
   if(selecionado) el.value = selecionado;
 }
 let cartoesExpandidos = {};
+let secoesGastoColapsadas = {};
 function renderCartaoTrackerList(){
   const list = document.getElementById('cartaoTrackerList');
   if(!list) return;

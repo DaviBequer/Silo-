@@ -37,6 +37,14 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.33', itens: [
+    'Dashboard: gastos, sobra, contas a pagar e o cartão "Meta para sair do PJ" agora só do Davi — a Cris fica só no Planner (dela)',
+    'Meta para sair do PJ: a ajuda da Cris agora vem dos extras dela marcados "vai ajudar o Davi", sem campo manual',
+    'Planner: seções Moradia/Assinaturas/Fixos/Contas Futuras podem ser fechadas tocando no título (fecham sozinhas quando vazias)',
+    'Contas a pagar: "dia X" agora mostra quantos dias faltam de verdade, mesmo olhando outro mês',
+    'Removido o campo "Já recebi" do fluxo mensal (o toggle do saldo em conta já resolve isso)',
+    'Ícones das contas um pouco maiores'
+  ]},
   { versao: 'v2.32', itens: [
     'Planner: status das contas (aberta, parcial, paga) com botão para registrar pagamento; pagamento parcial agora reduz o que falta pagar',
     'Planner: campo "Já recebi" para a renda do mês e botão "+ Gasto futuro" na faixa',
