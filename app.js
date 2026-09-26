@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.35', itens: [
+    'Simulador de Orçamento: botão "Usar total dos cartões em aberto" preenche a meta com o valor total do cartão, pra simular um empréstimo que quita tudo e parcela em N vezes',
+    'PDF do Resumo: nova tabela com os próximos 6 meses, mostrando quanto de cartão e quanto de contas fixas/futuras em cada mês'
+  ]},
   { versao: 'v2.34', itens: [
     'Planner no computador agora organiza os cartões e seções em colunas, igual ao Dashboard, em vez de empilhar tudo'
   ]},

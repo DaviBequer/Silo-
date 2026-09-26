@@ -85,8 +85,15 @@ function closeSimulador(){
   simuladorAumentoRendaPercent = 0;
 }
 
-function adicionarMetaSimulador(){
-  const nome = document.getElementById('simMetaNome').value.trim();
+/* Preenche o valor da meta com o total em aberto nos cartões, pra simular um empréstimo que quita tudo */
+function usarTotalCartoesNaMeta(){
+  const total = totalCartoesNoMesAtual();
+  if(!total){ showToast('Não há valor em aberto nos cartões'); return; }
+  document.getElementById('simMetaValor').value = total.toFixed(2).replace('.',',');
+  if(!document.getElementById('simMetaNome').value.trim()) document.getElementById('simMetaNome').value = 'Empréstimo (quitar cartão)';
+  showToast('Valor dos cartões preenchido: ' + fmtMoney(total));
+}
+function adicionarMetaSimulador(){  const nome = document.getElementById('simMetaNome').value.trim();
   const valor = parseMoney(document.getElementById('simMetaValor').value);
   const parcelas = Math.max(1, parseInt(document.getElementById('simMetaParcelas').value) || 1);
   const mes = document.getElementById('simMetaMes').value;
@@ -811,6 +818,23 @@ function exportarResumoFinanceiroPDF(){
     });
     y = doc.lastAutoTable.finalY + 24;
   }
+
+  doc.autoTable({
+    startY: y,
+    head: [['Mês','Cartão','Moradia/Fixos/Assin.','Contas Futuras','Total do mês']],
+    body: [0,1,2,3,4,5].map(i=>{
+      const m = addMonths(mKey, i);
+      const bd = expenseBreakdownForMonth('davi', m);
+      const contas = bd.moradia + bd.fixo + bd.assinatura;
+      return [monthLabel(m), fmtMoney(bd.cartao), fmtMoney(contas), fmtMoney(bd.futuro), fmtMoney(bd.total)];
+    }),
+    theme: 'grid',
+    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
+    bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
+    styles: { lineColor:[230,230,232], lineWidth:0.5 },
+    margin: { left:marginX, right:marginX }
+  });
+  y = doc.lastAutoTable.finalY + 24;
 
   doc.autoTable({
     startY: y,
