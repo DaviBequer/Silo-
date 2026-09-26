@@ -276,8 +276,8 @@ function renderPlannerSaldoModoBtn(){
   if(!btn) return;
   const ativo = !!state.users[u].usarSaldoComoBase;
   btn.classList.toggle('active', ativo);
-  btn.textContent = ativo
-    ? '✓ Calculando pelo saldo em conta — toque pra voltar a somar a renda'
+  btn.innerHTML = ativo
+    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>Calculando pelo saldo em conta — toque pra voltar a somar a renda'
     : 'Já recebi tudo e comecei a pagar? Toque pra calcular só pelo saldo em conta';
 }
 
@@ -302,7 +302,7 @@ function atualizarReservaProjecao(){
     const meses = Math.ceil(falta/aporte);
     linhaMeses = `<div class="reserva-proj-linha">No ritmo de ${fmtMoney(aporte)}/mês, faltam <b>${meses} ${meses===1?'mês':'meses'}</b> pra bater a meta</div>`;
   } else if(falta === 0){
-    linhaMeses = `<div class="reserva-proj-linha reserva-proj-ok">🎉 Meta batida!</div>`;
+    linhaMeses = `<div class="reserva-proj-linha reserva-proj-ok"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Meta batida!</div>`;
   }
   el.innerHTML = `
     <div class="reserva-proj-barra"><div class="reserva-proj-barra-fill" style="width:${pct}%"></div></div>

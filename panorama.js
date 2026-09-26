@@ -700,7 +700,7 @@ function renderResumoGeral(){
 
     <div class="card">
       <div class="card-title"><div class="left">Vilão do Orçamento</div></div>
-      ${vilao ? `<div class="comp-ano-linha"><span>🔺 ${CATEGORIA_LABELS[vilao.cat]}</span><span>${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)}</span><span style="color:var(--danger);font-weight:800">+${vilao.diffPct.toFixed(0)}%</span></div>` : `<div class="comp-ano-linha"><span>Nenhuma categoria disparou em relação ao mês passado</span></div>`}
+      ${vilao ? `<div class="comp-ano-linha"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>${CATEGORIA_LABELS[vilao.cat]}</span><span>${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)}</span><span style="color:var(--danger);font-weight:800">+${vilao.diffPct.toFixed(0)}%</span></div>` : `<div class="comp-ano-linha"><span>Nenhuma categoria disparou em relação ao mês passado</span></div>`}
       <div class="comp-ano-linha"><span>Gasto essencial mínimo</span><span style="font-weight:800">${fmtMoney(essencialMin)}</span></div>
     </div>
 
@@ -903,7 +903,7 @@ function renderVilaoOrcamento(){
   card.style.display = 'block';
   let html = '';
   if(vilao){
-    html += `<div class="comp-ano-linha"><span>🔺 ${CATEGORIA_LABELS[vilao.cat]}</span><span>${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)}</span><span style="color:var(--danger);font-weight:800">+${vilao.diffPct.toFixed(0)}%</span></div>`;
+    html += `<div class="comp-ano-linha"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>${CATEGORIA_LABELS[vilao.cat]}</span><span>${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)}</span><span style="color:var(--danger);font-weight:800">+${vilao.diffPct.toFixed(0)}%</span></div>`;
   }
   html += `<div class="comp-ano-linha"><span>Gasto essencial mínimo</span><span style="font-weight:800">${fmtMoney(essencialMin)}</span></div>`;
   document.getElementById('vilaoOrcamentoBody').innerHTML = html;
@@ -969,9 +969,9 @@ function renderFluxoCaixa(){
     return;
   }
   if(minPonto && minPonto.saldo < 0){
-    resumoEl.innerHTML = `<div class="fluxo-alerta negativo">⚠️ Ponto mais apertado: dia ${minPonto.dia}, saldo projetado ${fmtMoneySigned(minPonto.saldo)}</div>`;
+    resumoEl.innerHTML = `<div class="fluxo-alerta negativo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Ponto mais apertado: dia ${minPonto.dia}, saldo projetado ${fmtMoneySigned(minPonto.saldo)}</div>`;
   } else {
-    resumoEl.innerHTML = `<div class="fluxo-alerta positivo">✓ O saldo projetado não fica negativo em nenhum dia deste mês</div>`;
+    resumoEl.innerHTML = `<div class="fluxo-alerta positivo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>O saldo projetado não fica negativo em nenhum dia deste mês</div>`;
   }
   listaEl.innerHTML = pontos.map(p=>{
     const isMin = minPonto && p.dia===minPonto.dia && p.saldo===minPonto.saldo;
@@ -1029,7 +1029,7 @@ function renderParcelasTerminando(){
   const porMes = {};
   lista.forEach(p=>{ porMes[p.mesFim] = (porMes[p.mesFim]||0)+1; });
   const avisoJuntas = Object.keys(porMes).filter(m=>porMes[m]>=2)
-    .map(m=>`<div class="fluxo-alerta negativo">⚠️ ${porMes[m]} parcelas terminam juntas em ${monthLabel(m)} — cuidado pra não gastar o alívio todo em outra coisa</div>`)
+    .map(m=>`<div class="fluxo-alerta negativo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${porMes[m]} parcelas terminam juntas em ${monthLabel(m)} — cuidado pra não gastar o alívio todo em outra coisa</div>`)
     .join('');
   document.getElementById('parcelasTerminandoLista').innerHTML = avisoJuntas + lista.map(p=>
     `<div class="parcela-fim-item">

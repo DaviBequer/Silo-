@@ -37,6 +37,16 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.37', itens: [
+    'Removido o leitor de QR do cupom fiscal (experimental, não estava funcionando)'
+  ]},
+  { versao: 'v2.36', itens: [
+    'Modais agora abrem centralizados no computador (continuam subindo de baixo no celular), e o fundo não rola mais atrás de nenhum modal',
+    'Botões pequenos (adicionar, editar, duplicar, excluir, abrir/fechar seção) com área de toque maior, sem mudar o visual',
+    'Campos de formulário não dão mais zoom sozinhos ao tocar no iPhone',
+    'Moradia, Assinaturas, Fixos e Contas Futuras agora aparecem em caixa, igual ao resto do Dashboard',
+    'Emojis de alerta (vilão, aviso, meta batida, confirmação) trocados por ícones no estilo do app'
+  ]},
   { versao: 'v2.35', itens: [
     'Simulador de Orçamento: botão "Usar total dos cartões em aberto" preenche a meta com o valor total do cartão, pra simular um empréstimo que quita tudo e parcela em N vezes',
     'PDF do Resumo: nova tabela com os próximos 6 meses, mostrando quanto de cartão e quanto de contas fixas/futuras em cada mês'
