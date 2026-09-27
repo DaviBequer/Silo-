@@ -7,9 +7,9 @@ const ICON_LAY_LOCK_OPEN = '<svg width="13" height="13" viewBox="0 0 24 24" fill
 const ICON_LAY_LOCK_CLOSED = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
 const LAYOUT_GROUPS = {
-  panoResumo: { selector:'#panoPanelResumo', defaultSpan:6 },
+  panoResumo: { selector:'#panoPanelResumo', defaultSpan:4 },
   panoContas: { selector:'#panoPanelContas', defaultSpan:12 },
-  planner:    { selector:'#aba-planner',     defaultSpan:6 }
+  planner:    { selector:'#aba-planner',     defaultSpan:4 }
 };
 
 let layoutEditActive = false;
@@ -103,12 +103,14 @@ function startLayoutDrag(e, groupKey, el, container){
   try{ e.target.setPointerCapture(e.pointerId); }catch(err){}
   el.classList.add('lay-dragging');
   document.body.classList.add('lay-dragging-active');
+  let lastAlvo = null;
   function onMove(ev){
     el.style.pointerEvents='none';
     const under = document.elementFromPoint(ev.clientX, ev.clientY);
     el.style.pointerEvents='';
     const alvo = under && under.closest ? under.closest('[data-lid]') : null;
-    if(alvo && alvo!==el && alvo.parentElement===container && alvo.dataset.locked!=='1'){
+    if(alvo && alvo!==el && alvo.parentElement===container && alvo.dataset.locked!=='1' && alvo!==lastAlvo){
+      lastAlvo = alvo;
       flipReorder(container, ()=>{
         const depois = !!(el.compareDocumentPosition(alvo) & Node.DOCUMENT_POSITION_FOLLOWING);
         if(depois) container.insertBefore(el, alvo.nextSibling);

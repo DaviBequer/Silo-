@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.48', itens: [
+    'Layout: padrão agora é 3 colunas, drag & drop melhorado, scrollbar oculta com seta visual',
+    'Planner: botão pra ver compras arquivadas no topo do cartão, ícones mais escuros'
+  ]},
   { versao: 'v2.47', itens: [
     'Novo: botão de editar layout no header (Dashboard e Planner) — no computador dá pra arrastar, redimensionar e travar os cards; no celular dá pra reordenar',
     'Logo do Siloé e ícones do header centralizados no computador',

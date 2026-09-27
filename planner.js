@@ -632,6 +632,7 @@ function renderCartaoTrackerList(){
           <div class="ct-nome-cartao">${cartao.nome}</div>
         </div>
         <div class="ct-actions">
+          <button class="btn-icon-sm" onclick="toggleQuitadasCartao('${cartao.id}')" title="Ver arquivadas">${ICON_EYE}</button>
           <button class="btn-icon-sm" onclick="openCartaoCardModal('${cartao.id}')">${ICON_EDIT}</button>
           <button class="btn-icon-sm" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
         </div>
