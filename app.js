@@ -37,6 +37,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.47', itens: [
+    'Novo: botão de editar layout no header (Dashboard e Planner) — no computador dá pra arrastar, redimensionar e travar os cards; no celular dá pra reordenar',
+    'Logo do Siloé e ícones do header centralizados no computador',
+    'Ponto PJ: dias agrupados por semana, com opção de recolher cada semana pra ocupar menos espaço',
+    'Modal de adicionar/editar gasto mais largo no computador, com mais campos lado a lado'
+  ]},
   { versao: 'v2.46', itens: [
     'Cartões de Crédito: nova fatura mês a mês (rolagem lateral), começando no mês atual — clica num mês pra ver só o que cai nele, clica de novo pra voltar a ver tudo'
   ]},

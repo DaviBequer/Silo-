@@ -1,10 +1,11 @@
-const CACHE_NAME = 'siloe-cache-v38';
-const APP_VERSION = '2.46';
+const CACHE_NAME = 'siloe-cache-v39';
+const APP_VERSION = '2.47';
 const ARQUIVOS = [
   './index.html',
   `./style.css?v=${APP_VERSION}`,
-  `./app.js?v=${APP_VERSION}`,
   `./core.js?v=${APP_VERSION}`,
+  `./layout.js?v=${APP_VERSION}`,
+  `./app.js?v=${APP_VERSION}`,
   `./panorama.js?v=${APP_VERSION}`,
   `./planner.js?v=${APP_VERSION}`,
   `./ponto.js?v=${APP_VERSION}`,

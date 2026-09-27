@@ -126,6 +126,12 @@ function dayTotalMinutes(d){
   return periodo + (d.extra||0);
 }
 
+let pontoSemanaColapsada = {}; // chave mKey+'-w'+índice -> true/false (em memória, não precisa persistir)
+function toggleSemanaPonto(chave){
+  pontoSemanaColapsada[chave] = !pontoSemanaColapsada[chave];
+  renderPonto();
+}
+
 function renderPonto(){
   const mKey = pontoMonthKeyAtual();
   ensurePontoMonth(mKey);
@@ -136,41 +142,72 @@ function renderPonto(){
   const lista = document.getElementById('pontoDiasLista');
   const hoje = new Date();
   const nowMin = hoje.getHours()*60 + hoje.getMinutes();
-  let rows = '';
+
+  // Agrupa os dias em semanas (semana começa no domingo)
+  const semanas = [];
   for(let dia=1; dia<=totalDias; dia++){
-    const d = getDia(mKey, dia);
     const dateObj = keyToDate(mKey); dateObj.setDate(dia);
-    const isWeekend = dateObj.getDay()===0 || dateObj.getDay()===6;
-    const isHoje = dateObj.getFullYear()===hoje.getFullYear() && dateObj.getMonth()===hoje.getMonth() && dateObj.getDate()===hoje.getDate();
-    const total = dayTotalMinutes(d);
-    const extraVal = d.extra ? String(Math.floor(d.extra/60)).padStart(2,'0')+':'+String(d.extra%60).padStart(2,'0') : '';
-    const travado = !!d.concluido;
-    const tapAttrs = (campo)=> travado ? '' : `onpointerdown="tempoTapStart(event,${dia},'${campo}')" onpointerup="tempoTapEnd(event,${dia},'${campo}')" onpointercancel="tempoTapCancel()" onpointerleave="tempoTapCancel()" oncontextmenu="return false"`;
-    const statusClasse = (campo)=>{
-      if(d.confirmado && d.confirmado[campo]) return 'ph-confirmado';
-      if(isHoje && d[campo] && nowMin > timeToMin(d[campo])) return 'ph-atrasado';
-      return '';
-    };
-    rows += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''}">
-      <div class="pd-head">
-        <div class="pd-data">${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="pd-total ${total===0?'zero':''}">${minToHoursLabel(total)}</div>
-          <button class="btn-icon-sm ${travado?'concluido-ativo':''}" onclick="toggleDiaConcluido(${dia})" title="${travado?'Reabrir dia':'Marcar como concluído'}">${travado?ICON_CHECK:ICON_UNLOCK}</button>
-          <button class="btn-icon-sm" onclick="zerarDia(${dia})" title="Não trabalhei" ${travado?'disabled':''}>${ICON_BAN}</button>
-        </div>
-      </div>
-      <div class="ponto-horarios-grid">
-        <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap ${statusClasse('entrada')}" ${tapAttrs('entrada')}>${d.entrada||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap ${statusClasse('almocoSaida')}" ${tapAttrs('almocoSaida')}>${d.almocoSaida||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap ${statusClasse('almocoVolta')}" ${tapAttrs('almocoVolta')}>${d.almocoVolta||'--:--'}</div></div>
-        <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap ${statusClasse('saida')}" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
-      </div>
-      <div class="ponto-extra-row">
-        <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)" ${travado?'disabled':''}></div>
-      </div>
-    </div>`;
+    if(dateObj.getDay()===0 || dia===1) semanas.push([]);
+    semanas[semanas.length-1].push(dia);
   }
+
+  let rows = '';
+  semanas.forEach((diasDaSemana, wIdx)=>{
+    const chave = mKey+'-w'+wIdx;
+    const semanaTemHoje = diasDaSemana.some(dia=>{
+      const dt = keyToDate(mKey); dt.setDate(dia);
+      return dt.getFullYear()===hoje.getFullYear() && dt.getMonth()===hoje.getMonth() && dt.getDate()===hoje.getDate();
+    });
+    const ultimoDiaSemana = keyToDate(mKey); ultimoDiaSemana.setDate(diasDaSemana[diasDaSemana.length-1]);
+    const semanaPassou = ultimoDiaSemana < hoje && !semanaTemHoje;
+    if(!(chave in pontoSemanaColapsada)) pontoSemanaColapsada[chave] = semanaPassou;
+    const colapsada = pontoSemanaColapsada[chave];
+    const primeiroDia = diasDaSemana[0], ultimoDia = diasDaSemana[diasDaSemana.length-1];
+
+    let diasHtml = '';
+    diasDaSemana.forEach(dia=>{
+      const d = getDia(mKey, dia);
+      const dateObj = keyToDate(mKey); dateObj.setDate(dia);
+      const isWeekend = dateObj.getDay()===0 || dateObj.getDay()===6;
+      const isHoje = dateObj.getFullYear()===hoje.getFullYear() && dateObj.getMonth()===hoje.getMonth() && dateObj.getDate()===hoje.getDate();
+      const total = dayTotalMinutes(d);
+      const extraVal = d.extra ? String(Math.floor(d.extra/60)).padStart(2,'0')+':'+String(d.extra%60).padStart(2,'0') : '';
+      const travado = !!d.concluido;
+      const tapAttrs = (campo)=> travado ? '' : `onpointerdown="tempoTapStart(event,${dia},'${campo}')" onpointerup="tempoTapEnd(event,${dia},'${campo}')" onpointercancel="tempoTapCancel()" onpointerleave="tempoTapCancel()" oncontextmenu="return false"`;
+      const statusClasse = (campo)=>{
+        if(d.confirmado && d.confirmado[campo]) return 'ph-confirmado';
+        if(isHoje && d[campo] && nowMin > timeToMin(d[campo])) return 'ph-atrasado';
+        return '';
+      };
+      diasHtml += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''}">
+        <div class="pd-head">
+          <div class="pd-data">${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="pd-total ${total===0?'zero':''}">${minToHoursLabel(total)}</div>
+            <button class="btn-icon-sm ${travado?'concluido-ativo':''}" onclick="toggleDiaConcluido(${dia})" title="${travado?'Reabrir dia':'Marcar como concluído'}">${travado?ICON_CHECK:ICON_UNLOCK}</button>
+            <button class="btn-icon-sm" onclick="zerarDia(${dia})" title="Não trabalhei" ${travado?'disabled':''}>${ICON_BAN}</button>
+          </div>
+        </div>
+        <div class="ponto-horarios-grid">
+          <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap ${statusClasse('entrada')}" ${tapAttrs('entrada')}>${d.entrada||'--:--'}</div></div>
+          <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap ${statusClasse('almocoSaida')}" ${tapAttrs('almocoSaida')}>${d.almocoSaida||'--:--'}</div></div>
+          <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap ${statusClasse('almocoVolta')}" ${tapAttrs('almocoVolta')}>${d.almocoVolta||'--:--'}</div></div>
+          <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap ${statusClasse('saida')}" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
+        </div>
+        <div class="ponto-extra-row">
+          <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)" ${travado?'disabled':''}></div>
+        </div>
+      </div>`;
+    });
+
+    rows += `<div class="ponto-semana-grupo ${colapsada?'colapsada':''}">
+      <div class="ponto-semana-head" onclick="toggleSemanaPonto('${chave}')">
+        <span>Semana ${wIdx+1} <small>${String(primeiroDia).padStart(2,'0')}–${String(ultimoDia).padStart(2,'0')}</small></span>
+        <button type="button" class="section-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      </div>
+      <div class="ponto-semana-dias">${diasHtml}</div>
+    </div>`;
+  });
   lista.innerHTML = rows;
   renderPontoSummary();
 }

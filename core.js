@@ -41,7 +41,8 @@ function novoEstado(){
     semanaOffset:0,
     semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} },
-    configFonte:'system'
+    configFonte:'system',
+    layoutPrefs:{}
   };
 }
 const FONTES_APP = {
@@ -151,11 +152,14 @@ function carregar(){
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
       if(!state.configFonte) state.configFonte = 'system';
+      if(!state.layoutPrefs) state.layoutPrefs = {};
     }
   }catch(e){ /* sem dados salvos ainda */ }
   limparDadosAntigos();
   aplicarFonteApp();
   renderAll();
+  if(typeof applyAllLayouts==='function') applyAllLayouts();
+  if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility('panorama');
 }
 
 /* ================= LIMPEZA AUTOMÁTICA (mantém só mês atual + mês passado) ================= */
@@ -304,6 +308,7 @@ function switchAba(aba){
   if(aba==='louvor') renderLouvor();
   if(aba==='mercado') renderMercado();
   if(typeof atualizarLvNavBar==='function') atualizarLvNavBar();
+  if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility(aba);
 }
 function switchUser(user){
   state.currentUser = user;
