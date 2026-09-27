@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.38', itens: [
+    'Planner: linhas de Moradia/Assinaturas/Fixos/Contas Futuras sem os botões de duplicar e arquivar; os que ficaram (pagar, editar, excluir) em uma coluna só, mais visíveis',
+    'Louvor: removida a barra "Biblioteca/Estúdio" que travava a navegação — pra sair, use a setinha no cabeçalho'
+  ]},
   { versao: 'v2.37', itens: [
     'Removido o leitor de QR do cupom fiscal (experimental, não estava funcionando)'
   ]},
