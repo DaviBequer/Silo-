@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.49">
+<link rel="stylesheet" href="style.css?v=2.50">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.49</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.50</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -609,6 +609,49 @@
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalCredoVista')">Cancelar</button>
       <button class="btn btn-block" onclick="salvarCredoVista()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalAssinatura">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalAssinaturaTitle">Assinatura</h3>
+      <button class="modal-close" onclick="closeModal('modalAssinatura')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="hidden" id="assinaturaCartaoId">
+    <input type="hidden" id="assinaturaId">
+    <div class="field full">
+      <label>Nome</label>
+      <input type="text" id="assinaturaNome" placeholder="Ex: Netflix">
+    </div>
+    <div class="field full">
+      <label>Valor mensal</label>
+      <div class="input-money"><input type="text" id="assinaturaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="field full">
+      <label>Categoria</label>
+      <div class="dificuldade-chips" id="assinaturaCategoriaChips"></div>
+    </div>
+    <div class="field full">
+      <label>Mês de início</label>
+      <div class="month-picker">
+        <button type="button" class="month-picker-btn" id="assinaturaMesInicioPickerBtn" onclick="toggleMonthPicker('assinaturaMesInicioPicker')">Selecione o mês</button>
+        <div class="month-picker-panel" id="assinaturaMesInicioPickerPanel" style="display:none">
+          <div class="month-picker-nav">
+            <button type="button" onclick="shiftPickerYear('assinaturaMesInicioPicker',-1)">‹</button>
+            <span id="assinaturaMesInicioPickerYear"></span>
+            <button type="button" onclick="shiftPickerYear('assinaturaMesInicioPicker',1)">›</button>
+          </div>
+          <div class="month-picker-grid" id="assinaturaMesInicioPickerGrid"></div>
+        </div>
+      </div>
+      <input type="hidden" id="assinaturaMesInicio">
+    </div>
+    <button type="button" id="btnCancelarAssinatura" class="link-btn-sm" style="display:none" onclick="cancelarAssinatura()">Cancelar assinatura a partir do próximo mês</button>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalAssinatura')">Fechar</button>
+      <button class="btn btn-block" onclick="salvarAssinatura()">Salvar</button>
     </div>
   </div>
 </div>
@@ -1632,14 +1675,14 @@ if(versaoArmazenada !== VERSAO_ATUAL){
   }
 }
 </script>
-<script src="core.js?v=2.49"></script>
-<script src="layout.js?v=2.49"></script>
-<script src="app.js?v=2.49"></script>
-<script src="panorama.js?v=2.49"></script>
-<script src="planner.js?v=2.49"></script>
-<script src="ponto.js?v=2.49"></script>
-<script src="receitas.js?v=2.49"></script>
-<script src="louvor.js?v=2.49"></script>
-<script src="mercado.js?v=2.49"></script>
+<script src="core.js?v=2.50"></script>
+<script src="layout.js?v=2.50"></script>
+<script src="app.js?v=2.50"></script>
+<script src="panorama.js?v=2.50"></script>
+<script src="planner.js?v=2.50"></script>
+<script src="ponto.js?v=2.50"></script>
+<script src="receitas.js?v=2.50"></script>
+<script src="louvor.js?v=2.50"></script>
+<script src="mercado.js?v=2.50"></script>
 </body>
 </html>

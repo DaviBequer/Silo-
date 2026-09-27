@@ -533,7 +533,8 @@ function gerarFaturaMensalHtml(cartao){
   return meses.map(mKey=>{
     const totalParcelas = compras.reduce((s,item)=>s+compraTrackerValorNoMes(item, mKey), 0);
     const totalVista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).reduce((s,cv)=>s+Number(cv.valor||0), 0);
-    const total = totalParcelas + totalVista;
+    const totalAssinaturas = (cartao.assinaturas||[]).reduce((s,a)=>s+assinaturaValorNoMes(a, mKey), 0);
+    const total = totalParcelas + totalVista + totalAssinaturas;
     const sel = selecionado===mKey ? ' selected' : '';
     return `<div class="ct-fatura-chip${sel}" onclick="toggleFaturaMes('${cartao.id}','${mKey}')">
       <div class="fm-mes">${monthLabel(mKey)}</div>
@@ -571,7 +572,8 @@ function renderCartaoTrackerList(){
       if(item.pago) return s; // pago não entra no cálculo
       const c = compraTrackerCalc(item);
       return s + (c.status==='concluido' ? 0 : c.restante);
-    },0) + (cartao.credoVista?.reduce((s,v)=>s+Number(v.valor||0), 0) || 0);
+    },0) + (cartao.credoVista?.reduce((s,v)=>s+Number(v.valor||0), 0) || 0)
+      + (cartao.assinaturas||[]).reduce((s,a)=>s+assinaturaValorNoMes(a, mesFinanceiroAtual()), 0);
     const limite = Number(cartao.limite)||0;
     const disponivel = Math.max(0, limite - usado);
     const percentUsado = limite>0 ? Math.min(100, Math.round((usado/limite)*100)) : 0;
@@ -652,10 +654,14 @@ function renderCartaoTrackerList(){
         ${quitadasHtml}
         <div class="credo-vista-list">
           ${(cartao.credoVista||[]).filter(cv=>!mesSelecionado || cv.mKey===mesSelecionado).map(cv=>`<div class="credo-vista-item" ondblclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
+          ${(cartao.assinaturas||[]).filter(a=>!mesSelecionado || assinaturaValorNoMes(a, mesSelecionado)>0).map(a=>`<div class="credo-vista-item" ondblclick="openAssinaturaModal('${cartao.id}','${a.id}')"><span class="cv-cat-badge">${a.categoria||'Outros'}</span><span class="cv-desc">${a.nome}${a.canceladoApartirDe?' · cancelada':''} <span class="badge-teste">Assinatura</span></span><span class="cv-valor">${fmtMoney(a.valor)}</span><button class="btn-icon-sm" onclick="excluirAssinatura('${cartao.id}','${a.id}')">${ICON_TRASH}</button></div>`).join('')}
         </div>
+        <button type="button" class="link-btn-sm" onclick="toggleGastosDashboard('${cartao.id}')">${gastosDashboardAberto[cartao.id]?'Ocultar':'Ver'} gastos por categoria</button>
+        ${gastosDashboardAberto[cartao.id] ? renderCartaoGastosDashboard(cartao, mesSelecionado || mesFinanceiroAtual()) : ''}
         <div style="display:flex;gap:6px;margin-top:10px">
           <button class="btn btn-sm btn-outline" style="flex:1" onclick="openCompraTrackerModal('${cartao.id}')">+ Parcelada</button>
           <button class="btn btn-sm btn-outline" style="flex:1" onclick="openCredoVistaModal('${cartao.id}')">+ À vista</button>
+          <button class="btn btn-sm btn-outline" style="flex:1" onclick="openAssinaturaModal('${cartao.id}')">+ Assinatura</button>
         </div>
       </div>
     </div>`;
@@ -922,6 +928,119 @@ function excluirCredoVista(cartaoId, credoId){
   persist();
   renderCartaoTrackerList();
   renderPanorama();
+}
+
+/* --- Assinaturas do cartão: recorrência mensal, sem precisar relançar --- */
+window.assinaturaCategoriaSelecionada = 'Outros';
+function selecionarAssinaturaCategoria(c){
+  window.assinaturaCategoriaSelecionada = c;
+  renderAssinaturaCategoriaChips();
+}
+function renderAssinaturaCategoriaChips(){
+  const el = document.getElementById('assinaturaCategoriaChips');
+  if(!el) return;
+  const cats = getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom');
+  el.innerHTML = cats.map(c =>
+    `<button type="button" class="dif-chip${window.assinaturaCategoriaSelecionada===c?' active':''}" onclick="selecionarAssinaturaCategoria('${c}')">${c}</button>`
+  ).join('') + `<button type="button" class="dif-chip cat-chip-add" onclick="abrirNovaCategoriaExtra('assinatura')">+ Nova</button>`;
+}
+function openAssinaturaModal(cartaoId, assinaturaId){
+  document.getElementById('assinaturaCartaoId').value = cartaoId;
+  document.getElementById('assinaturaId').value = assinaturaId || '';
+  document.getElementById('modalAssinaturaTitle').textContent = assinaturaId ? 'Editar Assinatura' : 'Nova Assinatura';
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  const item = assinaturaId ? cartao?.assinaturas?.find(a=>a.id===assinaturaId) : null;
+  document.getElementById('assinaturaNome').value = item?.nome || '';
+  document.getElementById('assinaturaValor').value = item ? (item.valor||0).toFixed(2).replace('.',',') : '';
+  window.assinaturaCategoriaSelecionada = item?.categoria || 'Outros';
+  createMonthPicker('assinaturaMesInicioPicker', 'assinaturaMesInicio', item?.mesInicio || mesFinanceiroAtual());
+  const btnCancelar = document.getElementById('btnCancelarAssinatura');
+  if(btnCancelar) btnCancelar.style.display = (item && !item.canceladoApartirDe) ? '' : 'none';
+  renderAssinaturaCategoriaChips();
+  document.getElementById('modalAssinatura').classList.add('active');
+}
+function salvarAssinatura(){
+  const cartaoId = document.getElementById('assinaturaCartaoId').value;
+  const assinaturaId = document.getElementById('assinaturaId').value;
+  const nome = document.getElementById('assinaturaNome').value.trim();
+  const valor = parseMoney(document.getElementById('assinaturaValor').value);
+  const categoria = window.assinaturaCategoriaSelecionada || 'Outros';
+  const mesInicio = document.getElementById('assinaturaMesInicio').value || mesFinanceiroAtual();
+  if(!nome){ showToast('Digite o nome da assinatura'); return; }
+  if(!valor){ showToast('Digite o valor'); return; }
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  if(!cartao){ showToast('Cartão não encontrado'); return; }
+  if(!cartao.assinaturas) cartao.assinaturas = [];
+  if(assinaturaId){
+    const item = cartao.assinaturas.find(a=>a.id===assinaturaId);
+    if(item) Object.assign(item, { nome, valor, categoria, mesInicio });
+  } else {
+    cartao.assinaturas.push({ id: 'as'+Date.now(), nome, valor, categoria, mesInicio, canceladoApartirDe: null });
+  }
+  persist();
+  closeModal('modalAssinatura');
+  renderCartaoTrackerList();
+  showToast('Assinatura salva');
+}
+function cancelarAssinatura(){
+  const cartaoId = document.getElementById('assinaturaCartaoId').value;
+  const assinaturaId = document.getElementById('assinaturaId').value;
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  const item = cartao?.assinaturas?.find(a=>a.id===assinaturaId);
+  if(!item) return;
+  item.canceladoApartirDe = mesFinanceiroAtual();
+  persist();
+  closeModal('modalAssinatura');
+  renderCartaoTrackerList();
+  showToast('Assinatura cancelada a partir de ' + monthLabel(item.canceladoApartirDe));
+}
+function excluirAssinatura(cartaoId, assinaturaId){
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  if(cartao) cartao.assinaturas = (cartao.assinaturas||[]).filter(a=>a.id!==assinaturaId);
+  persist();
+  renderCartaoTrackerList();
+}
+/* Valor da assinatura num mês qualquer: cobra a partir do mês de início, e para de cobrar a partir do mês de cancelamento */
+function assinaturaValorNoMes(item, mKey){
+  if(!item.mesInicio || mKey < item.mesInicio) return 0;
+  if(item.canceladoApartirDe && mKey >= item.canceladoApartirDe) return 0;
+  return Number(item.valor||0);
+}
+
+/* --- Dashboard de gastos do cartão: à vista + assinaturas do mês, por categoria e por nome --- */
+function cartaoGastosPorMes(cartao, mKey){
+  const porCategoria = {}, porNome = {};
+  (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).forEach(cv=>{
+    const cat = cv.categoria || 'Outros', nome = cv.descricao || 'Crédito à vista';
+    porCategoria[cat] = (porCategoria[cat]||0) + Number(cv.valor||0);
+    porNome[nome] = (porNome[nome]||0) + Number(cv.valor||0);
+  });
+  (cartao.assinaturas||[]).forEach(a=>{
+    const valor = assinaturaValorNoMes(a, mKey);
+    if(!valor) return;
+    const cat = a.categoria || 'Outros';
+    porCategoria[cat] = (porCategoria[cat]||0) + valor;
+    porNome[a.nome] = (porNome[a.nome]||0) + valor;
+  });
+  return { porCategoria, porNome };
+}
+let gastosDashboardAberto = {};
+function toggleGastosDashboard(cartaoId){
+  gastosDashboardAberto[cartaoId] = !gastosDashboardAberto[cartaoId];
+  renderCartaoTrackerList();
+}
+function renderCartaoGastosDashboard(cartao, mKey){
+  const { porCategoria, porNome } = cartaoGastosPorMes(cartao, mKey);
+  const catEntries = Object.entries(porCategoria).sort((a,b)=>b[1]-a[1]);
+  if(!catEntries.length) return `<div class="ct-sem-compra">Nenhum gasto em ${monthLabel(mKey)}</div>`;
+  const nomeEntries = Object.entries(porNome).sort((a,b)=>b[1]-a[1]);
+  const maiorCat = Math.max(...catEntries.map(e=>e[1]));
+  const maiorNome = Math.max(...nomeEntries.map(e=>e[1]));
+  const barRow = (label, valor, maior) => `<div class="bar-row"><div class="bar-label">${label}</div><div class="bar-container"><div class="bar-fill" style="width:${Math.round(valor/maior*100)}%;background:var(--primary)"><div class="bar-percent">${fmtMoney(valor)}</div></div></div></div>`;
+  return `<div class="ponto-semanas-titulo" style="margin-top:var(--s3)">Por categoria · ${monthLabel(mKey)}</div>
+    <div class="bar-chart">${catEntries.map(([c,v])=>barRow(c,v,maiorCat)).join('')}</div>
+    <div class="ponto-semanas-titulo" style="margin-top:var(--s3)">Por nome</div>
+    <div class="bar-chart">${nomeEntries.map(([n,v])=>barRow(n,v,maiorNome)).join('')}</div>`;
 }
 function excluirCompraTracker(id){
   state.comprasTracker = (state.comprasTracker||[]).filter(i=>i.id!==id);

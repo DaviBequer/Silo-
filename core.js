@@ -148,7 +148,7 @@ function carregar(){
       if(!state.tarefaCategorias) state.tarefaCategorias = [];
       (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
       // migração: garantir campos novos
-      (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; });
+      (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; if(!c.assinaturas) c.assinaturas=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
       if(!state.configFonte) state.configFonte = 'system';

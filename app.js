@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.50', itens: [
+    'Cartão: assinaturas (cobrança recorrente automática todo mês, com opção de cancelar)',
+    'Cartão: dashboard de gastos do mês por categoria e por nome'
+  ]},
   { versao: 'v2.49', itens: [
     'Crédito à vista: mês escolhido é o mês da compra, entra na fatura do mês seguinte',
     'Planner no computador: layout tipo Pinterest de verdade, sem espaço sobrando'
@@ -298,6 +302,9 @@ function salvarCategoriaExtra(){
   if(alvo==='mercado'){
     window.estFormCategoriaSelecionada = nome;
     renderEstFormCategoriaChips();
+  } else if(alvo==='assinatura'){
+    window.assinaturaCategoriaSelecionada = nome;
+    renderAssinaturaCategoriaChips();
   } else {
     window.credoVistaCategoriaSelecionada = nome;
     renderCredoVistaCategoriaChips();
