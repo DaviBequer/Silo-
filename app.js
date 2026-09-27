@@ -37,6 +37,16 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.41', itens: [
+    'Cartões de Crédito: some da tela quando o usuário selecionado é a Cris',
+    'Cartões de Crédito: compras parceladas ordenadas por quem termina primeiro; ao quitar a última parcela, a compra vai para "Ver quitadas" em vez de continuar na lista',
+    'Cartões de Crédito: mostra também a data de vencimento, junto com a de fechamento'
+  ]},
+  { versao: 'v2.40', itens: [
+    'Moradia/Fixos/Assinaturas/Contas Futuras: ícones de ação em linha em cima do valor, ocupando menos espaço',
+    'Fluxo Mensal: seta pra expandir de 6 para 12 meses',
+    'Fluxo Mensal: tecla de avançar (Enter) mais confiável no teclado numérico do celular'
+  ]},
   { versao: 'v2.39', itens: [
     'Dados do App: mostra só a atualização mais recente (não a lista toda)',
     'Removidos os backups automáticos (guardavam várias cópias inteiras dos dados e ocupavam espaço) — use o Exportar de vez em quando',

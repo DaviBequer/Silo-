@@ -167,12 +167,20 @@ function renderPlanner(){
   renderReservaBadge();
 }
 
+let fluxoMesesExpandido = false;
+function toggleFluxoMeses(){
+  fluxoMesesExpandido = !fluxoMesesExpandido;
+  renderRendaTable();
+}
 function renderRendaTable(){
   const u = state.currentUser;
   const months = [];
-  for(let i=0;i<6;i++) months.push(addMonths(mesFinanceiroAtual(), i));
+  const numMeses = fluxoMesesExpandido ? 12 : 6;
+  for(let i=0;i<numMeses;i++) months.push(addMonths(mesFinanceiroAtual(), i));
   const cartoes = (u==='davi') ? (state.users[u].cartoes || []) : [];
   const hoje = mesFinanceiroAtual();
+  const btnToggle = document.getElementById('btnToggleFluxoMeses');
+  if(btnToggle) btnToggle.classList.toggle('expandido', fluxoMesesExpandido);
 
   const thead = `<tr><th style="text-align:left;padding-left:10px">Categoria</th>${months.map(mKey=>{
     const isCurrent = mKey===hoje;
@@ -185,7 +193,7 @@ function renderRendaTable(){
       return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:700">${fmtMoney(val)}</td>`;
     }
     const val = state.users[u].income[mKey] || 0;
-    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
+    return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" enterkeyhint="next" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
   }).join('')}<td></td></tr>`;
 
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
@@ -203,7 +211,7 @@ function renderRendaTable(){
     : cartoes.map(c=>{
       return `<tr class="cartao-row"><td class="row-label">${c.nome}</td>${months.map(mKey=>{
         const val = (c.gastos||{})[mKey] || 0;
-        return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
+        return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" enterkeyhint="next" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
       }).join('')}<td><span class="cartao-actions"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span></td></tr>`;
     }).join(''));
 
@@ -438,11 +446,13 @@ function renderGastoGrid(cat){
         ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
         <div class="lr-meta">${metaTxt}${statusTxt}</div>
       </div>
-      <div class="lr-value">${valorTxt}</div>
-      <div class="lr-actions">
-        ${btnPagar}
-        <button class="btn-icon-sm" onclick="editGasto('${cat}','${item.id}')">${ICON_EDIT}</button>
-        <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
+      <div class="lr-right">
+        <div class="lr-actions">
+          ${btnPagar}
+          <button class="btn-icon-sm" onclick="editGasto('${cat}','${item.id}')">${ICON_EDIT}</button>
+          <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
+        </div>
+        <div class="lr-value">${valorTxt}</div>
       </div>
     </div>`;
   }).join('');
@@ -455,10 +465,12 @@ function renderGastoGrid(cat){
       arqEl.innerHTML = `<button class="link-btn-sm" onclick="toggleArquivadosGasto('${cat}')">${aberto?'Ocultar':'Ver'} arquivados (${arquivados.length})</button>` +
         (aberto ? arquivados.map(item=>`<div class="list-row list-row-arquivado">
           <div class="lr-info"><div class="lr-desc">${item.desc}</div></div>
-          <div class="lr-value">${fmtMoney(item.valor)}</div>
-          <div class="lr-actions">
-            <button class="btn-icon-sm" title="Restaurar" onclick="desarquivarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
-            <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
+          <div class="lr-right">
+            <div class="lr-actions">
+              <button class="btn-icon-sm" title="Restaurar" onclick="desarquivarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+              <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
+            </div>
+            <div class="lr-value">${fmtMoney(item.valor)}</div>
           </div>
         </div>`).join('') : '');
     }
@@ -510,17 +522,25 @@ function popularSelectCartoes(selectId, selecionado){
 }
 let cartoesExpandidos = {};
 let secoesGastoColapsadas = {};
+let quitadasMostrarPorCartao = {};
 function renderCartaoTrackerList(){
   const list = document.getElementById('cartaoTrackerList');
   if(!list) return;
+  const secao = document.getElementById('secaoCartaoTracker');
+  if(secao) secao.style.display = (state.currentUser==='davi') ? '' : 'none';
+  if(state.currentUser!=='davi') return;
   const cartoes = state.cartoesTracker || [];
   if(cartoes.length === 0){
     list.innerHTML = `<div class="empty-state"><div class="title">Nenhum cartão cadastrado</div><div class="desc">Toque em "+ Cartão" pra começar</div></div>`;
     return;
   }
   list.innerHTML = cartoes.map(cartao=>{
-    const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
-    const usado = compras.reduce((s,item)=>{
+    const todasCompras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
+    const compras = todasCompras
+      .filter(item=>compraTrackerCalc(item).status!=='concluido')
+      .sort((a,b)=>compraTrackerCalc(a).restam - compraTrackerCalc(b).restam);
+    const quitadas = todasCompras.filter(item=>compraTrackerCalc(item).status==='concluido');
+    const usado = todasCompras.reduce((s,item)=>{
       if(item.pago) return s; // pago não entra no cálculo
       const c = compraTrackerCalc(item);
       return s + (c.status==='concluido' ? 0 : c.restante);
@@ -566,6 +586,18 @@ function renderCartaoTrackerList(){
         </div>`;
       }).join('');
 
+    const quitadasHtml = quitadas.length === 0 ? '' :
+      `<button class="link-btn-sm" onclick="toggleQuitadasCartao('${cartao.id}')">${quitadasMostrarPorCartao[cartao.id]?'Ocultar':'Ver'} quitadas (${quitadas.length})</button>` +
+      (quitadasMostrarPorCartao[cartao.id] ? quitadas.map(item=>`<div class="compra-tracker-item pago">
+        <div class="ct-top">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0">
+            <div class="ct-nome pago">${item.nome}</div>
+          </div>
+          <div class="ct-actions"><button class="btn-icon-sm" onclick="excluirCompraTracker('${item.id}')">${ICON_TRASH}</button></div>
+        </div>
+        <div class="ct-meta">Quitada · ${fmtMoney(compraTrackerCalc(item).total)}</div>
+      </div>`).join('') : '');
+
     return `<div class="cartao-card-item">
       <div class="ct-top">
         <div style="display:flex;align-items:center;gap:8px;min-width:0">
@@ -580,10 +612,11 @@ function renderCartaoTrackerList(){
       <div class="ct-disponivel-lbl">Disponível</div>
       <div class="ct-disponivel-val">${fmtMoney(disponivel)}</div>
       <div class="ct-bar"><div class="ct-bar-fill" style="width:${percentUsado}%"></div></div>
-      <div class="ct-foot"><span>Gasto ${fmtMoney(usado)}</span><span>Fecha dia ${cartao.fechamento||'—'} · Total ${fmtMoney(limite)}</span></div>
+      <div class="ct-foot"><span>Gasto ${fmtMoney(usado)}</span><span>Fecha dia ${cartao.fechamento||'—'} · Vence dia ${cartao.vencimento||'—'} · Total ${fmtMoney(limite)}</span></div>
       <div class="ct-toggle-compras" onclick="toggleCartaoDetalhes('${cartao.id}')">Ver detalhes</div>
       <div class="compras-do-cartao${cartoesExpandidos[cartao.id]?' expanded':''}" id="cartaoDetalhes-${cartao.id}">
         ${comprasHtml}
+        ${quitadasHtml}
         <div class="credo-vista-list">
           ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item" ondblclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
         </div>
@@ -592,6 +625,10 @@ function renderCartaoTrackerList(){
       </div>
     </div>`;
   }).join('');
+}
+function toggleQuitadasCartao(cartaoId){
+  quitadasMostrarPorCartao[cartaoId] = !quitadasMostrarPorCartao[cartaoId];
+  renderCartaoTrackerList();
 }
 function toggleCartaoDetalhes(cartaoId){
   cartoesExpandidos[cartaoId] = !cartoesExpandidos[cartaoId];

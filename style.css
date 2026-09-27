@@ -73,9 +73,10 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .list-row .lr-desc{font-size:13.5px;font-weight:600;color:var(--text)}
 .list-row .lr-meta{font-size:10.5px;color:var(--text-faint);margin-top:2px}
 .list-row .lr-caption{font-size:10px;font-weight:400;color:var(--text-faint);font-style:italic;margin-top:1px}
-.list-row .lr-value{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
-.list-row .lr-actions{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.7}
+.list-row .lr-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.list-row .lr-actions{display:flex;flex-direction:row;align-items:center;gap:4px;opacity:.7;padding-bottom:4px;border-bottom:1px solid var(--line)}
 .list-row:active .lr-actions,.list-row:hover .lr-actions{opacity:1}
+.list-row .lr-value{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
 .list-row.paid{opacity:.4}
 .list-row.paid .lr-desc{text-decoration:line-through}
 
@@ -216,6 +217,8 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .money-table .row-label{text-align:left;font-weight:700;color:var(--text);font-size:11.5px;white-space:nowrap;padding-left:var(--s2);min-width:110px}
 .money-table .cartao-actions{display:inline-flex;gap:2px}
 .money-table .current-col{background:var(--primary-tint)}
+.fluxo-meses-toggle svg{transition:transform .2s var(--ease)}
+.fluxo-meses-toggle.expandido svg{transform:rotate(90deg)}
 .money-table th.current-col{background:var(--primary-tint);border-radius:6px 6px 0 0}
 .money-table .cell-money{position:relative}
 .money-table .cell-money::before{content:'R$ ';font-size:10px;color:var(--text-faint);font-weight:600}
