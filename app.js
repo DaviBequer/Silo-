@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.46', itens: [
+    'Cartões de Crédito: nova fatura mês a mês (rolagem lateral), começando no mês atual — clica num mês pra ver só o que cai nele, clica de novo pra voltar a ver tudo'
+  ]},
   { versao: 'v2.45', itens: [
     'Novo: botão "Fonte" em Dados do App, com Inter, Poppins, Nunito e a padrão do celular pra escolher a fonte do app inteiro',
     'Títulos do app (cabeçalhos, cards, telas cheias) agora usam uma fonte própria, mais chamativa'

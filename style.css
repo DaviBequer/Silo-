@@ -354,6 +354,13 @@ body:has(.modal-overlay.active){overflow:hidden}
 .compras-do-cartao{display:none}
 .compras-do-cartao.expanded{display:flex;flex-direction:column;margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
 .ct-toggle-compras{width:100%;text-align:center;font-size:10.5px;color:var(--text-faint);font-weight:600;margin-top:var(--s2);cursor:pointer;padding:var(--s1)}
+.ct-fatura-mensal{display:flex;align-items:center;gap:4px;margin-top:var(--s3)}
+.ct-fatura-mensal-strip{display:flex;gap:6px;overflow-x:auto;scroll-behavior:smooth;flex:1;padding-bottom:2px}
+.ct-fatura-mensal-strip::-webkit-scrollbar{display:none}
+.ct-fatura-chip{flex:0 0 auto;min-width:60px;padding:6px 8px;border-radius:12px;background:var(--card-2);border:1.5px solid transparent;text-align:center;cursor:pointer;transition:all var(--dur) var(--ease)}
+.ct-fatura-chip.selected{border-color:var(--success)}
+.ct-fatura-chip .fm-mes{font-size:9.5px;color:var(--text-faint);font-weight:700;text-transform:uppercase}
+.ct-fatura-chip .fm-valor{font-size:11px;font-weight:700;color:var(--text);margin-top:2px}
 .ct-sem-compra{font-size:11px;color:var(--text-faint);text-align:center;padding:var(--s3) 0}
 .compra-tracker-item{padding:var(--s2) 0;border-bottom:1px solid var(--line)}
 .compra-tracker-item:last-child{border-bottom:none}

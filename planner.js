@@ -523,6 +523,31 @@ function popularSelectCartoes(selectId, selecionado){
 let cartoesExpandidos = {};
 let secoesGastoColapsadas = {};
 let quitadasMostrarPorCartao = {};
+let faturaMesSelecionado = {};
+function gerarFaturaMensalHtml(cartao){
+  const hoje = mesFinanceiroAtual();
+  const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
+  const selecionado = faturaMesSelecionado[cartao.id];
+  const meses = [];
+  for(let i=0;i<12;i++) meses.push(addMonths(hoje, i));
+  return meses.map(mKey=>{
+    const totalParcelas = compras.reduce((s,item)=>s+compraTrackerValorNoMes(item, mKey), 0);
+    const totalVista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).reduce((s,cv)=>s+Number(cv.valor||0), 0);
+    const total = totalParcelas + totalVista;
+    const sel = selecionado===mKey ? ' selected' : '';
+    return `<div class="ct-fatura-chip${sel}" onclick="toggleFaturaMes('${cartao.id}','${mKey}')">
+      <div class="fm-mes">${monthLabel(mKey)}</div>
+      <div class="fm-valor">${fmtMoney(total)}</div>
+    </div>`;
+  }).join('');
+}
+function toggleFaturaMes(cartaoId, mKey){
+  faturaMesSelecionado[cartaoId] = faturaMesSelecionado[cartaoId]===mKey ? null : mKey;
+  renderCartaoTrackerList();
+}
+function scrollFaturaMensal(cartaoId, dir){
+  document.getElementById('faturaStrip-'+cartaoId)?.scrollBy({left: dir*140, behavior:'smooth'});
+}
 function renderCartaoTrackerList(){
   const list = document.getElementById('cartaoTrackerList');
   if(!list) return;
@@ -535,9 +560,11 @@ function renderCartaoTrackerList(){
     return;
   }
   list.innerHTML = cartoes.map(cartao=>{
+    const mesSelecionado = faturaMesSelecionado[cartao.id];
     const todasCompras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
     const compras = todasCompras
       .filter(item=>compraTrackerCalc(item).status!=='concluido')
+      .filter(item=>!mesSelecionado || compraTrackerValorNoMes(item, mesSelecionado)>0)
       .sort((a,b)=>compraTrackerCalc(a).restam - compraTrackerCalc(b).restam);
     const quitadas = todasCompras.filter(item=>compraTrackerCalc(item).status==='concluido');
     const usado = todasCompras.reduce((s,item)=>{
@@ -613,12 +640,17 @@ function renderCartaoTrackerList(){
       <div class="ct-disponivel-val">${fmtMoney(disponivel)}</div>
       <div class="ct-bar"><div class="ct-bar-fill" style="width:${percentUsado}%"></div></div>
       <div class="ct-foot"><span>Gasto ${fmtMoney(usado)}</span><span>Fecha dia ${cartao.fechamento||'—'} · Vence dia ${cartao.vencimento||'—'} · Total ${fmtMoney(limite)}</span></div>
+      <div class="ct-fatura-mensal">
+        <button class="btn-icon-sm" onclick="scrollFaturaMensal('${cartao.id}',-1)">‹</button>
+        <div class="ct-fatura-mensal-strip" id="faturaStrip-${cartao.id}">${gerarFaturaMensalHtml(cartao)}</div>
+        <button class="btn-icon-sm" onclick="scrollFaturaMensal('${cartao.id}',1)">›</button>
+      </div>
       <div class="ct-toggle-compras" onclick="toggleCartaoDetalhes('${cartao.id}')">Ver detalhes</div>
       <div class="compras-do-cartao${cartoesExpandidos[cartao.id]?' expanded':''}" id="cartaoDetalhes-${cartao.id}">
         ${comprasHtml}
         ${quitadasHtml}
         <div class="credo-vista-list">
-          ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item" ondblclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
+          ${(cartao.credoVista||[]).filter(cv=>!mesSelecionado || cv.mKey===mesSelecionado).map(cv=>`<div class="credo-vista-item" ondblclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
         </div>
         <div style="display:flex;gap:6px;margin-top:10px">
           <button class="btn btn-sm btn-outline" style="flex:1" onclick="openCompraTrackerModal('${cartao.id}')">+ Parcelada</button>
