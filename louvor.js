@@ -225,6 +225,7 @@ function salvarLouvorCampo(){
   l.artista = document.getElementById('lvArtista').value;
   l.conteudo = document.getElementById('lvConteudo').value;
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
+  renderLouvorLista();
   persist();
 }
 function salvarLouvorData(v){
@@ -794,8 +795,8 @@ function renderLouvorSlidePreview(){
   const el = document.getElementById('lvSlidePreview');
   const espacamentoStyle = `letter-spacing:${l.slideEspacamento}px`;
   if(lvSlideIndex === 0){
-    el.style.alignItems = 'flex-start';
-    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:left;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist" style="text-align:left">${l.artista||''}</div>`;
+    el.style.alignItems = 'center';
+    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist" style="text-align:center">${l.artista||''}</div>`;
   }else{
     const s = slides[lvSlideIndex-1];
     const lyricText = s.lines.join('\n');
@@ -825,8 +826,8 @@ function exportarLouvorSlides(){
 
   const capa = pres.addSlide();
   capa.background = { color: graphiteHex };
-  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:'left', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
-  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:'left' });
+  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:'center', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
+  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:'center' });
 
   const { slides } = lvParseContent(l.conteudo);
   slides.forEach(s=>{

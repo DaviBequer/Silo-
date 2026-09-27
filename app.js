@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.43', itens: [
+    'Louvor: editar título/artista já atualiza na hora o card na lista lateral',
+    'Louvor: título e artista do slide de capa agora centralizados (preview e PowerPoint exportado), igual aos slides de letra'
+  ]},
   { versao: 'v2.42', itens: [
     'Cartões de Crédito: botões "+ Parcelada" e "+ À vista" lado a lado'
   ]},
