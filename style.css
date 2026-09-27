@@ -980,7 +980,7 @@ body:has(#aba-panorama.active) .header{padding-left:var(--s4);padding-right:var(
 
 /* Planner no desktop: grid livre de 12 colunas, editável pelo botão de layout no header */
 @media(min-width:1024px){
-#aba-planner.active{max-width:none;width:100%;box-sizing:border-box;padding:var(--s4);display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:row dense;grid-auto-rows:min-content;gap:var(--s4);align-items:start;align-content:start}
+#aba-planner.active{max-width:none;width:100%;box-sizing:border-box;padding:var(--s4);display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:row dense;grid-auto-rows:8px;gap:var(--s4);align-items:start;align-content:start}
 #aba-planner.active > .user-tabs,#aba-planner.active > .plan-faixa{grid-column:1/-1}
 }
 

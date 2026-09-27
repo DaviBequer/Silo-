@@ -857,13 +857,14 @@ function openCredoVistaModal(cartaoId, credoId){
       document.getElementById('credoVistaDescricao').value = item.descricao || '';
       document.getElementById('credoVistaValor').value = (item.valor||0).toFixed(2).replace('.',',');
       window.credoVistaCategoriaSelecionada = item.categoria || 'Outros';
-      createMonthPicker('credoVistaMesPicker', 'credoVistaMes', item.mKey || mesFinanceiroAtual());
+      // o campo mostra o mês da compra; o que fica salvo (mKey) é a fatura, 1 mês depois
+      createMonthPicker('credoVistaMesPicker', 'credoVistaMes', item.mKey ? addMonths(item.mKey, -1) : todayKey());
     }
   }else{
     document.getElementById('credoVistaDescricao').value = '';
     document.getElementById('credoVistaValor').value = '';
     window.credoVistaCategoriaSelecionada = 'Outros';
-    createMonthPicker('credoVistaMesPicker', 'credoVistaMes', mesFinanceiroAtual());
+    createMonthPicker('credoVistaMesPicker', 'credoVistaMes', todayKey());
   }
   renderCredoVistaCategoriaChips();
   document.getElementById('modalCredoVista').classList.add('active');
@@ -874,7 +875,8 @@ function salvarCredoVista(){
   const descricao = document.getElementById('credoVistaDescricao').value.trim();
   const valor = parseMoney(document.getElementById('credoVistaValor').value);
   const categoria = window.credoVistaCategoriaSelecionada || 'Outros';
-  const mKey = document.getElementById('credoVistaMes').value || mesFinanceiroAtual();
+  const mesCompra = document.getElementById('credoVistaMes').value || todayKey();
+  const mKey = addMonths(mesCompra, 1); // compra em setembro entra na fatura de outubro
   if(!valor){ showToast('Digite o valor'); return; }
   const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
   if(!cartao){ showToast('Cartão não encontrado'); return; }

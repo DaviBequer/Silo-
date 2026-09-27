@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.49', itens: [
+    'Crédito à vista: mês escolhido é o mês da compra, entra na fatura do mês seguinte',
+    'Planner no computador: layout tipo Pinterest de verdade, sem espaço sobrando'
+  ]},
   { versao: 'v2.48', itens: [
     'Layout: padrão agora é 3 colunas, drag & drop melhorado, scrollbar oculta com seta visual',
     'Planner: botão pra ver compras arquivadas no topo do cartão, ícones mais escuros'

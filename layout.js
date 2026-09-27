@@ -9,8 +9,37 @@ const ICON_LAY_LOCK_CLOSED = '<svg width="13" height="13" viewBox="0 0 24 24" fi
 const LAYOUT_GROUPS = {
   panoResumo: { selector:'#panoPanelResumo', defaultSpan:4 },
   panoContas: { selector:'#panoPanelContas', defaultSpan:12 },
-  planner:    { selector:'#aba-planner',     defaultSpan:4 }
+  planner:    { selector:'#aba-planner',     defaultSpan:4, masonry:true }
 };
+
+/* Masonry fino por linhas (efeito Pinterest sem espaço sobrando): cada bloco
+   ganha um grid-row-end calculado pela sua própria altura, numa unidade de
+   linha bem pequena, e um ResizeObserver mantém isso atualizado sozinho
+   sempre que o bloco muda de altura (seção que colapsa, conteúdo que muda,
+   redimensionamento manual etc.), sem precisar recalcular em cada tela. */
+const MASONRY_ROW = 8;
+const masonryObserved = new WeakSet();
+function masonryUpdateSpan(el, container){
+  const cs = getComputedStyle(container);
+  const rowGap = parseFloat(cs.rowGap)||0;
+  const h = el.getBoundingClientRect().height;
+  if(!h) return;
+  const span = Math.max(1, Math.ceil((h+rowGap)/(MASONRY_ROW+rowGap)));
+  el.style.gridRowEnd = 'span '+span;
+}
+function masonryObserve(el, container){
+  if(masonryObserved.has(el)) return;
+  masonryObserved.add(el);
+  new ResizeObserver(()=>masonryUpdateSpan(el, container)).observe(el);
+}
+function applyMasonryRows(groupKey, container, bp){
+  if(!LAYOUT_GROUPS[groupKey].masonry) return;
+  Array.from(container.children).forEach(el=>{
+    if(el.nodeType!==1) return;
+    if(bp==='desktop'){ masonryUpdateSpan(el, container); masonryObserve(el, container); }
+    else { el.style.gridRowEnd=''; }
+  });
+}
 
 let layoutEditActive = false;
 
@@ -67,6 +96,7 @@ function applyLayout(groupKey){
       el.style.gridColumn=''; el.style.height=''; el.style.overflow='';
     }
   });
+  applyMasonryRows(groupKey, container, bp);
 }
 function applyAllLayouts(){ Object.keys(LAYOUT_GROUPS).forEach(applyLayout); }
 
