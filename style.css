@@ -480,6 +480,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 .accordion-toggle-label{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center}
 .accordion-chevron{color:var(--text-faint);transition:transform var(--dur) var(--ease);flex-shrink:0}
 .accordion-body{margin-top:var(--s3);animation:fadeIn .2s var(--ease)}
+.lv-config-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2) var(--s3)}
+.lv-config-grid .field{margin-bottom:0;gap:4px}
+.lv-config-grid .field.full{grid-column:1/-1}
 
 .badge{display:inline-block;padding:3px var(--s2);border-radius:12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
 

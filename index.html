@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.43">
+<link rel="stylesheet" href="style.css?v=2.44">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.43</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.44</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -895,7 +895,7 @@
         <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
         <svg id="lvPdfConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
-      <div class="accordion-body" id="lvPdfConfigBody" style="display:none">
+      <div class="accordion-body lv-config-grid" id="lvPdfConfigBody" style="display:none">
         <div class="field full">
           <label>Colunas</label>
           <div class="dificuldade-chips">
@@ -910,7 +910,7 @@
             <button type="button" class="dif-chip" id="lvOrientPaisagem" onclick="setLvPdfOrientacao('paisagem')">Paisagem</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Tamanho do texto</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(-1)">−</button>
@@ -918,7 +918,7 @@
             <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(1)">+</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Tamanho do título</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(-1)">−</button>
@@ -926,7 +926,7 @@
             <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(1)">+</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Altura da linha</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(-0.1)">−</button>
@@ -934,7 +934,7 @@
             <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(0.1)">+</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Espaçamento de letras</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(-0.2)">−</button>
@@ -942,7 +942,7 @@
             <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(0.2)">+</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Margem da folha</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvPdfMargem(-4)">−</button>
@@ -963,8 +963,8 @@
         <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
         <svg id="lvSlideConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
-      <div class="accordion-body" id="lvSlideConfigBody" style="display:none">
-        <div class="field full">
+      <div class="accordion-body lv-config-grid" id="lvSlideConfigBody" style="display:none">
+        <div class="field">
           <label>Tamanho do título</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(-2)">−</button>
@@ -972,7 +972,7 @@
             <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(2)">+</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Tamanho do texto</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(-2)">−</button>
@@ -980,7 +980,7 @@
             <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(2)">+</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Altura da linha no slide</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(-0.1)">−</button>
@@ -988,7 +988,7 @@
             <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(0.1)">+</button>
           </div>
         </div>
-        <div class="field full">
+        <div class="field">
           <label>Espaçamento de letras</label>
           <div class="lv-transpose">
             <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(-0.1)">−</button>
@@ -1622,13 +1622,13 @@ if(versaoArmazenada !== VERSAO_ATUAL){
   }
 }
 </script>
-<script src="core.js?v=2.43"></script>
-<script src="app.js?v=2.43"></script>
-<script src="panorama.js?v=2.43"></script>
-<script src="planner.js?v=2.43"></script>
-<script src="ponto.js?v=2.43"></script>
-<script src="receitas.js?v=2.43"></script>
-<script src="louvor.js?v=2.43"></script>
-<script src="mercado.js?v=2.43"></script>
+<script src="core.js?v=2.44"></script>
+<script src="app.js?v=2.44"></script>
+<script src="panorama.js?v=2.44"></script>
+<script src="planner.js?v=2.44"></script>
+<script src="ponto.js?v=2.44"></script>
+<script src="receitas.js?v=2.44"></script>
+<script src="louvor.js?v=2.44"></script>
+<script src="mercado.js?v=2.44"></script>
 </body>
 </html>

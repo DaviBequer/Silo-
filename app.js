@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.44', itens: [
+    'Corrigido: sair do Louvor pelo menu inferior sem fechar a tela do Louvor antes travava a tela aberta por cima',
+    'Louvor: configurações de Visualizar e Slides mais compactas, em grade'
+  ]},
   { versao: 'v2.43', itens: [
     'Louvor: editar título/artista já atualiza na hora o card na lista lateral',
     'Louvor: título e artista do slide de capa agora centralizados (preview e PowerPoint exportado), igual aos slides de letra'
