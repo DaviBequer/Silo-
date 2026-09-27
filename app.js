@@ -37,6 +37,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.39', itens: [
+    'Dados do App: mostra só a atualização mais recente (não a lista toda)',
+    'Removidos os backups automáticos (guardavam várias cópias inteiras dos dados e ocupavam espaço) — use o Exportar de vez em quando',
+    'Louvor: removida a dica de formatação embaixo do texto na Edição',
+    'Louvor: a folha de edição agora tem proporção de folha A4'
+  ]},
   { versao: 'v2.38', itens: [
     'Planner: linhas de Moradia/Assinaturas/Fixos/Contas Futuras sem os botões de duplicar e arquivar; os que ficaram (pagar, editar, excluir) em uma coluna só, mais visíveis',
     'Louvor: removida a barra "Biblioteca/Estúdio" que travava a navegação — pra sair, use a setinha no cabeçalho'
@@ -184,30 +190,13 @@ const CHANGELOG = [
 function renderChangelog(){
   const el = document.getElementById('changelogList');
   if(!el) return;
-  el.innerHTML = CHANGELOG.map(v => `
+  const v = CHANGELOG[0];
+  el.innerHTML = `
     <div style="padding:8px 10px;background:var(--card-2);border-radius:8px">
       <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px">${v.versao}</div>
       ${v.itens.map(txt => `<div style="font-size:11.5px;color:var(--text-faint);line-height:1.4">• ${txt}</div>`).join('')}
     </div>
-  `).join('');
-}
-
-function renderBackupsAutoLista(){
-  const el = document.getElementById('backupsAutoLista');
-  if(!el) return;
-  const backups = listarBackupsAutomaticos();
-  if(backups.length===0){
-    el.innerHTML = `<div class="empty-state-sm" style="padding:8px 0">Nenhum backup automático ainda</div>`;
-    return;
-  }
-  el.innerHTML = backups.map(b=>{
-    const dataLabel = new Date(b.dia+'T00:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
-    return `<div class="busca-resultado-item" style="padding:8px 4px">
-      <span class="busca-resultado-icon">🕐</span>
-      <div class="busca-resultado-info"><div class="busca-resultado-label">${dataLabel}</div><div class="busca-resultado-meta">${b.versao||''}</div></div>
-      <button class="link-btn-sm" onclick="restaurarBackupAutomatico('${b.dia}')">Restaurar</button>
-    </div>`;
-  }).join('');
+  `;
 }
 
 function abrirImportExportModal(){
@@ -215,7 +204,6 @@ function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
   renderChangelog();
-  renderBackupsAutoLista();
   
   console.log('[STORAGE DEBUG] localStorage.length:', localStorage.length);
   const storage = calcularStorageUsage();

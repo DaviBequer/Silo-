@@ -49,48 +49,11 @@ let state = novoEstado();
 function persist(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    salvarBackupAutomatico();
   }catch(e){ console.error('Erro ao salvar', e); }
 }
-const BACKUP_AUTO_KEY = 'siloe-backups-auto';
-let ultimoBackupAutoDia = null;
-function salvarBackupAutomatico(){
-  const hojeISO = new Date().toISOString().slice(0,10);
-  if(ultimoBackupAutoDia === hojeISO) return;
-  try{
-    const raw = localStorage.getItem(BACKUP_AUTO_KEY);
-    const backups = raw ? JSON.parse(raw) : {};
-    backups[hojeISO] = { state, versao: document.querySelector('.header-version')?.textContent?.trim()||'', salvoEm: Date.now() };
-    const dias = Object.keys(backups).sort();
-    while(dias.length > 5){ delete backups[dias.shift()]; }
-    localStorage.setItem(BACKUP_AUTO_KEY, JSON.stringify(backups));
-    ultimoBackupAutoDia = hojeISO;
-  }catch(e){ console.error('Erro ao salvar backup automático', e); }
-}
-function listarBackupsAutomaticos(){
-  try{
-    const raw = localStorage.getItem(BACKUP_AUTO_KEY);
-    if(!raw) return [];
-    const backups = JSON.parse(raw);
-    return Object.keys(backups).sort().reverse().map(dia=>({ dia, ...backups[dia] }));
-  }catch(e){ return []; }
-}
-function restaurarBackupAutomatico(dia){
-  iosConfirm(`Restaurar o backup automático de ${new Date(dia+'T00:00:00').toLocaleDateString('pt-BR')}? Os dados atuais serão substituídos.`).then(ok=>{
-    if(!ok) return;
-    try{
-      const raw = localStorage.getItem(BACKUP_AUTO_KEY);
-      const backups = JSON.parse(raw);
-      const b = backups[dia];
-      if(!b) return;
-      state = Object.assign(novoEstado(), b.state);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      renderAll();
-      closeModal('modalImportExport');
-      showToast('Backup restaurado');
-    }catch(e){ showToast('Erro ao restaurar backup'); }
-  });
-}
+// Backup automático removido (v2.39) — guardava várias cópias inteiras do estado e ocupava espaço.
+// Limpa qualquer backup antigo que já esteja salvo no navegador, pra liberar espaço.
+try{ localStorage.removeItem('siloe-backups-auto'); }catch(e){}
 function carregar(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
