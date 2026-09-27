@@ -620,8 +620,10 @@ function renderCartaoTrackerList(){
         <div class="credo-vista-list">
           ${(cartao.credoVista||[]).map(cv=>`<div class="credo-vista-item" ondblclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
         </div>
-        <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="openCompraTrackerModal('${cartao.id}')">+ Compra parcelada</button>
-        <button class="btn btn-sm btn-outline" style="width:100%;margin-top:6px" onclick="openCredoVistaModal('${cartao.id}')">+ Crédito à vista</button>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button class="btn btn-sm btn-outline" style="flex:1" onclick="openCompraTrackerModal('${cartao.id}')">+ Parcelada</button>
+          <button class="btn btn-sm btn-outline" style="flex:1" onclick="openCredoVistaModal('${cartao.id}')">+ À vista</button>
+        </div>
       </div>
     </div>`;
   }).join('');

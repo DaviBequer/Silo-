@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.42', itens: [
+    'Cartões de Crédito: botões "+ Parcelada" e "+ À vista" lado a lado'
+  ]},
   { versao: 'v2.41', itens: [
     'Cartões de Crédito: some da tela quando o usuário selecionado é a Cris',
     'Cartões de Crédito: compras parceladas ordenadas por quem termina primeiro; ao quitar a última parcela, a compra vai para "Ver quitadas" em vez de continuar na lista',
