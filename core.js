@@ -40,8 +40,30 @@ function novoEstado(){
     preListaCompras:[],
     semanaOffset:0,
     semanaAgenda:{},
-    ponto:{ valorHora:0, padraoHoras:8, days:{} }
+    ponto:{ valorHora:0, padraoHoras:8, days:{} },
+    configFonte:'system'
   };
+}
+const FONTES_APP = {
+  system:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+  inter:"'Inter',sans-serif",
+  poppins:"'Poppins',sans-serif",
+  nunito:"'Nunito',sans-serif"
+};
+function aplicarFonteApp(){
+  const fonte = FONTES_APP[state.configFonte] || FONTES_APP.system;
+  document.documentElement.style.setProperty('--font-body', fonte);
+  document.querySelectorAll('.fonte-chip').forEach(el=>el.classList.remove('active'));
+  const ativo = document.getElementById('fonteChip'+(state.configFonte||'system').charAt(0).toUpperCase()+(state.configFonte||'system').slice(1));
+  ativo?.classList.add('active');
+}
+function setAppFonte(nome){
+  state.configFonte = nome;
+  persist();
+  aplicarFonteApp();
+}
+function toggleFontePopup(){
+  document.getElementById('fontePopup')?.classList.toggle('show');
 }
 let state = novoEstado();
 
@@ -128,9 +150,11 @@ function carregar(){
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
+      if(!state.configFonte) state.configFonte = 'system';
     }
   }catch(e){ /* sem dados salvos ainda */ }
   limparDadosAntigos();
+  aplicarFonteApp();
   renderAll();
 }
 

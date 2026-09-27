@@ -37,6 +37,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.45', itens: [
+    'Novo: botão "Fonte" em Dados do App, com Inter, Poppins, Nunito e a padrão do celular pra escolher a fonte do app inteiro',
+    'Títulos do app (cabeçalhos, cards, telas cheias) agora usam uma fonte própria, mais chamativa'
+  ]},
   { versao: 'v2.44', itens: [
     'Corrigido: sair do Louvor pelo menu inferior sem fechar a tela do Louvor antes travava a tela aberta por cima',
     'Louvor: configurações de Visualizar e Slides mais compactas, em grade'
