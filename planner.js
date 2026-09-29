@@ -1036,7 +1036,7 @@ function renderCartaoGastosDashboard(cartao, mKey){
   const nomeEntries = Object.entries(porNome).sort((a,b)=>b[1]-a[1]);
   const maiorCat = Math.max(...catEntries.map(e=>e[1]));
   const maiorNome = Math.max(...nomeEntries.map(e=>e[1]));
-  const barRow = (label, valor, maior) => `<div class="bar-row"><div class="bar-label">${label}</div><div class="bar-container"><div class="bar-fill" style="width:${Math.round(valor/maior*100)}%;background:var(--primary)"><div class="bar-percent">${fmtMoney(valor)}</div></div></div></div>`;
+  const barRow = (label, valor, maior) => `<div class="bar-row"><div class="bar-label" style="width:96px">${label}</div><div class="bar-container"><div class="bar-fill" style="width:${Math.max(4,Math.round(valor/maior*100))}%;background:var(--primary)"></div></div><div class="bar-valor">${fmtMoney(valor)}</div></div>`;
   return `<div class="ponto-semanas-titulo" style="margin-top:var(--s3)">Por categoria · ${monthLabel(mKey)}</div>
     <div class="bar-chart">${catEntries.map(([c,v])=>barRow(c,v,maiorCat)).join('')}</div>
     <div class="ponto-semanas-titulo" style="margin-top:var(--s3)">Por nome</div>

@@ -38,9 +38,7 @@ function calcularStorageUsage(){
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
   { versao: 'v2.51', itens: [
-    'Novo visual: tema claro e leve, preto e dourado — dourado marca o que está selecionado/ativo (menu, chips, versão)',
-    'Cards com mais respiro (mais espaço interno e entre eles) e cantos mais suaves',
-    'Corrigido: modal "Dados do App" ficava colado embaixo em telas médias; agora centraliza mais cedo'
+    'Correção: valor do dashboard de gastos do cartão (por categoria/nome) ficava ilegível em barras pequenas — agora fica sempre fora da barra'
   ]},
   { versao: 'v2.50', itens: [
     'Cartão: assinaturas (cobrança recorrente automática todo mês, com opção de cancelar)',
