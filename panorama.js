@@ -285,11 +285,14 @@ function renderPanorama(){
   const receitaDavi = incomeForMonth('davi', state.focusMonth);
   const gastosDavi = expensesForMonth('davi', state.focusMonth);
   const sobraDavi = receitaDavi - gastosDavi;
-  userSection.innerHTML = `<div class="user-card-combined"><div class="ucc-col">
-    <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Receita</span><span class="u-receita">${fmtMoney(receitaDavi)}</span></div>
-    <div class="u-row" style="cursor:pointer" onclick="abrirDetalheAcumulado('${state.focusMonth}')"><span class="lbl">Gastos</span><span class="u-gastos">${fmtMoney(gastosDavi)}</span></div>
-    <div class="u-sobra ${sobraDavi>=0?'positive':'negative'}"><span class="lbl">Sobra</span><span>${fmtMoneySigned(sobraDavi)}</span></div>
-  </div></div>`;
+  userSection.innerHTML = `<div class="pano-hero" onclick="abrirDetalheAcumulado('${state.focusMonth}')">
+    <div class="pano-hero-label">Sobra em ${monthLabel(state.focusMonth)}</div>
+    <div class="pano-hero-row">
+      <span class="pano-hero-valor ${sobraDavi>=0?'':'negative'}">${fmtMoneySigned(sobraDavi)}</span>
+      <span class="pano-hero-sub">receita ${fmtMoney(receitaDavi)}</span>
+    </div>
+    <div class="pano-hero-sub2">gastos ${fmtMoney(gastosDavi)}</div>
+  </div>`;
 
   document.getElementById('contasMesLabel').textContent = monthLabel(state.focusMonth);
   renderChecklist();
@@ -417,25 +420,24 @@ function renderPanoCharts(){
     return `<div class="donut-legend-item"><i style="background:${catColors[c]}"></i><span>${catLabels[c]}</span><b>${pct.toFixed(0)}%</b></div>`;
   }).join('') : `<div class="donut-legend-item"><span>Sem gastos no mês</span></div>`;
 
-  const barChart = catsComValor.length ? catsComValor.map(c=>{
+  const stackBar = catsComValor.length ? catsComValor.map(c=>{
     const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
-    return `<div class="bar-row"><div class="bar-label">${catLabels[c]}</div><div class="bar-container"><div class="bar-fill" style="width:${pct.toFixed(0)}%;background:${catColors[c]}"><div class="bar-percent">${pct.toFixed(0)}%</div></div></div></div>`;
-  }).join('') : '';
+    return `<div style="width:${pct.toFixed(2)}%;background:${catColors[c]}" title="${catLabels[c]}"></div>`;
+  }).join('') : `<div style="width:100%;background:var(--line)"></div>`;
+  const legendComValor = catsComValor.length ? catsComValor.map(c=>{
+    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
+    return `<div class="pano-stack-legend-item"><span class="dot" style="background:${catColors[c]}"></span><span class="nome">${catLabels[c]}</span><span class="valor">${pct.toFixed(0)}% · ${fmtMoney(totals[c])}</span></div>`;
+  }).join('') : `<div class="pano-stack-legend-item"><span class="nome">Sem gastos no mês</span></div>`;
 
   wrap.innerHTML = `
-    <div class="donut-row">
-      <div class="donut-card">
-        <div class="donut-wrap" style="background:${gradGanhos}"><div class="donut-hole"><div class="donut-hole-label">Ganho</div><div class="donut-hole-value">${fmtMoney(renda)}</div></div></div>
-        <div class="donut-legend">
-          <div class="donut-legend-item"><i style="background:var(--success)"></i><span>Sobra</span><b>${fmtMoneySigned(sobra)}</b></div>
-          <div class="donut-legend-item"><i style="background:var(--danger)"></i><span>Gastos</span><b>${fmtMoney(gastosTotal)}</b></div>
-        </div>
-      </div>
-      <div class="donut-card">
-        <div class="donut-wrap" style="background:${gradCat}"><div class="donut-hole"><div class="donut-hole-label">Gastos</div><div class="donut-hole-value">${fmtMoney(gastosTotal)}</div></div></div>
-        <div class="donut-legend">${legendCat}</div>
-      </div>
+    <div class="pano-stat-row">
+      <div><span class="k">Ganho</span><span class="v" style="color:var(--success)">${fmtMoney(renda)}</span></div>
+      <div><span class="k">Gastos</span><span class="v" style="color:var(--danger)">${fmtMoney(gastosTotal)}</span></div>
+      <div><span class="k">Sobra</span><span class="v">${fmtMoneySigned(sobra)}</span></div>
     </div>
+    <div class="pano-stack-title">Para onde foi</div>
+    <div class="pano-stack-bar">${stackBar}</div>
+    <div class="pano-stack-legend">${legendComValor}</div>
   `;
 }
 
@@ -518,21 +520,44 @@ function abrirDetalheAcumulado(mKey){
 }
 
 function renderAcumTable(months){
-  let acumulado = 0;
   const hoje = mesFinanceiroAtual();
-  const rows = months.map(mKey=>{
-    const sobra = saldoHouseholdForMonth(mKey);
-    acumulado += sobra;
-    const isSelected = mKey === state.focusMonth;
-    const isHoje = mKey === hoje;
-    const acumuladoTxt = isHoje ? '—' : `<span style="color:${acumulado>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(acumulado)}</span>`;
-    return `<tr class="${isSelected?'selected-row':''}" onclick="selectFocusMonth('${mKey}');abrirDetalheAcumulado('${mKey}')" style="cursor:pointer">
-      <td class="row-label">${monthLabel(mKey)}${isSelected?' •':''}</td>
-      <td style="font-weight:700;color:${sobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobra)}</td>
-      <td style="font-weight:800">${acumuladoTxt}</td>
-    </tr>`;
+  const vals = months.map(mKey=>saldoHouseholdForMonth(mKey));
+  const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
+  const range = (max-min) || 1;
+  const chartTop = 26, chartH = 40, chartBottom = chartTop + chartH;
+  const n = months.length;
+  const stepX = n>1 ? 268/(n-1) : 0;
+  const pts = months.map((mKey,i)=>{
+    const v = vals[i];
+    const x = 16 + i*stepX;
+    const y = chartBottom - ((v-min)/range)*chartH;
+    return {x,y,v,mKey};
+  });
+  const line = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const dots = pts.map(p=>{
+    const isSelected = p.mKey===state.focusMonth;
+    const isHoje = p.mKey===hoje;
+    const cor = isSelected ? 'var(--gold)' : (isHoje ? 'var(--gold)' : 'var(--text-faint)');
+    const r = isSelected||isHoje ? 4 : 2.5;
+    return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${cor}" style="cursor:pointer" onclick="selectFocusMonth('${p.mKey}');abrirDetalheAcumulado('${p.mKey}')"/>`;
   }).join('');
-  document.getElementById('acumTableBody').innerHTML = rows;
+  const labels = pts.map(p=>{
+    const cor = p.v>=0 ? 'var(--success)' : 'var(--danger)';
+    const peso = p.mKey===state.focusMonth ? '800' : '600';
+    return `<text x="${p.x}" y="${chartTop-10}" text-anchor="middle" font-size="9" font-weight="${peso}" fill="${cor}">${fmtMoneyCompactSigned(p.v)}</text>`;
+  }).join('');
+  const meses = pts.map(p=>{
+    const isSelected = p.mKey===state.focusMonth;
+    return `<div class="acum-timeline-mes${isSelected?' selected':''}" onclick="selectFocusMonth('${p.mKey}');abrirDetalheAcumulado('${p.mKey}')">${monthLabel(p.mKey)}</div>`;
+  }).join('');
+  document.getElementById('acumTimelineWrap').innerHTML = `
+    <svg viewBox="0 0 300 ${chartBottom+6}" width="100%" height="${chartBottom+6}" style="overflow:visible">
+      <polyline points="${line}" fill="none" stroke="var(--line)" stroke-width="2"/>
+      ${labels}
+      ${dots}
+    </svg>
+    <div class="acum-timeline-meses">${meses}</div>
+  `;
 }
 
 function selectFocusMonth(mKey){

@@ -220,6 +220,8 @@ function todayKey(){ return mesAtualRef; }
 function mesFinanceiroAtual(){ return addMonths(todayKey(), 1); } // Planner/Panorama sempre operam 1 mês à frente (trabalhou em X, recebe/paga em X+1)
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }
+function fmtMoneyCompact(v){ return 'R$ '+Math.round(v||0).toLocaleString('pt-BR'); }
+function fmtMoneyCompactSigned(v){ return v>=0 ? fmtMoneyCompact(v) : '-'+fmtMoneyCompact(Math.abs(v)); }
 function parseMoney(str){
   if(!str) return 0;
   const cleaned = String(str).replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
