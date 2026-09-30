@@ -301,6 +301,7 @@ function switchAba(aba){
   document.getElementById('aba-'+aba).classList.add('active');
   document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
   document.getElementById('pageLouvorForm')?.classList.remove('active');
+  document.getElementById('pageComando')?.classList.remove('active');
   document.body.style.overflow = '';
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
   window.scrollTo(0,0);

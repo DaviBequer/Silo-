@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.53', itens: [
+    'Novo: tela "Comando" (clica na logo) — ordens do dia, sequência de dias em disciplina, juramento e registro de autossabotagem'
+  ]},
   { versao: 'v2.52', itens: [
     'Dashboard: Acumulado virou uma linha do tempo com o valor de cada mês (em vez da tabela); os dois donuts viraram um número de Sobra em destaque + barra única "Para onde foi", com % e valor de cada categoria',
     'Planner: campo de Saldo Atual maior, com sublinhado dourado; mês atual do Fluxo Mensal destacado em dourado'
