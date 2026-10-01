@@ -919,7 +919,7 @@ body{padding-bottom:calc(84px + var(--safe))}
 .mercado-add-btn:active{opacity:.85}
 
 .mercado-lista{display:flex;flex-direction:column;gap:10px;padding:0 var(--s3) var(--s3)}
-.mercado-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;box-shadow:var(--card-shadow)}
+.mercado-item{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;box-shadow:var(--card-shadow)}
 .mercado-item.comprado{border-color:var(--success);background:var(--success-tint)}
 .mercado-item.comprado .mercado-item-nome{text-decoration:line-through;color:var(--text-faint)}
 .mercado-item.repor{border-color:var(--warning);background:var(--warning-tint)}
@@ -927,7 +927,7 @@ body{padding-bottom:calc(84px + var(--safe))}
 .mercado-check{width:24px;height:24px;border-radius:8px;border:1.8px solid var(--line);background:var(--card-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
 .mercado-check.checked{background:var(--primary);border-color:var(--primary)}
 .mercado-check.pending{background:var(--warning-tint);border-color:var(--warning);color:var(--warning)}
-.mercado-item-info{flex:1;min-width:0}
+.mercado-item-info{flex:1 1 100%;min-width:0}
 .mercado-item-nome{font-size:14.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}
 .mercado-item-meta{font-size:11.5px;color:var(--text-faint);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mercado-item-qtd{font-size:12.5px;font-weight:800;color:var(--text-dim);background:var(--card-2);padding:5px 11px;border-radius:20px;flex-shrink:0;white-space:nowrap}
