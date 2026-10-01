@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.54', itens: [
+    'Mercado: lista de compras, estoque e dashboard ganharam layout próprio de computador (grade de cards, dashboard em 2 colunas) em vez do formato de celular esticado'
+  ]},
   { versao: 'v2.53', itens: [
     'Novo: tela "Comando" (clica na logo) — ordens do dia, sequência de dias em disciplina, juramento e registro de autossabotagem'
   ]},
