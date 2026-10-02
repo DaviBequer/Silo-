@@ -1,28 +1,37 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#2B3038">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Siloé">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
-<title>Siloé</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style-original.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Siloé">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Siloé</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2.55">
 </head>
-<body id="app"></body>
-<script src="core.js"></script>
-<script src="pano.js"></script>
-<script src="planner.js"></script>
-<script src="ponto.js"></script>
-<script src="receitas.js"></script>
-<script src="louvor.js"></script>
-<script src="mercado.js"></script>
-<script src="app.js"></script>
-<script>renderAll();</script>
+<body>
+  <div id="app"></div>
+
+  <script src="core.js"></script>
+  <script src="layout.js"></script>
+  <script src="comando.js"></script>
+  <script src="pano.js"></script>
+  <script src="planner.js"></script>
+  <script src="ponto.js"></script>
+  <script src="receitas.js"></script>
+  <script src="louvor.js"></script>
+  <script src="mercado.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (typeof renderAll === 'function') {
+      renderAll();
+    }
+  </script>
+</body>
 </html>
