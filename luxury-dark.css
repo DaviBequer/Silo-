@@ -1,596 +1,263 @@
-/* ================= DARK MODE PREMIUM ================= */
+/* ================= FINAL LUXURY UPGRADE ================= */
 
 :root {
-  --color-scheme: light dark;
+  --luxury-bg: #0b0d10;
+  --luxury-bg-2: #12171d;
+  --luxury-card: rgba(18, 23, 29, 0.9);
+  --luxury-card-2: rgba(29, 35, 42, 0.95);
+  --luxury-line: rgba(255,255,255,0.08);
+  --luxury-text: #f5f7fa;
+  --luxury-dim: #c9d0d7;
+  --luxury-faint: #8d97a4;
+  --luxury-gold: #d4af67;
+  --luxury-gold-2: #b88932;
+  --luxury-gold-soft: rgba(212, 175, 103, 0.14);
+  --luxury-success: #6ee7b7;
+  --luxury-danger: #ff7d7d;
+  --luxury-warning: #fbbf24;
+  --luxury-shadow: 0 22px 50px rgba(0,0,0,0.45);
+  --luxury-shadow-soft: 0 10px 28px rgba(0,0,0,0.28);
+  --luxury-radius-xl: 28px;
+  --luxury-radius-lg: 22px;
+  --luxury-radius-md: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0f0f;
-    --card: #1a1a1a;
-    --card-2: #242424;
-    --line: #2d2d2d;
-    --text: #f5f5f5;
-    --text-dim: #b0b0b0;
-    --text-faint: #808080;
-    --primary: #f5f5f5;
-    --primary-dim: #ffffff;
-    --primary-tint: rgba(255, 255, 255, 0.08);
-    --gold: #d4af37;
-    --gold-dim: #e6c547;
-    --gold-tint: rgba(212, 175, 55, 0.12);
-    --success: #4ade80;
-    --success-tint: rgba(74, 222, 128, 0.1);
-    --danger: #ff6b6b;
-    --danger-tint: rgba(255, 107, 107, 0.1);
-    --warning: #fbbf24;
-    --warning-tint: rgba(251, 191, 36, 0.1);
-    --lavender: #a78bfa;
-    --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.48);
-    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
-  }
-
-  body {
-    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
-  }
-
-  .header {
-    background: rgba(20, 20, 20, 0.86);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(0, 0, 0, 0.32);
-  }
-
-  .bottom-nav {
-    background: rgba(15, 15, 15, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.48);
-  }
-
-  .modal-overlay {
-    background: rgba(0, 0, 0, 0.68);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-  }
-
-  .receita-card {
-    background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
-  }
-
-  .receita-card:hover {
-    background: linear-gradient(135deg, #242424 0%, #2d2d2d 100%);
-  }
-
-  .lv-card {
-    background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
-  }
-
-  .lv-card:hover {
-    background: linear-gradient(135deg, #242424 0%, #2d2d2d 100%);
-  }
-
-  .pano-subtab.active {
-    background: #ffffff;
-    color: #0f0f0f;
-  }
-
-  .user-tab.active {
-    background: #f5f5f5;
-    color: #0f0f0f;
-  }
-
-  .user-tab.cris.active {
-    background: var(--lavender);
-    color: #f5f5f5;
-  }
-
-  .subtab-btn.active {
-    background: #f5f5f5;
-    color: #0f0f0f;
-  }
-
-  .filter-chip.active {
-    background: var(--gold);
-    color: #0f0f0f;
-  }
-
-  .lv-tom-grid-btn.active {
-    background: var(--gold);
-    color: #0f0f0f;
-  }
-
-  .dif-chip.active {
-    background: var(--gold);
-    color: #0f0f0f;
-  }
-
-  .btn {
-    background: var(--gold);
-    color: #0f0f0f;
-    box-shadow: 0 8px 16px rgba(212, 175, 55, 0.24);
-  }
-
-  .btn:hover {
-    background: var(--gold-dim);
-    box-shadow: 0 12px 20px rgba(212, 175, 55, 0.32);
-  }
-
-  .receitas-search {
-    background: var(--card-2);
-    color: var(--text);
-    border: 1px solid var(--line);
-  }
-
-  .receitas-search input::placeholder {
-    color: var(--text-faint);
-  }
-
-  .lv-page-sheet {
-    background: #f5f5f5;
-    color: #0f0f0f;
-  }
-
-  .lv-editor-textarea {
-    background: transparent;
-    color: #0f0f0f;
-  }
-
-  .lv-title-input,
-  .lv-artist-input {
-    color: #0f0f0f;
-  }
-
-  .acum-card {
-    background: var(--primary-tint);
-    border: 1px solid var(--line);
-  }
-
-  .ponto-summary {
-    background: var(--primary-tint);
-    border: 1px solid var(--line);
-  }
-
-  .modal {
-    background: var(--card);
-  }
-
-  .field input,
-  .field select,
-  .field textarea {
-    background: var(--card-2);
-    color: var(--text);
-    border: 1.5px solid var(--line);
-  }
-
-  .field input:focus,
-  .field select:focus,
-  .field textarea:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
-  }
+body {
+  background:
+    radial-gradient(circle at top left, rgba(212,175,103,0.12), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(255,255,255,0.03), transparent 25%),
+    linear-gradient(180deg, var(--luxury-bg) 0%, var(--luxury-bg-2) 100%);
 }
 
-/* ================= LUXURY REFINEMENT ================= */
-
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.header {
+  background: rgba(9, 11, 14, 0.78);
+  border-bottom: 1px solid var(--luxury-line);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.18);
 }
 
-html {
-  font-feature-settings: "kern" 1;
-  text-rendering: optimizeLegibility;
-}
-
-/* Tipografia Ultra Premium */
-.h1,
 .header-title,
 .fullpage-title,
 .card-title,
 .section-title,
-.receita-card-nome,
-.lv-card-titulo,
 .pano-hero-valor,
 .acum-card .value,
 .ponto-summary .summary-item .value,
+.receita-card-nome,
+.lv-card-titulo,
 .mkt-stat-value {
-  letter-spacing: -0.02em;
-  font-variation-settings: "wght" 800;
+  color: var(--luxury-text);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
 }
 
-/* Espaçamento Ultra Refinado */
 .card,
 .section,
-.modal {
-  border-radius: 28px;
-}
-
-@media (max-width: 767px) {
-  .card,
-  .section,
-  .modal {
-    border-radius: 24px;
-  }
-
-  .receita-card {
-    border-radius: 20px;
-  }
-
-  .bottom-nav {
-    border-top-left-radius: 24px;
-    border-top-right-radius: 24px;
-  }
-}
-
-/* Glassmorphism Premium */
-.header,
-.bottom-nav,
-.modal-overlay,
-.receitas-search,
-.filter-chip,
-.month-picker-panel,
-.cat-picker-panel,
-.receita-card-menu,
-.receita-menu-dropdown {
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
-/* Micro-interações Premium */
-button,
-input,
-select,
-textarea,
-[role="button"],
-[role="link"],
-.icon-btn-sm,
-.btn-icon-sm,
-.section-add,
-.filter-chip,
+.modal,
+.user-card-combined,
+.tarefas-dashboard,
+.ponto-semanas-card,
+.mkt-stat-card,
+.mkt-rank-item,
 .receita-card,
 .lv-card,
 .cartao-card-item,
 .mercado-item,
-.mkt-rank-item {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+.simulador-painel,
+.acum-card,
+.ponto-summary,
+.check-item-compact,
+.semana-dia,
+.user-tab,
+.month-picker-panel,
+.cat-picker-panel,
+.receita-card-menu,
+.receita-menu-dropdown {
+  background: linear-gradient(180deg, rgba(24,29,35,0.98) 0%, rgba(18,23,29,0.96) 100%);
+  border: 1px solid var(--luxury-line);
+  box-shadow: var(--luxury-shadow-soft);
 }
 
-button:active,
-.receita-card:active,
-.lv-card:active,
-.mercado-item:active {
-  transform: scale(0.98);
+.card,
+.section,
+.modal {
+  border-radius: var(--luxury-radius-xl);
 }
 
-/* Cards com Profundidade */
+.card:hover,
+.section:hover,
+.receita-card:hover,
+.lv-card:hover,
+.cartao-card-item:hover,
+.mkt-rank-item:hover,
+.mercado-item:hover {
+  box-shadow: var(--luxury-shadow);
+  border-color: rgba(212, 175, 103, 0.35);
+}
+
+.bottom-nav {
+  background: rgba(10, 13, 16, 0.92);
+  border-top: 1px solid var(--luxury-line);
+  box-shadow: 0 -15px 35px rgba(0,0,0,0.28);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+.nav-item {
+  color: var(--luxury-faint);
+  border-radius: 14px;
+}
+
+.nav-item.active {
+  color: var(--luxury-gold);
+  background: rgba(212,175,103,0.08);
+  box-shadow: inset 0 0 0 1px rgba(212,175,103,0.2);
+}
+
+.nav-item.active::after {
+  background: var(--luxury-gold);
+  width: 6px;
+  height: 6px;
+  bottom: 6px;
+}
+
+.btn {
+  background: linear-gradient(180deg, #d9b76d 0%, #bf8f38 100%);
+  color: #1a1208;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 10px 22px rgba(191,143,56,0.25);
+}
+
+.btn:hover {
+  background: linear-gradient(180deg, #e2c278 0%, #c7932a 100%);
+  box-shadow: 0 14px 30px rgba(191,143,56,0.34);
+}
+
+.btn-outline {
+  background: rgba(255,255,255,0.02);
+  color: var(--luxury-text);
+  border: 1px solid var(--luxury-line);
+}
+
+.field input,
+.field select,
+.field textarea,
+.month-picker-btn,
+.cat-picker-btn,
+.receitas-search,
+.unidade-picker,
+.filter-chip,
+.lv-tom-grid-btn,
+.subtab-btn,
+.user-tab,
+.pano-subtab,
+.modal-close,
+.section-add,
+.section-add-label {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--luxury-line);
+  color: var(--luxury-text);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.receitas-search:focus-within,
+.month-picker-btn:focus,
+.cat-picker-btn:focus {
+  border-color: rgba(212,175,103,0.8);
+  box-shadow: 0 0 0 3px rgba(212,175,103,0.12);
+}
+
+.filter-chip.active,
+.dif-chip.active,
+.lv-tom-grid-btn.active,
+.user-tab.active,
+.subtab-btn.active,
+.pano-subtab.active {
+  background: linear-gradient(180deg, #d9b76d 0%, #bf8f38 100%);
+  color: #1a1208;
+  border-color: transparent;
+  box-shadow: 0 10px 22px rgba(191,143,56,0.22);
+}
+
 .receita-card,
-.lv-card,
-.cartao-card-item,
-.mkt-rank-item,
-.mercado-item {
-  position: relative;
-  overflow: hidden;
+.lv-card {
+  background: linear-gradient(180deg, rgba(22,26,32,0.96) 0%, rgba(17,21,27,0.98) 100%);
 }
 
 .receita-card::before,
 .lv-card::before,
 .cartao-card-item::before,
-.mkt-rank-item::before,
-.mercado-item::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at top left,
-    rgba(255, 255, 255, 0.1),
-    transparent 50%
-  );
-  pointer-events: none;
+.mercado-item::before,
+.mkt-rank-item::before {
+  background: radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 45%);
 }
 
-@media (prefers-color-scheme: dark) {
-  .receita-card::before,
-  .lv-card::before,
-  .cartao-card-item::before,
-  .mkt-rank-item::before,
-  .mercado-item::before {
-    background: radial-gradient(
-      circle at top left,
-      rgba(255, 255, 255, 0.05),
-      transparent 50%
-    );
-  }
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.76);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-/* Animação de Entrada */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.aba.active,
-.receita-card,
-.lv-card,
-.card,
-.section,
 .modal {
-  animation: fadeInUp 0.4s ease-out forwards;
-}
-
-/* Scroll Behavior Premium */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
+  background: linear-gradient(180deg, rgba(18,22,27,0.98) 0%, rgba(12,16,20,0.98) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 26px 60px rgba(0,0,0,0.52);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(26, 24, 21, 0.2);
-  border-radius: 4px;
-  transition: background 0.2s ease;
+  background: rgba(255,255,255,0.15);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(26, 24, 21, 0.4);
+  background: rgba(212,175,103,0.5);
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
-}
-
-/* Estado de Carregamento */
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--card-2) 25%,
-    var(--line) 50%,
-    var(--card-2) 75%
-  );
-  background-size: 1000px 100%;
-  animation: shimmer 2s infinite;
-}
-
-/* Tipografia com Kerning */
-.header-title,
-.card-title,
-.section-title,
-.receita-card-nome,
-.lv-card-titulo {
-  font-kerning: auto;
-  font-feature-settings: "liga" 1, "calt" 1;
-}
-
-/* Focus Visível Premium */
-:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 4px;
-}
-
-/* Acessibilidade */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* High Contrast Mode */
-@media (prefers-contrast: more) {
-  :root {
-    --line: #d4ccc0;
-    --text-faint: #7a6c5c;
-  }
-
-  button,
-  input,
-  select,
-  textarea {
-    border-width: 2px;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .header,
-  .bottom-nav,
-  .nav-item,
-  .header-btn,
-  .modal-overlay {
-    display: none;
-  }
-
-  body {
-    background: white;
-    padding: 0;
-  }
-
-  .aba {
-    max-width: 100%;
-    page-break-inside: avoid;
-  }
-}
-
-/* ================= REFINAMENTO FINAL PARA MOBILE ================= */
-
-@media (max-width: 480px) {
+@media (max-width: 767px) {
   .card,
   .section {
-    padding: 16px 14px;
-    margin-bottom: 12px;
-  }
-
-  .field {
-    margin-bottom: 12px;
-  }
-
-  .btn,
-  .btn-outline {
-    padding: 12px 16px;
-    font-size: 14px;
-    border-radius: 12px;
-  }
-
-  .receita-card,
-  .lv-card {
-    border-radius: 16px;
+    border-radius: 20px;
   }
 
   .header {
-    padding: 8px 12px;
-  }
-
-  .header-logo {
-    width: 28px;
-    height: 28px;
-  }
-
-  .header-title {
-    font-size: 14px;
-  }
-
-  .modal {
-    border-radius: 20px 20px 0 0;
-  }
-
-  .field input,
-  .field select,
-  .field textarea {
-    font-size: 16px;
-    padding: 12px 12px;
-  }
-}
-
-/* ================= REFINAMENTO FINAL PARA DESKTOP ================= */
-
-@media (min-width: 1024px) {
-  .card,
-  .section {
-    padding: 28px 32px;
-    margin-bottom: 24px;
-    border-radius: 28px;
-  }
-
-  .modal {
-    max-width: 680px;
-    border-radius: 28px;
+    padding: 10px 12px;
   }
 
   .bottom-nav {
-    border-radius: 20px 20px 0 0;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .bottom-nav {
     max-width: 1100px;
     left: 50%;
     transform: translateX(-50%);
+    border-radius: 20px 20px 0 0;
   }
 
   .receita-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .header {
-    padding: 12px 24px;
-  }
-
-  button:hover {
-    transform: translateY(-2px);
+  .card,
+  .section {
+    padding: 28px 30px;
   }
 
   .receita-card:hover,
   .lv-card:hover,
   .cartao-card-item:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 24px 48px rgba(26, 24, 21, 0.18);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .receita-card:hover,
-    .lv-card:hover,
-    .cartao-card-item:hover {
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.48);
-    }
+    transform: translateY(-8px);
+    box-shadow: 0 26px 52px rgba(0,0,0,0.42);
   }
 }
 
-/* ================= ESTADO FINAL OTIMIZADO ================= */
-
-/* Performance */
-.receita-card,
-.lv-card,
-.cartao-card-item,
-.mkt-rank-item,
-.mercado-item,
-.modal,
-.card,
-.section {
-  will-change: transform, box-shadow;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-/* Suavidade */
-* {
-  scroll-behavior: smooth;
-}
-
-/* Consistência */
-:root {
-  --transition-fast: 0.12s ease;
-  --transition-normal: 0.2s ease;
-  --transition-slow: 0.3s ease;
-}
-
-button,
-input,
-select,
-textarea,
-.icon-btn-sm,
-.btn-icon-sm,
-.section-add,
-.filter-chip {
-  transition: all var(--transition-normal);
-}
-
-/* Estado Pronto para Produção */
-body {
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
