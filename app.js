@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.0', itens: [
+    'Corrigido: tela preta ao abrir o app — um arquivo do app estava com o nome errado e não carregava'
+  ]},
   { versao: 'v2.55', itens: [
     'Corrigido: nome do item sumia nos cards do Mercado quando não cabia ao lado da quantidade e dos botões (ficava com largura zero) — agora o nome sempre ocupa a linha toda e os botões vão pra linha de baixo'
   ]},
