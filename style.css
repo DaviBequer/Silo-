@@ -1228,3 +1228,10 @@ body.lay-dragging-active{cursor:grabbing}
 .mercado-item.ml-item .mercado-item-info{flex:1 1 auto;min-width:0}
 .mercado-item.ml-item .mercado-item-del{margin-left:auto;padding:8px 10px;font-size:16px}
 #mercadoListaAtivaView .mkt-carrinho-bar{position:static;bottom:auto;margin:16px 0 var(--s3)}
+
+/* ===== v2.67: microfone por aba + modal com botão sempre visível ===== */
+.voz-btn{width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;border:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.voz-btn.ouvindo{background:var(--danger);animation:micPulse 1s ease-in-out infinite}
+.voz-btn-tab{width:30px;height:30px;margin:auto 3px auto 6px}
+.modal{max-height:min(92vh,92%)}
+.modal-actions{position:sticky;bottom:0;background:var(--card);padding-top:var(--s2);padding-bottom:var(--safe);z-index:2}

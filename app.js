@@ -33,6 +33,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.67', itens: [
+    'Microfone em mais abas: Planner (gastos), Cartões (compra/assinatura), Ponto PJ (horários) e Louvor (novo louvor) — preenche o formulário e você confere antes de salvar',
+    'Modais: o botão Salvar não fica mais escondido pelo teclado'
+  ]},
   { versao: 'v2.66', itens: [
     'Mercado: lista "No mercado" sem seleção, ✕ de excluir à direita, botão Finalizar compra no fim da lista; cada item adicionado já soma no gasto do mês e no Dashboard'
   ]},
