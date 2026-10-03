@@ -218,6 +218,16 @@ function popularSelectMes(selectId){
 function daysInMonth(key){ const d=keyToDate(key); return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
 function todayKey(){ return mesAtualRef; }
 function mesFinanceiroAtual(){ return addMonths(todayKey(), 1); } // Planner/Panorama sempre operam 1 mês à frente (trabalhou em X, recebe/paga em X+1)
+async function aplicarMesAtualManual(){
+  const valor = document.getElementById('mesAtualManualInput')?.value;
+  if(!valor) return;
+  const ok = await iosConfirm(`Definir ${monthLabel(valor)} como mês atual? Isso muda o que o app considera "hoje" no Planner, Ponto PJ, Dashboard e cartões.`);
+  if(!ok) return;
+  mesAtualRef = valor;
+  localStorage.setItem(MES_ATUAL_KEY, valor);
+  if(state.focusMonth) state.focusMonth = mesFinanceiroAtual();
+  renderAll();
+}
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }
 function fmtMoneyCompact(v){ return 'R$ '+Math.round(v||0).toLocaleString('pt-BR'); }

@@ -37,6 +37,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.57', itens: [
+    'Novo: em Dados do App dá pra definir manualmente qual é o "mês atual" do app (afeta Planner, Ponto PJ, Dashboard e fatura dos cartões)'
+  ]},
   { versao: 'v2.56', itens: [
     'Mercado todo compacto: abas viraram texto sublinhado, itens perderam a caixa/sombra e viraram linhas finas, quantidade virou selo dourado pequeno, "mover pra lista" virou ícone — cabe muito mais item na tela em Lista, Estoque e Dashboard'
   ]},
@@ -271,6 +274,8 @@ function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
   renderChangelog();
+  const mesInput = document.getElementById('mesAtualManualInput');
+  if(mesInput) mesInput.value = mesAtualRef;
   
   console.log('[STORAGE DEBUG] localStorage.length:', localStorage.length);
   const storage = calcularStorageUsage();
