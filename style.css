@@ -1145,12 +1145,12 @@ body.lay-dragging-active{cursor:grabbing}
 /* ===== v2.61: barra fixa do Mercado + grupos ===== */
 .mercado-subtabs{display:none!important}
 #aba-mercado{padding-bottom:calc(var(--s4) + 60px)}
-.mkt-bottombar{position:fixed;left:0;right:0;bottom:calc(84px + var(--safe));z-index:150;display:flex;justify-content:center;gap:4px;background:var(--bg);border-top:1px solid var(--line);padding:4px var(--s3)}
+.mkt-bottombar{position:fixed;left:0;right:0;bottom:var(--navh,70px);z-index:150;display:flex;justify-content:center;gap:4px;background:var(--bg);border-top:1px solid var(--line);padding:4px var(--s3)}
 .mkt-bb-btn{flex:1;max-width:200px;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;padding:4px 0;color:var(--text-faint);font-size:10px;font-weight:700;font-family:inherit;cursor:pointer}
 .mkt-bb-btn.active{color:var(--gold)}
-.mkt-carrinho-bar{bottom:calc(84px + 52px + var(--safe))}
-#aba-mercado .receita-fab{bottom:calc(84px + 64px + var(--safe))}
-.mkt-grupo-titulo{margin:12px var(--s3) 0;padding:0 2px;font-size:10.5px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px}
+.mkt-carrinho-bar{bottom:calc(var(--navh,70px) + 52px)}
+#aba-mercado .receita-fab{bottom:calc(var(--navh,70px) + 64px)}
+.mkt-grupo-titulo{margin:12px 0 0;padding:0 2px;font-size:10.5px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px}
 @media (min-width:768px){ .mkt-grupo-titulo{max-width:620px;margin-left:auto;margin-right:auto} }
 
 /* ===== v2.62: voz, repetir compra ===== */

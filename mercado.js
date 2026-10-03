@@ -25,7 +25,7 @@ function atualizarResumoMercado(){
     }
   }
   const falta = state.estoque.filter(e=> e.quantidadeAtual < e.quantidadeMinima).length;
-  document.getElementById('mktResumoFalta').textContent = falta;
+  document.getElementById('mktResumoFalta').textContent = falta+' '+(falta===1?'item':'itens');
   document.getElementById('mktResumoFaltaBtn').classList.toggle('alerta', falta>0);
 }
 function renderMercado(){

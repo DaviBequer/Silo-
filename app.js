@@ -33,6 +33,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.63', itens: [
+    'Mercado: barra inferior encostada no menu (altura medida automaticamente), "1 item" no singular e títulos de grupo alinhados'
+  ]},
   { versao: 'v2.62', itens: [
     'Mercado: ditar itens por voz (microfone) e botão "Repetir última compra" na Planejando',
     'Dados do App: botão para enviar o backup pelo compartilhamento do celular (Drive, WhatsApp...)'
@@ -499,3 +502,14 @@ function cancelarNumeroModal(){
   if(numeroModalResolve) numeroModalResolve(null);
   numeroModalResolve = null;
 }
+
+
+/* ================= ALTURA REAL DO MENU INFERIOR ================= */
+function ajustarAlturaMenuInferior(){
+  const nav = document.querySelector('.bottom-nav');
+  if(!nav) return;
+  document.documentElement.style.setProperty('--navh', nav.offsetHeight+'px');
+}
+ajustarAlturaMenuInferior();
+window.addEventListener('load', ajustarAlturaMenuInferior);
+window.addEventListener('resize', ajustarAlturaMenuInferior);
