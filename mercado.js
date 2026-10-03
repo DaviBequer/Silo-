@@ -6,7 +6,30 @@ let estoqueItemAtualId = null;
 
 function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
+function atualizarResumoMercado(){
+  const gastoEl = document.getElementById('mktResumoGasto');
+  if(!gastoEl) return;
+  const agora = new Date();
+  gastoEl.textContent = calcularGastoMercadoMes(agora.getFullYear(), agora.getMonth()).toFixed(2).replace('.',',');
+  const gastoNum = calcularGastoMercadoMes(agora.getFullYear(), agora.getMonth());
+  const meta = state.mercadoMeta || 0;
+  const metaWrap = document.getElementById('mktResumoMeta');
+  if(metaWrap){
+    metaWrap.style.display = meta>0 ? 'block' : 'none';
+    if(meta>0){
+      const pct = Math.round(gastoNum/meta*100);
+      document.getElementById('mktResumoMetaTxt').textContent = pct+'% da meta de R$ '+meta.toFixed(2).replace('.',',');
+      const fill = document.getElementById('mktResumoMetaFill');
+      fill.style.width = Math.min(100,pct)+'%';
+      fill.classList.toggle('estourou', pct>100);
+    }
+  }
+  const falta = state.estoque.filter(e=> e.quantidadeAtual < e.quantidadeMinima).length;
+  document.getElementById('mktResumoFalta').textContent = falta;
+  document.getElementById('mktResumoFaltaBtn').classList.toggle('alerta', falta>0);
+}
 function renderMercado(){
+  atualizarResumoMercado();
   renderPreListaView();
   renderListaComprasView();
   renderMercadoEstoqueFilterChips();
@@ -26,6 +49,10 @@ function switchMercadoSubtab(tab){
   document.getElementById('subtabBtnMercadoLista').classList.toggle('active', tab==='lista');
   document.getElementById('subtabBtnMercadoEstoque').classList.toggle('active', tab==='estoque');
   document.getElementById('subtabBtnMercadoDashboard').classList.toggle('active', tab==='dashboard');
+  document.getElementById('mktBbLista')?.classList.toggle('active', tab==='lista');
+  document.getElementById('mktBbEstoque')?.classList.toggle('active', tab==='estoque');
+  document.getElementById('mktBbDashboard')?.classList.toggle('active', tab==='dashboard');
+  window.scrollTo(0,0);
   document.getElementById('mercadoSubtabLista').style.display = tab==='lista' ? 'block' : 'none';
   document.getElementById('mercadoSubtabEstoque').style.display = tab==='estoque' ? 'block' : 'none';
   document.getElementById('mercadoSubtabDashboard').style.display = tab==='dashboard' ? 'block' : 'none';
@@ -96,7 +123,14 @@ function renderListaComprasView(){
   manualItens.forEach(it=>{ totalItens++; totalValor += (it.valor||0) * (it.quantidade||0); });
   document.getElementById('mlHeaderItens').textContent = totalItens;
   document.getElementById('mlHeaderTotal').textContent = totalValor.toFixed(2).replace('.',',');
-  document.getElementById('btnFinalizarListaAtiva').style.display = manualItens.length>0 ? 'block' : 'none';
+  document.getElementById('btnFinalizarListaAtiva').style.display = manualItens.length>0 ? 'flex' : 'none';
+  const pegos = manualItens.filter(it=>it.pego);
+  let valorPegos = 0;
+  pegos.forEach(it=>{ valorPegos += (it.valor||0) * (it.quantidade||0); });
+  document.getElementById('mlCarrinhoQtd').textContent = pegos.length;
+  document.getElementById('mlCarrinhoTotalItens').textContent = manualItens.length;
+  document.getElementById('mlCarrinhoValor').textContent = valorPegos.toFixed(2).replace('.',',');
+  atualizarResumoMercado();
 
   if(autoItens.length===0 && manualItens.length===0){
     el.innerHTML = `<div class="empty-state"><div class="title">Lista vazia</div><div class="desc">Adicione um item ou espere o estoque acabar</div></div>`;
@@ -114,9 +148,18 @@ function renderListaComprasView(){
       <div class="mercado-item-qtd">+${e.quantidadeReposicao||e.quantidadeMinima}${e.unidade}</div>
     </div>`;
   });
+  const grupos = {};
   manualItens.forEach(it=>{
-    const subtotal = (it.valor||0) * (it.quantidade||0);
-    html += `<div class="mercado-item ${it.pego?'carrinho':''}"
+    const est = encontrarEstoquePorNome(it.nome);
+    const cat = est ? est.categoria : 'Outros';
+    (grupos[cat] = grupos[cat] || []).push(it);
+  });
+  const ordemCats = [...MERCADO_CATEGORIAS, ...Object.keys(grupos).filter(c=>!MERCADO_CATEGORIAS.includes(c))];
+  ordemCats.filter(c=>grupos[c]).forEach(cat=>{
+    html += `<div class="mkt-grupo-titulo">${cat} · ${grupos[cat].length}</div>`;
+    grupos[cat].forEach(it=>{
+      const subtotal = (it.valor||0) * (it.quantidade||0);
+      html += `<div class="mercado-item ${it.pego?'carrinho':''}"
       onpointerdown="mlItemTapStart(event,'${it.id}')" onpointerup="mlItemTapEnd(event,'${it.id}')" onpointercancel="mlItemTapCancel()" onpointerleave="mlItemTapCancel()">
       <div class="mercado-check${it.pego?' checked':''}">${it.pego?ICON_CHECK:''}</div>
       <div class="mercado-item-info">
@@ -125,6 +168,7 @@ function renderListaComprasView(){
       </div>
       <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
     </div>`;
+    });
   });
   el.innerHTML = html;
 }
@@ -365,7 +409,7 @@ function confirmarFinalizarCompra(){
 
 /* ---------- Estoque de Casa ---------- */
 function renderMercadoEstoqueFilterChips(){
-  const chips = ['Todas', ...getCategoriasComCustom(MERCADO_CATEGORIAS, 'mercadoCategoriasCustom')];
+  const chips = ['Todas', 'Acabando', ...getCategoriasComCustom(MERCADO_CATEGORIAS, 'mercadoCategoriasCustom')];
   document.getElementById('mercadoEstoqueFilterChips').innerHTML = chips.map(c=>
     `<button class="filter-chip${mercadoEstoqueFiltroAtivo===c?' active':''}" onclick="setMercadoEstoqueFiltro('${c}')">${c}</button>`
   ).join('');
@@ -375,28 +419,66 @@ function setMercadoEstoqueFiltro(c){
   renderMercadoEstoqueFilterChips();
   renderEstoqueView();
 }
+function estimarDiasRestantes(e){
+  const hist = e.historicoCompras || [];
+  const dias = hist.map(h=>h.diasDesdeUltima).filter(d=>d!==null && d>0);
+  if(dias.length===0 || hist.length===0) return null;
+  const media = dias.reduce((a,b)=>a+b,0)/dias.length;
+  const ultima = new Date(hist[hist.length-1].data).getTime();
+  if(!ultima) return null;
+  const desde = (Date.now()-ultima)/86400000;
+  return Math.max(0, Math.round(media-desde));
+}
 function renderEstoqueView(){
   const el = document.getElementById('mercadoEstoqueLista');
   let items = state.estoque.slice();
-  if(mercadoEstoqueFiltroAtivo !== 'Todas') items = items.filter(e=>e.categoria===mercadoEstoqueFiltroAtivo);
-  items.sort((a,b)=> a.nome.localeCompare(b.nome));
+  if(mercadoEstoqueFiltroAtivo === 'Acabando') items = items.filter(e=>e.quantidadeAtual < e.quantidadeMinima);
+  else if(mercadoEstoqueFiltroAtivo !== 'Todas') items = items.filter(e=>e.categoria===mercadoEstoqueFiltroAtivo);
+  items.sort((a,b)=>{
+    const fa = a.quantidadeAtual < a.quantidadeMinima ? 0 : 1;
+    const fb = b.quantidadeAtual < b.quantidadeMinima ? 0 : 1;
+    return fa-fb || a.nome.localeCompare(b.nome);
+  });
+  const contEl = document.getElementById('mercadoCasaContagem');
+  if(contEl) contEl.textContent = state.estoque.length + (state.estoque.length===1 ? ' item' : ' itens');
   if(items.length===0){
-    el.innerHTML = `<div class="empty-state"><div class="title">Nenhum item no estoque</div><div class="desc">Toque no + para adicionar</div></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="title">${mercadoEstoqueFiltroAtivo==='Acabando'?'Nada acabando':'Nenhum item em casa'}</div><div class="desc">${mercadoEstoqueFiltroAtivo==='Acabando'?'Tudo acima do mínimo':'Toque no + para adicionar'}</div></div>`;
     return;
   }
   el.innerHTML = items.map(e=>{
     const abaixo = e.quantidadeAtual < e.quantidadeMinima;
     const ultimoPreco = (e.precos && e.precos.length) ? e.precos[e.precos.length-1].valor : null;
-    return `<div class="mercado-item ${abaixo?'repor':''}">
-      <div class="mercado-item-info" onclick="abrirEstoqueForm('${e.id}')">
-        <div class="mercado-item-nome">${e.nome}${abaixo?'<span class="mercado-badge-auto">Repor</span>':''}</div>
-        <div class="mercado-item-meta">${e.categoria} · mínimo ${e.quantidadeMinima}${e.unidade}${ultimoPreco!==null?` · R$ ${ultimoPreco.toFixed(2).replace('.',',')}/${e.unidade}`:''}</div>
+    const ref = Math.max(e.quantidadeReposicao||0, (e.quantidadeMinima||0)*2, e.quantidadeAtual, 1);
+    const pct = Math.min(100, Math.round(e.quantidadeAtual/ref*100));
+    const nivel = abaixo ? 'baixo' : (e.quantidadeAtual < e.quantidadeMinima*1.5 ? 'medio' : 'ok');
+    const dias = estimarDiasRestantes(e);
+    let selo;
+    if(abaixo) selo = dias!==null && dias>0 ? `acaba em ~${dias} ${dias===1?'dia':'dias'}` : 'repor';
+    else if(dias!==null) selo = dias===0 ? 'hoje' : `dura ~${dias} ${dias===1?'dia':'dias'}`;
+    else selo = 'ok';
+    let avisoPreco = '';
+    if(e.precos && e.precos.length>=2){
+      const dif = e.precos[e.precos.length-1].valor - e.precos[e.precos.length-2].valor;
+      if(Math.abs(dif)>=0.01){
+        const txt = 'R$ '+Math.abs(dif).toFixed(2).replace('.',',');
+        avisoPreco = dif<0 ? `<div class="casa-preco barato">${txt} mais barato que na compra anterior</div>` : `<div class="casa-preco caro">${txt} mais caro que na compra anterior</div>`;
+      }
+    }
+    return `<div class="casa-item">
+      <div class="casa-item-top" onclick="abrirEstoqueForm('${e.id}')">
+        <span class="casa-item-nome">${e.nome}</span>
+        <span class="casa-selo ${nivel}">${selo}</span>
       </div>
-      <div class="mercado-item-stepper">
-        <button onclick="ajustarEstoqueQtdRapido('${e.id}', -1)">−</button>
-        <span>${e.quantidadeAtual}${e.unidade}</span>
-        <button onclick="ajustarEstoqueQtdRapido('${e.id}', 1)">+</button>
+      <div class="casa-barra" onclick="abrirEstoqueForm('${e.id}')"><div class="casa-barra-fill ${nivel}" style="width:${pct}%"></div></div>
+      <div class="casa-item-base">
+        <span class="casa-item-meta">${e.categoria} · mín. ${e.quantidadeMinima}${e.unidade}${ultimoPreco!==null?` · R$ ${ultimoPreco.toFixed(2).replace('.',',')}/${e.unidade}`:''}</span>
+        <div class="mercado-item-stepper">
+          <button onclick="ajustarEstoqueQtdRapido('${e.id}', -1)">−</button>
+          <span>${e.quantidadeAtual}${e.unidade}</span>
+          <button onclick="ajustarEstoqueQtdRapido('${e.id}', 1)">+</button>
+        </div>
       </div>
+      ${avisoPreco}
     </div>`;
   }).join('');
 }
@@ -512,7 +594,17 @@ function abrirHistoricoItem(){
 }
 
 /* ---------- Dashboard ---------- */
+function salvarMetaMercado(){
+  const el = document.getElementById('mktMetaInput');
+  const v = parseMoney(el.value);
+  state.mercadoMeta = (!isNaN(v) && v>0) ? v : 0;
+  persist();
+  atualizarResumoMercado();
+  showToast(state.mercadoMeta>0 ? 'Meta salva' : 'Meta removida');
+}
 function renderMercadoDashboard(){
+  const metaInp = document.getElementById('mktMetaInput');
+  if(metaInp && document.activeElement!==metaInp) metaInp.value = state.mercadoMeta>0 ? 'R$ '+state.mercadoMeta.toFixed(2).replace('.',',') : '';
   const agora = new Date();
   const mesAtual = agora.getMonth(), anoAtual = agora.getFullYear();
 
@@ -572,9 +664,9 @@ if('serviceWorker' in navigator){
 }
 
 /* ================= IMPORTAR / EXPORTAR TODOS OS DADOS ================= */
-function exportarDadosApp(){
+function montarBackupApp(){
   const versaoEl = document.querySelector('.header-version');
-  const backup = {
+  return {
     app: 'Siloe',
     versaoApp: versaoEl ? versaoEl.textContent.trim() : '',
     exportadoEm: new Date().toISOString(),
@@ -582,6 +674,24 @@ function exportarDadosApp(){
     logo: localStorage.getItem('siloe-logo') || null,
     state: state
   };
+}
+async function compartilharBackupApp(){
+  const nome = `siloe-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const blob = new Blob([JSON.stringify(montarBackupApp(), null, 2)], { type: 'application/json' });
+  try{
+    const arquivo = new File([blob], nome, { type: 'application/json' });
+    if(navigator.canShare && navigator.canShare({ files:[arquivo] })){
+      await navigator.share({ files:[arquivo], title: 'Backup Siloé' });
+      closeModal('modalImportExport');
+      return;
+    }
+  }catch(err){
+    if(err && err.name==='AbortError') return;
+  }
+  exportarDadosApp();
+}
+function exportarDadosApp(){
+  const backup = montarBackupApp();
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -635,3 +745,76 @@ function onImportFileSelected(event){
 /* ================= INIT (deve rodar por último, depois de todos os módulos) ================= */
 carregar();
 aplicarLogoSalva();
+
+
+/* ---------- Ditar itens por voz ---------- */
+const NUMEROS_EXTENSO = { 'um':1,'uma':1,'dois':2,'duas':2,'três':3,'tres':3,'quatro':4,'cinco':5,'seis':6,'sete':7,'oito':8,'nove':9,'dez':10 };
+function interpretarItemDitado(trecho){
+  let t = trecho.trim();
+  if(!t) return null;
+  let qtd = 1;
+  let m = t.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|un|unidades?)?\s+(?:de\s+)?(.+)$/i);
+  if(m){ qtd = parseFloat(m[1].replace(',','.')) || 1; t = m[2]; }
+  else {
+    const p = t.split(/\s+/);
+    const n = NUMEROS_EXTENSO[p[0].toLowerCase()];
+    if(n && p.length>1){ qtd = n; t = p.slice(1).join(' ').replace(/^de\s+/i,''); }
+  }
+  t = t.trim();
+  if(!t) return null;
+  return { nome: t.charAt(0).toUpperCase()+t.slice(1), quantidade: qtd };
+}
+let mercadoReconhecimento = null;
+function ditarItensMercado(modo){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ showToast('Ditado não disponível neste navegador'); return; }
+  const btn = document.getElementById(modo==='pre' ? 'mktMicPre' : 'mktMicAtiva');
+  if(mercadoReconhecimento){ try{ mercadoReconhecimento.stop(); }catch(e){} return; }
+  const rec = new SR();
+  mercadoReconhecimento = rec;
+  rec.lang = 'pt-BR';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  btn.classList.add('ouvindo');
+  showToast('Fale os itens, separados por vírgula');
+  rec.onresult = (ev)=>{
+    const texto = ev.results[0][0].transcript;
+    const itens = texto.split(/(?<!\d),|,(?!\d)|\bvírgula\b|\bpróximo\b/i).map(interpretarItemDitado).filter(Boolean);
+    if(itens.length===0){ showToast('Não entendi, tente de novo'); return; }
+    itens.forEach(it=>{
+      if(modo==='pre') state.preListaCompras.push({ id: uid('mp'), nome: it.nome, quantidade: it.quantidade, unidade:'unidades', criadoEm: Date.now() });
+      else state.listaCompras.push({ id: uid('mc'), nome: it.nome, quantidade: it.quantidade, unidade:'unidades', valor:0, pego:false, criadoEm: Date.now() });
+    });
+    persist();
+    renderPreListaView();
+    renderListaComprasView();
+    showToast(itens.length===1 ? '1 item adicionado' : itens.length+' itens adicionados');
+  };
+  rec.onerror = ()=>{ showToast('Não consegui ouvir. Verifique o microfone'); };
+  rec.onend = ()=>{ btn.classList.remove('ouvindo'); mercadoReconhecimento = null; };
+  try{ rec.start(); }catch(e){ btn.classList.remove('ouvindo'); mercadoReconhecimento = null; }
+}
+
+/* ---------- Repetir última compra ---------- */
+async function repetirUltimaCompra(){
+  let ultima = 0;
+  state.estoque.forEach(e=>(e.historicoCompras||[]).forEach(h=>{ if(h.data>ultima) ultima = h.data; }));
+  if(!ultima){ showToast('Ainda não há compra finalizada'); return; }
+  const itens = [];
+  state.estoque.forEach(e=>(e.historicoCompras||[]).forEach(h=>{
+    if(h.data===ultima) itens.push({ nome:e.nome, quantidade:h.quantidadeComprada||1, unidade:e.unidade||'unidades' });
+  }));
+  const dt = new Date(ultima).toLocaleDateString('pt-BR');
+  const ok = await iosConfirm(`Adicionar os ${itens.length} itens da compra de ${dt} na pré-listagem?`);
+  if(!ok) return;
+  const jaTem = new Set(state.preListaCompras.map(x=>x.nome.trim().toLowerCase()));
+  let add = 0;
+  itens.forEach(it=>{
+    if(jaTem.has(it.nome.trim().toLowerCase())) return;
+    state.preListaCompras.push({ id: uid('mp'), nome: it.nome, quantidade: it.quantidade, unidade: it.unidade, criadoEm: Date.now() });
+    add++;
+  });
+  persist();
+  renderPreListaView();
+  showToast(add>0 ? add+' itens adicionados' : 'Todos já estavam na lista');
+}

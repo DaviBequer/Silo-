@@ -1094,3 +1094,68 @@ body.lay-dragging-active{cursor:grabbing}
   #mercadoSubtabDashboard{max-width:1040px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:0 var(--s4);align-content:start}
   #mercadoSubtabDashboard > .mkt-stat-row{grid-column:1/-1}
 }
+
+/* ===== Mercado v2.58: resumo no topo + barra do carrinho ===== */
+.mkt-resumo{display:flex;gap:12px;margin:10px var(--s3) 4px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.mkt-resumo-col{flex:1;min-width:0;text-align:left;background:none;border:none;padding:0;font-family:inherit;color:var(--text)}
+.mkt-resumo-label{font-size:11px;color:var(--text-dim);margin-bottom:2px}
+.mkt-resumo-valor{font-size:18px;font-weight:800;color:var(--text)}
+.mkt-resumo-falta{cursor:pointer;border-left:1px solid var(--line);padding-left:12px}
+.mkt-resumo-falta.alerta .mkt-resumo-valor{color:var(--danger)}
+.mkt-carrinho-bar{position:sticky;bottom:calc(84px + var(--safe));z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px var(--s3) var(--s3);padding:10px 12px;background:var(--primary);color:#fff;border-radius:14px}
+.mkt-carrinho-label{font-size:11px;opacity:.8}
+.mkt-carrinho-valor{font-size:16px;font-weight:800}
+.mkt-carrinho-btn{background:var(--gold);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+@media (min-width:768px){
+  .mkt-resumo,.mkt-carrinho-bar{max-width:620px;margin-left:auto;margin-right:auto}
+}
+
+/* ===== Mercado v2.59: Casa (estoque) ===== */
+.casa-header{padding:6px var(--s3) 0;font-size:11px;color:var(--text-dim)}
+.casa-item{padding:10px 2px;margin:0 var(--s3);border-bottom:1px solid var(--line)}
+.casa-item-top{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
+.casa-item-nome{font-size:14px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.casa-selo{font-size:10.5px;font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
+.casa-selo.baixo{background:var(--danger-tint,rgba(176,50,50,.12));color:var(--danger)}
+.casa-selo.medio{background:var(--warning-tint);color:var(--warning)}
+.casa-selo.ok{background:var(--gold-tint);color:var(--gold-dim)}
+.casa-barra{height:6px;background:var(--card-2);border-radius:3px;margin:8px 0 6px;overflow:hidden;cursor:pointer}
+.casa-barra-fill{height:100%;border-radius:3px;min-width:3px}
+.casa-barra-fill.baixo{background:var(--danger)}
+.casa-barra-fill.medio{background:var(--warning)}
+.casa-barra-fill.ok{background:var(--success)}
+.casa-item-base{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.casa-item-meta{font-size:10.5px;color:var(--text-faint);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+@media (min-width:768px){
+  .casa-header,.casa-item{max-width:620px;margin-left:auto;margin-right:auto}
+}
+
+/* ===== v2.60: meta mensal e aviso de preço ===== */
+.mkt-meta-wrap{margin:0 var(--s3) 6px;padding:0 2px}
+.mkt-meta-track{height:6px;background:var(--card-2);border-radius:3px;overflow:hidden}
+.mkt-meta-fill{height:100%;background:var(--gold);border-radius:3px;width:0}
+.mkt-meta-fill.estourou{background:var(--danger)}
+.mkt-meta-txt{font-size:10.5px;color:var(--text-dim);margin-top:4px}
+.casa-preco{font-size:10.5px;font-weight:600;margin-top:5px}
+.casa-preco.barato{color:var(--success)}
+.casa-preco.caro{color:var(--danger)}
+#mktMetaInput{width:100%;max-width:220px}
+@media (min-width:768px){ .mkt-meta-wrap{max-width:620px;margin-left:auto;margin-right:auto} }
+
+/* ===== v2.61: barra fixa do Mercado + grupos ===== */
+.mercado-subtabs{display:none!important}
+#aba-mercado{padding-bottom:calc(var(--s4) + 60px)}
+.mkt-bottombar{position:fixed;left:0;right:0;bottom:calc(84px + var(--safe));z-index:150;display:flex;justify-content:center;gap:4px;background:var(--bg);border-top:1px solid var(--line);padding:4px var(--s3)}
+.mkt-bb-btn{flex:1;max-width:200px;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;padding:4px 0;color:var(--text-faint);font-size:10px;font-weight:700;font-family:inherit;cursor:pointer}
+.mkt-bb-btn.active{color:var(--gold)}
+.mkt-carrinho-bar{bottom:calc(84px + 52px + var(--safe))}
+#aba-mercado .receita-fab{bottom:calc(84px + 64px + var(--safe))}
+.mkt-grupo-titulo{margin:12px var(--s3) 0;padding:0 2px;font-size:10.5px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px}
+@media (min-width:768px){ .mkt-grupo-titulo{max-width:620px;margin-left:auto;margin-right:auto} }
+
+/* ===== v2.62: voz, repetir compra ===== */
+.mercado-mic-btn{background:var(--primary)}
+.mercado-mic-btn.ouvindo{background:var(--danger);animation:micPulse 1s ease-in-out infinite}
+@keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.mkt-repetir-btn{display:block;margin:2px var(--s3) 6px;padding:4px 2px;background:none;border:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--gold-dim);cursor:pointer;text-align:left}
+@media (min-width:768px){ .mkt-repetir-btn{max-width:620px;margin-left:auto;margin-right:auto} }

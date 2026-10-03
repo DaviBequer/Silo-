@@ -201,20 +201,6 @@ function monthLabel(key){ const d=keyToDate(key); return MES_NOMES[d.getMonth()]
 function monthLabelLong(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+' de '+d.getFullYear(); }
 function monthLabelExtensoCurto(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+'/'+String(d.getFullYear()).slice(-2); }
 function monthLabelExtenso(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+'/'+d.getFullYear(); }
-function popularSelectMes(selectId){
-  const el = document.getElementById(selectId);
-  if(!el) return;
-  const valorAtual = el.value;
-  const base = keyToDate(todayKey());
-  let html = '<option value="">Selecione...</option>';
-  for(let i=-36;i<=24;i++){
-    const d = new Date(base.getFullYear(), base.getMonth()+i, 1);
-    const key = monthKey(d);
-    html += `<option value="${key}">${MES_NOMES_LONGOS[d.getMonth()]} de ${d.getFullYear()}</option>`;
-  }
-  el.innerHTML = html;
-  if(valorAtual) el.value = valorAtual;
-}
 function daysInMonth(key){ const d=keyToDate(key); return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
 function todayKey(){ return mesAtualRef; }
 function mesFinanceiroAtual(){ return addMonths(todayKey(), 1); } // Planner/Panorama sempre operam 1 mês à frente (trabalhou em X, recebe/paga em X+1)
@@ -262,19 +248,6 @@ const PADRAO_SEGQUI_HORAS = 9;
 const PADRAO_SEX_HORAS = 8;
 
 /* ================= LOGO PERSONALIZADA (escolhida pelo usuário no dispositivo) ================= */
-function triggerLogoUpload(){ document.getElementById('logoFileInput').click(); }
-function onLogoFileSelected(ev){
-  const file = ev.target.files && ev.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const dataUrl = e.target.result;
-    try{ localStorage.setItem('siloe-logo', dataUrl); }catch(err){ console.error('Erro ao salvar logo', err); }
-    aplicarLogoSalva();
-    showToast('Logo atualizada');
-  };
-  reader.readAsDataURL(file);
-}
 function aplicarLogoSalva(){
   try{
     const saved = localStorage.getItem('siloe-logo');

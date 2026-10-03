@@ -11,9 +11,7 @@ function renderAll(){
 /* ========== STORAGE & BACKUP ========== */
 function calcularStorageUsage(){
   let usado = 0;
-  console.log('[CALC-STORAGE] Iniciando cálculo');
   try{
-    console.log('[CALC-STORAGE] localStorage.length:', localStorage.length);
     for(let i = 0; i < localStorage.length; i++){
       const key = localStorage.key(i);
       if(key){
@@ -21,7 +19,6 @@ function calcularStorageUsage(){
         const keyBytes = new TextEncoder().encode(key).length;
         const valueBytes = new TextEncoder().encode(value).length;
         const total = keyBytes + valueBytes;
-        console.log(`[CALC-STORAGE] "${key}": ${total} bytes (key:${keyBytes} + value:${valueBytes})`);
         usado += total;
       }
     }
@@ -30,13 +27,31 @@ function calcularStorageUsage(){
   }
   const total = 5 * 1024 * 1024;
   const percentual = Math.min(100, Math.round((usado / total) * 100));
-  console.log('[CALC-STORAGE] RESULTADO:', { usado, total, percentual });
   return { usado, total, percentual };
 }
 
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.62', itens: [
+    'Mercado: ditar itens por voz (microfone) e botão "Repetir última compra" na Planejando',
+    'Dados do App: botão para enviar o backup pelo compartilhamento do celular (Drive, WhatsApp...)'
+  ]},
+  { versao: 'v2.61', itens: [
+    'Mercado: barra fixa embaixo (Lista, Casa, Gastos) e lista no mercado agrupada por categoria',
+    'Dia de recebimento e aviso de vencimento agora abrem uma janela do app em vez da caixa do navegador'
+  ]},
+  { versao: 'v2.60', itens: [
+    'Mercado: meta de gasto mensal (definida em Gastos) com barra no topo da Lista e aviso de preço mais barato/caro na Casa',
+    'Limpeza: removidos códigos sem uso e logs de depuração'
+  ]},
+  { versao: 'v2.59', itens: [
+    'Mercado: Estoque virou "Casa" com barra de nível (vermelho/amarelo/verde), estimativa de dias restantes e filtro "Acabando"; Dashboard virou "Gastos"'
+  ]},
+  { versao: 'v2.58', itens: [
+    'Botão voltar do celular: agora fecha a tela/janela aberta primeiro e, na tela principal, pede para tocar de novo para sair',
+    'Mercado: resumo no topo (gasto do mês e itens acabando), abas Planejando/No mercado e barra do carrinho fixa embaixo'
+  ]},
   { versao: 'v2.57', itens: [
     'Novo: em Dados do App dá pra definir manualmente qual é o "mês atual" do app (afeta Planner, Ponto PJ, Dashboard e fatura dos cartões)'
   ]},
@@ -270,22 +285,17 @@ function renderChangelog(){
 }
 
 function abrirImportExportModal(){
-  console.log('[STORAGE DEBUG] Abrindo modal');
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
   renderChangelog();
   const mesInput = document.getElementById('mesAtualManualInput');
   if(mesInput) mesInput.value = mesAtualRef;
   
-  console.log('[STORAGE DEBUG] localStorage.length:', localStorage.length);
   const storage = calcularStorageUsage();
-  console.log('[STORAGE DEBUG] calcularStorageUsage retornou:', storage);
   
   const usedMB = (storage.usado / (1024*1024)).toFixed(2);
-  console.log('[STORAGE DEBUG] usedMB:', usedMB);
   
   const bar = document.getElementById('storageBar');
-  console.log('[STORAGE DEBUG] bar element:', bar);
   
   bar.style.width = storage.percentual + '%';
   let gradient;
@@ -294,13 +304,10 @@ function abrirImportExportModal(){
   else gradient = '#ef4444';
   bar.style.background = gradient;
   
-  console.log('[STORAGE DEBUG] Atualizando percentual para:', storage.percentual + '%');
   document.getElementById('storagePercent').textContent = storage.percentual + '%';
   
-  console.log('[STORAGE DEBUG] Atualizando usado para:', usedMB + ' MB');
   document.getElementById('storageUsed').textContent = usedMB + ' MB';
   
-  console.log('[STORAGE DEBUG] Done!');
 }
 
 /* exportarDadosApp / triggerImportarDados / onImportFileSelected vivem em mercado.js */
@@ -422,3 +429,73 @@ function closeModal(modalId){
 
 /* ========== NAVEGAÇÃO ========== */
 /* switchAba e switchUser vivem em core.js */
+
+
+/* ================= BOTÃO VOLTAR DO CELULAR (toque duplo pra sair) ================= */
+let voltarSairArmado = false;
+let voltarSairTimer = null;
+function fecharCamadaAbertaVoltar(){
+  const conf = document.getElementById('iosConfirmOverlay');
+  if(conf && conf.classList.contains('show')){ iosConfirmResolver(false); return true; }
+  const modais = document.querySelectorAll('.modal-overlay.active');
+  if(modais.length){
+    const topo = modais[modais.length-1];
+    if(topo.id==='modalNumeroSimples') cancelarNumeroModal();
+    else closeModal(topo.id);
+    return true;
+  }
+  const paginas = document.querySelectorAll('.fullpage.active');
+  if(paginas.length){
+    const pg = paginas[paginas.length-1];
+    if(pg.id==='pageComando' && typeof fecharComando==='function') fecharComando();
+    else pg.classList.remove('active');
+    document.body.style.overflow = '';
+    return true;
+  }
+  return false;
+}
+function iniciarBotaoVoltar(){
+  if(!window.history || !history.pushState) return;
+  history.replaceState({siloe:'base'}, '');
+  history.pushState({siloe:'guarda'}, '');
+  window.addEventListener('popstate', ()=>{
+    if(voltarSairArmado){
+      voltarSairArmado = false;
+      clearTimeout(voltarSairTimer);
+      history.back();
+      return;
+    }
+    history.pushState({siloe:'guarda'}, '');
+    if(fecharCamadaAbertaVoltar()) return;
+    voltarSairArmado = true;
+    showToast('Toque de novo em voltar para sair');
+    clearTimeout(voltarSairTimer);
+    voltarSairTimer = setTimeout(()=>{ voltarSairArmado = false; }, 2000);
+  });
+}
+iniciarBotaoVoltar();
+
+
+/* ================= MODAL DE NÚMERO (substitui prompt nativo) ================= */
+let numeroModalResolve = null;
+function pedirNumeroModal(titulo, dica, atual){
+  document.getElementById('numeroSimplesTitulo').textContent = titulo;
+  document.getElementById('numeroSimplesDica').textContent = dica;
+  const inp = document.getElementById('numeroSimplesInput');
+  inp.value = atual ?? '';
+  document.getElementById('modalNumeroSimples').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  setTimeout(()=>{ inp.focus(); inp.select(); }, 60);
+  return new Promise(resolve=>{ numeroModalResolve = resolve; });
+}
+function confirmarNumeroModal(){
+  const v = document.getElementById('numeroSimplesInput').value;
+  closeModal('modalNumeroSimples');
+  if(numeroModalResolve) numeroModalResolve(v);
+  numeroModalResolve = null;
+}
+function cancelarNumeroModal(){
+  closeModal('modalNumeroSimples');
+  if(numeroModalResolve) numeroModalResolve(null);
+  numeroModalResolve = null;
+}

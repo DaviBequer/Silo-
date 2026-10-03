@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.57">
+<link rel="stylesheet" href="style.css?v=2.62">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.57</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.62</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1121,15 +1121,29 @@
 
   <div class="tarefas-subtabs mercado-subtabs">
     <button class="subtab-btn active" id="subtabBtnMercadoLista" onclick="switchMercadoSubtab('lista')">Lista</button>
-    <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="switchMercadoSubtab('estoque')">Estoque</button>
-    <button class="subtab-btn" id="subtabBtnMercadoDashboard" onclick="switchMercadoSubtab('dashboard')">Dashboard</button>
+    <button class="subtab-btn" id="subtabBtnMercadoEstoque" onclick="switchMercadoSubtab('estoque')">Casa</button>
+    <button class="subtab-btn" id="subtabBtnMercadoDashboard" onclick="switchMercadoSubtab('dashboard')">Gastos</button>
   </div>
 
   <!-- SUB-ABA: Lista de Compras -->
   <div id="mercadoSubtabLista" class="mercado-subtab active">
+    <div class="mkt-resumo" id="mktResumo">
+      <div class="mkt-resumo-col">
+        <div class="mkt-resumo-label">Gasto no mês</div>
+        <div class="mkt-resumo-valor">R$ <span id="mktResumoGasto">0,00</span></div>
+      </div>
+      <button type="button" class="mkt-resumo-col mkt-resumo-falta" id="mktResumoFaltaBtn" onclick="switchMercadoListaModo('ativa')">
+        <div class="mkt-resumo-label">Acabando em casa</div>
+        <div class="mkt-resumo-valor"><span id="mktResumoFalta">0</span> itens</div>
+      </button>
+    </div>
+    <div class="mkt-meta-wrap" id="mktResumoMeta" style="display:none">
+      <div class="mkt-meta-track"><div class="mkt-meta-fill" id="mktResumoMetaFill"></div></div>
+      <div class="mkt-meta-txt" id="mktResumoMetaTxt"></div>
+    </div>
     <div class="mercado-lista-toggle">
-      <button class="subtab-btn active" id="btnMlPre" onclick="switchMercadoListaModo('pre')">Pré-listagem</button>
-      <button class="subtab-btn" id="btnMlAtiva" onclick="switchMercadoListaModo('ativa')">Lista de Compras</button>
+      <button class="subtab-btn active" id="btnMlPre" onclick="switchMercadoListaModo('pre')">Planejando</button>
+      <button class="subtab-btn" id="btnMlAtiva" onclick="switchMercadoListaModo('ativa')">No mercado</button>
     </div>
 
     <!-- PRÉ-LISTAGEM: só quantidade + nome, pra planejar antes de ir ao mercado -->
@@ -1139,8 +1153,10 @@
           <input type="text" id="mpQuantidade" inputmode="decimal" placeholder="Qtd" onkeydown="if(event.key==='Enter') document.getElementById('mpNome').focus()">
           <input type="text" id="mpNome" placeholder="O que precisa comprar?" style="flex:1" onkeydown="if(event.key==='Enter') adicionarItemPreLista()">
           <button class="mercado-add-btn" onclick="adicionarItemPreLista()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+          <button type="button" class="mercado-add-btn mercado-mic-btn" id="mktMicPre" onclick="ditarItensMercado('pre')" aria-label="Ditar itens"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
         </div>
       </div>
+      <button type="button" class="mkt-repetir-btn" onclick="repetirUltimaCompra()">Repetir última compra</button>
       <div id="mercadoPreLista" class="mercado-lista"></div>
     </div>
 
@@ -1158,15 +1174,23 @@
         <div class="mercado-add-row2" style="margin-top:8px">
           <input type="text" id="mlValor" placeholder="R$ 0,00" inputmode="numeric" oninput="maskMoneyInput(this)" onkeydown="if(event.key==='Enter') adicionarItemListaAtiva()">
           <button class="mercado-add-btn" onclick="adicionarItemListaAtiva()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+          <button type="button" class="mercado-add-btn mercado-mic-btn" id="mktMicAtiva" onclick="ditarItensMercado('ativa')" aria-label="Ditar itens"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
         </div>
       </div>
       <div id="mercadoListaCompras" class="mercado-lista"></div>
-      <button class="btn btn-block" id="btnFinalizarListaAtiva" style="max-width:720px;margin:0 auto var(--s3);display:none" onclick="finalizarListaAtiva()">Finalizar e dar baixa no estoque</button>
+      <div class="mkt-carrinho-bar" id="btnFinalizarListaAtiva" style="display:none">
+        <div class="mkt-carrinho-info">
+          <div class="mkt-carrinho-label">No carrinho <span id="mlCarrinhoQtd">0</span> de <span id="mlCarrinhoTotalItens">0</span></div>
+          <div class="mkt-carrinho-valor">R$ <span id="mlCarrinhoValor">0,00</span></div>
+        </div>
+        <button type="button" class="mkt-carrinho-btn" onclick="finalizarListaAtiva()">Finalizar compra</button>
+      </div>
     </div>
   </div>
 
   <!-- SUB-ABA: Estoque de Casa -->
   <div id="mercadoSubtabEstoque" class="mercado-subtab" style="display:none">
+    <div class="casa-header"><span id="mercadoCasaContagem">0 itens</span></div>
     <div class="receita-filter-chips" id="mercadoEstoqueFilterChips" style="padding:var(--s2) var(--s3)"></div>
     <div id="mercadoEstoqueLista" class="mercado-lista"></div>
     <button class="receita-fab" onclick="abrirEstoqueForm(null)" title="Novo item" aria-label="Novo item">
@@ -1187,6 +1211,10 @@
       </div>
     </div>
     <div class="mkt-dash-section">
+      <div class="mkt-dash-title">Meta de gasto no mês</div>
+      <input type="text" id="mktMetaInput" inputmode="numeric" placeholder="R$ 0,00" oninput="maskMoneyInput(this)" onchange="salvarMetaMercado()" onkeydown="if(event.key==='Enter') this.blur()">
+    </div>
+    <div class="mkt-dash-section">
       <div class="mkt-dash-title">Giram mais rápido (dias médios até acabar)</div>
       <div id="mktRankingGiro"></div>
     </div>
@@ -1196,6 +1224,11 @@
     </div>
   </div>
 
+  <div class="mkt-bottombar" id="mktBottomBar">
+    <button type="button" class="mkt-bb-btn active" id="mktBbLista" onclick="switchMercadoSubtab('lista')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg><span>Lista</span></button>
+    <button type="button" class="mkt-bb-btn" id="mktBbEstoque" onclick="switchMercadoSubtab('estoque')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Casa</span></button>
+    <button type="button" class="mkt-bb-btn" id="mktBbDashboard" onclick="switchMercadoSubtab('dashboard')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg><span>Gastos</span></button>
+  </div>
 </div>
 
 <!-- MODAL: Item de Estoque (criar/editar) -->
@@ -1381,6 +1414,7 @@
       <button class="btn" onclick="exportarDadosApp()">Exportar</button>
       <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
     </div>
+    <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="compartilharBackupApp()">Enviar backup (Drive, WhatsApp...)</button>
     <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
   </div>
 </div>
@@ -1397,6 +1431,23 @@
       <div class="field"><label>Valor por unidade</label><input type="text" id="mlEditValor" inputmode="numeric" oninput="maskMoneyInput(this)"></div>
     </div>
     <button class="btn btn-block" onclick="salvarEdicaoItemLista()">Salvar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalNumeroSimples">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="numeroSimplesTitulo">Valor</h3>
+      <button class="modal-close" onclick="cancelarNumeroModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label id="numeroSimplesDica">Número</label>
+      <input type="text" id="numeroSimplesInput" inputmode="numeric" onkeydown="if(event.key==='Enter') confirmarNumeroModal()">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="cancelarNumeroModal()">Cancelar</button>
+      <button class="btn btn-block" onclick="confirmarNumeroModal()">Salvar</button>
+    </div>
   </div>
 </div>
 
@@ -1687,15 +1738,15 @@ if(versaoArmazenada !== VERSAO_ATUAL){
   }
 }
 </script>
-<script src="core.js?v=2.57"></script>
-<script src="comando.js?v=2.57"></script>
-<script src="layout.js?v=2.57"></script>
-<script src="app.js?v=2.57"></script>
-<script src="panorama.js?v=2.57"></script>
-<script src="planner.js?v=2.57"></script>
-<script src="ponto.js?v=2.57"></script>
-<script src="receitas.js?v=2.57"></script>
-<script src="louvor.js?v=2.57"></script>
-<script src="mercado.js?v=2.57"></script>
+<script src="core.js?v=2.62"></script>
+<script src="comando.js?v=2.62"></script>
+<script src="layout.js?v=2.62"></script>
+<script src="app.js?v=2.62"></script>
+<script src="panorama.js?v=2.62"></script>
+<script src="planner.js?v=2.62"></script>
+<script src="ponto.js?v=2.62"></script>
+<script src="receitas.js?v=2.62"></script>
+<script src="louvor.js?v=2.62"></script>
+<script src="mercado.js?v=2.62"></script>
 </body>
 </html>

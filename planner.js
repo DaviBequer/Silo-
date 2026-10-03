@@ -2,13 +2,6 @@
 /* ================= LISTA DE TAREFAS (isolado, visual apenas) ================= */
 let tarefaTimerInterval = null;
 
-function openTarefasModal(){
-  document.getElementById('pageTarefas').classList.add('active');
-  switchTarefasSubtab('tarefas');
-  renderTarefasModal();
-  if(tarefaTimerInterval) clearInterval(tarefaTimerInterval);
-  tarefaTimerInterval = setInterval(tickTarefaTimers, 1000);
-}
 function closeTarefasPage(){
   document.getElementById('pageTarefas').classList.remove('active');
   if(tarefaTimerInterval){ clearInterval(tarefaTimerInterval); tarefaTimerInterval = null; }
@@ -248,13 +241,6 @@ function renderPlannerFaixa(){
     </div>`;
 }
 
-function setJaRecebido(user, mKey, valStr){
-  if(!state.users[user].jaRecebido) state.users[user].jaRecebido = {};
-  state.users[user].jaRecebido[mKey] = parseMoney(valStr);
-  renderRendaTable();
-  renderPanorama();
-  persist();
-}
 function setIncome(user, mKey, valStr){
   if(user === 'davi') return; // renda do Davi é automática (vem do Ponto PJ)
   const v = parseMoney(valStr);
@@ -368,30 +354,6 @@ let gastoMostrarArquivados = {};
 function toggleArquivadosGasto(cat){
   gastoMostrarArquivados[cat] = !gastoMostrarArquivados[cat];
   renderGastoGrid(cat);
-}
-function duplicarGasto(cat, id){
-  const list = state.users[state.currentUser].expenses[cat];
-  const item = list.find(i=>i.id===id);
-  if(!item) return;
-  const copia = JSON.parse(JSON.stringify(item));
-  copia.id = 'g'+Date.now()+Math.floor(Math.random()*1000);
-  copia.desc = item.desc + ' (cópia)';
-  copia.arquivado = false;
-  delete copia.historico;
-  list.push(copia);
-  renderGastoGrid(cat);
-  renderPanorama();
-  persist();
-  showToast('Conta duplicada');
-}
-function arquivarGasto(cat, id){
-  const item = state.users[state.currentUser].expenses[cat].find(i=>i.id===id);
-  if(!item) return;
-  item.arquivado = true;
-  renderGastoGrid(cat);
-  renderPanorama();
-  persist();
-  showToast('Conta arquivada');
 }
 function desarquivarGasto(cat, id){
   const item = state.users[state.currentUser].expenses[cat].find(i=>i.id===id);

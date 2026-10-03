@@ -971,9 +971,9 @@ function calcularFluxoCaixa(mKey){
   });
   return { pontos, minPonto, diaRecebimento };
 }
-function editarDiaRecebimento(){
+async function editarDiaRecebimento(){
   const atual = state.diaRecebimentoRenda || 5;
-  const novo = prompt('Em que dia do mês a renda entra? (usado só pra estimar o fluxo de caixa)', atual);
+  const novo = await pedirNumeroModal('Dia de recebimento', 'Em que dia do mês a renda entra? (1 a 28, usado só pra estimar o fluxo de caixa)', atual);
   if(novo === null) return;
   const n = Math.min(28, Math.max(1, parseInt(novo)||5));
   state.diaRecebimentoRenda = n;
@@ -1072,9 +1072,9 @@ function diasParaVencimento(it, mKey){
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   return Math.round((alvo - hoje) / 86400000);
 }
-function editarDiasAviso(){
+async function editarDiasAviso(){
   const atual = state.diasAvisoVencimento ?? 3;
-  const novo = prompt('Avisar com quantos dias de antecedência antes do vencimento?', atual);
+  const novo = await pedirNumeroModal('Aviso de vencimento', 'Avisar com quantos dias de antecedência antes do vencimento? (0 a 15)', atual);
   if(novo === null) return;
   const n = Math.min(15, Math.max(0, parseInt(novo)||0));
   state.diasAvisoVencimento = n;
