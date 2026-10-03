@@ -1222,3 +1222,9 @@ body.lay-dragging-active{cursor:grabbing}
   #aba-mercado .mkt-bottombar{padding-left:var(--s4);padding-right:var(--s4)}
   #mercadoSubtabDashboard{padding:var(--s2) var(--s4) 100px}
 }
+
+/* ===== Mercado v2.66: lista sem seleção, ✕ à direita, barra no fim da lista ===== */
+.mercado-item.ml-item{flex-wrap:nowrap;align-items:center;gap:8px;padding:10px 2px}
+.mercado-item.ml-item .mercado-item-info{flex:1 1 auto;min-width:0}
+.mercado-item.ml-item .mercado-item-del{margin-left:auto;padding:8px 10px;font-size:16px}
+#mercadoListaAtivaView .mkt-carrinho-bar{position:static;bottom:auto;margin:16px 0 var(--s3)}

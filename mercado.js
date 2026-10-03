@@ -13,12 +13,15 @@ function fmtQtdUn(qtd, un){
   return fmtNumBR(qtd)+' '+un;
 }
 function fmtPorUn(un){ return (!un || un==='unidades' || un==='unidade') ? 'un.' : un; }
+function totalCompraEmAndamento(){
+  return (state.listaCompras||[]).reduce((t,it)=> t + (it.valor||0)*(it.quantidade||0), 0);
+}
 function atualizarResumoMercado(){
   const gastoEl = document.getElementById('mktResumoGasto');
   if(!gastoEl) return;
   const agora = new Date();
-  gastoEl.textContent = calcularGastoMercadoMes(agora.getFullYear(), agora.getMonth()).toFixed(2).replace('.',',');
-  const gastoNum = calcularGastoMercadoMes(agora.getFullYear(), agora.getMonth());
+  const gastoNum = calcularGastoMercadoMes(agora.getFullYear(), agora.getMonth()) + totalCompraEmAndamento();
+  gastoEl.textContent = gastoNum.toFixed(2).replace('.',',');
   const meta = state.mercadoMeta || 0;
   const metaWrap = document.getElementById('mktResumoMeta');
   if(metaWrap){
@@ -135,12 +138,8 @@ function renderListaComprasView(){
   document.getElementById('mlHeaderItens').textContent = totalItens;
   document.getElementById('mlHeaderTotal').textContent = totalValor.toFixed(2).replace('.',',');
   document.getElementById('btnFinalizarListaAtiva').style.display = manualItens.length>0 ? 'flex' : 'none';
-  const pegos = manualItens.filter(it=>it.pego);
-  let valorPegos = 0;
-  pegos.forEach(it=>{ valorPegos += (it.valor||0) * (it.quantidade||0); });
-  document.getElementById('mlCarrinhoQtd').textContent = pegos.length;
   document.getElementById('mlCarrinhoTotalItens').textContent = manualItens.length;
-  document.getElementById('mlCarrinhoValor').textContent = valorPegos.toFixed(2).replace('.',',');
+  document.getElementById('mlCarrinhoValor').textContent = totalValor.toFixed(2).replace('.',',');
   atualizarResumoMercado();
 
   if(autoItens.length===0 && manualItens.length===0){
@@ -171,14 +170,12 @@ function renderListaComprasView(){
     grupos[cat].forEach(it=>{
       const subtotal = (it.valor||0) * (it.quantidade||0);
       const semPreco = !(it.valor>0);
-      html += `<div class="mercado-item ${it.pego?'carrinho':''}${semPreco?' sem-preco':''}"
-      onpointerdown="mlItemTapStart(event,'${it.id}')" onpointerup="mlItemTapEnd(event,'${it.id}')" onpointercancel="mlItemTapCancel()" onpointerleave="mlItemTapCancel()">
-      <div class="mercado-check${it.pego?' checked':''}">${it.pego?ICON_CHECK:''}</div>
+      html += `<div class="mercado-item ml-item${semPreco?' sem-preco':''}" onclick="mlItemTap('${it.id}')">
       <div class="mercado-item-info">
         <div class="mercado-item-nome">${it.nome}</div>
         <div class="mercado-item-meta">${semPreco ? fmtQtdUn(it.quantidade, it.unidade)+' · sem preço, toque para informar' : fmtQtdUn(it.quantidade, it.unidade)+' · R$ '+it.valor.toFixed(2).replace('.',',')+'/'+fmtPorUn(it.unidade)+' · subtotal R$ '+subtotal.toFixed(2).replace('.',',')}</div>
       </div>
-      <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
+      <button class="mercado-item-del" aria-label="Excluir" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
     </div>`;
     });
   });
@@ -203,34 +200,15 @@ function excluirItemManual(id){
   persist();
   renderListaComprasView();
 }
-let mlItemTapTimer = null;
-let mlItemTapLongFired = false;
-function mlItemTapStart(ev, id){
-  if(ev.pointerType==='mouse' && ev.button!==0) return;
-  mlItemTapLongFired = false;
-  mlItemTapTimer = setTimeout(()=>{
-    mlItemTapLongFired = true;
-    if(navigator.vibrate) navigator.vibrate(12);
-    abrirEditarItemLista(id);
-  }, 500);
-}
-let marcarPegoAoSalvarId = null;
-function mlItemTapEnd(ev, id){
-  clearTimeout(mlItemTapTimer);
-  if(mlItemTapLongFired) return;
+function mlItemTap(id){
   const it = state.listaCompras.find(x=>x.id===id);
-  if(it && !it.pego && !(it.valor>0)){
-    marcarPegoAoSalvarId = id;
-    abrirEditarItemLista(id);
+  if(!it) return;
+  abrirEditarItemLista(id);
+  if(!(it.valor>0)){
     const campo = document.getElementById('mlEditValor');
     campo.value = '';
     setTimeout(()=>campo.focus(), 80);
-    return;
   }
-  toggleItemListaPego(id);
-}
-function mlItemTapCancel(){
-  clearTimeout(mlItemTapTimer);
 }
 let editandoItemListaId = null;
 function abrirEditarItemLista(id){
@@ -250,20 +228,10 @@ function salvarEdicaoItemLista(){
   it.nome = nome;
   it.quantidade = parseFloat(document.getElementById('mlEditQuantidade').value) || 1;
   it.valor = parseMoney(document.getElementById('mlEditValor').value);
-  if(marcarPegoAoSalvarId===it.id && it.valor>0) it.pego = true;
-  marcarPegoAoSalvarId = null;
   persist();
   closeModal('modalEditarItemLista');
   editandoItemListaId = null;
   renderListaComprasView();
-}
-function toggleItemListaPego(id){
-  const it = state.listaCompras.find(x=>x.id===id);
-  if(!it) return;
-  it.pego = !it.pego;
-  persist();
-  renderListaComprasView();
-  if(navigator.vibrate) navigator.vibrate(10);
 }
 function calcularGastoMercadoMes(ano, mes){
   let total = 0;
@@ -665,6 +633,11 @@ function renderMercadoDashboard(){
       }
     });
   });
+  const emAndamento = totalCompraEmAndamento();
+  gastoMes += emAndamento;
+  if(emAndamento>0){
+    gastoPorCategoria['Compra em andamento'] = emAndamento;
+  }
   document.getElementById('mktGastoMes').textContent = 'R$ '+gastoMes.toFixed(2).replace('.',',');
 
   const itensFalta = state.estoque.filter(e=>e.quantidadeAtual < e.quantidadeMinima).length;
