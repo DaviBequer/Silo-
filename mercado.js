@@ -43,13 +43,12 @@ function renderPreListaView(){
     el.innerHTML = `<div class="empty-state"><div class="title">Pré-listagem vazia</div><div class="desc">Anote o que vai precisar comprar</div></div>`;
     return;
   }
-  el.innerHTML = itens.map(it=>`<div class="mercado-item" style="cursor:default">
+  el.innerHTML = itens.map(it=>`<div class="mercado-item mercado-item-compact" style="cursor:default">
+    <div class="mercado-item-qtd">${it.quantidade}</div>
     <div class="mercado-item-info">
       <div class="mercado-item-nome">${it.nome}</div>
-      <div class="mercado-item-meta">Planejado</div>
     </div>
-    <div class="mercado-item-qtd">${it.quantidade}${it.unidade||''}</div>
-    <button type="button" class="mkt-item-mover" onclick="moverItemPreLista('${it.id}')">Mover pra lista</button>
+    <button type="button" class="mkt-item-mover" title="Mover pra lista" onclick="moverItemPreLista('${it.id}')">${ICON_ARROW_RIGHT}</button>
     <button class="mercado-item-del" onclick="excluirItemPreLista('${it.id}')">✕</button>
   </div>`).join('');
 }
