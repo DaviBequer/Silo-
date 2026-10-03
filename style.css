@@ -1159,3 +1159,33 @@ body.lay-dragging-active{cursor:grabbing}
 @keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 .mkt-repetir-btn{display:block;margin:2px var(--s3) 6px;padding:4px 2px;background:none;border:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--gold-dim);cursor:pointer;text-align:left}
 @media (min-width:768px){ .mkt-repetir-btn{max-width:620px;margin-left:auto;margin-right:auto} }
+
+/* ===== v2.64: sem barras de rolagem em cards, espaçamento uniforme, avisos melhorados ===== */
+.fluxo-caixa-lista{max-height:none;overflow:visible}
+.fluxo-destaque{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;margin-bottom:12px}
+.fluxo-destaque.negativo{background:var(--warning-tint);color:var(--warning)}
+.fluxo-destaque.positivo{background:var(--success-tint);color:var(--success)}
+.fluxo-destaque-ico{flex-shrink:0;display:flex}
+.fluxo-destaque-txt{flex:1;min-width:0}
+.fluxo-destaque-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.fluxo-destaque-sub{font-size:11.5px;font-weight:600;opacity:.85;margin-top:1px}
+.fluxo-destaque-valor{font-size:18px;font-weight:800;white-space:nowrap}
+.parcela-dica{display:flex;align-items:flex-start;gap:8px;padding:9px 12px;border-radius:10px;margin-bottom:10px;background:var(--warning-tint);color:var(--warning);font-size:11.5px;font-weight:600;line-height:1.35}
+.parcela-dica svg{flex-shrink:0;margin-top:1px}
+.parcela-mes{padding:2px 0 6px}
+.parcela-mes + .parcela-mes{border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+.parcela-mes-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.parcela-mes-nome{font-size:12.5px;font-weight:800;color:var(--text)}
+.parcela-mes-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;background:var(--gold-tint);color:var(--gold-dim)}
+.parcela-mes.junto .parcela-mes-badge{background:var(--warning-tint);color:var(--warning)}
+.parcela-mes-total{margin-left:auto;font-size:11px;font-weight:700;color:var(--success)}
+.parcela-mes .parcela-fim-item{padding-left:2px}
+@media(min-width:1024px){
+  .money-table{min-width:0}
+  .ponto-table-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+  .ponto-table-wrap::-webkit-scrollbar{display:none}
+  #aba-planner.active{grid-auto-rows:1px;gap:0 var(--s4)}
+  #aba-planner.active > *{margin-bottom:0}
+  #aba-panorama > .pano-subpanel{grid-auto-rows:1px;gap:0 var(--s4)}
+  #aba-panorama > .pano-subpanel > *{margin-bottom:0}
+}

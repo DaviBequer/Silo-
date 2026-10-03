@@ -33,6 +33,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.64', itens: [
+    'Desktop: removidas as barras de rolagem dentro dos cards (altura agora acompanha o conteúdo) e espaçamento igual entre todos os cards, sem buracos, no Dashboard e no Planner',
+    'Fluxo de caixa: destaque do ponto mais apertado redesenhado; Parcelas terminando agora agrupadas por mês'
+  ]},
   { versao: 'v2.63', itens: [
     'Mercado: barra inferior encostada no menu (altura medida automaticamente), "1 item" no singular e títulos de grupo alinhados'
   ]},

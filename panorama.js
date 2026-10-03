@@ -994,9 +994,9 @@ function renderFluxoCaixa(){
     return;
   }
   if(minPonto && minPonto.saldo < 0){
-    resumoEl.innerHTML = `<div class="fluxo-alerta negativo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Ponto mais apertado: dia ${minPonto.dia}, saldo projetado ${fmtMoneySigned(minPonto.saldo)}</div>`;
+    resumoEl.innerHTML = `<div class="fluxo-destaque negativo"><div class="fluxo-destaque-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="fluxo-destaque-txt"><div class="fluxo-destaque-label">Ponto mais apertado</div><div class="fluxo-destaque-sub">Dia ${minPonto.dia} · saldo projetado</div></div><div class="fluxo-destaque-valor">${fmtMoneySigned(minPonto.saldo)}</div></div>`;
   } else {
-    resumoEl.innerHTML = `<div class="fluxo-alerta positivo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>O saldo projetado não fica negativo em nenhum dia deste mês</div>`;
+    resumoEl.innerHTML = `<div class="fluxo-destaque positivo"><div class="fluxo-destaque-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="fluxo-destaque-txt"><div class="fluxo-destaque-label">Mês tranquilo</div><div class="fluxo-destaque-sub">O saldo projetado não fica negativo em nenhum dia</div></div></div>`;
   }
   listaEl.innerHTML = pontos.map(p=>{
     const isMin = minPonto && p.dia===minPonto.dia && p.saldo===minPonto.saldo;
@@ -1051,18 +1051,27 @@ function renderParcelasTerminando(){
   const lista = getParcelasTerminando(state.focusMonth, 4);
   if(lista.length===0){ card.style.display = 'none'; return; }
   card.style.display = 'block';
-  const porMes = {};
-  lista.forEach(p=>{ porMes[p.mesFim] = (porMes[p.mesFim]||0)+1; });
-  const avisoJuntas = Object.keys(porMes).filter(m=>porMes[m]>=2)
-    .map(m=>`<div class="fluxo-alerta negativo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${porMes[m]} parcelas terminam juntas em ${monthLabel(m)} — cuidado pra não gastar o alívio todo em outra coisa</div>`)
-    .join('');
-  document.getElementById('parcelasTerminandoLista').innerHTML = avisoJuntas + lista.map(p=>
-    `<div class="parcela-fim-item">
-      ${p.user?`<span class="user-tag ${p.user}">${p.user==='davi'?'Davi':'Cris'}</span>`:''}
-      <span class="parcela-fim-desc">${p.desc}</span>
-      <span class="parcela-fim-info">termina em <b>${monthLabel(p.mesFim)}</b> · libera ${fmtMoney(p.valor)}/mês</span>
-    </div>`
-  ).join('');
+  const grupos = {};
+  lista.forEach(p=>{ (grupos[p.mesFim] = grupos[p.mesFim] || []).push(p); });
+  const meses = Object.keys(grupos).sort();
+  const dica = meses.some(m=>grupos[m].length>=2)
+    ? `<div class="parcela-dica"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Meses com várias parcelas acabando juntas: não gaste todo o alívio em outra coisa</span></div>` : '';
+  document.getElementById('parcelasTerminandoLista').innerHTML = dica + meses.map(m=>{
+    const arr = grupos[m];
+    const total = arr.reduce((s,x)=>s+(x.valor||0),0);
+    return `<div class="parcela-mes${arr.length>=2?' junto':''}">
+      <div class="parcela-mes-head">
+        <span class="parcela-mes-nome">${monthLabel(m)}</span>
+        <span class="parcela-mes-badge">${arr.length} ${arr.length===1?'parcela':'parcelas'}</span>
+        <span class="parcela-mes-total">libera ${fmtMoney(total)}/mês</span>
+      </div>
+      ${arr.map(x=>`<div class="parcela-fim-item">
+        ${x.user?`<span class="user-tag ${x.user}">${x.user==='davi'?'Davi':'Cris'}</span>`:''}
+        <span class="parcela-fim-desc">${x.desc}</span>
+        <span class="parcela-fim-info">${fmtMoney(x.valor)}/mês</span>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
 /* ================= LEMBRETE DE VENCIMENTO ================= */

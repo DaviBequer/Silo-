@@ -7,8 +7,8 @@ const ICON_LAY_LOCK_OPEN = '<svg width="13" height="13" viewBox="0 0 24 24" fill
 const ICON_LAY_LOCK_CLOSED = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
 const LAYOUT_GROUPS = {
-  panoResumo: { selector:'#panoPanelResumo', defaultSpan:4 },
-  panoContas: { selector:'#panoPanelContas', defaultSpan:12 },
+  panoResumo: { selector:'#panoPanelResumo', defaultSpan:4, masonry:true },
+  panoContas: { selector:'#panoPanelContas', defaultSpan:12, masonry:true },
   planner:    { selector:'#aba-planner',     defaultSpan:4, masonry:true }
 };
 
@@ -17,15 +17,15 @@ const LAYOUT_GROUPS = {
    linha bem pequena, e um ResizeObserver mantém isso atualizado sozinho
    sempre que o bloco muda de altura (seção que colapsa, conteúdo que muda,
    redimensionamento manual etc.), sem precisar recalcular em cada tela. */
-const MASONRY_ROW = 8;
+const MASONRY_ROW = 1;
 const masonryObserved = new WeakSet();
 function masonryUpdateSpan(el, container){
-  const cs = getComputedStyle(container);
-  const rowGap = parseFloat(cs.rowGap)||0;
+  /* linhas de 1px e row-gap 0: cada bloco ocupa a própria altura + o espaço padrão
+     entre blocos (o mesmo gap das colunas), então a distância fica igual em todo lado */
+  const gap = parseFloat(getComputedStyle(container).columnGap)||0;
   const h = el.getBoundingClientRect().height;
   if(!h) return;
-  const span = Math.max(1, Math.ceil((h+rowGap)/(MASONRY_ROW+rowGap)));
-  el.style.gridRowEnd = 'span '+span;
+  el.style.gridRowEnd = 'span '+Math.max(1, Math.ceil(h+gap));
 }
 function masonryObserve(el, container){
   if(masonryObserved.has(el)) return;
@@ -90,8 +90,7 @@ function applyLayout(groupKey){
     if(bp==='desktop'){
       const span = prefs.w[lid] || cfg.defaultSpan;
       el.style.gridColumn = 'span '+span;
-      if(prefs.h[lid]){ el.style.height = prefs.h[lid]; el.style.overflow = 'auto'; }
-      else { el.style.height=''; el.style.overflow=''; }
+      el.style.height=''; el.style.overflow='';
     } else {
       el.style.gridColumn=''; el.style.height=''; el.style.overflow='';
     }
@@ -174,8 +173,6 @@ function startLayoutResize(e, groupKey, el, container){
     let span = Math.round(startSpan + dx/(colW+gap));
     span = Math.max(3, Math.min(12, span));
     el.style.gridColumn = 'span '+span;
-    el.style.height = Math.max(90, startH+dy)+'px';
-    el.style.overflow = 'auto';
   }
   function onUp(){
     window.removeEventListener('pointermove', onMove);
@@ -183,7 +180,6 @@ function startLayoutResize(e, groupKey, el, container){
     const bp = currentBp();
     const prefs = ensureLayoutPrefs(groupKey, bp);
     prefs.w[el.dataset.lid] = parseGridSpan(el.style.gridColumn);
-    prefs.h[el.dataset.lid] = el.style.height;
     persist();
   }
   window.addEventListener('pointermove', onMove);
