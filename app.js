@@ -33,6 +33,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.65', itens: [
+    'Mercado: mesmo espaçamento lateral em Lista, Casa e Gastos no computador; campos maiores com a fonte do app; meta de gasto com barra sempre visível na Lista',
+    'Mercado: itens sem preço em "No mercado" com borda vermelha; ditado reconhece preço por unidade (por kg fica em branco); Casa só mostra barra e selo quando há mínimo definido'
+  ]},
   { versao: 'v2.64', itens: [
     'Desktop: removidas as barras de rolagem dentro dos cards (altura agora acompanha o conteúdo) e espaçamento igual entre todos os cards, sem buracos, no Dashboard e no Planner',
     'Fluxo de caixa: destaque do ponto mais apertado redesenhado; Parcelas terminando agora agrupadas por mês'

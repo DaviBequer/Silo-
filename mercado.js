@@ -6,6 +6,13 @@ let estoqueItemAtualId = null;
 
 function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
+function fmtNumBR(n){ return String(Math.round(n*100)/100).replace('.',','); }
+function fmtQtdUn(qtd, un){
+  un = un || 'unidades';
+  if(un==='unidades' || un==='unidade') return fmtNumBR(qtd)+' '+(qtd===1?'unidade':'unidades');
+  return fmtNumBR(qtd)+' '+un;
+}
+function fmtPorUn(un){ return (!un || un==='unidades' || un==='unidade') ? 'un.' : un; }
 function atualizarResumoMercado(){
   const gastoEl = document.getElementById('mktResumoGasto');
   if(!gastoEl) return;
@@ -15,13 +22,17 @@ function atualizarResumoMercado(){
   const meta = state.mercadoMeta || 0;
   const metaWrap = document.getElementById('mktResumoMeta');
   if(metaWrap){
-    metaWrap.style.display = meta>0 ? 'block' : 'none';
+    const fill = document.getElementById('mktResumoMetaFill');
+    const txt = document.getElementById('mktResumoMetaTxt');
     if(meta>0){
       const pct = Math.round(gastoNum/meta*100);
-      document.getElementById('mktResumoMetaTxt').textContent = pct+'% da meta de R$ '+meta.toFixed(2).replace('.',',');
-      const fill = document.getElementById('mktResumoMetaFill');
+      txt.textContent = pct+'% da meta de R$ '+meta.toFixed(2).replace('.',',')+' · toque para editar';
       fill.style.width = Math.min(100,pct)+'%';
       fill.classList.toggle('estourou', pct>100);
+    } else {
+      txt.textContent = 'Definir meta de gasto no mês';
+      fill.style.width = '0%';
+      fill.classList.remove('estourou');
     }
   }
   const falta = state.estoque.filter(e=> e.quantidadeAtual < e.quantidadeMinima).length;
@@ -159,12 +170,13 @@ function renderListaComprasView(){
     html += `<div class="mkt-grupo-titulo">${cat} · ${grupos[cat].length}</div>`;
     grupos[cat].forEach(it=>{
       const subtotal = (it.valor||0) * (it.quantidade||0);
-      html += `<div class="mercado-item ${it.pego?'carrinho':''}"
+      const semPreco = !(it.valor>0);
+      html += `<div class="mercado-item ${it.pego?'carrinho':''}${semPreco?' sem-preco':''}"
       onpointerdown="mlItemTapStart(event,'${it.id}')" onpointerup="mlItemTapEnd(event,'${it.id}')" onpointercancel="mlItemTapCancel()" onpointerleave="mlItemTapCancel()">
       <div class="mercado-check${it.pego?' checked':''}">${it.pego?ICON_CHECK:''}</div>
       <div class="mercado-item-info">
         <div class="mercado-item-nome">${it.nome}</div>
-        <div class="mercado-item-meta">${it.quantidade}${it.unidade} · R$ ${(it.valor||0).toFixed(2).replace('.',',')} un. · subtotal R$ ${subtotal.toFixed(2).replace('.',',')}</div>
+        <div class="mercado-item-meta">${semPreco ? fmtQtdUn(it.quantidade, it.unidade)+' · sem preço, toque para informar' : fmtQtdUn(it.quantidade, it.unidade)+' · R$ '+it.valor.toFixed(2).replace('.',',')+'/'+fmtPorUn(it.unidade)+' · subtotal R$ '+subtotal.toFixed(2).replace('.',',')}</div>
       </div>
       <button class="mercado-item-del" onclick="event.stopPropagation();excluirItemManual('${it.id}')">✕</button>
     </div>`;
@@ -202,9 +214,20 @@ function mlItemTapStart(ev, id){
     abrirEditarItemLista(id);
   }, 500);
 }
+let marcarPegoAoSalvarId = null;
 function mlItemTapEnd(ev, id){
   clearTimeout(mlItemTapTimer);
-  if(!mlItemTapLongFired) toggleItemListaPego(id);
+  if(mlItemTapLongFired) return;
+  const it = state.listaCompras.find(x=>x.id===id);
+  if(it && !it.pego && !(it.valor>0)){
+    marcarPegoAoSalvarId = id;
+    abrirEditarItemLista(id);
+    const campo = document.getElementById('mlEditValor');
+    campo.value = '';
+    setTimeout(()=>campo.focus(), 80);
+    return;
+  }
+  toggleItemListaPego(id);
 }
 function mlItemTapCancel(){
   clearTimeout(mlItemTapTimer);
@@ -227,6 +250,8 @@ function salvarEdicaoItemLista(){
   it.nome = nome;
   it.quantidade = parseFloat(document.getElementById('mlEditQuantidade').value) || 1;
   it.valor = parseMoney(document.getElementById('mlEditValor').value);
+  if(marcarPegoAoSalvarId===it.id && it.valor>0) it.pego = true;
+  marcarPegoAoSalvarId = null;
   persist();
   closeModal('modalEditarItemLista');
   editandoItemListaId = null;
@@ -446,16 +471,26 @@ function renderEstoqueView(){
     return;
   }
   el.innerHTML = items.map(e=>{
-    const abaixo = e.quantidadeAtual < e.quantidadeMinima;
+    const temMin = e.quantidadeMinima > 0;
+    const abaixo = temMin && e.quantidadeAtual < e.quantidadeMinima;
+    const zerado = e.quantidadeAtual <= 0;
     const ultimoPreco = (e.precos && e.precos.length) ? e.precos[e.precos.length-1].valor : null;
-    const ref = Math.max(e.quantidadeReposicao||0, (e.quantidadeMinima||0)*2, e.quantidadeAtual, 1);
-    const pct = Math.min(100, Math.round(e.quantidadeAtual/ref*100));
-    const nivel = abaixo ? 'baixo' : (e.quantidadeAtual < e.quantidadeMinima*1.5 ? 'medio' : 'ok');
     const dias = estimarDiasRestantes(e);
-    let selo;
-    if(abaixo) selo = dias!==null && dias>0 ? `acaba em ~${dias} ${dias===1?'dia':'dias'}` : 'repor';
-    else if(dias!==null) selo = dias===0 ? 'hoje' : `dura ~${dias} ${dias===1?'dia':'dias'}`;
-    else selo = 'ok';
+    let selo = '', nivel = 'ok', barra = '';
+    if(temMin){
+      const ref = Math.max(e.quantidadeReposicao||0, e.quantidadeMinima*2, e.quantidadeAtual, 1);
+      const pct = Math.min(100, Math.round(e.quantidadeAtual/ref*100));
+      nivel = abaixo ? 'baixo' : (e.quantidadeAtual < e.quantidadeMinima*1.5 ? 'medio' : 'ok');
+      if(zerado) selo = 'acabou';
+      else if(abaixo) selo = dias!==null && dias>0 ? `acaba em ~${dias} ${dias===1?'dia':'dias'}` : 'repor';
+      else if(dias!==null && dias>0) selo = `dura ~${dias} ${dias===1?'dia':'dias'}`;
+      barra = `<div class="casa-barra" onclick="abrirEstoqueForm('${e.id}')"><div class="casa-barra-fill ${nivel}" style="width:${pct}%"></div></div>`;
+    } else if(zerado){
+      selo = 'acabou'; nivel = 'baixo';
+    }
+    const partes = [];
+    if(temMin) partes.push('mín. '+fmtQtdUn(e.quantidadeMinima, e.unidade));
+    if(ultimoPreco!==null) partes.push('R$ '+ultimoPreco.toFixed(2).replace('.',',')+'/'+fmtPorUn(e.unidade));
     let avisoPreco = '';
     if(e.precos && e.precos.length>=2){
       const dif = e.precos[e.precos.length-1].valor - e.precos[e.precos.length-2].valor;
@@ -467,14 +502,14 @@ function renderEstoqueView(){
     return `<div class="casa-item">
       <div class="casa-item-top" onclick="abrirEstoqueForm('${e.id}')">
         <span class="casa-item-nome">${e.nome}</span>
-        <span class="casa-selo ${nivel}">${selo}</span>
+        ${selo?`<span class="casa-selo ${nivel}">${selo}</span>`:''}
       </div>
-      <div class="casa-barra" onclick="abrirEstoqueForm('${e.id}')"><div class="casa-barra-fill ${nivel}" style="width:${pct}%"></div></div>
+      ${barra}
       <div class="casa-item-base">
-        <span class="casa-item-meta">${e.categoria} · mín. ${e.quantidadeMinima}${e.unidade}${ultimoPreco!==null?` · R$ ${ultimoPreco.toFixed(2).replace('.',',')}/${e.unidade}`:''}</span>
+        <span class="casa-item-meta">${partes.join(' · ')}</span>
         <div class="mercado-item-stepper">
           <button onclick="ajustarEstoqueQtdRapido('${e.id}', -1)">−</button>
-          <span>${e.quantidadeAtual}${e.unidade}</span>
+          <span>${fmtNumBR(e.quantidadeAtual)} ${(!e.unidade||e.unidade==='unidades')?'':e.unidade}</span>
           <button onclick="ajustarEstoqueQtdRapido('${e.id}', 1)">+</button>
         </div>
       </div>
@@ -594,6 +629,16 @@ function abrirHistoricoItem(){
 }
 
 /* ---------- Dashboard ---------- */
+async function editarMetaMercado(){
+  const atual = state.mercadoMeta>0 ? String(state.mercadoMeta).replace('.',',') : '';
+  const v = await pedirNumeroModal('Meta de gasto no mês','Quanto quer gastar no mercado por mês? (em reais; deixe vazio para remover)', atual);
+  if(v===null) return;
+  const n = parseMoney(v);
+  state.mercadoMeta = n>0 ? n : 0;
+  persist();
+  atualizarResumoMercado();
+  showToast(state.mercadoMeta>0 ? 'Meta salva' : 'Meta removida');
+}
 function salvarMetaMercado(){
   const el = document.getElementById('mktMetaInput');
   const v = parseMoney(el.value);
@@ -749,20 +794,41 @@ aplicarLogoSalva();
 
 /* ---------- Ditar itens por voz ---------- */
 const NUMEROS_EXTENSO = { 'um':1,'uma':1,'dois':2,'duas':2,'três':3,'tres':3,'quatro':4,'cinco':5,'seis':6,'sete':7,'oito':8,'nove':9,'dez':10 };
+const PALAVRAS_KG = /^(kg|quilo|quilos|kilo|kilos|quilograma|quilogramas)$/i;
 function interpretarItemDitado(trecho){
   let t = trecho.trim();
   if(!t) return null;
-  let qtd = 1;
-  let m = t.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|un|unidades?)?\s+(?:de\s+)?(.+)$/i);
-  if(m){ qtd = parseFloat(m[1].replace(',','.')) || 1; t = m[2]; }
-  else {
+  let qtd = 1, unidade = 'unidades', valor = null, porKg = false;
+  // preço no fim da frase (sempre por unidade; por kg fica em branco)
+  const rp = /(?:^|\s)(?:(a|por|custa|custando|vale|saiu|r\$)\s*)?(?:r\$\s*)?(\d+(?:[.,]\d{1,2})?)\s*(reais|real|r\$)?(?:\s+e\s+(\d{1,2})\s*centavos?)?(\s+(?:o|por|cada)\s+(?:quilo|quilos|kilo|kilos|kg)|\s*(?:\/|por)\s*kg)?\s*$/i.exec(t);
+  if(rp){
+    const ehPreco = rp[1] || rp[3] || rp[4] || rp[5] || /[.,]/.test(rp[2]);
+    if(ehPreco){
+      if(rp[5]) porKg = true;
+      else valor = parseFloat(rp[2].replace(',','.')) + (rp[4] ? parseInt(rp[4])/100 : 0);
+      t = t.slice(0, rp.index).trim();
+    }
+  }
+  // quantidade (dígitos ou por extenso) e unidade kg
+  let q = t.match(/^(\d+(?:[.,]\d+)?)\s*(x|un|unidades?|kg|quilos?|quilogramas?)?\s+(?:de\s+)?(.+)$/i);
+  if(q){
+    qtd = parseFloat(q[1].replace(',','.')) || 1;
+    if(q[2] && PALAVRAS_KG.test(q[2])){ unidade = 'kg'; }
+    t = q[3];
+  } else {
     const p = t.split(/\s+/);
     const n = NUMEROS_EXTENSO[p[0].toLowerCase()];
-    if(n && p.length>1){ qtd = n; t = p.slice(1).join(' ').replace(/^de\s+/i,''); }
+    if(n && p.length>1){
+      qtd = n;
+      let resto = p.slice(1);
+      if(PALAVRAS_KG.test(resto[0]) && resto.length>1){ unidade = 'kg'; resto.shift(); }
+      t = resto.join(' ').replace(/^de\s+/i,'');
+    }
   }
   t = t.trim();
   if(!t) return null;
-  return { nome: t.charAt(0).toUpperCase()+t.slice(1), quantidade: qtd };
+  if(unidade==='kg' || porKg){ valor = null; if(porKg) unidade = 'kg'; }
+  return { nome: t.charAt(0).toUpperCase()+t.slice(1), quantidade: qtd, unidade, valor };
 }
 let mercadoReconhecimento = null;
 function ditarItensMercado(modo){
@@ -781,14 +847,18 @@ function ditarItensMercado(modo){
     const texto = ev.results[0][0].transcript;
     const itens = texto.split(/(?<!\d),|,(?!\d)|\bvírgula\b|\bpróximo\b/i).map(interpretarItemDitado).filter(Boolean);
     if(itens.length===0){ showToast('Não entendi, tente de novo'); return; }
+    let semPreco = 0;
     itens.forEach(it=>{
-      if(modo==='pre') state.preListaCompras.push({ id: uid('mp'), nome: it.nome, quantidade: it.quantidade, unidade:'unidades', criadoEm: Date.now() });
-      else state.listaCompras.push({ id: uid('mc'), nome: it.nome, quantidade: it.quantidade, unidade:'unidades', valor:0, pego:false, criadoEm: Date.now() });
+      if(modo==='pre') state.preListaCompras.push({ id: uid('mp'), nome: it.nome, quantidade: it.quantidade, unidade: it.unidade, criadoEm: Date.now() });
+      else {
+        if(!(it.valor>0)) semPreco++;
+        state.listaCompras.push({ id: uid('mc'), nome: it.nome, quantidade: it.quantidade, unidade: it.unidade, valor: it.valor||0, pego:false, criadoEm: Date.now() });
+      }
     });
     persist();
     renderPreListaView();
     renderListaComprasView();
-    showToast(itens.length===1 ? '1 item adicionado' : itens.length+' itens adicionados');
+    showToast((itens.length===1 ? '1 item adicionado' : itens.length+' itens adicionados') + (semPreco>0 ? ' · '+semPreco+' sem preço' : ''));
   };
   rec.onerror = ()=>{ showToast('Não consegui ouvir. Verifique o microfone'); };
   rec.onend = ()=>{ btn.classList.remove('ouvindo'); mercadoReconhecimento = null; };

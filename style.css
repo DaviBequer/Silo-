@@ -1189,3 +1189,36 @@ body.lay-dragging-active{cursor:grabbing}
   #aba-panorama > .pano-subpanel{grid-auto-rows:1px;gap:0 var(--s4)}
   #aba-panorama > .pano-subpanel > *{margin-bottom:0}
 }
+
+/* ===== v2.65: Mercado padronizado (desktop e campos) ===== */
+#aba-mercado input,#aba-mercado button,#aba-mercado select{font-family:inherit}
+.mercado-add-btn{flex:0 0 40px;height:40px}
+#aba-mercado .mercado-add-nome{font-size:15px;padding:10px 2px}
+#aba-mercado .mercado-add-row2{gap:12px}
+#aba-mercado .mercado-add-row2 input{width:64px;flex:0 0 64px;font-size:15px;padding:10px 2px}
+#aba-mercado .mercado-add-row2 input#mpNome,#aba-mercado .mercado-add-row2 input#mlNome{width:auto;flex:1 1 0;min-width:0;text-align:left}
+#aba-mercado #mlValor{width:120px;flex:0 0 120px}
+.mercado-add-row-valor{margin-top:8px}
+.mkt-meta-wrap{cursor:pointer}
+.mkt-meta-track{height:8px}
+.mkt-meta-txt{font-size:11.5px;font-weight:600}
+.mercado-item.sem-preco{border:1.5px solid var(--danger);border-radius:10px;padding:8px 10px}
+.mercado-item.sem-preco .mercado-item-meta{color:var(--danger)}
+.mkt-meta-input{width:100%;max-width:260px;padding:10px 2px;border:none;border-bottom:1px solid var(--line);border-radius:0;background:transparent;color:var(--text);font-size:15px}
+.mkt-meta-input:focus{outline:none;border-bottom-color:var(--gold)}
+#mercadoSubtabDashboard{padding:var(--s2) var(--s3) 100px}
+.casa-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;min-width:0;overflow:hidden}
+#mercadoEstoqueLista{gap:10px}
+.casa-item-meta{min-height:1em}
+.casa-header{margin:0}
+@media(min-width:768px){
+  #aba-mercado .mercado-subtab{max-width:1040px;margin-left:auto;margin-right:auto;padding-left:var(--s4);padding-right:var(--s4);box-sizing:border-box}
+  #aba-mercado .mkt-resumo,#aba-mercado .mkt-meta-wrap,#aba-mercado .mercado-add-card,#aba-mercado .mercado-lista-toggle,#aba-mercado .mkt-lista-header,#aba-mercado .mkt-repetir-btn,#aba-mercado .mkt-carrinho-bar,#aba-mercado .casa-header,#aba-mercado .mkt-grupo-titulo,#aba-mercado .filter-chips,#aba-mercado .empty-state{max-width:none;margin-left:0;margin-right:0}
+  #aba-mercado .mercado-lista{max-width:none;margin:0;padding-left:0;padding-right:0}
+  #aba-mercado .mercado-add-card{display:flex;gap:12px;align-items:center;margin-top:var(--s3);margin-bottom:var(--s3)}
+  #aba-mercado .mercado-add-card .mercado-add-row2{flex:1;margin-top:0}
+  #aba-mercado .mercado-add-card .mercado-add-row2 + .mercado-add-row2{flex:0 0 auto}
+  #aba-mercado .mkt-grupo-titulo{grid-column:1/-1}
+  #aba-mercado .mkt-bottombar{padding-left:var(--s4);padding-right:var(--s4)}
+  #mercadoSubtabDashboard{padding:var(--s2) var(--s4) 100px}
+}
