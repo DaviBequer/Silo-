@@ -720,6 +720,29 @@ function excluirCartaoCard(id){
   initCompraTrackerGestures();
 }
 
+/* Gestos nas compras: clicar e segurar 4s exclui (duplo clique para editar já está no item) */
+let compraGestosAtivos = false;
+function initCompraTrackerGestures(){
+  if(compraGestosAtivos) return;
+  compraGestosAtivos = true;
+  let timer = null, x0 = 0, y0 = 0;
+  const cancelar = ()=>{ if(timer){ clearTimeout(timer); timer = null; } };
+  document.addEventListener('pointerdown', ev=>{
+    const item = ev.target.closest && ev.target.closest('.compra-tracker-item');
+    if(!item || ev.target.closest('button,input,select,a')) return;
+    const id = item.dataset.id;
+    if(!id) return;
+    x0 = ev.clientX; y0 = ev.clientY;
+    cancelar();
+    timer = setTimeout(()=>{ timer = null; excluirCompraTracker(id); }, 4000);
+  });
+  document.addEventListener('pointermove', ev=>{
+    if(timer && (Math.abs(ev.clientX-x0)>10 || Math.abs(ev.clientY-y0)>10)) cancelar();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>document.addEventListener(t, cancelar));
+}
+initCompraTrackerGestures();
+
 /* --- Compra (parcelamento vinculado a um cartão) --- */
 let compraTrackerLogoUrlAtual = null;
 function renderCompraTrackerLogoPreview(){
