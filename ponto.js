@@ -246,29 +246,50 @@ function renderPontoSummary(){
   renderPontoSemanasChart(mKey);
 }
 
+/* situação do mês pelos dias trancados (cadeado) */
+function pontoStatusMes(mKey){
+  const r = computePontoMes(mKey);
+  const totalDias = daysInMonth(mKey);
+  let uteis = 0, uteisConcluidos = 0, feitoMin = 0;
+  for(let dia=1; dia<=totalDias; dia++){
+    const d = getDia(mKey, dia);
+    const dow = keyToDate(mKey); dow.setDate(dia);
+    const util = dow.getDay()>=1 && dow.getDay()<=5;
+    if(util) uteis++;
+    if(d.concluido){
+      feitoMin += dayTotalMinutes(d);
+      if(util) uteisConcluidos++;
+    }
+  }
+  const restantes = uteis - uteisConcluidos;
+  const faltamMin = r.padraoMin - feitoMin;
+  return { r, uteis, uteisConcluidos, restantes, feitoMin, faltamMin, prog: uteis>0 ? uteisConcluidos/uteis : 0,
+           metaDia: restantes>0 ? Math.round(faltamMin/restantes) : 0 };
+}
+function pontoBannerHtml(mKey){
+  const st = pontoStatusMes(mKey);
+  const { r, uteis, uteisConcluidos, restantes, feitoMin, faltamMin, prog, metaDia } = st;
+  const sinal = (m)=> (m>=0?'+':'-')+minToHoursLabel(Math.abs(m));
+  if(restantes<=0){
+    if(faltamMin<=0){
+      return bannerGeo('positivo','ok','Mês fechado · meta batida',
+        `Todos os ${uteis} dias úteis concluídos · ${faltamMin===0?'exatamente no padrão':sinal(-faltamMin)+' acima do padrão'}`, 1);
+    }
+    return bannerGeo('negativo','alerta',`Mês fechado · faltaram ${minToHoursLabel(faltamMin)}`,
+      `Todos os ${uteis} dias úteis concluídos · padrão ${minToHoursLabel(r.padraoMin)}, registrado ${minToHoursLabel(feitoMin)}`, 1);
+  }
+  if(faltamMin<=0){
+    return bannerGeo('positivo','ok','Meta do mês já batida',
+      `${uteisConcluidos} de ${uteis} dias úteis concluídos · ${sinal(-faltamMin)} acima do padrão`, prog);
+  }
+  return bannerGeo(metaDia>540?'negativo':'positivo', metaDia>540?'alerta':'alvo',
+    `Faltam ${minToHoursLabel(faltamMin)} para fechar o mês`,
+    `${uteisConcluidos} de ${uteis} dias úteis concluídos · ${restantes} ${restantes>1?'restantes':'restante'} · cerca de <b>${minToHoursLabel(metaDia)}/dia</b>`, prog);
+}
 function renderPontoMetaDiaria(mKey, r){
   const el = document.getElementById('pontoMetaDiaria');
   if(!el) return;
-  if(mKey !== todayKey()){ el.innerHTML = ''; return; }
-  const totalDias = daysInMonth(mKey);
-  const hoje = new Date();
-  let diasUteisRestantes = 0;
-  for(let dia=hoje.getDate()+1; dia<=totalDias; dia++){
-    const d = keyToDate(mKey); d.setDate(dia);
-    const dow = d.getDay();
-    if(dow>=1 && dow<=5) diasUteisRestantes++;
-  }
-  const faltamMin = r.padraoMin - r.totalMin;
-  if(faltamMin <= 0){
-    el.innerHTML = `<div class="fluxo-alerta positivo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>Você já bateu (ou passou) a meta de horas do mês</div>`;
-    return;
-  }
-  if(diasUteisRestantes<=0){
-    el.innerHTML = `<div class="fluxo-alerta negativo"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Faltam ${minToHoursLabel(faltamMin)} e não há mais dias úteis neste mês</div>`;
-    return;
-  }
-  const metaDia = Math.round(faltamMin/diasUteisRestantes);
-  el.innerHTML = `<div class="fluxo-alerta ${metaDia>540?'negativo':'positivo'}">🎯 Faltam ${minToHoursLabel(faltamMin)} em ${diasUteisRestantes} dias úteis — cerca de <b>${minToHoursLabel(metaDia)}/dia</b> pra bater a meta</div>`;
+  el.innerHTML = pontoBannerHtml(mKey);
 }
 
 function renderPontoSemanasChart(mKey){
@@ -321,14 +342,35 @@ function renderPontoCompare(){
 }
 
 /* ================= PONTO PJ: CONFIGURAÇÃO E EXPORTAÇÃO PDF ================= */
+let pontoConfigMes = null;
+function renderPontoConfigMes(){
+  document.getElementById('pontoConfigMesLabel').textContent = monthLabelLong(pontoConfigMes);
+  document.getElementById('pontoConfigMesNota').style.display = pontoConfigMes===todayKey() ? 'none' : 'block';
+}
+function pontoConfigNavMes(delta){
+  pontoConfigMes = addMonths(pontoConfigMes, delta);
+  renderPontoConfigMes();
+}
 function openPontoConfigModal(){
   document.getElementById('pontoConfigNome').value = state.ponto.nomeUsuario || '';
+  pontoConfigMes = todayKey();
+  renderPontoConfigMes();
   document.getElementById('modalPontoConfig').classList.add('active');
 }
-function salvarPontoConfig(){
+async function salvarPontoConfig(){
   const nome = document.getElementById('pontoConfigNome').value.trim();
   state.ponto.nomeUsuario = nome;
   persist();
+  if(pontoConfigMes && pontoConfigMes !== todayKey()){
+    const ok = await iosConfirm(`Definir ${monthLabel(pontoConfigMes)} como mês vigente? Isso muda o que o app considera "hoje" no Ponto PJ, Planner, Dashboard e cartões.`);
+    if(!ok) return;
+    closeModal('modalPontoConfig');
+    state.pontoOffset = 0;
+    definirMesAtual(pontoConfigMes);
+    persist();
+    showToast('Mês vigente: '+monthLabel(pontoConfigMes));
+    return;
+  }
   closeModal('modalPontoConfig');
   showToast('Configuração salva');
 }
@@ -403,25 +445,17 @@ function gerarPdfPonto(){
     periodoLabel = `${monthLabelLong(mKey)} — dias ${String(diaIni).padStart(2,'0')} a ${String(diaFim).padStart(2,'0')}`;
   }
 
-  const valorHora = state.ponto.valorHora || 0;
   const linhas = [];
-  let totalMinPeriodo = 0;
   for(let dia=diaIni; dia<=diaFim; dia++){
     const d = getDia(mKey, dia);
     const dateObj = keyToDate(mKey); dateObj.setDate(dia);
-    const totalMin = dayTotalMinutes(d);
-    if(totalMin<=0 && !d.entrada) continue;
-    totalMinPeriodo += totalMin;
-    const horas = Math.floor(totalMin/60), minutos = totalMin%60;
-    const valorDia = (totalMin/60) * valorHora;
+    if(dayTotalMinutes(d)<=0 && !d.entrada) continue;
     linhas.push([
       `${String(dia).padStart(2,'0')} (${DIA_SEMANA[dateObj.getDay()]})`,
       d.entrada || '--:--',
       d.almocoSaida || '--:--',
       d.almocoVolta || '--:--',
-      d.saida || '--:--',
-      `${String(horas).padStart(2,'0')}h${String(minutos).padStart(2,'0')}m`,
-      fmtMoney(valorDia)
+      d.saida || '--:--'
     ]);
   }
 
@@ -430,7 +464,6 @@ function gerarPdfPonto(){
     return;
   }
 
-  const valorTotalPeriodo = (totalMinPeriodo/60) * valorHora;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4' });
   const nome = state.ponto.nomeUsuario || '';
@@ -460,55 +493,22 @@ function gerarPdfPonto(){
   doc.setTextColor(220,220,224);
   doc.text(periodoLabel, marginX+58, nome ? 68 : 53);
 
-  /* ---- Cards de resumo ---- */
-  const cardsY = 106;
-  const cardH = 56;
-  const gap = 12;
-  const cardW = (pageW - marginX*2 - gap*2) / 3;
-  const totalHorasLabel = minToHoursLabel(totalMinPeriodo);
-  const cards = [
-    { label:'TOTAL DE HORAS', value: totalHorasLabel, accent:graphite },
-    { label:'VALOR TOTAL', value: fmtMoney(valorTotalPeriodo), accent:[28,157,91] },
-    { label:'VALOR POR HORA', value: fmtMoney(valorHora), accent:[59,110,165] },
-  ];
-  cards.forEach((c,i)=>{
-    const x = marginX + i*(cardW+gap);
-    doc.setDrawColor(225,225,228);
-    doc.setLineWidth(1);
-    doc.roundedRect(x,cardsY,cardW,cardH,8,8,'S');
-    doc.setFillColor(...c.accent);
-    doc.roundedRect(x+12,cardsY+12,6,6,2,2,'F');
-    doc.setTextColor(120,120,124);
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(7.5);
-    doc.text(c.label, x+24, cardsY+16);
-    doc.setTextColor(30,30,32);
-    doc.setFontSize(15);
-    doc.text(c.value, x+12, cardsY+38);
-  });
-
-  /* ---- Tabela ---- */
+  /* ---- Tabela (somente os horários registrados) ---- */
   doc.autoTable({
-    startY: cardsY + cardH + 24,
-    head: [['Dia','Entrada','Almoço','Volta','Saída','Horas','Valor']],
+    startY: 112,
+    head: [['Dia','Entrada','Almoço','Volta','Saída']],
     body: linhas,
     theme: 'grid',
-    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9 },
-    bodyStyles: { fontSize:9, textColor:[40,40,40] },
+    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5, halign:'center' },
+    bodyStyles: { fontSize:10, textColor:[40,40,40], halign:'center', cellPadding:6 },
+    columnStyles: { 0:{ halign:'left', fontStyle:'bold' } },
     alternateRowStyles: { fillColor:[247,247,248] },
     styles: { lineColor:[230,230,232], lineWidth:0.5 },
     margin: { left:marginX, right:marginX }
   });
 
-  /* ---- Rodapé ---- */
-  const finalY = doc.lastAutoTable.finalY + 20;
-  doc.setTextColor(140,140,144);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(8);
-  doc.text(`Cálculo das horas considerando intervalo de almoço. Valor da hora: ${fmtMoney(valorHora)}.`, marginX, finalY);
-
   const dataExporto = monthLabel(mKey);
-  const fileName = `Ponto PJ - Davi Bequer - ${dataExporto}.pdf`;
+  const fileName = `Ponto PJ - ${nome || 'Davi Bequer'} - ${dataExporto}.pdf`;
 
   const blob = doc.output('blob');
   const file = new File([blob], fileName, { type:'application/pdf' });
@@ -537,7 +537,7 @@ function openConcluirMesModal(){
   const avisoEl = document.getElementById('concluirMesAviso');
   if(abertas > 0){
     avisoEl.style.display = 'block';
-    avisoEl.innerHTML = `${ICON_ALERT}Ainda há ${abertas} conta${abertas>1?'s':''} em aberto em ${monthLabel(mesContasAtual)}. Você pode concluir mesmo assim.`;
+    avisoEl.innerHTML = bannerGeo('negativo','alerta',`${abertas} conta${abertas>1?'s':''} em aberto`,`Em ${monthLabel(mesContasAtual)}. Você pode concluir mesmo assim.`);
   } else {
     avisoEl.style.display = 'none';
   }

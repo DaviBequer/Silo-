@@ -209,10 +209,32 @@ async function aplicarMesAtualManual(){
   if(!valor) return;
   const ok = await iosConfirm(`Definir ${monthLabel(valor)} como mês atual? Isso muda o que o app considera "hoje" no Planner, Ponto PJ, Dashboard e cartões.`);
   if(!ok) return;
+  definirMesAtual(valor);
+}
+function definirMesAtual(valor){
   mesAtualRef = valor;
   localStorage.setItem(MES_ATUAL_KEY, valor);
   if(state.focusMonth) state.focusMonth = mesFinanceiroAtual();
   renderAll();
+}
+/* ================= BANNER GEOMÉTRICO (reutilizável) ================= */
+const BN_ICONES = {
+  alvo:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>',
+  ok:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7.5"/></svg>',
+  alerta:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>',
+  carrinho:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h3l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2"/></svg>',
+  moeda:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-1-1.6-1.6-2.8-1.6-1.6 0-2.8.9-2.8 2.1 0 3 5.8 1.4 5.8 4.4 0 1.2-1.3 2.1-3 2.1-1.4 0-2.5-.7-3-1.8"/><path d="M12 6v1.6M12 16.4V18"/></svg>',
+  relogio:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>',
+  receita:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-2 1.5-3 4-3 7 0 1.5 1 2.5 3 2.5V21"/></svg>',
+  musica:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+  pergunta:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 .8c0 1.7-2.5 2.2-2.5 3.9"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>'
+};
+function bannerGeo(tipo, icone, titulo, sub, progresso){
+  const prog = (progresso===null || progresso===undefined) ? '' : `<div class="pj-banner-prog"><i style="width:${Math.max(0,Math.min(100,Math.round(progresso*100)))}%"></i></div>`;
+  return `<div class="pj-banner ${tipo}"><div class="pj-banner-ico">${BN_ICONES[icone]||''}</div><div class="pj-banner-body"><div class="pj-banner-title">${titulo}</div>${sub?`<div class="pj-banner-sub">${sub}</div>`:''}${prog}</div></div>`;
+}
+function iconeTile(icone, cor){
+  return `<span class="geo-tile" style="--bn:${cor||'var(--gold)'}">${(BN_ICONES[icone]||'').replace('width="20" height="20"','width="16" height="16"')}</span>`;
 }
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }

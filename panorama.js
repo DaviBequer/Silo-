@@ -249,7 +249,7 @@ function renderSimulador(){
   `;
   
   const primeiroMesComImpacto = comparativo.find(m=>m.saldoFinal<0);
-  const alertaHtml = primeiroMesComImpacto ? `<div class="simulador-alerta">${ICON_ALERT}Atenção: Saldo ficaria negativo em ${primeiroMesComImpacto.label}!</div>` : '';
+  const alertaHtml = primeiroMesComImpacto ? `<div style="margin-top:var(--s4)">${bannerGeo('negativo','alerta','Saldo ficaria negativo',`Primeiro mês no vermelho: ${primeiroMesComImpacto.label}`)}</div>` : '';
   
   document.getElementById('simPainelSimulacao').innerHTML = comparativoHtml + alertaHtml;
 }

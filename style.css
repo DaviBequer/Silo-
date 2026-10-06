@@ -29,8 +29,7 @@ body{background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overs
 input,textarea,select{-webkit-user-select:text;user-select:text}
 
 /* TIPOGRAFIA — 4 níveis só */
-.h1{font-size:32px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
-.h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim)}
+
 .body{font-size:14px;font-weight:500;color:var(--text)}
 .caption{font-size:11px;font-weight:500;color:var(--text-faint)}
 
@@ -95,13 +94,6 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .pano-nav-btn:hover{border-color:var(--primary);color:var(--primary)}
 .pano-nav-label{font-size:13px;font-weight:700;color:var(--text)}
 
-.compact-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
-.compact-table th{color:var(--text-faint);padding:var(--s2) var(--s1);font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line);text-align:center}
-.compact-table td{padding:var(--s2) var(--s1);text-align:center;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-.compact-table td.row-label{text-align:left;font-weight:700}
-.compact-table tr.selected-row td{background:var(--primary-tint)}
-.compact-table tr:last-child td{border-bottom:none}
-
 /* SUMMARY */
 .summary-list{display:flex;flex-direction:column}
 .summary-row{display:flex;justify-content:space-between;align-items:center;padding:var(--s3) var(--s1);border-bottom:1px solid var(--line);font-size:13px}
@@ -114,10 +106,8 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 .icon-btn-sm{background:var(--card-2);border:1px solid var(--line);color:var(--text-dim);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 
 /* Fluxo de caixa */
-.fluxo-alerta{font-size:12px;font-weight:700;padding:9px 12px;border-radius:10px;margin-bottom:10px}
-.fluxo-alerta.negativo{background:var(--warning-tint);color:var(--warning)}
-.fluxo-alerta.positivo{background:var(--success-tint);color:var(--success)}
-.fluxo-caixa-lista{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto}
+
+.fluxo-caixa-lista{display:flex;flex-direction:column;gap:2px;overflow-y:auto}
 .fluxo-linha{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:12px;border-bottom:1px solid var(--line)}
 .fluxo-linha-min{background:var(--danger-tint);border-radius:8px}
 .fluxo-dia{flex-shrink:0;width:52px;color:var(--text-dim);font-weight:600}
@@ -172,31 +162,15 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 
 /* USER SECTION */
 .user-section{margin-bottom:var(--s4)}
-.user-card-combined{background:var(--card);border-radius:var(--radius-md);padding:var(--s3);border:1px solid var(--line);box-shadow:var(--card-shadow);display:grid;grid-template-columns:1fr 1px 1fr;gap:var(--s3);align-items:stretch}
-.user-card-combined .ucc-divider{background:var(--line)}
-.user-card-combined .ucc-col{min-width:0}
-.user-card-combined .u-name{font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--s2)}
-.user-card-combined .u-row{display:flex;justify-content:space-between;align-items:center;margin-top:var(--s1);font-size:12px;gap:var(--s1)}
-.user-card-combined .u-row .lbl{color:var(--text-faint);font-weight:500;font-size:10px}
-.user-card-combined .u-receita{color:var(--success);font-weight:700;font-size:12.5px}
-.user-card-combined .u-gastos{color:var(--danger);font-weight:700;font-size:12.5px}
-.user-card-combined .u-sobra{font-size:16px;font-weight:800;margin-top:var(--s2);padding-top:var(--s2);border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;letter-spacing:-.3px}
-.user-card-combined .u-sobra .lbl{font-size:9px;color:var(--text-faint);font-weight:600;text-transform:uppercase}
-.user-card-combined .u-sobra.positive{color:var(--success)}
-.user-card-combined .u-sobra.negative{color:var(--danger)}
 
 /* HERO (Acumulado, Ponto summary) */
-.acum-card{background:var(--primary-tint);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s5) var(--s4);text-align:center;margin-bottom:var(--s4)}
-.acum-card .label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
-.acum-card .value{font-size:40px;font-weight:800;margin-top:var(--s2);line-height:1;letter-spacing:-1.5px;color:var(--text)}
-.acum-card .sub{font-size:11px;color:var(--text-faint);margin-top:var(--s2);font-weight:500}
 
 /* CHECKLIST (Contas a Pagar) */
 .checklist{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s2) var(--s3)}
 .check-item-compact{display:flex;align-items:center;gap:var(--s2);padding:var(--s2);border-bottom:1px solid var(--line);border:1.5px solid transparent;border-radius:10px;min-width:0;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}
-.conta-logo{width:26px;height:26px;border-radius:8px;object-fit:cover;flex-shrink:0}
+.conta-logo{object-fit:cover;flex-shrink:0}
 .conta-logo-sm{width:20px;height:20px;border-radius:6px;object-fit:cover;flex-shrink:0;font-size:9px}
-.conta-logo-placeholder{display:flex;align-items:center;justify-content:center;background:var(--card-2);color:var(--text-faint);font-weight:800;font-size:11px}
+.conta-logo-placeholder{display:flex;align-items:center;justify-content:center;background:var(--card-2);color:var(--text-faint);font-weight:800}
 .conta-logo-grande{width:56px;height:56px;border-radius:14px;object-fit:cover;flex-shrink:0}
 .conta-logo-grande.conta-logo-placeholder{font-size:22px}
 .check-item-compact.paid{border-color:var(--success);background:var(--success-tint)}
@@ -333,7 +307,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 body:has(.modal-overlay.active){overflow:hidden}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:550;align-items:flex-end;justify-content:center}
 .modal-overlay.active{display:flex}
-.modal{background:var(--card);width:100%;max-width:520px;border-radius:var(--radius) var(--radius) 0 0;max-height:92vh;overflow-y:auto;padding:var(--s4) var(--s4) calc(var(--s5) + var(--safe));animation:slideUp .25s var(--ease);border-top:1px solid var(--line)}
+.modal{background:var(--card);width:100%;max-width:520px;border-radius:var(--radius) var(--radius) 0 0;overflow-y:auto;padding:var(--s4) var(--s4) calc(var(--s5) + var(--safe));animation:slideUp .25s var(--ease);border-top:1px solid var(--line)}
 @media(min-width:1024px){
 .modal.modal-wide{max-width:760px}
 .modal.modal-wide .form-grid{grid-template-columns:repeat(3,1fr)}
@@ -353,7 +327,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 
 /* EMPTY STATE / TOAST */
 .empty-state{text-align:center;padding:var(--s6) var(--s3);color:var(--text-faint)}
-.empty-state .ico{font-size:40px;margin-bottom:var(--s3);opacity:.3}
+
 .empty-state .title{font-size:13px;font-weight:600;color:var(--text-dim)}
 .empty-state .desc{font-size:11px;margin-top:var(--s1);color:var(--text-faint)}
 
@@ -420,7 +394,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .simulador-linha:last-child{border-bottom:none}
 .simulador-linha .label{font-size:12.5px;font-weight:500;color:var(--text-dim)}
 .simulador-linha .valor{font-size:12.5px;font-weight:700;color:var(--text)}
-.simulador-alerta{display:flex;align-items:center;padding:var(--s3);border-radius:var(--radius-sm);background:var(--warning-tint);margin-top:var(--s4);font-size:11.5px;color:var(--text);font-weight:500}
+
 .simulador-meta-item{padding:var(--s3);border-radius:var(--radius-sm);background:var(--card);border:1px solid var(--line);margin-bottom:var(--s2)}
 .simulador-meta-item .nome{font-size:12.5px;font-weight:700;color:var(--text)}
 .simulador-meta-item .info{font-size:11px;color:var(--text-faint);margin-top:var(--s2)}
@@ -453,17 +427,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .comparativo-card .cc-acumulado span:last-child{color:var(--primary)!important;font-weight:800}
 
 /* TAREFAS — minimalista */
-.tarefa-categoria-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);margin:var(--s4) 0 var(--s2)}
-.tarefa-categoria-header:first-child{margin-top:0}
-.tarefa-item{display:flex;align-items:center;gap:var(--s2);padding:var(--s2) 0;border-bottom:1px solid var(--line)}
-.tarefa-item.feita{opacity:.35}
-.tarefa-item.feita .nome{text-decoration:line-through}
-.tarefa-item input[type=checkbox]{width:17px;height:17px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
-.tarefa-item .info{flex:1;min-width:0}
-.tarefa-item .nome{font-size:12.5px;font-weight:600;color:var(--text)}
-.tarefa-item .desc{font-size:10.5px;color:var(--text-faint);margin-top:2px}
-.tarefa-item .tarefa-del{opacity:.2;transition:opacity var(--dur) var(--ease)}
-.tarefa-item:hover .tarefa-del{opacity:1}
 
 /* FULLPAGE */
 .fullpage{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column}
@@ -475,24 +438,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 .fullpage-content{flex:1;overflow-y:auto;padding:var(--s3);animation:fadeIn .25s var(--ease)}
 
 /* DASHBOARD DE TAREFAS */
-.tarefas-dashboard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--s3);margin-bottom:var(--s4)}
-.td-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--s2);margin-bottom:var(--s3)}
-.td-stat{text-align:center;padding:var(--s2)}
-.td-num{font-size:18px;font-weight:800;color:var(--text)}
-.td-lbl{font-size:8.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;margin-top:2px}
-.td-progress-wrap{margin-top:var(--s2)}
-.td-progress-label{display:flex;justify-content:space-between;font-size:10px;font-weight:600;color:var(--text-dim);margin-bottom:var(--s1)}
-.td-progress-bar{height:6px;border-radius:6px;background:var(--card-2);overflow:hidden}
-.td-progress-fill{height:100%;background:var(--primary);border-radius:6px;transition:width .4s var(--ease)}
-.td-categorias{display:flex;flex-wrap:wrap;gap:var(--s1);margin-top:var(--s3)}
-.td-cat-badge{font-size:9px;font-weight:600;padding:3px var(--s2);border-radius:12px;background:var(--card-2);color:var(--text-dim)}
 
 /* TIMER DE TAREFA */
-.tarefa-timer-row{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s1)}
-.tarefa-timer-display{font-size:10px;font-weight:700;color:var(--text-dim);font-variant-numeric:tabular-nums;background:var(--card-2);padding:2px var(--s2);border-radius:6px}
-.btn-sm-timer{border:none;border-radius:6px;padding:3px var(--s2);font-size:9.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all var(--dur) var(--ease)}
-.btn-sm-timer.start{background:var(--success-tint);color:var(--success)}
-.btn-sm-timer.stop{background:var(--danger-tint);color:var(--danger)}
 
 /* DETALHE ACUMULADO */
 .detalhe-usuario{margin-bottom:var(--s3);padding-bottom:var(--s3);border-bottom:1px solid var(--line)}
@@ -521,13 +468,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .pano-stack-legend-item .dot{width:7px;height:7px;border-radius:50%;margin-right:7px;flex-shrink:0}
 .pano-stack-legend-item .nome{flex:1;min-width:0}
 .pano-stack-legend-item .valor{font-weight:700;color:var(--text)}
-.donut-row{display:flex;flex-direction:column;gap:var(--s3);margin-top:var(--s3)}
-.donut-card{flex:1;display:flex;flex-direction:row;align-items:center;gap:var(--s3);min-width:0}
-.donut-wrap{width:92px;height:92px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.donut-hole{width:60px;height:60px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px}
-.donut-hole-label{font-size:9px;color:var(--text-faint);text-transform:uppercase;font-weight:700;letter-spacing:.3px}
-.donut-hole-value{font-size:12.5px;font-weight:800;color:var(--text);margin-top:2px;line-height:1.15}
-.donut-legend{display:flex;flex-direction:column;gap:7px;width:100%;min-width:0}
+
 .donut-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-dim)}
 .donut-legend-item i{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .donut-legend-item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -541,12 +482,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-config-grid .field{margin-bottom:0;gap:4px}
 .lv-config-grid .field.full{grid-column:1/-1}
 
-.badge{display:inline-block;padding:3px var(--s2);border-radius:12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-
-@media(max-width:380px){
-.user-card-combined{grid-template-columns:1fr}
-.user-card-combined .ucc-divider{display:none;height:1px;width:100%}
-}
 @media(min-width:768px){
 body{padding-bottom:calc(84px + var(--safe))}
 .header{padding-left:max(var(--s3), calc((100% - 900px)/2));padding-right:max(var(--s3), calc((100% - 900px)/2))}
@@ -619,7 +554,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .busca-resultado-label{font-size:13px;font-weight:700;color:var(--text)}
 .busca-resultado-meta{font-size:11px;color:var(--text-faint)}
 .badge-teste{font-size:8.5px;font-weight:800;color:var(--warning);background:var(--warning-tint);padding:2px 6px;border-radius:8px;text-transform:uppercase;margin-left:4px;vertical-align:middle}
-
 
 /* ============ RECEITAS — módulo redesenhado ============ */
 
@@ -709,9 +643,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .receita-passo-txt{font-size:13.5px;color:var(--text-dim);line-height:1.55;padding-top:3px}
 .receita-obs-view{font-size:13px;color:var(--text-dim);line-height:1.55;background:var(--warning-tint);padding:12px 14px;border-radius:14px;white-space:pre-wrap}
 
-.receita-detalhe-actions{display:flex;gap:10px;margin-top:var(--s5)}
-.receita-detalhe-actions .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px}
-
 /* Formulário assistente */
 .receita-form-section{margin-bottom:var(--s5)}
 .receita-form-foto-wrap{position:relative;width:100%}
@@ -733,16 +664,11 @@ body{padding-bottom:calc(84px + var(--safe))}
 .dif-media{background:var(--warning-tint);color:var(--warning)}
 .dif-dificil{background:rgba(224,52,43,.12);color:var(--danger)}
 
-.cor-chips{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.cor-chip{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0;transition:all var(--dur) var(--ease)}
-.cor-chip.selected{border-color:var(--text);transform:scale(1.12)}
-.cor-chip-none{background:var(--card-2);border:1px solid var(--line);color:var(--text-faint);font-size:12px;display:flex;align-items:center;justify-content:center}
-
 /* Ingredientes (form) */
 .receita-ing-lista{display:flex;flex-direction:column;gap:6px}
 .receita-ing-row{display:grid;grid-template-columns:20px 52px 56px 1fr 28px;align-items:center;gap:6px}
 .receita-ing-num{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:grab;touch-action:none;user-select:none}
-.receita-passo-row .receita-passo-num{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:9px;cursor:grab;touch-action:none;user-select:none}
+.receita-passo-row .receita-passo-num{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:grab;touch-action:none;user-select:none}
 .receita-ing-row.dragging-row,.receita-passo-row.dragging-row{opacity:0.55;background:var(--primary-tint);border-radius:var(--radius-sm)}
 .receita-ing-row input,.receita-ing-row .unidade-picker{width:100%;padding:9px 6px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:11px;background:var(--card-2);color:var(--text);font-family:inherit;transition:all var(--dur) var(--ease);min-width:0}
 .receita-ing-row input:focus{outline:none;border-color:var(--primary);background:var(--card)}
@@ -791,28 +717,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .subtab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
 
 /* SEMANA — estilo bullet journal */
-.semana-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s4)}
-.semana-label{font-size:13px;font-weight:800;color:var(--text)}
-.semana-dia{margin-bottom:var(--s4);border-radius:16px;background:var(--card-2);padding:var(--s3)}
-.semana-dia.hoje{background:var(--primary-tint);border:1px solid var(--primary)}
-.semana-dia-head{display:flex;align-items:baseline;gap:8px;margin-bottom:var(--s3)}
-.semana-dia-nome{font-size:13px;font-weight:800;color:var(--text)}
-.semana-dia-num{font-size:11px;color:var(--text-faint);font-weight:600}
-.semana-periodo{margin-bottom:var(--s3)}
-.semana-periodo:last-child{margin-bottom:0}
-.semana-periodo-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.semana-periodo-lbl{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:var(--text-faint);text-transform:uppercase;letter-spacing:.3px}
-.semana-periodo-add{width:20px;height:20px;border-radius:50%;border:1px dashed var(--text-faint);background:none;color:var(--text-faint);font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.semana-periodo-add:active{background:var(--primary-tint);color:var(--primary);border-color:var(--primary)}
-.semana-periodo-itens{display:flex;flex-direction:column;gap:4px}
-.semana-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:9px;background:var(--card);font-size:12px;color:var(--text)}
-.semana-item.feito{opacity:.5}
-.semana-item.feito span{text-decoration:line-through}
-.semana-item-check{width:16px;height:16px;border-radius:5px;border:1.6px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--card-2)}
-.semana-item.feito .semana-item-check{background:var(--success);border-color:var(--success)}
-.semana-item span{flex:1;cursor:pointer}
-.semana-item-del{border:none;background:none;color:var(--text-faint);font-size:15px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0}
-.semana-item-del:hover{color:var(--danger)}
 
 /* ================= LOUVOR ================= */
 .lv-lista{display:flex;flex-direction:column;gap:var(--s2);padding:0 var(--s3) 100px}
@@ -905,8 +809,7 @@ body{padding-bottom:calc(84px + var(--safe))}
 .mercado-subtab{padding:0 0 100px}
 
 .mercado-add-card{background:transparent;border:none;border-bottom:1px solid var(--line);border-radius:0;padding:8px 2px;margin:2px var(--s3) 4px;box-shadow:none}
-.mercado-add-nome{width:100%;padding:8px 2px;border:none;border-bottom:1px solid var(--line);border-radius:0;background:transparent;color:var(--text);font-family:inherit;font-size:14px;margin-bottom:6px}
-.mercado-add-nome:focus{border-bottom-color:var(--gold)}
+
 .mercado-add-row2{display:flex;gap:10px;align-items:center}
 .mercado-add-row2 input{width:36px;flex:0 0 36px;padding:6px 0;border:none;border-bottom:1px solid var(--line);border-radius:0;background:transparent;color:var(--text);font-family:inherit;font-size:13px;text-align:left}
 .mercado-add-row2 input:focus{border-bottom-color:var(--gold)}
@@ -919,14 +822,13 @@ body{padding-bottom:calc(84px + var(--safe))}
 .unidade-picker-opt:last-child{border-bottom:none}
 .unidade-picker-opt.selected{color:var(--primary);font-weight:700}
 .unidade-picker-opt svg{color:var(--primary)}
-.mercado-add-btn{flex:0 0 32px;height:32px;border-radius:50%;border:none;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mercado-add-btn{border-radius:50%;border:none;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .mercado-add-btn:active{opacity:.85}
 
 .mercado-lista{display:flex;flex-direction:column;gap:0;padding:0 var(--s3) var(--s4)}
 .mercado-item{display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;background:none;border:none;border-bottom:1px solid var(--line);border-radius:0;padding:8px 2px;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;box-shadow:none}
 .mercado-item.mercado-item-compact{padding:7px 2px}
-.mercado-item.comprado{background:var(--success-tint)}
-.mercado-item.comprado .mercado-item-nome{text-decoration:line-through;color:var(--text-faint)}
+
 .mercado-item.repor{background:var(--warning-tint)}
 .mercado-item.carrinho{background:var(--gold-tint)}
 .mercado-check{width:20px;height:20px;border-radius:7px;border:1.8px solid var(--line);background:var(--card-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
@@ -942,7 +844,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .mercado-item-stepper span{min-width:22px;text-align:center;font-weight:800;font-size:11px;color:var(--text)}
 .mercado-item-stepper button{width:19px;height:19px;border-radius:5px;border:none;background:var(--card);color:var(--text-dim);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .mercado-badge-auto{font-size:8.5px;font-weight:800;color:var(--warning);text-transform:uppercase;letter-spacing:.3px;background:var(--warning-tint);padding:1px 6px;border-radius:8px;margin-left:5px}
-.mercado-badge-carrinho{font-size:8.5px;font-weight:800;color:var(--gold-dim);text-transform:uppercase;letter-spacing:.3px;background:var(--gold-tint);padding:1px 6px;border-radius:8px;margin-left:5px}
 
 /* ---------- Mercado: Dashboard ---------- */
 .mkt-stat-row{display:flex;gap:var(--s2);margin-bottom:var(--s3)}
@@ -982,7 +883,7 @@ body{padding-bottom:calc(84px + var(--safe))}
 .mkt-lista-header{display:flex;justify-content:space-between;align-items:center;background:none;border:none;border-bottom:1px solid var(--line);border-radius:0;padding:8px 2px;margin:0 var(--s3) 2px;font-size:12px;font-weight:700;color:var(--text-dim)}
 .mkt-lista-header-valor{font-size:15px;font-weight:800;color:var(--text)}
 .mkt-item-mover{background:none;border:none;color:var(--gold-dim);padding:3px;font-size:0;cursor:pointer;font-family:inherit;flex-shrink:0;display:flex;align-items:center}
-.mkt-resumo-valor{font-size:32px;font-weight:800;color:var(--text);text-align:center;margin-top:var(--s2)}
+.mkt-resumo-valor{text-align:center;margin-top:var(--s2)}
 .mkt-resumo-itens{font-size:13px;color:var(--text-faint);text-align:center;margin-top:4px}
 
 /* ---------- Planner: toggle renda x saldo em conta ---------- */
@@ -998,7 +899,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .bar-label{font-size:11px;font-weight:600;color:var(--text-dim);width:70px;flex-shrink:0}
 .bar-container{flex:1;height:20px;background:var(--card-2);border-radius:8px;overflow:hidden;position:relative}
 .bar-fill{height:100%;border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 0.3s var(--ease)}
-.bar-percent{font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.2)}
 
 /* Dashboard no desktop: painéis Resumo/Contas lado a lado; dentro de cada um,
    grid livre de 12 colunas, editável pelo botão de layout no header (ver layout.js) */
@@ -1102,7 +1002,7 @@ body.lay-dragging-active{cursor:grabbing}
 .mkt-resumo-valor{font-size:18px;font-weight:800;color:var(--text)}
 .mkt-resumo-falta{cursor:pointer;border-left:1px solid var(--line);padding-left:12px}
 .mkt-resumo-falta.alerta .mkt-resumo-valor{color:var(--danger)}
-.mkt-carrinho-bar{position:sticky;bottom:calc(84px + var(--safe));z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px var(--s3) var(--s3);padding:10px 12px;background:var(--primary);color:#fff;border-radius:14px}
+.mkt-carrinho-bar{position:sticky;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px var(--s3) var(--s3);padding:10px 12px;background:var(--primary);color:#fff;border-radius:14px}
 .mkt-carrinho-label{font-size:11px;opacity:.8}
 .mkt-carrinho-valor{font-size:16px;font-weight:800}
 .mkt-carrinho-btn{background:var(--gold);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
@@ -1112,7 +1012,7 @@ body.lay-dragging-active{cursor:grabbing}
 
 /* ===== Mercado v2.59: Casa (estoque) ===== */
 .casa-header{padding:6px var(--s3) 0;font-size:11px;color:var(--text-dim)}
-.casa-item{padding:10px 2px;margin:0 var(--s3);border-bottom:1px solid var(--line)}
+.casa-item{border-bottom:1px solid var(--line)}
 .casa-item-top{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
 .casa-item-nome{font-size:14px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .casa-selo{font-size:10.5px;font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
@@ -1132,10 +1032,10 @@ body.lay-dragging-active{cursor:grabbing}
 
 /* ===== v2.60: meta mensal e aviso de preço ===== */
 .mkt-meta-wrap{margin:0 var(--s3) 6px;padding:0 2px}
-.mkt-meta-track{height:6px;background:var(--card-2);border-radius:3px;overflow:hidden}
+.mkt-meta-track{background:var(--card-2);border-radius:3px;overflow:hidden}
 .mkt-meta-fill{height:100%;background:var(--gold);border-radius:3px;width:0}
 .mkt-meta-fill.estourou{background:var(--danger)}
-.mkt-meta-txt{font-size:10.5px;color:var(--text-dim);margin-top:4px}
+.mkt-meta-txt{color:var(--text-dim);margin-top:4px}
 .casa-preco{font-size:10.5px;font-weight:600;margin-top:5px}
 .casa-preco.barato{color:var(--success)}
 .casa-preco.caro{color:var(--danger)}
@@ -1193,7 +1093,7 @@ body.lay-dragging-active{cursor:grabbing}
 /* ===== v2.65: Mercado padronizado (desktop e campos) ===== */
 #aba-mercado input,#aba-mercado button,#aba-mercado select{font-family:inherit}
 .mercado-add-btn{flex:0 0 40px;height:40px}
-#aba-mercado .mercado-add-nome{font-size:15px;padding:10px 2px}
+
 #aba-mercado .mercado-add-row2{gap:12px}
 #aba-mercado .mercado-add-row2 input{width:64px;flex:0 0 64px;font-size:15px;padding:10px 2px}
 #aba-mercado .mercado-add-row2 input#mpNome,#aba-mercado .mercado-add-row2 input#mlNome{width:auto;flex:1 1 0;min-width:0;text-align:left}
@@ -1213,7 +1113,7 @@ body.lay-dragging-active{cursor:grabbing}
 .casa-header{margin:0}
 @media(min-width:768px){
   #aba-mercado .mercado-subtab{max-width:1040px;margin-left:auto;margin-right:auto;padding-left:var(--s4);padding-right:var(--s4);box-sizing:border-box}
-  #aba-mercado .mkt-resumo,#aba-mercado .mkt-meta-wrap,#aba-mercado .mercado-add-card,#aba-mercado .mercado-lista-toggle,#aba-mercado .mkt-lista-header,#aba-mercado .mkt-repetir-btn,#aba-mercado .mkt-carrinho-bar,#aba-mercado .casa-header,#aba-mercado .mkt-grupo-titulo,#aba-mercado .filter-chips,#aba-mercado .empty-state{max-width:none;margin-left:0;margin-right:0}
+  #aba-mercado .mkt-resumo,#aba-mercado .mkt-meta-wrap,#aba-mercado .mercado-add-card,#aba-mercado .mercado-lista-toggle,#aba-mercado .mkt-lista-header,#aba-mercado .mkt-repetir-btn,#aba-mercado .mkt-carrinho-bar,#aba-mercado .casa-header,#aba-mercado .mkt-grupo-titulo,#aba-mercado .empty-state{max-width:none;margin-left:0;margin-right:0}
   #aba-mercado .mercado-lista{max-width:none;margin:0;padding-left:0;padding-right:0}
   #aba-mercado .mercado-add-card{display:flex;gap:12px;align-items:center;margin-top:var(--s3);margin-bottom:var(--s3)}
   #aba-mercado .mercado-add-card .mercado-add-row2{flex:1;margin-top:0}
@@ -1235,3 +1135,31 @@ body.lay-dragging-active{cursor:grabbing}
 .voz-btn-tab{width:30px;height:30px;margin:auto 3px auto 6px}
 .modal{max-height:min(92vh,92%)}
 .modal-actions{position:sticky;bottom:0;background:var(--card);padding-top:var(--s2);padding-bottom:var(--safe);z-index:2}
+/* v2.68: botão principal no fim do modal também fica fixo quando o teclado abre */
+.modal > .btn-block:last-child{position:sticky;bottom:0;z-index:2;box-shadow:0 0 0 8px var(--card)}
+
+/* ===== v2.69: banner geométrico (Ponto PJ) e seletor de mês vigente ===== */
+#pontoMetaDiaria{margin:0 0 var(--s3)}
+.pj-banner{--bn:var(--success);--bn-tint:var(--success-tint);--bn-line:rgba(47,122,79,.22);position:relative;display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:var(--radius-md);overflow:hidden;background:var(--bn-tint);border:1px solid var(--bn-line)}
+.pj-banner::before{content:'';position:absolute;right:-26px;top:-28px;width:96px;height:96px;border-radius:50%;background:var(--bn);opacity:.1}
+.pj-banner::after{content:'';position:absolute;right:34px;bottom:-24px;width:48px;height:48px;border-radius:12px;transform:rotate(18deg);background:var(--bn);opacity:.07}
+.pj-banner.negativo{--bn:var(--warning);--bn-tint:var(--warning-tint);--bn-line:rgba(184,123,30,.25)}
+.pj-banner-ico{position:relative;z-index:1;flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:var(--bn);color:#fff;display:flex;align-items:center;justify-content:center}
+.pj-banner-body{position:relative;z-index:1;flex:1;min-width:0}
+.pj-banner-title{font-size:14px;font-weight:700;line-height:1.25;color:var(--bn)}
+.pj-banner-sub{font-size:12px;line-height:1.4;color:var(--text-dim);margin-top:3px}
+.pj-banner-prog{height:5px;border-radius:99px;background:rgba(26,24,21,.08);margin-top:9px;overflow:hidden}
+.pj-banner-prog>i{display:block;height:100%;border-radius:99px;background:var(--bn)}
+.pj-mes-stepper{display:flex;align-items:center;gap:8px}
+.pj-mes-btn{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--card-2);color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.pj-mes-label{flex:1;text-align:center;font-weight:700;font-size:15px;padding:10px 8px;border-radius:12px;background:var(--card-2);border:1px solid var(--line)}
+.pj-mes-nota{font-size:11.5px;color:var(--text-faint);margin-top:8px;line-height:1.4}
+.pj-mes-aviso{color:var(--warning)}
+
+/* ===== v2.70: banners/ícones geométricos no app, mic na busca e no Louvor ===== */
+.geo-tile{width:30px;height:30px;border-radius:9px;background:var(--bn);color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.busca-resultado-icon{background:none;width:auto;height:auto;border-radius:0}
+#buscaGlobalResposta:not(:empty){margin-bottom:var(--s3)}
+.receitas-search .voz-btn{width:30px;height:30px;padding:0;color:#fff;background:var(--primary);flex-shrink:0}
+.receitas-search .voz-btn.ouvindo{background:var(--danger)}
+.lv-search-row .voz-btn{align-self:center}

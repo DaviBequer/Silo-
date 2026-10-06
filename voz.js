@@ -273,8 +273,10 @@ function vozHora(tok, i){
     if(tok[k] && tok[k].s==='e' && tok[k+1]){
       if(tok[k+1].s==='meia'){ m = 30; consumidos += 2; }
       else if(/^\d{1,2}$/.test(tok[k+1].s) && parseInt(tok[k+1].s,10)<60){ m = parseInt(tok[k+1].s,10); consumidos += 2; }
+      else if(tok[k+1].s==='um' || tok[k+1].s==='uma'){ m = 1; consumidos += 2; }
     }
   }
+  if(h===null && (t.s==='um' || t.s==='uma') && tok[i+1] && ['hora','horas'].includes(tok[i+1].s)){ h = 1; consumidos = 2; }
   if(h===null || h>23) return null;
   const apos = tok.slice(i+consumidos, i+consumidos+2).map(x=>x.s).join(' ');
   if(/^da (tarde|noite)/.test(apos) && h<12){ h += 12; consumidos += 2; }
@@ -283,65 +285,122 @@ function vozHora(tok, i){
 }
 function ditarPonto(btn){
   vozOuvir(btn, (texto)=>{
-    let bruto = vozSemAcento(texto).toLowerCase()
-      .replace(/(saida|sai|sa[ií])\s+(do|para o|pro|pra)\s+almoco/g,'almoco')
+    const bruto = vozSemAcento(texto).toLowerCase()
+      .replace(/(saida|sai)\s+(do|para o|pro|pra)\s+almoco/g,'almoco')
       .replace(/(volta|voltei|retorno|retornei)\s+(do|ao|para o|pro|pra)\s+almoco/g,'volta');
     const tok = vozTokens(bruto);
     vozExtenso(tok);
-    const mKey = pontoMonthKeyAtual();
+    /* o ditado só vale para o mês vigente */
+    const mKey = todayKey();
+    const hojeReal = new Date();
+    const mesReal = monthKey(hojeReal) === mKey;
     let dia = null;
     for(let i=0;i<tok.length-1;i++) if(tok[i].s==='dia' && /^\d{1,2}$/.test(tok[i+1].s)){ dia = parseInt(tok[i+1].s,10); tok[i].used = tok[i+1].used = true; break; }
-    const hoje = new Date().getDate();
-    if(dia===null){
-      if(tok.some(t=>t.s==='ontem')) dia = Math.max(1, hoje-1);
-      else if(state.pontoOffset===0) dia = hoje;
-      else { showToast('Diga o dia, ex.: "dia 5, entrada 7 e meia"'); return; }
+    if(dia===null && mesReal){
+      if(tok.some(t=>t.s==='ontem') && hojeReal.getDate()>1) dia = hojeReal.getDate()-1;
+      else dia = hojeReal.getDate();
     }
+    if(dia===null){ showToast('Diga o dia. Ex.: "dia 5, entrada 7 e 3"'); return; }
+    if(dia<1 || dia>daysInMonth(mKey)){ showToast('Esse dia não existe em '+monthLabel(mKey)); return; }
     if(tok.some(t=>['folga','folgar','zerar','zera'].includes(t.s))){
-      getDia(mKey, dia); zerarDia(dia); showToast('Dia '+dia+' zerado'); return;
+      getDia(mKey, dia); state.pontoOffset = 0;
+      state.ponto.days[mKey][dia] = { entrada:null, almocoSaida:null, almocoVolta:null, saida:null, extra:0, confirmado:{} };
+      renderPonto(); persist(); showToast('Dia '+dia+' zerado'); return;
     }
-    const campos = { entrada:/^(entrada|entrei|cheguei|comecei|inicio|iniciei)$/, almocoSaida:/^(almoco|almocei|almocar)$/, almocoVolta:/^(volta|voltei|retorno|retornei)$/, saida:/^(saida|sai|sai|terminei|encerrei|embora|saio|fui)$/ };
-    const marcas = [];
-    tok.forEach((t,i)=>{ for(const c in campos) if(campos[c].test(t.s)){ marcas.push({ campo:c, i }); break; } });
     const d = getDia(mKey, dia);
-    if(d.concluido){ showToast('Dia '+dia+' está concluído, desmarque antes'); return; }
-    const gravar = (campo, min)=>{ d[campo] = minToTime(min); d.confirmado[campo] = true; };
-    const feitos = [];
+    if(d.concluido){ showToast('Dia '+dia+' está trancado, abra o cadeado antes'); return; }
+
+    /* marcas na ordem em que foram faladas */
+    const marcas = [];
+    tok.forEach((t,i)=>{
+      if(/^(entrada|entrei|cheguei|comecei|inicio|iniciei)$/.test(t.s)) marcas.push({ tipo:'in', i });
+      else if(/^(saida|sai|terminei|encerrei|embora|saio|fui)$/.test(t.s)) marcas.push({ tipo:'out', i });
+      else if(/^(almoco|almocei|almocar)$/.test(t.s)) marcas.push({ tipo:'almoco', i });
+      else if(/^(volta|voltei|retorno|retornei)$/.test(t.s)) marcas.push({ tipo:'volta', i });
+    });
+    const lerHoras = (de, ate)=>{
+      const horas = [];
+      for(let i=de;i<ate;i++){ const h = vozHora(tok, i); if(h){ horas.push(h.min); i += h.consumidos-1; } }
+      return horas;
+    };
+    const rotulo = { entrada:'entrada', almocoSaida:'almoço', almocoVolta:'volta', saida:'saída' };
+    const novos = {};      // campo -> minutos, só o que foi falado agora
+    const temConfirmado = ['entrada','almocoSaida','almocoVolta','saida'].some(c=>d.confirmado[c]);
+    const jaTem = (c)=> !!d.confirmado[c] || (c in novos);
     marcas.forEach((mk, idx)=>{
       const fim = idx+1 < marcas.length ? marcas[idx+1].i : tok.length;
-      const horas = [];
-      for(let i=mk.i+1;i<fim;i++){ const h = vozHora(tok, i); if(h){ horas.push(h.min); i += h.consumidos-1; } }
+      const horas = lerHoras(mk.i+1, fim);
       if(!horas.length) return;
-      if(mk.campo==='almocoSaida'){
-        gravar('almocoSaida', horas[0]); feitos.push('almoço');
-        if(horas[1]!==undefined){ gravar('almocoVolta', horas[1]); }
-      } else { gravar(mk.campo, horas[0]); feitos.push(mk.campo==='saida'?'saída':mk.campo==='entrada'?'entrada':'volta'); }
+      const min = horas[0];
+      if(mk.tipo==='almoco'){
+        novos.almocoSaida = min;
+        if(horas[1]!==undefined) novos.almocoVolta = horas[1];
+      } else if(mk.tipo==='volta'){
+        novos.almocoVolta = min;
+      } else if(mk.tipo==='in'){
+        const campo = !jaTem('entrada') ? 'entrada' : (!jaTem('almocoVolta') ? 'almocoVolta' : 'entrada');
+        novos[campo] = min;
+      } else {
+        let campo;
+        if(min < 15*60 && !jaTem('almocoSaida')) campo = 'almocoSaida';
+        else if(!jaTem('saida')) campo = 'saida';
+        else campo = min < 15*60 ? 'almocoSaida' : 'saida';
+        novos[campo] = min;
+      }
     });
+    /* hora extra: "hora extra 2 horas", "extra 1 e meia" */
+    let extraMin = null;
     const iExtra = tok.findIndex(t=>t.s==='extra' || t.s==='extras');
     if(iExtra>=0){
-      let min = null;
       for(let i=Math.max(0,iExtra-3); i<Math.min(tok.length, iExtra+4); i++){
-        if(/^\d{1,2}$/.test(tok[i].s) && !(i>0 && tok[i-1].s==='dia')){
-          min = parseInt(tok[i].s,10)*60;
+        if(/^\d{1,2}$/.test(tok[i].s) && !(i>0 && tok[i-1].s==='dia') && !(i>0 && ['entrada','saida','almoco','volta'].includes(tok[i-1].s))){
+          extraMin = parseInt(tok[i].s,10)*60;
           if(tok[i+1] && tok[i+1].s==='e' && tok[i+2]){
-            if(tok[i+2].s==='meia') min += 30;
-            else if(/^\d{1,2}$/.test(tok[i+2].s)) min += parseInt(tok[i+2].s,10);
+            if(tok[i+2].s==='meia') extraMin += 30;
+            else if(/^\d{1,2}$/.test(tok[i+2].s)) extraMin += parseInt(tok[i+2].s,10);
           }
           break;
         }
       }
-      if(min!==null){ d.extra = min; feitos.push('hora extra'); }
     }
-    if(!feitos.length){ showToast('Não entendi os horários, tente de novo'); return; }
+    const campos = Object.keys(novos);
+    if(!campos.length && extraMin===null){ showToast('Não entendi os horários. Ex.: "dia 5, entrada 7 e 3, saída meio-dia"'); return; }
+    /* registro parcial: num dia ainda sem horários confirmados, só entra o que foi falado */
+    if(campos.length && !temConfirmado){
+      d.entrada = d.almocoSaida = d.almocoVolta = d.saida = null;
+    }
+    campos.forEach(c=>{ d[c] = minToTime(novos[c]); d.confirmado[c] = true; });
+    if(extraMin!==null) d.extra = extraMin;
+    state.pontoOffset = 0;
     renderPonto(); persist();
-    showToast('Dia '+dia+': '+feitos.join(', ')+' registrados');
-  }, 'Ex: "entrada 7 e meia, almoço 12 às 13, saída 17"');
+    const ordem = ['entrada','almocoSaida','almocoVolta','saida'];
+    const resumo = ordem.filter(c=>c in novos).map(c=>rotulo[c]+' '+d[c]);
+    if(extraMin!==null) resumo.push('extra '+minToHoursLabel(extraMin));
+    showToast('Dia '+dia+': '+resumo.join(', '));
+  }, 'Ex: "dia 5, entrada 7 e 3, saída meio-dia"');
 }
 
 /* ---------- LOUVOR: novo louvor ---------- */
 const VOZ_NOTAS = { do:'C', re:'D', mi:'E', fa:'F', sol:'G', la:'A', si:'B', c:'C', d:'D', e:'E', f:'F', g:'G', a:'A', b:'B' };
 function ditarLouvor(btn){
+  vozOuvir(btn, processarLouvorTexto, 'Ex: "louvor Aliança, artista Fulano, tom D, categoria harpa"');
+}
+/* mic da lista do Louvor: "buscar Aliança" filtra a lista; qualquer outra frase cria um louvor novo */
+function ditarLouvorLista(btn){
   vozOuvir(btn, (texto)=>{
+    const m = vozSemAcento(texto).toLowerCase().match(/^\s*(buscar|busque|procurar|procure|achar|ache|abrir|abra)\s+(.+)$/);
+    if(m){
+      const termo = texto.trim().split(/\s+/).slice(1).join(' ').replace(/^(o|a|os|as|musica|louvor|hino)\s+/i,'');
+      const inp = document.getElementById('louvorSearchInput');
+      inp.value = termo; onLouvorSearchInput(termo);
+      showToast('Buscando "'+termo+'"');
+      return;
+    }
+    processarLouvorTexto(texto);
+  }, 'Ex: "buscar Aliança" ou "louvor Aliança, artista Fulano, tom D"');
+}
+function processarLouvorTexto(texto){
+  {
     const tok = vozTokens(texto);
     const iArt = tok.findIndex(t=>['artista','cantor','cantora','autor','banda'].includes(t.s));
     const iTom = tok.findIndex(t=>t.s==='tom');
@@ -384,7 +443,7 @@ function ditarLouvor(btn){
     renderLvNovoCategoriaChips();
     if(tomOrig){ window.lvNovoTomOriginal = tomOrig; window.lvNovoTomModoMenor = menor; atualizarLvNovoTomBox(); }
     showToast('Confira e toque em Criar e Abrir');
-  }, 'Ex: "louvor Aliança, artista Fulano, tom D, categoria harpa"');
+  }
 }
 
 /* rola o campo para a área visível quando o teclado abre dentro de um modal */
@@ -394,3 +453,81 @@ document.addEventListener('focusin', (e)=>{
     setTimeout(()=>{ try{ el.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(_){} }, 320);
   }
 });
+
+/* ---------- PERGUNTAS POR VOZ (na Busca): o app só responde, não altera nada ---------- */
+function vozReais(v){ return fmtMoney(v); }
+function responderPergunta(texto){
+  const t = vozSemAcento(texto).toLowerCase();
+  const tem = (...ws)=> ws.some(w=>t.includes(w));
+  const agora = new Date();
+  const nomeMes = (k)=> monthLabelLong(k);
+  /* Mercado */
+  if(tem('mercado','compra','compras','lista','carrinho','supermercado')){
+    const emAnd = totalCompraEmAndamento();
+    const gastoMes = calcularGastoMercadoMes(agora.getFullYear(), agora.getMonth()) + emAnd;
+    if(tem('lista','carrinho','vai dar','compra atual') && !tem('gastei','gasto','gastou')){
+      const n = (state.listaCompras||[]).length;
+      return bannerGeo('positivo','carrinho', vozReais(emAnd)+' na compra em andamento', n+(n===1?' item':' itens')+' na lista agora');
+    }
+    const meta = state.mercadoMeta || 0;
+    if(meta>0){
+      const resto = meta - gastoMes;
+      return bannerGeo(resto<0?'negativo':'positivo', resto<0?'alerta':'carrinho',
+        vozReais(gastoMes)+' no Mercado este mês',
+        resto<0 ? 'Passou '+vozReais(-resto)+' da meta de '+vozReais(meta) : 'Faltam '+vozReais(resto)+' para a meta de '+vozReais(meta), gastoMes/meta);
+    }
+    return bannerGeo('positivo','carrinho', vozReais(gastoMes)+' no Mercado este mês','Sem meta definida para o Mercado');
+  }
+  /* Ponto PJ */
+  if(tem('ponto','horas','hora ','trabalh','expediente',' pj')){
+    const mKey = todayKey();
+    const st = pontoStatusMes(mKey);
+    if(tem('receber','valor','ganh')){
+      return bannerGeo('positivo','moeda', vozReais(st.r.valorReceber)+' a receber', 'Ponto PJ de '+nomeMes(mKey)+' · '+minToHoursLabel(st.r.totalMin)+' registradas');
+    }
+    if(tem('trabalhei','total','quantas horas tenho','ja fiz')){
+      return bannerGeo('positivo','relogio', minToHoursLabel(st.r.totalMin)+' no mês', 'Padrão do mês: '+minToHoursLabel(st.r.padraoMin)+' · '+nomeMes(mKey));
+    }
+    return pontoBannerHtml(mKey);
+  }
+  /* Planner / Dashboard */
+  if(tem('sobra','sobrar','sobrou','sobram','saldo','gastos','gasto','gastei','gastamos','despesa','renda','salario','em aberto','pagar','contas')){
+    const mKey = mesFinanceiroAtual();
+    let users = ['davi','cris'], quem = 'do casal';
+    if(tem('davi')){ users=['davi']; quem='do Davi'; }
+    else if(tem('cris')){ users=['cris']; quem='da Cris'; }
+    const renda = users.reduce((a,u)=>a+incomeForMonth(u,mKey),0);
+    const gasto = users.reduce((a,u)=>a+expensesForMonth(u,mKey),0);
+    if(tem('em aberto','pagar','falta pagar')){
+      const n = contasEmAbertoNoMes(mKey);
+      return bannerGeo(n>0?'negativo':'positivo', n>0?'alerta':'ok', n>0 ? n+(n===1?' conta em aberto':' contas em aberto') : 'Nenhuma conta em aberto', 'Contas de '+nomeMes(mKey));
+    }
+    if(tem('renda','salario','ganho','receber')){
+      return bannerGeo('positivo','moeda', vozReais(renda)+' de renda '+quem, nomeMes(mKey));
+    }
+    if(tem('gastos','gasto','gastei','gastamos','despesa') && !tem('sobra','sobrar','sobrou','sobram','saldo')){
+      return bannerGeo('positivo','moeda', vozReais(gasto)+' em gastos '+quem, nomeMes(mKey)+' · renda '+vozReais(renda), renda>0?gasto/renda:null);
+    }
+    const sobra = renda - gasto;
+    return bannerGeo(sobra<0?'negativo':'positivo', sobra<0?'alerta':'ok',
+      sobra<0 ? 'Faltam '+vozReais(-sobra)+' no mês' : 'Sobram '+vozReais(sobra)+' no mês',
+      nomeMes(mKey)+' '+quem+' · renda '+vozReais(renda)+' · gastos '+vozReais(gasto), renda>0?Math.min(1,gasto/renda):null);
+  }
+  return null;
+}
+function perguntarPorVoz(btn){
+  vozOuvir(btn, (texto)=>{
+    const resp = document.getElementById('buscaGlobalResposta');
+    const html = responderPergunta(texto);
+    if(html){
+      resp.innerHTML = html;
+      document.getElementById('buscaGlobalInput').value = '';
+      document.getElementById('buscaGlobalResultados').innerHTML = '';
+    } else {
+      resp.innerHTML = '';
+      const inp = document.getElementById('buscaGlobalInput');
+      inp.value = texto.trim().replace(/[.?!]+$/,'');
+      onBuscaGlobalInput(inp.value);
+    }
+  }, 'Pergunte: "quanto gastei no mercado?" ou diga o que procurar');
+}

@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.67">
+<link rel="stylesheet" href="style.css?v=2.70">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.67</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.70</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -286,6 +286,7 @@
         <input type="text" id="louvorSearchInput" placeholder="Buscar por título ou artista..." oninput="onLouvorSearchInput(this.value)">
         <button id="louvorSearchClear" onclick="limparLouvorSearch()" style="display:none">✕</button>
       </div>
+      <button type="button" class="voz-btn" onclick="ditarLouvorLista(this)" aria-label="Ditar louvor ou buscar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
       <button type="button" class="lv-filtro-toggle active" id="louvorFiltroToggle" onclick="toggleLouvorFiltros()" title="Mostrar/ocultar filtros" aria-label="Mostrar/ocultar filtros">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
       </button>
@@ -308,7 +309,7 @@
   <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span>Ponto PJ</span></button>
   <button class="nav-item" onclick="switchAba('receitas')" data-aba="receitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg><span>Receitas</span></button>
   <button class="nav-item" onclick="switchAba('louvor')" data-aba="louvor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Louvor</span></button>
-  <button class="nav-item" onclick="switchAba('mercado')" data-aba="mercado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>Mercado</span></button>
+  <button class="nav-item" onclick="switchAba('mercado')" data-aba="mercado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h4l2.70 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>Mercado</span></button>
 </nav>
 
 
@@ -852,47 +853,6 @@
   </div>
 </div>
 
-<div class="fullpage" id="pageTarefas">
-  <div class="fullpage-header">
-    <button class="header-btn" onclick="closeTarefasPage()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div class="fullpage-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><path d="M9 12l2 2 4-4"/></svg>Organização</div>
-    <div style="width:40px"></div>
-  </div>
-
-  <div class="tarefas-subtabs">
-    <button class="subtab-btn active" id="subtabBtnTarefas" onclick="switchTarefasSubtab('tarefas')">Tarefas</button>
-    <button class="subtab-btn" id="subtabBtnSemana" onclick="switchTarefasSubtab('semana')">Semana</button>
-  </div>
-
-  <div class="fullpage-content" id="subtabTarefas">
-    <div class="card">
-      <div class="field full">
-        <label>Nome da Tarefa</label>
-        <input type="text" id="tarefaNome" placeholder="Ex: Comprar mantimentos">
-      </div>
-      <div class="field full">
-        <label>Descrição (opcional)</label>
-        <input type="text" id="tarefaDesc" placeholder="Detalhes da tarefa">
-      </div>
-      <div class="field full">
-        <label>Categoria (opcional)</label>
-        <input type="text" id="tarefaCategoria" placeholder="Ex: Casa, Trabalho...">
-      </div>
-      <button class="btn btn-block" onclick="salvarTarefa()">+ Adicionar Tarefa</button>
-    </div>
-    <div id="tarefasLista"></div>
-  </div>
-
-  <div class="fullpage-content" id="subtabSemana" style="display:none">
-    <div class="semana-nav">
-      <button class="btn-icon-sm" onclick="navSemana(-1)">◀</button>
-      <div class="semana-label" id="semanaLabel"></div>
-      <button class="btn-icon-sm" onclick="navSemana(1)">▶</button>
-    </div>
-    <div id="semanaDiasLista"></div>
-  </div>
-</div>
-
 <!-- FULLPAGE: Detalhe do Louvor (Edição / PDF / Slides) -->
 <div class="fullpage" id="pageComando">
   <div class="fullpage-header">
@@ -1367,7 +1327,9 @@
     <div class="receitas-search" style="margin-bottom:var(--s3)">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input type="text" id="buscaGlobalInput" placeholder="Contas, receitas, louvor, mercado..." oninput="onBuscaGlobalInput(this.value)">
+      <button type="button" class="voz-btn" onclick="perguntarPorVoz(this)" aria-label="Perguntar por voz"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
     </div>
+    <div id="buscaGlobalResposta"></div>
     <div id="buscaGlobalResultados" style="overflow-y:auto;flex:1"></div>
   </div>
 </div>
@@ -1499,26 +1461,6 @@
     <div class="ios-confirm-actions">
       <button class="ios-confirm-btn" id="iosConfirmBtnNao" onclick="iosConfirmResolver(false)">Não</button>
       <button class="ios-confirm-btn destructive" id="iosConfirmBtnSim" onclick="iosConfirmResolver(true)">Sim</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalSemanaItem">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Adicionar Item</h3>
-      <button class="modal-close" onclick="closeModal('modalSemanaItem')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
-    </div>
-    <input type="hidden" id="semanaItemDiaKey">
-    <input type="hidden" id="semanaItemPeriodo">
-    <input type="hidden" id="semanaItemId">
-    <div class="field full">
-      <label>Descrição</label>
-      <input type="text" id="semanaItemTexto" placeholder="Ex: Reunião com o time">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline btn-block" onclick="closeModal('modalSemanaItem')">Cancelar</button>
-      <button class="btn btn-block" onclick="salvarSemanaItem()">Salvar</button>
     </div>
   </div>
 </div>
@@ -1690,6 +1632,16 @@
       <label>Nome (aparece no PDF exportado)</label>
       <input type="text" id="pontoConfigNome" placeholder="Ex: Cristiane Silva">
     </div>
+    <div class="field full">
+      <label>Mês vigente</label>
+      <div class="pj-mes-stepper">
+        <button type="button" class="pj-mes-btn" onclick="pontoConfigNavMes(-1)" aria-label="Mês anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></button>
+        <div class="pj-mes-label" id="pontoConfigMesLabel"></div>
+        <button type="button" class="pj-mes-btn" onclick="pontoConfigNavMes(1)" aria-label="Próximo mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
+      </div>
+      <div class="pj-mes-nota">O mês vigente é o que o app considera "atual" no Ponto PJ, Planner e Dashboard. Você pode escolher meses passados ou futuros.</div>
+      <div class="pj-mes-nota pj-mes-aviso" id="pontoConfigMesNota" style="display:none">Ao salvar, o app vai pedir confirmação para trocar o mês vigente.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalPontoConfig')">Cancelar</button>
       <button class="btn btn-block" onclick="salvarPontoConfig()">Salvar</button>
@@ -1740,16 +1692,16 @@ if(versaoArmazenada !== VERSAO_ATUAL){
   }
 }
 </script>
-<script src="core.js?v=2.67"></script>
-<script src="comando.js?v=2.67"></script>
-<script src="layout.js?v=2.67"></script>
-<script src="app.js?v=2.67"></script>
-<script src="panorama.js?v=2.67"></script>
-<script src="planner.js?v=2.67"></script>
-<script src="ponto.js?v=2.67"></script>
-<script src="receitas.js?v=2.67"></script>
-<script src="louvor.js?v=2.67"></script>
-<script src="mercado.js?v=2.67"></script>
-<script src="voz.js?v=2.67"></script>
+<script src="core.js?v=2.70"></script>
+<script src="comando.js?v=2.70"></script>
+<script src="layout.js?v=2.70"></script>
+<script src="app.js?v=2.70"></script>
+<script src="panorama.js?v=2.70"></script>
+<script src="planner.js?v=2.70"></script>
+<script src="ponto.js?v=2.70"></script>
+<script src="receitas.js?v=2.70"></script>
+<script src="louvor.js?v=2.70"></script>
+<script src="mercado.js?v=2.70"></script>
+<script src="voz.js?v=2.70"></script>
 </body>
 </html>
