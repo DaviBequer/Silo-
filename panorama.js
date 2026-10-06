@@ -1259,10 +1259,12 @@ function onContaLogoSelected(event){
   reader.onload = e=>{
     const item = getGastoItemRef(editandoConta.user, editandoConta.cat, editandoConta.id);
     if(item){
-      item.logoUrl = e.target.result;
-      persist();
-      document.getElementById('editarContaLogoPreview').innerHTML = `<img src="${item.logoUrl}" class="conta-logo-grande">`;
-      renderChecklist();
+      comprimirImagemDataUrl(e.target.result).then(url=>{
+        item.logoUrl = url;
+        persist();
+        document.getElementById('editarContaLogoPreview').innerHTML = `<img src="${item.logoUrl}" class="conta-logo-grande">`;
+        renderChecklist();
+      });
     }
   };
   reader.readAsDataURL(file);

@@ -74,8 +74,15 @@ async function persistAgora(){
   clearTimeout(persistTimer);
   persistTimer = null;
   if(!remoteReady || !window.SiloSupabase) return false;
-  const ok = await window.SiloSupabase.saveState(state);
-  if(!ok && typeof showToast==='function') showToast('Não salvou: '+(window.SiloSupabase.lastError||'sem conexão'));
+  let ok = false;
+  for(let t=0; t<3 && !ok; t++){
+    ok = await window.SiloSupabase.saveState(state);
+    if(!ok && t<2) await new Promise(r=>setTimeout(r, 1500*(t+1)));
+  }
+  if(!ok && typeof showToast==='function'){
+    let kb = 0; try{ kb = Math.round(JSON.stringify(state).length/1024); }catch(e){}
+    showToast('Não salvou ('+kb+' KB): '+(window.SiloSupabase.lastError||'sem conexão'));
+  }
   return ok;
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden && persistTimer) persistAgora(); });
@@ -194,6 +201,7 @@ async function carregar(){
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility('panorama');
   await finalizarMigracaoLegado(precisaSalvar, legado);
+  compactarImagensDoEstado();
 }
 // Migração única do localStorage -> Supabase (pode ser apagada quando todos os aparelhos já tiverem migrado)
 async function finalizarMigracaoLegado(precisaSalvar, legado){
@@ -285,6 +293,61 @@ function popularSelectMes(selectId){
 }
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }
+/* ================= IMAGENS (logos reduzidas antes de ir para a nuvem) ================= */
+function comprimirImagemDataUrl(dataUrl, lado, qualidade){
+  lado = lado || 160; qualidade = qualidade || 0.85;
+  return new Promise(resolve=>{
+    try{
+      const img = new Image();
+      img.onload = ()=>{
+        try{
+          const esc = Math.min(1, lado/Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width*esc)), h = Math.max(1, Math.round(img.height*esc));
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          const png = /^data:image\/(png|svg|webp|gif)/.test(dataUrl);
+          const out = png ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', qualidade);
+          resolve(out.length < dataUrl.length ? out : dataUrl);
+        }catch(e){ resolve(dataUrl); }
+      };
+      img.onerror = ()=> resolve(dataUrl);
+      img.src = dataUrl;
+    }catch(e){ resolve(dataUrl); }
+  });
+}
+// Uma vez só: reduz logos grandes que já estão salvas (fotos de receitas já são comprimidas e ficam como estão)
+async function compactarImagensDoEstado(){
+  if(!remoteReady || state.imagensCompactadasV1) return;
+  const lista = [];
+  const varrer = (o)=>{
+    if(!o || typeof o!=='object') return;
+    Object.keys(o).forEach(k=>{
+      const v = o[k];
+      if(typeof v==='string' && v.startsWith('data:image/') && v.length>40000) lista.push([o,k]);
+      else if(v && typeof v==='object') varrer(v);
+    });
+  };
+  Object.keys(state).forEach(k=>{
+    if(k==='receitas') return;
+    const v = state[k];
+    if(typeof v==='string' && v.startsWith('data:image/') && v.length>40000) lista.push([state,k]);
+    else if(v && typeof v==='object') varrer(v);
+  });
+  let alteradas = 0;
+  for(const [o,k] of lista){
+    const antes = o[k];
+    const depois = await comprimirImagemDataUrl(antes, k==='logoApp' ? 256 : 160);
+    if(depois.length < antes.length){ o[k] = depois; alteradas++; }
+  }
+  state.imagensCompactadasV1 = true;
+  await persistAgora();
+  if(alteradas>0){
+    if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
+    renderAll();
+    if(typeof showToast==='function') showToast('Imagens otimizadas ('+alteradas+')');
+  }
+}
+
 /* Banner geométrico (Ponto PJ, Dashboard, Busca): tipo 'positivo'|'negativo', ícone, título, subtítulo (HTML) e progresso 0..1 opcional */
 const GEO_ICONES = {
   ok:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
@@ -348,11 +411,12 @@ function onLogoFileSelected(ev){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = function(e){
-    const dataUrl = e.target.result;
-    state.logoApp = dataUrl;
-    persist();
-    aplicarLogoSalva();
-    showToast('Logo atualizada');
+    comprimirImagemDataUrl(e.target.result, 256).then(dataUrl=>{
+      state.logoApp = dataUrl;
+      persist();
+      aplicarLogoSalva();
+      showToast('Logo atualizada');
+    });
   };
   reader.readAsDataURL(file);
 }

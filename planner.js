@@ -675,7 +675,7 @@ function onCartaoCardLogoSelected(event){
   const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = e=>{ cartaoCardLogoUrlAtual = e.target.result; renderCartaoCardLogoPreview(); };
+  reader.onload = e=>{ comprimirImagemDataUrl(e.target.result).then(url=>{ cartaoCardLogoUrlAtual = url; renderCartaoCardLogoPreview(); }); };
   reader.readAsDataURL(file);
 }
 function removerCartaoCardLogo(){
@@ -756,7 +756,7 @@ function onCompraTrackerLogoSelected(event){
   const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = e=>{ compraTrackerLogoUrlAtual = e.target.result; renderCompraTrackerLogoPreview(); };
+  reader.onload = e=>{ comprimirImagemDataUrl(e.target.result).then(url=>{ compraTrackerLogoUrlAtual = url; renderCompraTrackerLogoPreview(); }); };
   reader.readAsDataURL(file);
 }
 function removerCompraTrackerLogo(){
@@ -1220,7 +1220,7 @@ function onGastoLogoSelected(event){
   const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = e=>{ gastoLogoUrlAtual = e.target.result; renderGastoLogoPreview(); };
+  reader.onload = e=>{ comprimirImagemDataUrl(e.target.result).then(url=>{ gastoLogoUrlAtual = url; renderGastoLogoPreview(); }); };
   reader.readAsDataURL(file);
 }
 function removerGastoLogo(){

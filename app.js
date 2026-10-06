@@ -25,6 +25,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.74', itens: [
+    'Logos são reduzidas ao enviar e as já salvas são otimizadas uma vez; salvar na nuvem tenta de novo se falhar'
+  ]},
   { versao: 'v2.73', itens: [
     'Corrigido: funções de cálculo e formatação que estavam faltando deixavam o Dashboard vazio e travavam a importação',
     'Avisos de conexão com a nuvem agora mostram o motivo do erro'
