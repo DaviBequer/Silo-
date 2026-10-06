@@ -99,7 +99,7 @@ async function iavEnviar(){
   const btn = document.getElementById('iavBtn');
   btn.classList.add('pensando'); iavBolha('“'+texto+'”\nPensando…');
   try{
-    const r = await fetch(window.SUPABASE_URL+'/functions/v1/ia-voz', {
+    const r = await fetch(window.SUPABASE_URL+'/functions/v1/smart-handler', {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'apikey':window.SUPABASE_ANON_KEY, 'Authorization':'Bearer '+window.SUPABASE_ANON_KEY },
       body: JSON.stringify({ texto, contexto: iavContexto() })
