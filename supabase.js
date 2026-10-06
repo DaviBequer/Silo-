@@ -21,6 +21,7 @@
   window.SiloSupabase = {
     enabled: !!client,
     userId: USER_ID,
+    lastError: '',
     client,
     // Retorna { ok:true, data } (data = null se ainda não existe) ou { ok:false, error }
     async loadState(){
@@ -35,6 +36,7 @@
         return { ok:true, data: data ? data.data : null };
       } catch (e) {
         console.error('[SUPABASE] Erro ao carregar estado:', e);
+        this.lastError = String((e && (e.message || e.code)) || e).slice(0,120);
         return { ok:false, error:e };
       }
     },
@@ -53,6 +55,7 @@
         return true;
       } catch (e) {
         console.error('[SUPABASE] Erro ao salvar estado:', e);
+        this.lastError = String((e && (e.message || e.code)) || e).slice(0,120);
         return false;
       }
     },

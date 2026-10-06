@@ -25,6 +25,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.72', itens: [
+    'Avisos de conexão com a nuvem agora mostram o motivo do erro'
+  ]},
   { versao: 'v2.71', itens: [
     'Dados salvos só na nuvem (Supabase), sem localStorage; os dados antigos do aparelho são migrados na primeira abertura'
   ]},

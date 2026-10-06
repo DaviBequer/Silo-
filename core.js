@@ -75,7 +75,7 @@ async function persistAgora(){
   persistTimer = null;
   if(!remoteReady || !window.SiloSupabase) return false;
   const ok = await window.SiloSupabase.saveState(state);
-  if(!ok && typeof showToast==='function') showToast('Sem conexão: a alteração não foi salva.');
+  if(!ok && typeof showToast==='function') showToast('Não salvou: '+(window.SiloSupabase.lastError||'sem conexão'));
   return ok;
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden && persistTimer) persistAgora(); });
@@ -184,7 +184,7 @@ async function carregar(){
     console.error('[LOAD] Erro ao carregar estado:', e);
     state = novoEstado();
     remoteReady = false;   // não grava nada até conseguir ler a nuvem
-    if(typeof showToast==='function') showToast('Sem conexão com o Supabase. Nada será salvo até reconectar.');
+    if(typeof showToast==='function') showToast('Sem conexão com o Supabase: '+((window.SiloSupabase&&window.SiloSupabase.lastError)||(e&&e.message)||'erro desconhecido'));
     if(carregarTentativas++ < 5) setTimeout(carregar, 8000);
   }
   limparDadosAntigos();

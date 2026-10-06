@@ -751,7 +751,7 @@ function onImportFileSelected(event){
       state = novo;
       persistAgora().then(salvou=>{
         if(salvou) location.reload();
-        else showToast('Erro ao importar os dados.');
+        else showToast('Erro ao importar: '+((window.SiloSupabase&&window.SiloSupabase.lastError)||'sem conexão com o Supabase'));
       });
     });
   };
