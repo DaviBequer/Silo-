@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v74';
-const APP_VERSION = '2.74';
+const CACHE_NAME = 'siloe-cache-v75';
+const APP_VERSION = '2.75';
 const ARQUIVOS = [
   './index.html',
   `./style.css?v=${APP_VERSION}`,
@@ -15,6 +15,7 @@ const ARQUIVOS = [
   `./louvor.js?v=${APP_VERSION}`,
   `./mercado.js?v=${APP_VERSION}`,
   `./voz.js?v=${APP_VERSION}`,
+  `./ia-voz.js?v=${APP_VERSION}`,
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -39,6 +40,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return; // POST (IA, Supabase) passa direto, sem cache
   // Network first com fallback para cache
   event.respondWith(
     Promise.race([
