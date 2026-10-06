@@ -25,6 +25,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.77', itens: [
+    'IA: análise financeira (botão ✨ e no Concluir mês), leitura de boleto por foto (botão câmera), alerta diário quando o saldo vai faltar e perguntas/simulações por voz'
+  ] },
   { versao: 'v2.76', itens: [
     'Assistente de voz: corrigida a repetição de palavras ao falar no celular; novo painel de conversa com o que você disse, o raciocínio da IA e as ações feitas'
   ] },

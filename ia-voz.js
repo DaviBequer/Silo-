@@ -12,12 +12,30 @@ function iavCriarUI(){
   b.onclick = iavAlternar;
   const p = document.createElement('div');
   p.id = 'iavPainel';
+  const mini = (id, svg, tit, fn, nivel)=>{
+    const x = document.createElement('button');
+    x.id = id; x.type = 'button'; x.className = 'iav-mini'; x.title = tit; x.setAttribute('aria-label', tit);
+    x.style.bottom = 'calc('+(84+nivel*58)+'px + env(safe-area-inset-bottom,0px))';
+    x.innerHTML = svg; x.onclick = fn; return x;
+  };
+  const SVG_ANALISE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17l.7 1.8L21.5 19.5l-1.8.7L19 22l-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
+  const SVG_CAMERA = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'iavFoto'; inp.style.display = 'none';
+  inp.onchange = iavBoleto;
   document.body.appendChild(p); document.body.appendChild(b);
+  document.body.appendChild(mini('iavBtnAnalise', SVG_ANALISE, 'Analisar minhas finanças', ()=>iavAnalise('mes'), 1));
+  document.body.appendChild(mini('iavBtnFoto', SVG_CAMERA, 'Ler boleto por foto', ()=>inp.click(), 2));
+  document.body.appendChild(inp);
   const st = document.createElement('style');
   st.textContent = `
   #iavBtn{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;border:none;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:300;cursor:pointer}
   #iavBtn.ouvindo{background:var(--danger);animation:micPulse 1s ease-in-out infinite}
   #iavBtn.pensando{opacity:.6;pointer-events:none}
+  .iav-mini{position:fixed;right:23px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line,#ddd);background:var(--card,#fff);color:var(--gold,#b8963e);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:300;cursor:pointer}
+  .iav-botoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .iav-botoes button{flex:1;min-width:110px;padding:9px 10px;border-radius:12px;border:1px solid var(--line,#ddd);background:var(--card,#fff);color:var(--text,#111);font-weight:700;font-size:13px;font-family:inherit;cursor:pointer}
+  .iav-botoes button.prim{background:var(--primary);color:#fff;border-color:var(--primary)}
   #iavPainel{position:fixed;left:12px;right:82px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:300;display:none;background:var(--card,#fff);color:var(--text,#111);border:1px solid var(--line,#ddd);border-radius:20px;padding:12px 14px 14px;box-shadow:0 10px 30px rgba(0,0,0,.18);max-height:50vh;overflow:auto;font-size:14px;line-height:1.4}
   #iavPainel.show{display:block;animation:iavSobe .22s ease-out}
   @keyframes iavSobe{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -30,7 +48,7 @@ function iavCriarUI(){
   .iav-pens{font-style:italic;color:var(--text-faint,#8a8478);font-size:13px;margin-bottom:6px}
   .iav-chip{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-weight:600;font-size:13.5px;animation:iavSobe .25s ease-out both}
   .iav-chip i{font-style:normal;color:#fff;background:var(--success,#2e8b57);width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px}
-  .iav-fala{margin-top:6px}
+  .iav-fala{margin-top:6px;white-space:pre-line}
   .iav-pontos{display:inline-flex;gap:4px;vertical-align:middle;margin-left:4px}
   .iav-pontos span{width:6px;height:6px;border-radius:50%;background:var(--gold,#b8963e);animation:iavPula 1s infinite ease-in-out}
   .iav-pontos span:nth-child(2){animation-delay:.15s}.iav-pontos span:nth-child(3){animation-delay:.3s}
@@ -54,11 +72,17 @@ function iavPainel(o){
     (o.feitos||[]).forEach((f,i)=>{ h += `<div class="iav-chip" style="animation-delay:${i*0.12}s"><i>✓</i><span>${iavEsc(f)}</span></div>`; });
     if(o.fala) h += `<div class="iav-fala">${iavEsc(o.fala)}</div>`;
     h += `</div>`;
+    if(o.botoes && o.botoes.length){
+      iavBotoesFn = o.botoes.map(b=>b.fn);
+      h += `<div class="iav-botoes">`+o.botoes.map((b,i)=>`<button class="${b.prim?'prim':''}" onclick="iavBotao(${i})">${iavEsc(b.txt)}</button>`).join('')+`</div>`;
+    }
   }
   el.innerHTML = h; el.classList.add('show');
-  if(o.fase==='pronto') iavFecha = setTimeout(()=>iavPainel(null), 9000);
+  if(o.fase==='pronto' && !o.fixo && !(o.botoes&&o.botoes.length)) iavFecha = setTimeout(()=>iavPainel(null), 9000);
 }
 
+let iavBotoesFn = [];
+function iavBotao(i){ const f = iavBotoesFn[i]; iavPainel(null); if(f) f(); }
 function iavJunta(a,b){ return [a,b].filter(Boolean).join(' ').trim(); }
 
 function iavAlternar(){
@@ -123,7 +147,46 @@ function iavContexto(){
     usuario: state.currentUser,
     saldoAtual: state.users[state.currentUser].saldoAtual||0,
     mesFoco: mKey, hoje: todayKey(),
-    contas
+    contas,
+    resumo: iavResumo()
+  };
+}
+
+/* ---------- resumo financeiro calculado pelo app (a IA só interpreta) ---------- */
+function iavTent(fn, padrao){ try{ const v = fn(); return v===undefined ? padrao : v; }catch(e){ return padrao; } }
+function iavR2(v){ return Math.round((Number(v)||0)*100)/100; }
+function iavResumo(){
+  const m0 = state.focusMonth;
+  const cats = ['moradia','fixo','assinatura','futuro'];
+  const meses = [0,1,2].map(i=>addMonths(m0,i)).map(m=>{
+    const d = iavTent(()=>dadosDoMes(m), {renda:0,gastoTotal:0,sobra:0});
+    const fx = iavTent(()=>calcularFluxoCaixa(m), null);
+    const brutos = iavTent(()=>gastosBrutosMes('davi', m), 0);
+    const contrib = iavTent(()=>contribCrisForMonth(m), 0);
+    return {
+      mes: m,
+      renda: iavR2(d.renda), gastosAPagar: iavR2(d.gastoTotal), sobraPrevista: iavR2(d.sobra),
+      gastosTotaisDoMes: iavR2(brutos),
+      porCategoria: Object.fromEntries(cats.map(c=>[c, iavR2(iavTent(()=>categoryTotalForMonth(c,m),0))])),
+      menorSaldoNoMes: fx && fx.minPonto ? { dia: fx.minPonto.dia, saldo: iavR2(fx.minPonto.saldo) } : null,
+      precisaGanharBrutoParaSairDoPJ: iavR2(Math.max(brutos-contrib,0)/(1-DIZIMO_PERCENT)),
+      parcelasDeComprasNoCartao: iavR2((state.comprasTracker||[]).reduce((t,c)=>t+compraTrackerValorNoMes(c,m),0))
+    };
+  });
+  const ant = iavTent(()=>dadosDoMes(addMonths(m0,-1)), null);
+  const ant3 = iavTent(()=>dadosDoMes(addMonths(m0,-3)), null);
+  const abertas = iavTent(()=>getContasDoMes(m0).filter(it=>!state.paid[m0+'_'+it.user+'_'+it.cat+'_'+it.id]), []);
+  const vilao = iavTent(()=>calcularVilaoOrcamento(m0), null);
+  return {
+    hoje: new Date().toISOString().slice(0,10), diaDeHoje: new Date().getDate(),
+    saldoAtual: iavR2(state.users.davi.saldoAtual), diaQueRecebe: state.diaRecebimentoRenda||5,
+    meses,
+    mesAnterior: ant ? { renda:iavR2(ant.renda), gastos:iavR2(ant.gastoTotal), sobra:iavR2(ant.sobra) } : null,
+    ha3Meses: ant3 ? { renda:iavR2(ant3.renda), gastos:iavR2(ant3.gastoTotal), sobra:iavR2(ant3.sobra) } : null,
+    contasEmAberto: { quantidade: abertas.length, total: iavR2(abertas.reduce((t,i)=>t+(Number(i.valor)||0),0)),
+      proximas: abertas.slice(0,6).map(i=>({ nome:i.desc, valor:iavR2(i.valor), dia:i.dia })) },
+    cartoesTotalEmAberto: iavR2(iavTent(()=>totalCartoesNoMesAtual(),0)),
+    categoriaQueMaisSubiu: vilao ? { categoria:vilao.cat, antes:iavR2(vilao.anterior), agora:iavR2(vilao.atual), subiuPct:Math.round(vilao.diffPct) } : null
   };
 }
 
@@ -136,15 +199,10 @@ async function iavEnviar(){
   const btn = document.getElementById('iavBtn');
   btn.classList.add('pensando'); iavPainel({fase:'pensando', texto});
   try{
-    const r = await fetch(window.SUPABASE_URL+'/functions/v1/smart-handler', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'apikey':window.SUPABASE_ANON_KEY, 'Authorization':'Bearer '+window.SUPABASE_ANON_KEY },
-      body: JSON.stringify({ texto, contexto: iavContexto() })
-    });
-    const j = await r.json();
+    const j = await iavChamar({ texto, contexto: iavContexto() });
     const feitos = [];
     for(const a of (j.acoes||[])){ const m = await iavExecutar(a); if(m) feitos.push(m); }
-    iavPainel({fase:'pronto', texto, pensamento:j.pensamento, feitos, fala:j.fala});
+    iavPainel({fase:'pronto', texto, pensamento:j.pensamento, feitos, fala:j.fala, fixo:(j.fala||'').length>160});
   }catch(e){
     console.error(e);
     iavPainel({fase:'pronto', texto, fala:'Não consegui falar com a IA. Verifique a função no Supabase.'});
@@ -205,4 +263,95 @@ async function iavExecutar(a){
   return null;
 }
 
-window.addEventListener('load', iavCriarUI);
+async function iavChamar(corpo){
+  const r = await fetch(window.SUPABASE_URL+'/functions/v1/smart-handler', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'apikey':window.SUPABASE_ANON_KEY, 'Authorization':'Bearer '+window.SUPABASE_ANON_KEY },
+    body: JSON.stringify(corpo)
+  });
+  return r.json();
+}
+
+/* ---------- análise financeira (botão ✨ e resumo ao concluir o mês) ---------- */
+async function iavAnalise(tipo){
+  const pergunta = tipo==='fechamento' ? 'Resumo do fechamento do mês' : 'Como estou financeiramente?';
+  iavPainel({fase:'pensando', texto:pergunta});
+  try{
+    const j = await iavChamar({ modo:'analise', tipo, resumo: iavResumo() });
+    iavPainel({fase:'pronto', texto:pergunta, pensamento:j.pensamento, fala:j.fala, fixo:true});
+  }catch(e){
+    console.error(e);
+    iavPainel({fase:'pronto', texto:pergunta, fala:'Não consegui falar com a IA agora. Tente de novo.', fixo:true});
+  }
+}
+
+/* ---------- foto de boleto/conta → lança no Planner (com confirmação) ---------- */
+function iavLerArquivo(file){
+  return new Promise((ok,err)=>{ const r = new FileReader(); r.onload = ()=>ok(r.result); r.onerror = err; r.readAsDataURL(file); });
+}
+async function iavBoleto(ev){
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if(!file) return;
+  iavPainel({fase:'pensando', texto:'📷 Foto do boleto enviada'});
+  try{
+    let url = await iavLerArquivo(file);
+    url = await comprimirImagemDataUrl(url, 1400, 0.8);
+    const j = await iavChamar({ modo:'boleto', imagem:url.split(',')[1], mime:(url.match(/^data:([^;]+)/)||[])[1]||'image/jpeg' });
+    const valor = iavNum(j.valor);
+    if(!j.desc || valor===null || valor<=0){
+      iavPainel({fase:'pronto', texto:'📷 Foto do boleto', pensamento:j.pensamento, fala:j.fala||'Não consegui ler o valor. Tente uma foto mais de perto e com boa luz.', fixo:true});
+      return;
+    }
+    const cat = ['moradia','fixo','assinatura'].includes(j.categoria) ? j.categoria : 'fixo';
+    const venc = /^\d{4}-\d{2}-\d{2}$/.test(j.vencimento||'') ? j.vencimento : null;
+    const dia = venc ? parseInt(venc.slice(8,10),10) : 1;
+    const mes = venc ? venc.slice(0,7) : state.focusMonth;
+    const txt = j.desc+' — '+fmtMoney(valor)+(venc?' (vence '+venc.slice(8,10)+'/'+venc.slice(5,7)+')':'');
+    iavPainel({ fase:'pronto', texto:'📷 Foto do boleto', pensamento:j.pensamento, fala:'Lançar '+txt+'?', fixo:true,
+      botoes:[
+        { txt:'Só neste mês', prim:true, fn:()=>iavLancar({desc:j.desc, valor, dia, mes, unica:true, cat}) },
+        { txt:'Fixa todo mês', fn:()=>iavLancar({desc:j.desc, valor, dia, mes, unica:false, cat}) },
+        { txt:'Cancelar', fn:()=>{} }
+      ] });
+  }catch(e){
+    console.error(e);
+    iavPainel({fase:'pronto', texto:'📷 Foto do boleto', fala:'Não consegui ler a foto agora. Tente de novo.', fixo:true});
+  }
+}
+function iavLancar(o){
+  const u = state.currentUser;
+  const id = 'g'+Date.now()+Math.floor(Math.random()*1000);
+  if(o.unica){
+    state.users[u].expenses.futuro.push({ id, desc:o.desc, descricao:'', recorrente:false, mesInicio:o.mes, parcelas:1, replicar:true, valor:o.valor, valores:{}, dia:o.dia });
+  } else {
+    state.users[u].expenses[o.cat].push({ id, desc:o.desc, descricao:'', valor:o.valor, dia:o.dia, mesInicio:null, tipo:'fixa', essencial:true });
+  }
+  renderPlanner(); renderPanorama(); persist();
+  iavPainel({fase:'pronto', pensamento:'Conta lançada.', feitos:['Lançado: '+o.desc+' '+fmtMoney(o.valor)+(o.unica?' (só em '+monthLabel(o.mes)+')':' (todo mês)')]});
+}
+
+/* ---------- alerta de aperto: avisa 1x por dia se o saldo vai faltar (conta feita pelo app, sem IA) ---------- */
+function iavAlertaAperto(){
+  try{
+    const hoje = new Date().toISOString().slice(0,10);
+    if(localStorage.getItem('iav-alerta')===hoje) return;
+    const m0 = state.focusMonth;
+    const achados = [m0, addMonths(m0,1)].map(m=>({ m, fx:calcularFluxoCaixa(m) })).filter(x=>x.fx.minPonto && x.fx.minPonto.saldo < 0);
+    if(!achados.length) return;
+    localStorage.setItem('iav-alerta', hoje);
+    const a = achados[0], p = a.fx.minPonto;
+    iavPainel({ fase:'pronto', fixo:true, pensamento:'Olhei o fluxo de caixa de '+monthLabel(a.m)+'.',
+      fala:'⚠️ Dia '+p.dia+' o saldo previsto fica em '+fmtMoneySigned(p.saldo)+' (faltam '+fmtMoney(Math.abs(p.saldo))+').\nO dia de recebimento configurado é '+a.fx.diaRecebimento+'. Veja se dá para reorganizar vencimentos.' });
+  }catch(e){}
+}
+function iavEsperarEstado(){
+  let n = 0;
+  const t = setInterval(()=>{
+    n++;
+    if(typeof remoteReady!=='undefined' && remoteReady){ clearInterval(t); setTimeout(iavAlertaAperto, 1500); }
+    else if(n>30) clearInterval(t);
+  }, 1000);
+}
+
+window.addEventListener('load', ()=>{ iavCriarUI(); iavEsperarEstado(); });
