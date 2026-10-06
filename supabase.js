@@ -55,11 +55,12 @@
     async saveState(payload){
       if (!client) return false;
       try {
+        const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
         const { error } = await client
           .from('app_state')
           .upsert({
             user_id: this.userId,
-            data: payload,
+            data: parsed,
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id' });
 
