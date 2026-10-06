@@ -68,20 +68,34 @@ function toggleFontePopup(){
 }
 let state = novoEstado();
 
-/* ================= PERSISTÊNCIA (localStorage do navegador) ================= */
+/* ================= PERSISTÊNCIA (localStorage + Supabase fallback) ================= */
 function persist(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }catch(e){ console.error('Erro ao salvar', e); }
+  }catch(e){ console.error('Erro ao salvar local', e); }
+
+  if(window.SiloSupabase && window.SiloSupabase.enabled){
+    window.SiloSupabase.saveState(state).catch(()=>{});
+  }
 }
 // Backup automático removido (v2.39) — guardava várias cópias inteiras do estado e ocupava espaço.
 // Limpa qualquer backup antigo que já esteja salvo no navegador, pra liberar espaço.
 try{ localStorage.removeItem('siloe-backups-auto'); }catch(e){}
-function carregar(){
+async function carregar(){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){
-      const saved = JSON.parse(raw);
+    let saved = null;
+
+    if(window.SiloSupabase && window.SiloSupabase.enabled){
+      const remote = await window.SiloSupabase.loadState();
+      if(remote) saved = remote;
+    }
+
+    if(!saved){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) saved = JSON.parse(raw);
+    }
+
+    if(saved){
       state = Object.assign(novoEstado(), saved);
       // garante estrutura de usuários/categorias mesmo se dados antigos incompletos
       ['davi','cris'].forEach(u=>{
@@ -153,8 +167,13 @@ function carregar(){
       delete state.config;
       if(!state.configFonte) state.configFonte = 'system';
       if(!state.layoutPrefs) state.layoutPrefs = {};
+    } else {
+      state = novoEstado();
     }
-  }catch(e){ /* sem dados salvos ainda */ }
+  }catch(e){
+    console.error('[LOAD] Erro ao carregar estado:', e);
+    state = novoEstado();
+  }
   limparDadosAntigos();
   aplicarFonteApp();
   renderAll();
@@ -216,309 +235,4 @@ function definirMesAtual(valor){
   localStorage.setItem(MES_ATUAL_KEY, valor);
   if(state.focusMonth) state.focusMonth = mesFinanceiroAtual();
   renderAll();
-}
-/* ================= BANNER GEOMÉTRICO (reutilizável) ================= */
-const BN_ICONES = {
-  alvo:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>',
-  ok:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7.5"/></svg>',
-  alerta:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>',
-  carrinho:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h3l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2"/></svg>',
-  moeda:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-1-1.6-1.6-2.8-1.6-1.6 0-2.8.9-2.8 2.1 0 3 5.8 1.4 5.8 4.4 0 1.2-1.3 2.1-3 2.1-1.4 0-2.5-.7-3-1.8"/><path d="M12 6v1.6M12 16.4V18"/></svg>',
-  relogio:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>',
-  receita:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-2 1.5-3 4-3 7 0 1.5 1 2.5 3 2.5V21"/></svg>',
-  musica:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
-  pergunta:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 .8c0 1.7-2.5 2.2-2.5 3.9"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>'
-};
-function bannerGeo(tipo, icone, titulo, sub, progresso){
-  const prog = (progresso===null || progresso===undefined) ? '' : `<div class="pj-banner-prog"><i style="width:${Math.max(0,Math.min(100,Math.round(progresso*100)))}%"></i></div>`;
-  return `<div class="pj-banner ${tipo}"><div class="pj-banner-ico">${BN_ICONES[icone]||''}</div><div class="pj-banner-body"><div class="pj-banner-title">${titulo}</div>${sub?`<div class="pj-banner-sub">${sub}</div>`:''}${prog}</div></div>`;
-}
-function iconeTile(icone, cor){
-  return `<span class="geo-tile" style="--bn:${cor||'var(--gold)'}">${(BN_ICONES[icone]||'').replace('width="20" height="20"','width="16" height="16"')}</span>`;
-}
-function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }
-function fmtMoneyCompact(v){ return 'R$ '+Math.round(v||0).toLocaleString('pt-BR'); }
-function fmtMoneyCompactSigned(v){ return v>=0 ? fmtMoneyCompact(v) : '-'+fmtMoneyCompact(Math.abs(v)); }
-function parseMoney(str){
-  if(!str) return 0;
-  const cleaned = String(str).replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
-  const v = parseFloat(cleaned);
-  return isNaN(v) ? 0 : v;
-}
-function maskMoneyInput(el){
-  let digits = el.value.replace(/\D/g,'');
-  if(digits===''){ el.value=''; return; }
-  digits = digits.replace(/^0+(?=\d)/,'');
-  while(digits.length<3) digits = '0'+digits;
-  let cents = digits.slice(-2);
-  let intPart = digits.slice(0,-2).replace(/^0+(?=\d)/,'');
-  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-  el.value = intPart+','+cents;
-}
-function handleMoneyKeydown(event){
-  if(event.key !== 'Enter') return;
-  event.preventDefault();
-  event.target.blur();
-  const td = event.target.closest('td');
-  const nextTd = td && td.nextElementSibling;
-  const nextInput = nextTd ? nextTd.querySelector('input') : null;
-  if(nextInput){ nextInput.focus(); nextInput.select(); }
-}
-
-const PADRAO_SEGQUI_HORAS = 9;
-const PADRAO_SEX_HORAS = 8;
-
-/* ================= LOGO PERSONALIZADA (escolhida pelo usuário no dispositivo) ================= */
-function aplicarLogoSalva(){
-  try{
-    const saved = localStorage.getItem('siloe-logo');
-    if(saved){
-      const img = document.getElementById('headerLogoImg');
-      img.src = saved;
-      img.style.display = '';
-      document.getElementById('headerLogoFallback').style.display = 'none';
-    }
-  }catch(e){ /* sem logo salva ainda */ }
-}
-
-/* ================= ÍCONES SVG (sem emoji) ================= */
-const ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-const ICON_EYE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
-const ICON_PRATO = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>';
-const ICON_RECEITA_EMPTY = '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg>';
-const ICON_CLOCK_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
-const ICON_PORCOES_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
-const ICON_DUPLICATE_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-const ICON_BAN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg>';
-const ICON_ARROW_RIGHT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
-const ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-const ICON_UNLOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
-const ICON_SAVE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
-const ICON_CHART = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
-const ICON_ALERT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-const ICON_WALLET = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>';
-const ICON_TREND = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
-
-/* ================= NAVEGAÇÃO DE ABAS ================= */
-function switchAba(aba){
-  document.querySelectorAll('.aba').forEach(el=>el.classList.remove('active'));
-  document.getElementById('aba-'+aba).classList.add('active');
-  document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
-  document.getElementById('pageLouvorForm')?.classList.remove('active');
-  document.getElementById('pageComando')?.classList.remove('active');
-  document.body.style.overflow = '';
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
-  window.scrollTo(0,0);
-  if(aba==='ponto') renderPonto();
-  if(aba==='planner') renderPlanner();
-  if(aba==='panorama') renderPanorama();
-  if(aba==='receitas') renderReceitas();
-  if(aba==='louvor') renderLouvor();
-  if(aba==='mercado') renderMercado();
-  if(typeof atualizarLvNavBar==='function') atualizarLvNavBar();
-  if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility(aba);
-}
-function switchUser(user){
-  state.currentUser = user;
-  document.getElementById('tabDavi').classList.toggle('active', user==='davi');
-  document.getElementById('tabCris').classList.toggle('active', user==='cris');
-  persist();
-  renderAll();
-}
-
-/* ================= CÁLCULOS FINANCEIROS ================= */
-const DIZIMO_PERCENT = 0.10;
-
-function rendaBaseForMonth(user, mKey){
-  if(user === 'davi'){
-    const mesAnterior = addMonths(mKey, -1);
-    return computePontoMes(mesAnterior).valorReceber;
-  }
-  return state.users[user].income[mKey] || 0;
-}
-function extraTotalForMonth(user, mKey){
-  return (state.users[user].extras||[]).reduce((sum,e)=>{
-    const fim = e.mesFim || e.mesInicio;
-    if(mKey >= e.mesInicio && mKey <= fim) return sum + (Number(e.valor)||0);
-    return sum;
-  }, 0);
-}
-function incomeForMonth(user, mKey){
-  const isAtual = mKey === mesFinanceiroAtual();
-  const saldo = isAtual ? (state.users[user].saldoAtual || 0) : 0;
-  if(isAtual && state.users[user].usarSaldoComoBase){
-    return saldo;
-  }
-  const base = rendaBaseForMonth(user, mKey);
-  const extra = extraTotalForMonth(user, mKey);
-  return base + extra + saldo;
-}
-/* Categorias fixas de um chip-picker + categorias que o usuário criou (guardadas em state[customKey]) */
-function getCategoriasComCustom(base, customKey){
-  return base.concat(state[customKey]||[]);
-}
-function dizimoForMonth(user, mKey){
-  if(user !== 'davi') return 0;
-  const base = rendaBaseForMonth(user, mKey);
-  return base * DIZIMO_PERCENT;
-}
-
-/* ================= RENDA EXTRA (múltiplas entradas, por período) ================= */
-let rendaExtraUser = null;
-function abrirRendaExtraModal(user, mKey){
-  rendaExtraUser = user;
-  document.getElementById('rendaExtraModalUsuario').textContent = user==='davi'?'Davi':'Cris';
-  document.getElementById('extraAjudaDaviField').style.display = user==='cris' ? 'block' : 'none';
-  resetarFormExtraItem();
-  createMonthPicker('extraMesInicioPicker','extraMesInicio', mKey);
-  createMonthPicker('extraMesFimPicker','extraMesFim', mKey);
-  renderRendaExtraLista();
-  document.getElementById('modalRendaExtra').classList.add('active');
-}
-function resetarFormExtraItem(){
-  document.getElementById('extraItemId').value = '';
-  document.getElementById('extraItemDesc').value = '';
-  document.getElementById('extraItemValor').value = '';
-  document.getElementById('extraItemAjudaDavi').checked = false;
-  document.getElementById('extraFormTitulo').textContent = 'Novo Extra';
-}
-function renderRendaExtraLista(){
-  const lista = (state.users[rendaExtraUser].extras||[]).slice().sort((a,b)=> b.mesInicio.localeCompare(a.mesInicio));
-  const el = document.getElementById('rendaExtraLista');
-  if(lista.length===0){
-    el.innerHTML = `<div class="empty-state-sm">Nenhum extra cadastrado ainda</div>`;
-    return;
-  }
-  el.innerHTML = lista.map(e=>{
-    const fim = e.mesFim || e.mesInicio;
-    const periodo = e.mesInicio===fim ? monthLabelExtensoCurto(e.mesInicio) : `${monthLabelExtensoCurto(e.mesInicio)} – ${monthLabelExtensoCurto(fim)}`;
-    return `<div class="renda-extra-item">
-      <div class="rei-info">
-        <div class="rei-desc">${e.desc}</div>
-        <div class="rei-periodo">${periodo}</div>
-      </div>
-      <div class="rei-valor">${fmtMoney(e.valor)}</div>
-      <div class="rei-actions">
-        <button class="btn-icon-sm" onclick="editarExtraItem('${e.id}')">${ICON_EDIT}</button>
-        <button class="btn-icon-sm" onclick="excluirExtraItem('${e.id}')">${ICON_TRASH}</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-function editarExtraItem(id){
-  const item = (state.users[rendaExtraUser].extras||[]).find(e=>e.id===id);
-  if(!item) return;
-  document.getElementById('extraItemId').value = item.id;
-  document.getElementById('extraItemDesc').value = item.desc;
-  document.getElementById('extraItemValor').value = Number(item.valor).toFixed(2).replace('.',',');
-  document.getElementById('extraItemDia').value = item.dia || '';
-  document.getElementById('extraItemAjudaDavi').checked = !!item.ajudaDavi;
-  selectPickerMonth('extraMesInicioPicker', item.mesInicio);
-  selectPickerMonth('extraMesFimPicker', item.mesFim||item.mesInicio);
-  document.getElementById('extraFormTitulo').textContent = 'Editar Extra';
-}
-function salvarExtraItem(){
-  const id = document.getElementById('extraItemId').value;
-  const desc = document.getElementById('extraItemDesc').value.trim();
-  const valor = parseMoney(document.getElementById('extraItemValor').value);
-  const dia = parseInt(document.getElementById('extraItemDia').value) || null;
-  const ajudaDavi = rendaExtraUser==='cris' && document.getElementById('extraItemAjudaDavi').checked;
-  const mesInicio = document.getElementById('extraMesInicio').value;
-  const mesFim = document.getElementById('extraMesFim').value;
-  if(!desc){ showToast('Digite uma descrição'); return; }
-  if(!valor){ showToast('Digite um valor'); return; }
-  if(!mesInicio || !mesFim){ showToast('Selecione o período'); return; }
-  if(mesFim < mesInicio){ showToast('Mês final não pode ser antes do inicial'); return; }
-  if(!state.users[rendaExtraUser].extras) state.users[rendaExtraUser].extras = [];
-  if(id){
-    const item = state.users[rendaExtraUser].extras.find(e=>e.id===id);
-    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; item.dia=dia; item.ajudaDavi=ajudaDavi; }
-  } else {
-    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim, dia, ajudaDavi });
-  }
-  persist();
-  resetarFormExtraItem();
-  renderRendaExtraLista();
-  renderRendaTable();
-  renderPanorama();
-  renderMetaPJ();
-  showToast('Extra salvo');
-}
-function excluirExtraItem(id){
-  state.users[rendaExtraUser].extras = (state.users[rendaExtraUser].extras||[]).filter(e=>e.id!==id);
-  persist();
-  renderRendaExtraLista();
-  renderRendaTable();
-  renderPanorama();
-}
-function closeRendaExtraModal(){
-  document.getElementById('modalRendaExtra').classList.remove('active');
-  rendaExtraUser = null;
-}
-function futuroValorNoMes(item, mKey){
-  // compatibilidade com formato antigo (mês único)
-  if(item.mes !== undefined && item.recorrente === undefined && item.parcelas === undefined){
-    return item.mes === mKey ? (Number(item.valor)||0) : 0;
-  }
-  if(item.recorrente){
-    return mKey >= item.mesInicio ? (Number(item.valor)||0) : 0;
-  }
-  const parcelas = item.parcelas || 1;
-  const meses = [];
-  for(let i=0;i<parcelas;i++) meses.push(addMonths(item.mesInicio, i));
-  const idx = meses.indexOf(mKey);
-  if(idx === -1) return 0;
-  if(item.replicar === false){
-    return Number((item.valores||{})[meses[idx]]) || 0;
-  }
-  return Number(item.valor) || 0;
-}
-/* Conta com pagamento parcial: só o que falta pagar entra na previsão */
-function restanteConta(paidKey, valor){
-  const pago = (state.pagamentosParciais||{})[paidKey] || 0;
-  return Math.max(valor - pago, 0);
-}
-function expensesForMonth(user, mKey){
-  const ex = state.users[user].expenses;
-  let total = 0;
-  ['moradia','assinatura','fixo'].forEach(cat=>{
-    ex[cat].forEach(item=>{
-      if(item.mesInicio && mKey < item.mesInicio) return; // ainda não começou a contar
-      const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
-      if(state.paid[paidKey]) return; // já pago neste mês, não conta mais
-      total += restanteConta(paidKey, Number(item.valor)||0);
-    });
-  });
-  ex.futuro.forEach(item=>{
-    const v = futuroValorNoMes(item, mKey);
-    if(v<=0) return;
-    const paidKey = mKey+'_'+user+'_futuro_'+item.id;
-    if(state.paid[paidKey]) return;
-    total += restanteConta(paidKey, v);
-  });
-  (state.users[user].cartoes||[]).forEach(c=>{ total += Number((c.gastos||{})[mKey]) || 0; });
-  total += dizimoForMonth(user, mKey);
-  return total;
-}
-function saldoForMonth(user, mKey){ return incomeForMonth(user,mKey) - expensesForMonth(user,mKey); }
-function saldoHouseholdForMonth(mKey){ return saldoForMonth('davi',mKey); } // Dashboard: só Davi
-
-function getPanoWindowMonths(){
-  if(state.panoOffset < 0) state.panoOffset = 0;
-  const base = addMonths(mesFinanceiroAtual(), state.panoOffset);
-  const arr = [];
-  for(let i=0;i<6;i++) arr.push(addMonths(base,i));
-  return arr;
-}
-
-/* Contribuição da Cris pro Davi: soma dos extras dela marcados "vai ajudar o Davi" */
-function contribCrisForMonth(mKey){
-  return (state.users.cris.extras||[]).reduce((sum,e)=>{
-    if(!e.ajudaDavi) return sum;
-    const fim = e.mesFim || e.mesInicio;
-    if(mKey >= e.mesInicio && mKey <= fim) return sum + (Number(e.valor)||0);
-    return sum;
-  }, 0);
 }
