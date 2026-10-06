@@ -25,6 +25,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.78', itens: [
+    'Removidos os microfones antigos (ditado por aba); só o microfone da IA fica, nas abas Dashboard, Planner, Ponto e Mercado. A IA agora também registra o ponto por voz, mostra dias úteis sem cadeado e mexe nas listas do Mercado'
+  ] },
   { versao: 'v2.77', itens: [
     'IA: análise financeira (botão ✨ e no Concluir mês), leitura de boleto por foto (botão câmera), alerta diário quando o saldo vai faltar e perguntas/simulações por voz'
   ] },

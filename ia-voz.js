@@ -1,7 +1,12 @@
 /* ========== IA-VOZ — assistente por voz inteligente (botão flutuante em todas as abas) ==========
    Ouve com pausa longa (3s de silêncio), manda para a função "ia-voz" no Supabase (Gemini) e executa as ações. */
 
+const VOZ_MIC_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>';
 const IAV_SILENCIO_MS = 3000;
+const IAV_ABAS_MIC = ['panorama','planner','ponto','mercado'];      // onde o microfone aparece
+const IAV_ABAS_FINANCAS = ['panorama','planner'];                    // onde ✨ e câmera aparecem
+function iavHojeISO(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function iavAgora(){ const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 let iavRec = null, iavTexto = '', iavAtual = '', iavTimer = null, iavFecha = null, iavAtivo = false, iavRefs = {};
 
 function iavCriarUI(){
@@ -148,8 +153,54 @@ function iavContexto(){
     saldoAtual: state.users[state.currentUser].saldoAtual||0,
     mesFoco: mKey, hoje: todayKey(),
     contas,
+    abaAtual: iavAbaAtual(),
+    hoje: iavHojeISO(), agora: iavAgora(),
+    ponto: iavPontoCtx(),
+    mercado: iavMercadoCtx(),
     resumo: iavResumo()
   };
+}
+
+/* ---------- Ponto: dias úteis passados sem cadeado (lógica do app, a IA só informa) ---------- */
+const IAV_DIAS_SEM = ['dom','seg','ter','qua','qui','sex','sáb'];
+function iavPontoCtx(){
+  const mKey = todayKey();                                  // mês do Ponto em uso
+  const agora = new Date(), real = monthKey(agora), diaHoje = agora.getDate();
+  const dias = (state.ponto.days && state.ponto.days[mKey]) || {};
+  const fim = mKey < real ? daysInMonth(mKey) : (mKey === real ? diaHoje-1 : 0);
+  const sem = [];
+  for(let dia=1; dia<=fim; dia++){
+    const dt = keyToDate(mKey); dt.setDate(dia);
+    const dow = dt.getDay();
+    if(dow<1 || dow>5) continue;                            // só dias úteis
+    const d = dias[dia];
+    if(d && d.concluido) continue;                          // cadeado fechado = ok
+    const zerado = !!d && !d.entrada && !d.almocoSaida && !d.almocoVolta && !d.saida;
+    sem.push({ data: mKey+'-'+String(dia).padStart(2,'0'), diaSemana: IAV_DIAS_SEM[dow], marcadoComoNaoTrabalhado: zerado });
+  }
+  const dh = (mKey === real) ? dias[diaHoje] : null;
+  return {
+    mesDoPonto: mKey,
+    diasUteisSemCadeado: sem,
+    hoje: mKey === real ? {
+      data: iavHojeISO(),
+      cadeadoFechado: !!(dh && dh.concluido),
+      registrado: dh ? { entrada:dh.entrada||null, almocoSaida:dh.almocoSaida||null, almocoVolta:dh.almocoVolta||null, saida:dh.saida||null, confirmados:Object.keys(dh.confirmado||{}).filter(k=>dh.confirmado[k]) } : null
+    } : null
+  };
+}
+
+/* ---------- Mercado: listas com refs ---------- */
+function iavMercadoCtx(){
+  const planejando = (state.preListaCompras||[]).map((it,i)=>{
+    const ref = 'm'+(i+1); iavRefs[ref] = { tipo:'pre', id:it.id };
+    return { ref, nome:it.nome, quantidade:it.quantidade, unidade:it.unidade||'unidades' };
+  });
+  const noMercado = (state.listaCompras||[]).map((it,i)=>{
+    const ref = 'k'+(i+1); iavRefs[ref] = { tipo:'ativa', id:it.id };
+    return { ref, nome:it.nome, quantidade:it.quantidade, unidade:it.unidade||'unidades', valorPorUnidade:it.valor||0, pego:!!it.pego };
+  });
+  return { planejando, noMercado };
 }
 
 /* ---------- resumo financeiro calculado pelo app (a IA só interpreta) ---------- */
@@ -178,7 +229,7 @@ function iavResumo(){
   const abertas = iavTent(()=>getContasDoMes(m0).filter(it=>!state.paid[m0+'_'+it.user+'_'+it.cat+'_'+it.id]), []);
   const vilao = iavTent(()=>calcularVilaoOrcamento(m0), null);
   return {
-    hoje: new Date().toISOString().slice(0,10), diaDeHoje: new Date().getDate(),
+    hoje: iavHojeISO(), diaDeHoje: new Date().getDate(),
     saldoAtual: iavR2(state.users.davi.saldoAtual), diaQueRecebe: state.diaRecebimentoRenda||5,
     meses,
     mesAnterior: ant ? { renda:iavR2(ant.renda), gastos:iavR2(ant.gastoTotal), sobra:iavR2(ant.sobra) } : null,
@@ -200,9 +251,14 @@ async function iavEnviar(){
   btn.classList.add('pensando'); iavPainel({fase:'pensando', texto});
   try{
     const j = await iavChamar({ texto, contexto: iavContexto() });
-    const feitos = [];
-    for(const a of (j.acoes||[])){ const m = await iavExecutar(a); if(m) feitos.push(m); }
-    iavPainel({fase:'pronto', texto, pensamento:j.pensamento, feitos, fala:j.fala, fixo:(j.fala||'').length>160});
+    const feitos = [], avisos = [];
+    for(const a of (j.acoes||[])){
+      const m = await iavExecutar(a);
+      if(m && typeof m === 'object' && m.aviso) avisos.push('⚠️ '+m.aviso);
+      else if(m) feitos.push(m);
+    }
+    const fala = [j.fala, ...avisos].filter(Boolean).join('\n');
+    iavPainel({fase:'pronto', texto, pensamento:j.pensamento, feitos, fala, fixo:fala.length>160 || !!j.fixo});
   }catch(e){
     console.error(e);
     iavPainel({fase:'pronto', texto, fala:'Não consegui falar com a IA. Verifique a função no Supabase.'});
@@ -259,6 +315,115 @@ async function iavExecutar(a){
       return 'Excluído: '+item.desc;
     }
     case 'abrir_resumo': abrirResumoGeral(); return 'Resumo aberto';
+
+    /* ----- PONTO ----- */
+    case 'registrar_ponto': {
+      const data = /^\d{4}-\d{2}-\d{2}$/.test(a.data||'') ? a.data : iavHojeISO();
+      const mKey = data.slice(0,7), dia = parseInt(data.slice(8,10),10);
+      if(!(dia>=1 && dia<=daysInMonth(mKey))) return null;
+      const d = getDia(mKey, dia);
+      if(d.concluido) return { aviso:'O dia '+dia+' está com o cadeado fechado. Abra o cadeado para eu alterar.' };
+      const campos = ['entrada','almocoSaida','almocoVolta','saida'];
+      const norm = (t)=>{ const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||'').trim()); if(!m) return null; const h=+m[1], mi=+m[2]; return (h<24 && mi<60) ? String(h).padStart(2,'0')+':'+m[2] : null; };
+      const novos = {};
+      campos.forEach(c=>{ const v = norm(a[c]); if(v) novos[c] = v; });
+      const extra = iavNum(a.extraMin);
+      if(!Object.keys(novos).length && extra===null) return null;
+      if(Object.keys(novos).length && !campos.some(c=>d.confirmado[c])) campos.forEach(c=>{ d[c] = null; }); // dia ainda sem horários seus: não mistura com o padrão
+      Object.keys(novos).forEach(c=>{ d[c] = novos[c]; d.confirmado[c] = true; });
+      if(extra!==null && extra>=0) d.extra = Math.round(extra);
+      if(mKey===todayKey()) state.pontoOffset = 0;
+      renderPonto(); persist();
+      const rot = { entrada:'entrada', almocoSaida:'almoço', almocoVolta:'volta', saida:'saída' };
+      const partes = campos.filter(c=>novos[c]).map(c=>rot[c]+' '+novos[c]);
+      if(extra!==null && extra>=0) partes.push('extra '+minToHoursLabel(Math.round(extra)));
+      return 'Ponto dia '+String(dia).padStart(2,'0')+': '+partes.join(', ');
+    }
+    case 'zerar_dia_ponto': {
+      const data = /^\d{4}-\d{2}-\d{2}$/.test(a.data||'') ? a.data : iavHojeISO();
+      const mKey = data.slice(0,7), dia = parseInt(data.slice(8,10),10);
+      if(!(dia>=1 && dia<=daysInMonth(mKey))) return null;
+      const d = getDia(mKey, dia);
+      if(d.concluido) return { aviso:'O dia '+dia+' está com o cadeado fechado.' };
+      state.ponto.days[mKey][dia] = { entrada:null, almocoSaida:null, almocoVolta:null, saida:null, extra:0, confirmado:{} };
+      renderPonto(); persist();
+      return 'Dia '+String(dia).padStart(2,'0')+' marcado como não trabalhado';
+    }
+    case 'travar_dia_ponto': {
+      const data = /^\d{4}-\d{2}-\d{2}$/.test(a.data||'') ? a.data : iavHojeISO();
+      const mKey = data.slice(0,7), dia = parseInt(data.slice(8,10),10);
+      if(!(dia>=1 && dia<=daysInMonth(mKey))) return null;
+      const d = getDia(mKey, dia);
+      d.concluido = !!a.travar;
+      renderPonto(); persist();
+      return 'Dia '+String(dia).padStart(2,'0')+(d.concluido?' trancado (cadeado fechado)':' reaberto');
+    }
+
+    /* ----- MERCADO ----- */
+    case 'adicionar_itens_mercado': {
+      const naLista = a.lista === 'mercado';
+      let c = 0;
+      (a.itens||[]).forEach(it=>{
+        let nome = String(it.nome||'').trim(); if(!nome) return;
+        nome = nome.charAt(0).toUpperCase()+nome.slice(1);
+        const qtd = iavNum(it.quantidade) > 0 ? iavNum(it.quantidade) : 1;
+        const un = it.unidade === 'kg' ? 'kg' : 'unidades';
+        if(naLista){
+          const v = (un==='kg') ? 0 : (iavNum(it.valor) > 0 ? iavNum(it.valor) : 0);   // por kg fica sem preço, como antes
+          state.listaCompras.push({ id:uid('mc'), nome, quantidade:qtd, unidade:un, valor:v, pego:false, criadoEm:Date.now() });
+        } else {
+          state.preListaCompras.push({ id:uid('mp'), nome, quantidade:qtd, unidade:un, criadoEm:Date.now() });
+        }
+        c++;
+      });
+      if(!c) return null;
+      persist(); renderMercado();
+      return c+(c===1?' item adicionado':' itens adicionados')+(naLista?' em "No mercado"':' em "Planejando"');
+    }
+    case 'marcar_item_mercado': {
+      let c = 0;
+      (a.refs||[]).forEach(ref=>{
+        const r = iavRefs[ref]; if(!r || r.tipo!=='ativa') return;
+        const it = state.listaCompras.find(x=>x.id===r.id); if(!it) return;
+        it.pego = !!a.pego; c++;
+      });
+      if(!c) return null;
+      persist(); renderMercado();
+      return c+(c===1?' item ':' itens ')+(a.pego?'marcado(s) como pego(s)':'desmarcado(s)');
+    }
+    case 'definir_preco_mercado': {
+      const r = iavRefs[a.ref]; const v = iavNum(a.valor);
+      if(!r || r.tipo!=='ativa' || v===null || v<0) return null;
+      const it = state.listaCompras.find(x=>x.id===r.id); if(!it) return null;
+      it.valor = v; persist(); renderMercado();
+      return it.nome+': '+fmtMoney(v)+' por unidade';
+    }
+    case 'mover_para_mercado': {
+      let c = 0;
+      (a.refs||[]).forEach(ref=>{
+        const r = iavRefs[ref]; if(!r || r.tipo!=='pre') return;
+        const it = state.preListaCompras.find(x=>x.id===r.id); if(!it) return;
+        state.listaCompras.push({ id:uid('mc'), nome:it.nome, quantidade:it.quantidade, unidade:it.unidade||'unidades', valor:0, pego:false, criadoEm:Date.now() });
+        state.preListaCompras = state.preListaCompras.filter(x=>x.id!==r.id); c++;
+      });
+      if(!c) return null;
+      persist(); renderMercado();
+      return c+(c===1?' item foi':' itens foram')+' para "No mercado"';
+    }
+    case 'remover_item_mercado': {
+      const alvos = (a.refs||[]).map(ref=>iavRefs[ref]).filter(Boolean);
+      if(!alvos.length) return null;
+      const nomes = alvos.map(r=>{ const l = r.tipo==='pre' ? state.preListaCompras : state.listaCompras; const it = l.find(x=>x.id===r.id); return it ? it.nome : null; }).filter(Boolean);
+      if(!nomes.length) return null;
+      const ok = await iosConfirm('Remover da lista: '+nomes.join(', ')+'?');
+      if(!ok) return null;
+      alvos.forEach(r=>{
+        if(r.tipo==='pre') state.preListaCompras = state.preListaCompras.filter(x=>x.id!==r.id);
+        else state.listaCompras = state.listaCompras.filter(x=>x.id!==r.id);
+      });
+      persist(); renderMercado();
+      return 'Removido(s): '+nomes.join(', ');
+    }
   }
   return null;
 }
@@ -334,7 +499,7 @@ function iavLancar(o){
 /* ---------- alerta de aperto: avisa 1x por dia se o saldo vai faltar (conta feita pelo app, sem IA) ---------- */
 function iavAlertaAperto(){
   try{
-    const hoje = new Date().toISOString().slice(0,10);
+    const hoje = iavHojeISO();
     if(localStorage.getItem('iav-alerta')===hoje) return;
     const m0 = state.focusMonth;
     const achados = [m0, addMonths(m0,1)].map(m=>({ m, fx:calcularFluxoCaixa(m) })).filter(x=>x.fx.minPonto && x.fx.minPonto.saldo < 0);
@@ -354,4 +519,18 @@ function iavEsperarEstado(){
   }, 1000);
 }
 
-window.addEventListener('load', ()=>{ iavCriarUI(); iavEsperarEstado(); });
+/* ---------- botões só nas abas que usam IA ---------- */
+function iavAbaAtual(){ const n = document.querySelector('.nav-item.active'); return n ? n.dataset.aba : 'panorama'; }
+function iavAtualizarVisibilidade(){
+  const aba = iavAbaAtual();
+  const mic = IAV_ABAS_MIC.includes(aba), fin = IAV_ABAS_FINANCAS.includes(aba);
+  const set = (id, on)=>{ const el = document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
+  set('iavBtn', mic); set('iavBtnAnalise', mic && fin); set('iavBtnFoto', mic && fin);
+  if(!mic){ if(iavAtivo) iavParar(); iavPainel(null); }
+}
+(function(){
+  const original = switchAba;
+  switchAba = function(aba){ const r = original.apply(this, arguments); iavAtualizarVisibilidade(); return r; };
+})();
+
+window.addEventListener('load', ()=>{ iavCriarUI(); iavAtualizarVisibilidade(); iavEsperarEstado(); });
