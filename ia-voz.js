@@ -2,7 +2,7 @@
    Ouve com pausa longa (3s de silêncio), manda para a função "ia-voz" no Supabase (Gemini) e executa as ações. */
 
 const IAV_SILENCIO_MS = 3000;
-let iavRec = null, iavTexto = '', iavTimer = null, iavAtivo = false, iavRefs = {};
+let iavRec = null, iavTexto = '', iavAtual = '', iavTimer = null, iavFecha = null, iavAtivo = false, iavRefs = {};
 
 function iavCriarUI(){
   if(document.getElementById('iavBtn')) return;
@@ -10,60 +10,96 @@ function iavCriarUI(){
   b.id = 'iavBtn'; b.type = 'button'; b.setAttribute('aria-label','Assistente de voz');
   b.innerHTML = VOZ_MIC_SVG.replace(/width="16" height="16"/,'width="24" height="24"');
   b.onclick = iavAlternar;
-  const bolha = document.createElement('div');
-  bolha.id = 'iavBolha';
-  document.body.appendChild(bolha); document.body.appendChild(b);
+  const p = document.createElement('div');
+  p.id = 'iavPainel';
+  document.body.appendChild(p); document.body.appendChild(b);
   const st = document.createElement('style');
   st.textContent = `
   #iavBtn{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;border:none;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:300;cursor:pointer}
   #iavBtn.ouvindo{background:var(--danger);animation:micPulse 1s ease-in-out infinite}
   #iavBtn.pensando{opacity:.6;pointer-events:none}
-  #iavBolha{position:fixed;left:12px;right:82px;bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--card,#1c1c1e);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.35;z-index:300;display:none;max-height:35vh;overflow:auto}
-  #iavBolha.show{display:block}`;
+  #iavPainel{position:fixed;left:12px;right:82px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:300;display:none;background:var(--card,#fff);color:var(--text,#111);border:1px solid var(--line,#ddd);border-radius:20px;padding:12px 14px 14px;box-shadow:0 10px 30px rgba(0,0,0,.18);max-height:50vh;overflow:auto;font-size:14px;line-height:1.4}
+  #iavPainel.show{display:block;animation:iavSobe .22s ease-out}
+  @keyframes iavSobe{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .iav-topo{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint,#999);margin-bottom:10px}
+  .iav-ponto{width:8px;height:8px;border-radius:50%;background:var(--gold,#b8963e)}
+  .iav-ponto.on{animation:micPulse 1s ease-in-out infinite}
+  .iav-x{margin-left:auto;background:none;border:none;color:var(--text-faint,#999);font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+  .iav-eu{margin-left:auto;max-width:92%;width:fit-content;background:var(--primary);color:#fff;border-radius:16px 16px 4px 16px;padding:9px 12px;font-size:15px;word-break:break-word}
+  .iav-ia{margin-top:10px;background:var(--card-2,#f4f1ea);border-radius:16px 16px 16px 4px;padding:10px 12px}
+  .iav-pens{font-style:italic;color:var(--text-faint,#8a8478);font-size:13px;margin-bottom:6px}
+  .iav-chip{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-weight:600;font-size:13.5px;animation:iavSobe .25s ease-out both}
+  .iav-chip i{font-style:normal;color:#fff;background:var(--success,#2e8b57);width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px}
+  .iav-fala{margin-top:6px}
+  .iav-pontos{display:inline-flex;gap:4px;vertical-align:middle;margin-left:4px}
+  .iav-pontos span{width:6px;height:6px;border-radius:50%;background:var(--gold,#b8963e);animation:iavPula 1s infinite ease-in-out}
+  .iav-pontos span:nth-child(2){animation-delay:.15s}.iav-pontos span:nth-child(3){animation-delay:.3s}
+  @keyframes iavPula{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.1)}}`;
   document.head.appendChild(st);
 }
-function iavBolha(txt){
-  const el = document.getElementById('iavBolha');
-  if(!txt){ el.classList.remove('show'); return; }
-  el.textContent = txt; el.classList.add('show');
+function iavEsc(t){ return String(t||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+/* fase: 'ouvindo' | 'pensando' | 'pronto' */
+function iavPainel(o){
+  const el = document.getElementById('iavPainel');
+  clearTimeout(iavFecha);
+  if(!o){ el.classList.remove('show'); return; }
+  const rotulo = o.fase==='ouvindo' ? 'Ouvindo' : o.fase==='pensando' ? 'Pensando' : 'Siloé IA';
+  let h = `<div class="iav-topo"><span class="iav-ponto${o.fase!=='pronto'?' on':''}"></span>${rotulo}<button class="iav-x" onclick="iavPainel(null)" aria-label="Fechar">&times;</button></div>`;
+  if(o.texto) h += `<div class="iav-eu">${iavEsc(o.texto)}</div>`;
+  else if(o.fase==='ouvindo') h += `<div class="iav-pens">Pode falar… toque no microfone para enviar</div>`;
+  if(o.fase==='pensando') h += `<div class="iav-ia"><div class="iav-pens">Entendendo o que você pediu<span class="iav-pontos"><span></span><span></span><span></span></span></div></div>`;
+  if(o.fase==='pronto'){
+    h += `<div class="iav-ia">`;
+    if(o.pensamento) h += `<div class="iav-pens">${iavEsc(o.pensamento)}</div>`;
+    (o.feitos||[]).forEach((f,i)=>{ h += `<div class="iav-chip" style="animation-delay:${i*0.12}s"><i>✓</i><span>${iavEsc(f)}</span></div>`; });
+    if(o.fala) h += `<div class="iav-fala">${iavEsc(o.fala)}</div>`;
+    h += `</div>`;
+  }
+  el.innerHTML = h; el.classList.add('show');
+  if(o.fase==='pronto') iavFecha = setTimeout(()=>iavPainel(null), 9000);
 }
+
+function iavJunta(a,b){ return [a,b].filter(Boolean).join(' ').trim(); }
 
 function iavAlternar(){
   if(iavAtivo){ iavEnviar(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){ showToast('Voz não disponível neste navegador'); return; }
   if(!(window.SUPABASE_URL)){ showToast('Supabase não configurado'); return; }
-  iavTexto = ''; iavAtivo = true;
+  iavTexto = ''; iavAtual = ''; iavAtivo = true;
   document.getElementById('iavBtn').classList.add('ouvindo');
-  iavBolha('Pode falar… (toque de novo para enviar)');
+  iavPainel({fase:'ouvindo'});
+  iavTimer = setTimeout(()=>{ if(iavAtivo && !iavJunta(iavTexto,iavAtual)){ iavParar(); iavPainel(null); } }, 15000); // ninguém falou
   iavIniciarRec(SR);
 }
+/* Escuta em "rodadas" curtas (sem continuous): evita o bug do Android que repete as palavras */
 function iavIniciarRec(SR){
   const rec = new SR();
   iavRec = rec;
-  rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = true;
+  rec.lang = 'pt-BR'; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 1;
   rec.onresult = (ev)=>{
-    let final = '', parcial = '';
-    for(let i=0;i<ev.results.length;i++){
-      const t = ev.results[i][0].transcript;
-      if(ev.results[i].isFinal) final += t+' '; else parcial += t;
-    }
-    iavTexto = final;
-    iavBolha((final+parcial).trim() || 'Ouvindo…');
+    let t = '';
+    for(let i=0;i<ev.results.length;i++) t += ev.results[i][0].transcript;
+    iavAtual = t.trim();
+    iavPainel({fase:'ouvindo', texto:iavJunta(iavTexto, iavAtual)});
     clearTimeout(iavTimer);
     iavTimer = setTimeout(iavEnviar, IAV_SILENCIO_MS);
   };
   rec.onerror = (e)=>{
     if(e.error==='no-speech' || e.error==='aborted') return;
-    showToast('Não consegui ouvir. Verifique o microfone'); iavParar();
+    showToast('Não consegui ouvir. Verifique o microfone'); iavParar(); iavPainel(null);
   };
-  rec.onend = ()=>{ if(iavAtivo){ try{ iavIniciarRec(SR); }catch(e){ iavParar(); } } }; // Android corta sozinho: religa
+  rec.onend = ()=>{
+    if(!iavAtivo) return;
+    if(iavAtual){ iavTexto = iavJunta(iavTexto, iavAtual); iavAtual = ''; }
+    try{ iavIniciarRec(SR); }catch(e){ iavParar(); }
+  };
   try{ rec.start(); }catch(e){ iavParar(); }
 }
 function iavParar(){
   iavAtivo = false; clearTimeout(iavTimer);
   const r = iavRec; iavRec = null;
-  if(r){ r.onend = null; try{ r.stop(); }catch(e){} }
+  if(r){ r.onend = null; r.onresult = null; try{ r.stop(); }catch(e){} }
   document.getElementById('iavBtn').classList.remove('ouvindo');
 }
 
@@ -93,11 +129,12 @@ function iavContexto(){
 
 async function iavEnviar(){
   clearTimeout(iavTimer);
-  const texto = (iavTexto||'').trim();
+  const texto = iavJunta(iavTexto, iavAtual);
   iavParar();
-  if(!texto){ iavBolha(''); return; }
+  iavTexto = ''; iavAtual = '';
+  if(!texto){ iavPainel(null); return; }
   const btn = document.getElementById('iavBtn');
-  btn.classList.add('pensando'); iavBolha('“'+texto+'”\nPensando…');
+  btn.classList.add('pensando'); iavPainel({fase:'pensando', texto});
   try{
     const r = await fetch(window.SUPABASE_URL+'/functions/v1/smart-handler', {
       method:'POST',
@@ -107,11 +144,10 @@ async function iavEnviar(){
     const j = await r.json();
     const feitos = [];
     for(const a of (j.acoes||[])){ const m = await iavExecutar(a); if(m) feitos.push(m); }
-    iavBolha([...(feitos.length?feitos.map(f=>'✓ '+f):[]), j.fala||''].filter(Boolean).join('\n'));
-    setTimeout(()=>iavBolha(''), 6000);
+    iavPainel({fase:'pronto', texto, pensamento:j.pensamento, feitos, fala:j.fala});
   }catch(e){
-    console.error(e); iavBolha('Não consegui falar com a IA. Verifique a função no Supabase.');
-    setTimeout(()=>iavBolha(''), 5000);
+    console.error(e);
+    iavPainel({fase:'pronto', texto, fala:'Não consegui falar com a IA. Verifique a função no Supabase.'});
   }
   btn.classList.remove('pensando');
 }
