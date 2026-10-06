@@ -1,13 +1,6 @@
 /* ================= ESTADO ================= */
-const STORAGE_KEY = 'siloe-data-v1';
-const MES_ATUAL_KEY = 'siloe-mes-atual';
-let mesAtualRef = localStorage.getItem(MES_ATUAL_KEY);
-if(!mesAtualRef){
-  // Primeira vez que o app roda neste dispositivo: parte do mês real como ponto de partida.
-  // Depois disso, só muda quando o usuário concluir o mês manualmente.
-  mesAtualRef = monthKey(new Date());
-  localStorage.setItem(MES_ATUAL_KEY, mesAtualRef);
-}
+// Mês atual fica em state.mesAtual (Supabase). Aqui é só o ponto de partida até o estado carregar.
+let mesAtualRef = monthKey(new Date());
 const MES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MES_NOMES_LONGOS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DIA_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -68,32 +61,38 @@ function toggleFontePopup(){
 }
 let state = novoEstado();
 
-/* ================= PERSISTÊNCIA (localStorage + Supabase fallback) ================= */
+/* ================= PERSISTÊNCIA (somente Supabase) ================= */
+let remoteReady = false;   // só vira true depois de ler a nuvem com sucesso; antes disso nada é gravado
+let persistTimer = null;
+let carregarTentativas = 0;
 function persist(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }catch(e){ console.error('Erro ao salvar local', e); }
-
-  if(window.SiloSupabase && window.SiloSupabase.enabled){
-    window.SiloSupabase.saveState(state).catch(()=>{});
-  }
+  if(!remoteReady) return;   // evita sobrescrever a nuvem com estado vazio
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(persistAgora, 500);
 }
-// Backup automático removido (v2.39) — guardava várias cópias inteiras do estado e ocupava espaço.
-// Limpa qualquer backup antigo que já esteja salvo no navegador, pra liberar espaço.
-try{ localStorage.removeItem('siloe-backups-auto'); }catch(e){}
+async function persistAgora(){
+  clearTimeout(persistTimer);
+  persistTimer = null;
+  if(!remoteReady || !window.SiloSupabase) return false;
+  const ok = await window.SiloSupabase.saveState(state);
+  if(!ok && typeof showToast==='function') showToast('Sem conexão: a alteração não foi salva.');
+  return ok;
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && persistTimer) persistAgora(); });
+window.addEventListener('pagehide', ()=>{ if(persistTimer) persistAgora(); });
+
 async function carregar(){
+  let legado = { state:null, mesAtual:null, logo:null };
+  let precisaSalvar = false;
   try{
     let saved = null;
+    if(!window.SiloSupabase || !window.SiloSupabase.enabled) throw new Error('Supabase não configurado');
+    const r = await window.SiloSupabase.loadState();
+    if(!r.ok) throw r.error;
+    saved = r.data;
+    legado = window.SiloSupabase.lerLegado();
 
-    if(window.SiloSupabase && window.SiloSupabase.enabled){
-      const remote = await window.SiloSupabase.loadState();
-      if(remote) saved = remote;
-    }
-
-    if(!saved){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw) saved = JSON.parse(raw);
-    }
+    if(!saved && legado.state){ saved = legado.state; precisaSalvar = true; }   // primeira vez: sobe o que estava no aparelho
 
     if(saved){
       state = Object.assign(novoEstado(), saved);
@@ -167,18 +166,50 @@ async function carregar(){
       delete state.config;
       if(!state.configFonte) state.configFonte = 'system';
       if(!state.layoutPrefs) state.layoutPrefs = {};
+      if(state.mesAtual){
+        mesAtualRef = state.mesAtual;
+      } else {
+        mesAtualRef = legado.mesAtual || mesAtualRef;
+        state.mesAtual = mesAtualRef;
+        precisaSalvar = true;
+      }
+      if(legado.logo && !state.logoApp){ state.logoApp = legado.logo; precisaSalvar = true; }
     } else {
       state = novoEstado();
+      state.mesAtual = mesAtualRef;
+      precisaSalvar = true;
     }
+    remoteReady = true;
   }catch(e){
     console.error('[LOAD] Erro ao carregar estado:', e);
     state = novoEstado();
+    remoteReady = false;   // não grava nada até conseguir ler a nuvem
+    if(typeof showToast==='function') showToast('Sem conexão com o Supabase. Nada será salvo até reconectar.');
+    if(carregarTentativas++ < 5) setTimeout(carregar, 8000);
   }
   limparDadosAntigos();
   aplicarFonteApp();
   renderAll();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility('panorama');
+  await finalizarMigracaoLegado(precisaSalvar, legado);
+}
+// Migração única do localStorage -> Supabase (pode ser apagada quando todos os aparelhos já tiverem migrado)
+async function finalizarMigracaoLegado(precisaSalvar, legado){
+  if(!remoteReady || !window.SiloSupabase) return;
+  if(precisaSalvar){
+    const ok = await persistAgora();
+    if(!ok) return;   // mantém os dados locais até conseguir salvar na nuvem
+    window.SiloSupabase.limparLegado();
+    return;
+  }
+  if(legado && legado.state){
+    // A nuvem já tinha dados e este aparelho também tem dados antigos: pergunta antes de apagar
+    const ok = await iosConfirm('Este aparelho ainda guarda dados antigos. Os dados da nuvem foram mantidos. Apagar os antigos deste aparelho?');
+    if(ok) window.SiloSupabase.limparLegado();
+  } else {
+    window.SiloSupabase.limparLegado();
+  }
 }
 
 /* ================= LIMPEZA AUTOMÁTICA (mantém só mês atual + mês passado) ================= */
@@ -232,7 +263,8 @@ async function aplicarMesAtualManual(){
 }
 function definirMesAtual(valor){
   mesAtualRef = valor;
-  localStorage.setItem(MES_ATUAL_KEY, valor);
+  state.mesAtual = valor;
+  persist();
   if(state.focusMonth) state.focusMonth = mesFinanceiroAtual();
   renderAll();
 }

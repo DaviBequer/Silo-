@@ -551,7 +551,7 @@ function confirmarConcluirMes(){
   state.historicoMeses[mesQueFecha] = { renda, gastoTotal, sobra: renda-gastoTotal, fechadoEm: Date.now() };
 
   mesAtualRef = addMonths(mesAtualRef, 1);
-  localStorage.setItem(MES_ATUAL_KEY, mesAtualRef);
+  state.mesAtual = mesAtualRef;
   state.panoOffset = 0;
   state.pontoOffset = 0;
   state.focusMonth = mesFinanceiroAtual();

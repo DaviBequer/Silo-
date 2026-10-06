@@ -10,18 +10,10 @@ function renderAll(){
 
 /* ========== STORAGE & BACKUP ========== */
 function calcularStorageUsage(){
+  // Tamanho dos dados guardados no Supabase (estado completo em JSON)
   let usado = 0;
   try{
-    for(let i = 0; i < localStorage.length; i++){
-      const key = localStorage.key(i);
-      if(key){
-        const value = localStorage.getItem(key) || '';
-        const keyBytes = new TextEncoder().encode(key).length;
-        const valueBytes = new TextEncoder().encode(value).length;
-        const total = keyBytes + valueBytes;
-        usado += total;
-      }
-    }
+    usado = new TextEncoder().encode(JSON.stringify(state)).length;
   }catch(e){
     console.error('[CALC-STORAGE] ERRO:', e);
   }
@@ -33,6 +25,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.71', itens: [
+    'Dados salvos só na nuvem (Supabase), sem localStorage; os dados antigos do aparelho são migrados na primeira abertura'
+  ]},
   { versao: 'v2.67', itens: [
     'Microfone em mais abas: Planner (gastos), Cartões (compra/assinatura), Ponto PJ (horários) e Louvor (novo louvor) — preenche o formulário e você confere antes de salvar',
     'Modais: o botão Salvar não fica mais escondido pelo teclado'

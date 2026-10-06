@@ -689,7 +689,6 @@ function montarBackupApp(){
     versaoApp: versaoEl ? versaoEl.textContent.trim() : '',
     exportadoEm: new Date().toISOString(),
     mesAtual: mesAtualRef,
-    logo: localStorage.getItem('siloe-logo') || null,
     state: state
   };
 }
@@ -747,14 +746,13 @@ function onImportFileSelected(event){
     iosConfirm('Importar vai substituir TODOS os dados atuais do app por esse backup. Continuar?').then(ok=>{
       event.target.value = '';
       if(!ok) return;
-      try{
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.state));
-        if(backup.mesAtual) localStorage.setItem(MES_ATUAL_KEY, backup.mesAtual);
-        if(backup.logo) localStorage.setItem('siloe-logo', backup.logo);
-        location.reload();
-      }catch(err){
-        showToast('Erro ao importar os dados.');
-      }
+      const novo = Object.assign(novoEstado(), backup.state);
+      if(backup.mesAtual) novo.mesAtual = backup.mesAtual;
+      state = novo;
+      persistAgora().then(salvou=>{
+        if(salvou) location.reload();
+        else showToast('Erro ao importar os dados.');
+      });
     });
   };
   reader.readAsText(file);
@@ -762,7 +760,6 @@ function onImportFileSelected(event){
 
 /* ================= INIT (deve rodar por último, depois de todos os módulos) ================= */
 carregar();
-aplicarLogoSalva();
 
 
 /* ---------- Ditar itens por voz ---------- */
