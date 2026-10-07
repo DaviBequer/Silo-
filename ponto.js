@@ -1,5 +1,5 @@
 /* ================= PONTO PJ ================= */
-function pontoMonthKeyAtual(){ return addMonths(todayKey(), state.pontoOffset); }
+function pontoMonthKeyAtual(){ return addMonths(pontoBaseKey(), state.pontoOffset); }
 function ensurePontoMonth(mKey){
   if(!state.ponto.days[mKey]) state.ponto.days[mKey] = {};
 }
@@ -324,9 +324,9 @@ function renderPontoSemanasChart(mKey){
 }
 
 function renderPontoCompare(){
-  const passado = addMonths(todayKey(), -1);
-  const atual = todayKey();
-  const proximo = addMonths(todayKey(), 1);
+  const passado = addMonths(pontoBaseKey(), -1);
+  const atual = pontoBaseKey();
+  const proximo = addMonths(pontoBaseKey(), 1);
   const meses = [passado, atual, proximo];
   const container = document.getElementById('pontoCompareStrip');
   if(!container) return;
@@ -345,7 +345,7 @@ function renderPontoCompare(){
 let pontoConfigMes = null;
 function renderPontoConfigMes(){
   document.getElementById('pontoConfigMesLabel').textContent = monthLabelLong(pontoConfigMes);
-  document.getElementById('pontoConfigMesNota').style.display = pontoConfigMes===todayKey() ? 'none' : 'block';
+  document.getElementById('pontoConfigMesNota').style.display = pontoConfigMes===pontoBaseKey() ? 'none' : 'block';
 }
 function pontoConfigNavMes(delta){
   pontoConfigMes = addMonths(pontoConfigMes, delta);
@@ -353,7 +353,7 @@ function pontoConfigNavMes(delta){
 }
 function openPontoConfigModal(){
   document.getElementById('pontoConfigNome').value = state.ponto.nomeUsuario || '';
-  pontoConfigMes = todayKey();
+  pontoConfigMes = pontoBaseKey();
   renderPontoConfigMes();
   document.getElementById('modalPontoConfig').classList.add('active');
 }
@@ -361,14 +361,12 @@ async function salvarPontoConfig(){
   const nome = document.getElementById('pontoConfigNome').value.trim();
   state.ponto.nomeUsuario = nome;
   persist();
-  if(pontoConfigMes && pontoConfigMes !== todayKey()){
-    const ok = await iosConfirm(`Definir ${monthLabel(pontoConfigMes)} como mês vigente? Isso muda o que o app considera "hoje" no Ponto PJ, Planner, Dashboard e cartões.`);
+  if(pontoConfigMes && pontoConfigMes !== pontoBaseKey()){
+    const ok = await iosConfirm(`Definir ${monthLabel(pontoConfigMes)} como mês do Ponto PJ?`);
     if(!ok) return;
     closeModal('modalPontoConfig');
-    state.pontoOffset = 0;
-    definirMesAtual(pontoConfigMes);
-    persist();
-    showToast('Mês vigente: '+monthLabel(pontoConfigMes));
+    definirMesPonto(pontoConfigMes);
+    showToast('Mês do Ponto PJ: '+monthLabel(pontoConfigMes));
     return;
   }
   closeModal('modalPontoConfig');
@@ -524,7 +522,7 @@ function gerarPdfPonto(){
 
 /* ================= CONCLUIR MÊS ================= */
 function openConcluirMesModal(){
-  const mesPontoAtual = todayKey();
+  const mesPontoAtual = pontoBaseKey();
   const mesContasAtual = mesFinanceiroAtual();
   const mesPontoProximo = addMonths(mesPontoAtual, 1);
   const mesContasProximo = addMonths(mesContasAtual, 1);
@@ -552,6 +550,8 @@ function confirmarConcluirMes(){
 
   mesAtualRef = addMonths(mesAtualRef, 1);
   state.mesAtual = mesAtualRef;
+  mesPontoRef = addMonths(mesPontoRef, 1);
+  state.mesPonto = mesPontoRef;
   state.panoOffset = 0;
   state.pontoOffset = 0;
   state.focusMonth = mesFinanceiroAtual();

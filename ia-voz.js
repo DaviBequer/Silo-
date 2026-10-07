@@ -195,7 +195,7 @@ function iavExtrasCtx(mKey){
 /* ---------- Ponto: dias úteis passados sem cadeado (lógica do app, a IA só informa) ---------- */
 const IAV_DIAS_SEM = ['dom','seg','ter','qua','qui','sex','sáb'];
 function iavPontoCtx(){
-  const mKey = todayKey();                                  // mês do Ponto em uso
+  const mKey = pontoBaseKey();                              // mês do Ponto em uso
   const agora = new Date(), real = monthKey(agora), diaHoje = agora.getDate();
   const dias = (state.ponto.days && state.ponto.days[mKey]) || {};
   const fim = mKey < real ? daysInMonth(mKey) : (mKey === real ? diaHoje-1 : 0);
@@ -421,7 +421,7 @@ async function iavExecutar(a){
       if(Object.keys(novos).length && !campos.some(c=>d.confirmado[c])) campos.forEach(c=>{ d[c] = null; }); // dia ainda sem horários seus: não mistura com o padrão
       Object.keys(novos).forEach(c=>{ d[c] = novos[c]; d.confirmado[c] = true; });
       if(extra!==null && extra>=0) d.extra = Math.round(extra);
-      if(mKey===todayKey()) state.pontoOffset = 0;
+      if(mKey===pontoBaseKey()) state.pontoOffset = 0;
       renderPonto(); persist();
       const rot = { entrada:'entrada', almocoSaida:'almoço', almocoVolta:'volta', saida:'saída' };
       const partes = campos.filter(c=>novos[c]).map(c=>rot[c]+' '+novos[c]);

@@ -375,7 +375,7 @@ function abrirDetalheCategoria(cat, mKey){
 }
 
 function renderPanoPonto(){
-  const atual = todayKey();
+  const atual = pontoBaseKey();
   const passado = addMonths(atual, -1);
   const rAtual = computePontoMes(atual);
   const rPassado = computePontoMes(passado);

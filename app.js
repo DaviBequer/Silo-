@@ -25,6 +25,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.81', itens: [
+    'Mês atual: Dashboard e Planner andam juntos (seletor na versão); o Ponto PJ tem o mês dele, só nas configurações do Ponto',
+    'Dashboard > Contas: removido o Fluxo de caixa; Contas a pagar agora vem antes de Parcelas terminando'
+  ]},
   { versao: 'v2.80', itens: [
     'IA no Planner: adiciona compra no cartão (à vista, parcelada, assinatura) e renda extra por voz, sempre mostrando uma janelinha para você conferir e salvar',
     'Cartões: resumo mês a mês com sobra, fatura e quanto resta (só ali, a sobra do Dashboard segue sem o cartão)',
@@ -331,7 +335,6 @@ function abrirImportExportModal(){
   renderChangelog();
   const mesInput = document.getElementById('mesAtualManualInput');
   if(mesInput) mesInput.value = mesAtualRef;
-  atualizarBtnMesFinanceiroAtraso();
   
   const storage = calcularStorageUsage();
   

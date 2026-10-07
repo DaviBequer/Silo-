@@ -13,9 +13,9 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.80">
-<link rel="stylesheet" href="luxury-dark.css?v=2.80">
-<link rel="stylesheet" href="premium.css?v=2.80">
+<link rel="stylesheet" href="style.css?v=2.81">
+<link rel="stylesheet" href="luxury-dark.css?v=2.81">
+<link rel="stylesheet" href="premium.css?v=2.81">
 </head>
 <body>
 
@@ -26,7 +26,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.80</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v2.81</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -101,24 +101,16 @@
   <div class="pano-subpanel" id="panoPanelContas">
 
   <div class="card">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Fluxo de Caixa — <span id="fluxoCaixaMesLabel"></span></div>
-      <button class="icon-btn-sm" onclick="editarDiaRecebimento()" title="Configurar dia de recebimento"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-    </div>
-    <div id="fluxoCaixaResumo"></div>
-    <div id="fluxoCaixaLista" class="fluxo-caixa-lista"></div>
-  </div>
-
-  <div class="card" id="cardParcelasTerminando" style="display:none">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Parcelas Terminando</div></div>
-    <div id="parcelasTerminandoLista"></div>
-  </div>
-
-  <div class="card">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Contas a Pagar — <span id="contasMesLabel"></span></div>
       <button class="icon-btn-sm" onclick="editarDiasAviso()" title="Configurar aviso de vencimento"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
     </div>
     <div id="vencendoEmBreveBanner" style="display:none"></div>
     <div class="checklist" id="contasChecklist"></div>
+  </div>
+
+  <div class="card" id="cardParcelasTerminando" style="display:none">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Parcelas Terminando</div></div>
+    <div id="parcelasTerminandoLista"></div>
   </div>
 
   </div>
@@ -1363,11 +1355,6 @@
         <input type="month" id="mesAtualManualInput" style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:14px">
         <button class="btn btn-outline" style="flex:0 0 auto" onclick="aplicarMesAtualManual()">Definir</button>
       </div>
-      <div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">Muda o mês que o app considera "atual" em tudo (Planner, Ponto PJ, Dashboard, fatura dos cartões).</div>
-    </div>
-    <div style="margin-bottom:var(--s3)">
-      <button class="btn btn-outline btn-block" id="btnMesFinanceiroAtraso" onclick="toggleMesFinanceiroAtraso()">Segurar Dashboard/Planner no mês anterior</button>
-      <div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">Só Dashboard, Planner e Panorama. O Ponto PJ não muda: você edita o ponto do mês novo enquanto ainda paga as contas do mês anterior.</div>
     </div>
     <div style="margin-bottom:var(--s3)">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;display:flex;justify-content:space-between">
@@ -1658,8 +1645,8 @@
         <div class="pj-mes-label" id="pontoConfigMesLabel"></div>
         <button type="button" class="pj-mes-btn" onclick="pontoConfigNavMes(1)" aria-label="Próximo mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></button>
       </div>
-      <div class="pj-mes-nota">O mês vigente é o que o app considera "atual" no Ponto PJ, Planner e Dashboard. Você pode escolher meses passados ou futuros.</div>
-      <div class="pj-mes-nota pj-mes-aviso" id="pontoConfigMesNota" style="display:none">Ao salvar, o app vai pedir confirmação para trocar o mês vigente.</div>
+      <div class="pj-mes-nota">Mês atual só do Ponto PJ. Não altera Dashboard nem Planner.</div>
+      <div class="pj-mes-nota pj-mes-aviso" id="pontoConfigMesNota" style="display:none">Ao salvar, o app vai pedir confirmação para trocar o mês.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalPontoConfig')">Cancelar</button>
@@ -1701,17 +1688,17 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=2.80"></script>
-<script src="core.js?v=2.80"></script>
-<script src="comando.js?v=2.80"></script>
-<script src="layout.js?v=2.80"></script>
-<script src="app.js?v=2.80"></script>
-<script src="panorama.js?v=2.80"></script>
-<script src="planner.js?v=2.80"></script>
-<script src="ponto.js?v=2.80"></script>
-<script src="receitas.js?v=2.80"></script>
-<script src="louvor.js?v=2.80"></script>
-<script src="mercado.js?v=2.80"></script>
-<script src="ia-voz.js?v=2.80"></script>
+<script src="supabase.js?v=2.81"></script>
+<script src="core.js?v=2.81"></script>
+<script src="comando.js?v=2.81"></script>
+<script src="layout.js?v=2.81"></script>
+<script src="app.js?v=2.81"></script>
+<script src="panorama.js?v=2.81"></script>
+<script src="planner.js?v=2.81"></script>
+<script src="ponto.js?v=2.81"></script>
+<script src="receitas.js?v=2.81"></script>
+<script src="louvor.js?v=2.81"></script>
+<script src="mercado.js?v=2.81"></script>
+<script src="ia-voz.js?v=2.81"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 /* ================= ESTADO ================= */
 // Mês atual fica em state.mesAtual (Supabase). Aqui é só o ponto de partida até o estado carregar.
 let mesAtualRef = monthKey(new Date());
-// 1 = Dashboard/Planner/Panorama seguram o mês financeiro 1 mês atrás (ex.: ainda pagando as contas de outubro enquanto o Ponto já está em novembro). Fica em state.mesFinanceiroAtraso.
 let mesFinanceiroAtrasoRef = 0;
+let mesPontoRef = monthKey(new Date()); // mês do Ponto PJ (independente do Dashboard/Planner)
 const MES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MES_NOMES_LONGOS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DIA_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -202,10 +202,23 @@ async function carregar(){
         state.mesAtual = mesAtualRef;
         precisaSalvar = true;
       }
+      if(state.mesPonto === undefined){
+        // migração: Ponto PJ passa a ter mês próprio; Dashboard/Planner guardam o mês que mostram
+        state.mesPonto = mesAtualRef;
+        mesAtualRef = addMonths(mesAtualRef, state.mesFinanceiroAtraso ? 0 : 1);
+        state.mesAtual = mesAtualRef;
+        state.mesFinanceiroAtraso = 0;
+        precisaSalvar = true;
+      }
+      mesPontoRef = state.mesPonto;
+      mesFinanceiroAtrasoRef = 0;
       if(legado.logo && !state.logoApp){ state.logoApp = legado.logo; precisaSalvar = true; }
     } else {
+      mesPontoRef = mesAtualRef;
+      mesAtualRef = addMonths(mesAtualRef, 1);
       state = novoEstado();
       state.mesAtual = mesAtualRef;
+      state.mesPonto = mesPontoRef;
       precisaSalvar = true;
     }
     remoteReady = true;
@@ -249,7 +262,7 @@ function limparDadosAntigos(){
   // Planner/Panorama operam 1 mês à frente: "mês passado" financeiro = mês real atual
   const limitePlanner = todayKey();
   // Ponto PJ é sempre em tempo real: "mês passado" real = mês real atual -1
-  const limitePonto = addMonths(todayKey(), -1);
+  const limitePonto = addMonths(mesPontoRef, -1);
 
   ['davi','cris'].forEach(u=>{
     const us = state.users[u];
@@ -284,12 +297,13 @@ function monthLabelLong(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.
 function monthLabelExtensoCurto(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+'/'+String(d.getFullYear()).slice(-2); }
 function monthLabelExtenso(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+'/'+d.getFullYear(); }
 function daysInMonth(key){ const d=keyToDate(key); return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
-function todayKey(){ return mesAtualRef; }
-function mesFinanceiroAtual(){ return addMonths(todayKey(), mesFinanceiroAtrasoRef ? 0 : 1); } // Planner/Panorama sempre operam 1 mês à frente (trabalhou em X, recebe/paga em X+1)
+function todayKey(){ return addMonths(mesAtualRef, -1); } // mês real de referência (1 antes do mês do Dashboard/Planner)
+function mesFinanceiroAtual(){ return mesAtualRef; } // mês atual do Dashboard/Planner
+function pontoBaseKey(){ return mesPontoRef; } // mês atual do Ponto PJ
 async function aplicarMesAtualManual(){
   const valor = document.getElementById('mesAtualManualInput')?.value;
   if(!valor) return;
-  const ok = await iosConfirm(`Definir ${monthLabel(valor)} como mês atual? Isso muda o que o app considera "hoje" no Planner, Ponto PJ, Dashboard e cartões.`);
+  const ok = await iosConfirm(`Definir ${monthLabel(valor)} como mês atual? Isso muda o mês atual do Dashboard e do Planner.`);
   if(!ok) return;
   definirMesAtual(valor);
 }
@@ -300,22 +314,12 @@ function definirMesAtual(valor){
   if(state.focusMonth) state.focusMonth = mesFinanceiroAtual();
   renderAll();
 }
-function toggleMesFinanceiroAtraso(){
-  state.mesFinanceiroAtraso = state.mesFinanceiroAtraso ? 0 : 1;
-  mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso;
-  state.focusMonth = mesFinanceiroAtual();
-  state.panoOffset = 0;
+function definirMesPonto(valor){
+  mesPontoRef = valor;
+  state.mesPonto = valor;
+  state.pontoOffset = 0;
   persist();
   renderAll();
-  atualizarBtnMesFinanceiroAtraso();
-  showToast(state.mesFinanceiroAtraso ? 'Dashboard e Planner ficam em '+monthLabel(mesFinanceiroAtual()) : 'Dashboard e Planner foram para '+monthLabel(mesFinanceiroAtual()));
-}
-function atualizarBtnMesFinanceiroAtraso(){
-  const b = document.getElementById('btnMesFinanceiroAtraso');
-  if(!b) return;
-  const on = !!state.mesFinanceiroAtraso;
-  b.classList.toggle('active', on);
-  b.textContent = on ? 'Segurando em '+monthLabel(mesFinanceiroAtual())+' — toque pra avançar' : 'Segurar Dashboard/Planner no mês anterior';
 }
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }

@@ -689,6 +689,7 @@ function montarBackupApp(){
     versaoApp: versaoEl ? versaoEl.textContent.trim() : '',
     exportadoEm: new Date().toISOString(),
     mesAtual: mesAtualRef,
+    mesPonto: mesPontoRef,
     state: state
   };
 }
