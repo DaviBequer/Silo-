@@ -154,11 +154,42 @@ function iavContexto(){
     mesFoco: mKey, hoje: todayKey(),
     contas,
     abaAtual: iavAbaAtual(),
+    extrasDoMes: iavExtrasCtx(mKey),
+    cartoes: (state.cartoesTracker||[]).map(c=>c.nome),
     hoje: iavHojeISO(), agora: iavAgora(),
     ponto: iavPontoCtx(),
     mercado: iavMercadoCtx(),
     resumo: iavResumo()
   };
+}
+
+/* ---------- Janelinha de conferência: nada vai pro app sem o Salvar ---------- */
+let iavConfResolve = null;
+function iavConfirmarItem(titulo, linhas){
+  document.getElementById('iavConfTitulo').textContent = titulo;
+  const box = document.getElementById('iavConfLinhas');
+  box.innerHTML = '';
+  linhas.forEach(([rotulo, valor])=>{
+    const row = document.createElement('div'); row.className = 'iav-conf-linha';
+    const a = document.createElement('span'); a.textContent = rotulo;
+    const b = document.createElement('b'); b.textContent = valor;
+    row.appendChild(a); row.appendChild(b); box.appendChild(row);
+  });
+  document.getElementById('modalIavConfirmar').classList.add('active');
+  return new Promise(resolve=>{ iavConfResolve = resolve; });
+}
+function iavConfResolver(v){
+  document.getElementById('modalIavConfirmar').classList.remove('active');
+  if(iavConfResolve) iavConfResolve(v);
+  iavConfResolve = null;
+}
+
+/* ---------- Extras (renda extra do Planner) do mês em foco ---------- */
+function iavExtrasCtx(mKey){
+  const u = state.currentUser;
+  return (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey)).map(e=>({
+    id:e.id, desc:e.desc, valor:e.valor, recebido:extraRecebidoNoMes(e, mKey)
+  }));
 }
 
 /* ---------- Ponto: dias úteis passados sem cadeado (lógica do app, a IA só informa) ---------- */
@@ -276,6 +307,64 @@ async function iavExecutar(a){
       state.users[u].saldoAtual = v;
       renderPlanner(); renderPanorama(); persist();
       return 'Saldo atual: '+fmtMoney(v);
+    }
+    case 'adicionar_compra_cartao': {
+      const cartoes = state.cartoesTracker || [];
+      if(!cartoes.length) return { aviso:'Você ainda não tem cartão cadastrado no Planner' };
+      const nomeC = String(a.cartao||'').toLowerCase().trim();
+      const cartao = cartoes.find(c=>nomeC && String(c.nome||'').toLowerCase().includes(nomeC)) || (cartoes.length===1 ? cartoes[0] : null);
+      if(!cartao) return { aviso:'Qual cartão? Tenho: '+cartoes.map(c=>c.nome).join(', ') };
+      const tipo = ['avista','parcelada','assinatura'].includes(a.tipo) ? a.tipo : 'avista';
+      const v = iavNum(a.valor); const desc = String(a.desc||'').trim();
+      if(!desc || !(v>0)) return { aviso:'Faltou o nome ou o valor da compra' };
+      const mesOk = /^\d{4}-\d{2}$/.test(a.mes||'') ? a.mes : null;
+      const categoria = String(a.categoria||'').trim() || 'Outros';
+      let linhas, aplicar;
+      if(tipo==='avista'){
+        const mKey = addMonths(mesOk || todayKey(), 1); // compra em um mês entra na fatura do seguinte
+        linhas = [['Cartão',cartao.nome],['Tipo','À vista'],['Descrição',desc],['Valor',fmtMoney(v)],['Categoria',categoria],['Entra na fatura de',monthLabel(mKey)]];
+        aplicar = ()=>{ if(!cartao.credoVista) cartao.credoVista = []; cartao.credoVista.push({ id:'cv'+Date.now(), descricao:desc, valor:v, categoria, mKey }); };
+      } else if(tipo==='parcelada'){
+        const parcelas = Math.min(120, Math.max(1, parseInt(a.parcelas)||1));
+        const mesInicio = mesOk || mesFinanceiroAtual();
+        linhas = [['Cartão',cartao.nome],['Tipo','Parcelada'],['Descrição',desc],['Valor total',fmtMoney(v)],['Parcelas',parcelas+'x de '+fmtMoney(v/parcelas)],['Primeira parcela',monthLabel(mesInicio)]];
+        aplicar = ()=>{ if(!state.comprasTracker) state.comprasTracker = []; state.comprasTracker.push({ id:'cp'+Date.now(), nome:desc, descricao:'', logoUrl:null, cartaoId:cartao.id, valorTotal:v, parcelas, mesInicio }); };
+      } else {
+        const mesInicio = mesOk || mesFinanceiroAtual();
+        linhas = [['Cartão',cartao.nome],['Tipo','Assinatura'],['Nome',desc],['Valor por mês',fmtMoney(v)],['Categoria',categoria],['Começa em',monthLabel(mesInicio)]];
+        aplicar = ()=>{ if(!cartao.assinaturas) cartao.assinaturas = []; cartao.assinaturas.push({ id:'as'+Date.now(), nome:desc, valor:v, categoria, mesInicio, canceladoApartirDe:null }); };
+      }
+      const ok = await iavConfirmarItem('Conferir antes de salvar', linhas);
+      if(!ok) return 'Cancelado: '+desc;
+      aplicar();
+      persist(); renderCartaoTrackerList(); renderPanorama();
+      return cartao.nome+': '+desc+' '+fmtMoney(v)+' salvo';
+    }
+    case 'adicionar_extra': {
+      const v = iavNum(a.valor); const desc = String(a.desc||'').trim();
+      if(!desc || !(v>0)) return { aviso:'Faltou o nome ou o valor do extra' };
+      const okMes = m=> /^\d{4}-\d{2}$/.test(m||'');
+      const mesInicio = okMes(a.mesInicio) ? a.mesInicio : state.focusMonth;
+      const mesFim = okMes(a.mesFim) && a.mesFim >= mesInicio ? a.mesFim : mesInicio;
+      const dia = Math.min(31, Math.max(1, parseInt(a.dia)||0)) || null;
+      const periodo = mesInicio===mesFim ? monthLabel(mesInicio) : monthLabel(mesInicio)+' a '+monthLabel(mesFim);
+      const ok = await iavConfirmarItem('Conferir antes de salvar', [['Tipo','Renda extra'],['Descrição',desc],['Valor',fmtMoney(v)],['Período',periodo],['Dia que cai',dia?String(dia):'—']]);
+      if(!ok) return 'Cancelado: '+desc;
+      if(!state.users[u].extras) state.users[u].extras = [];
+      state.users[u].extras.push({ id:'ex'+Date.now(), desc, valor:v, mesInicio, mesFim, dia, ajudaDavi:false });
+      persist(); renderPlanner(); renderPanorama();
+      return 'Extra: '+desc+' '+fmtMoney(v)+' salvo';
+    }
+    case 'marcar_extra_recebido': {
+      const mKey = /^\d{4}-\d{2}$/.test(a.mes||'') ? a.mes : state.focusMonth;
+      const alvo = String(a.desc||'').toLowerCase().trim();
+      const lista = (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey));
+      const e = lista.find(x=>x.id===a.id) || lista.find(x=>alvo && String(x.desc||'').toLowerCase().includes(alvo)) || (lista.length===1 ? lista[0] : null);
+      if(!e) return { aviso:'Não achei esse extra em '+monthLabel(mKey) };
+      const rec = a.recebido !== false;
+      setExtraRecebido(u, e.id, mKey, rec);
+      persist(); renderPlanner(); renderPanorama();
+      return 'Extra '+(rec?'recebido':'pendente')+': '+e.desc+' ('+monthLabel(mKey)+')';
     }
     case 'marcar_pago': {
       let c = 0;

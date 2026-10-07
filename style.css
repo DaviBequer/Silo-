@@ -1163,3 +1163,30 @@ body.lay-dragging-active{cursor:grabbing}
 .receitas-search .voz-btn{width:30px;height:30px;padding:0;color:#fff;background:var(--primary);flex-shrink:0}
 .receitas-search .voz-btn.ouvindo{background:var(--danger)}
 .lv-search-row .voz-btn{align-self:center}
+
+/* Extra recebido (Planner) */
+.btn-recebido{margin-top:6px;border:1px solid var(--line);background:var(--card);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.btn-recebido.on{background:var(--success-tint,#e6f4ea);color:var(--success);border-color:var(--success)}
+.renda-extra-item.recebido .rei-valor{text-decoration:line-through;opacity:.55}
+.extra-rec-nota{font-size:9.5px;font-weight:600;color:var(--text-faint);margin-top:1px}
+#btnMesFinanceiroAtraso.active{background:var(--primary);color:#fff}
+
+/* Seletor de tema */
+.tema-chip{padding:10px 4px;border-radius:12px;background:var(--card-2);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--text);font-family:inherit;cursor:pointer}
+.tema-chip.active{border-color:var(--gold);background:var(--gold-tint);color:var(--gold-dim)}
+/* Sobra x fatura (seção dos cartões) */
+.sf-resumo{margin-bottom:var(--s3);padding:12px;border-radius:var(--radius-md);background:var(--card-2)}
+.sf-titulo{font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px}
+.sf-nota{font-size:10px;color:var(--text-faint);margin-bottom:8px}
+.sf-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.sf-chip{flex:0 0 118px;padding:8px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.sf-chip .fm-mes{font-size:10.5px;font-weight:700;color:var(--text-dim);margin-bottom:4px}
+.sf-linha{display:flex;justify-content:space-between;gap:6px;font-size:10.5px;color:var(--text-faint);margin-top:2px}
+.sf-linha b{font-size:11px;color:var(--text);font-weight:700}
+.sf-linha.res{margin-top:5px;padding-top:5px;border-top:1px dashed var(--line)}
+.sf-linha.res b{color:var(--success);font-size:12px}
+.sf-linha.res.neg b{color:var(--warning)}
+/* Conferência da IA */
+.iav-conf-linha{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.iav-conf-linha span{color:var(--text-faint)}
+.iav-conf-linha b{color:var(--text);text-align:right;word-break:break-word}

@@ -1,6 +1,8 @@
 /* ================= ESTADO ================= */
 // Mês atual fica em state.mesAtual (Supabase). Aqui é só o ponto de partida até o estado carregar.
 let mesAtualRef = monthKey(new Date());
+// 1 = Dashboard/Planner/Panorama seguram o mês financeiro 1 mês atrás (ex.: ainda pagando as contas de outubro enquanto o Ponto já está em novembro). Fica em state.mesFinanceiroAtraso.
+let mesFinanceiroAtrasoRef = 0;
 const MES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MES_NOMES_LONGOS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DIA_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -35,6 +37,7 @@ function novoEstado(){
     semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} },
     configFonte:'system',
+    configTema:'padrao',
     layoutPrefs:{}
   };
 }
@@ -55,6 +58,23 @@ function setAppFonte(nome){
   state.configFonte = nome;
   persist();
   aplicarFonteApp();
+}
+const TEMAS_APP = { padrao:'', luxury:'tema-luxury', premium:'tema-premium' };
+const TEMAS_COR_BARRA = { padrao:'#2B3038', luxury:'#0b0d10', premium:'#2B3038' };
+function aplicarTemaApp(){
+  const t = TEMAS_APP[state.configTema] !== undefined ? state.configTema : 'padrao';
+  Object.values(TEMAS_APP).forEach(c=>{ if(c) document.body.classList.remove(c); });
+  if(TEMAS_APP[t]) document.body.classList.add(TEMAS_APP[t]);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', TEMAS_COR_BARRA[t]);
+  document.querySelectorAll('.tema-chip').forEach(el=>el.classList.toggle('active', el.dataset.tema===t));
+}
+function setAppTema(nome){
+  state.configTema = nome;
+  persist();
+  aplicarTemaApp();
+}
+function toggleTemaPopup(){
+  document.getElementById('temaPopup')?.classList.toggle('show');
 }
 function toggleFontePopup(){
   document.getElementById('fontePopup')?.classList.toggle('show');
@@ -172,7 +192,9 @@ async function carregar(){
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
       if(!state.configFonte) state.configFonte = 'system';
+      if(!state.configTema) state.configTema = 'padrao';
       if(!state.layoutPrefs) state.layoutPrefs = {};
+      mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso ? 1 : 0;
       if(state.mesAtual){
         mesAtualRef = state.mesAtual;
       } else {
@@ -196,6 +218,7 @@ async function carregar(){
   }
   limparDadosAntigos();
   aplicarFonteApp();
+  aplicarTemaApp();
   if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
   renderAll();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
@@ -262,7 +285,7 @@ function monthLabelExtensoCurto(key){ const d=keyToDate(key); return MES_NOMES_L
 function monthLabelExtenso(key){ const d=keyToDate(key); return MES_NOMES_LONGOS[d.getMonth()]+'/'+d.getFullYear(); }
 function daysInMonth(key){ const d=keyToDate(key); return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
 function todayKey(){ return mesAtualRef; }
-function mesFinanceiroAtual(){ return addMonths(todayKey(), 1); } // Planner/Panorama sempre operam 1 mês à frente (trabalhou em X, recebe/paga em X+1)
+function mesFinanceiroAtual(){ return addMonths(todayKey(), mesFinanceiroAtrasoRef ? 0 : 1); } // Planner/Panorama sempre operam 1 mês à frente (trabalhou em X, recebe/paga em X+1)
 async function aplicarMesAtualManual(){
   const valor = document.getElementById('mesAtualManualInput')?.value;
   if(!valor) return;
@@ -277,19 +300,22 @@ function definirMesAtual(valor){
   if(state.focusMonth) state.focusMonth = mesFinanceiroAtual();
   renderAll();
 }
-function popularSelectMes(selectId){
-  const el = document.getElementById(selectId);
-  if(!el) return;
-  const valorAtual = el.value;
-  const base = keyToDate(todayKey());
-  let html = '<option value="">Selecione...</option>';
-  for(let i=-36;i<=24;i++){
-    const d = new Date(base.getFullYear(), base.getMonth()+i, 1);
-    const key = monthKey(d);
-    html += `<option value="${key}">${MES_NOMES_LONGOS[d.getMonth()]} de ${d.getFullYear()}</option>`;
-  }
-  el.innerHTML = html;
-  if(valorAtual) el.value = valorAtual;
+function toggleMesFinanceiroAtraso(){
+  state.mesFinanceiroAtraso = state.mesFinanceiroAtraso ? 0 : 1;
+  mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso;
+  state.focusMonth = mesFinanceiroAtual();
+  state.panoOffset = 0;
+  persist();
+  renderAll();
+  atualizarBtnMesFinanceiroAtraso();
+  showToast(state.mesFinanceiroAtraso ? 'Dashboard e Planner ficam em '+monthLabel(mesFinanceiroAtual()) : 'Dashboard e Planner foram para '+monthLabel(mesFinanceiroAtual()));
+}
+function atualizarBtnMesFinanceiroAtraso(){
+  const b = document.getElementById('btnMesFinanceiroAtraso');
+  if(!b) return;
+  const on = !!state.mesFinanceiroAtraso;
+  b.classList.toggle('active', on);
+  b.textContent = on ? 'Segurando em '+monthLabel(mesFinanceiroAtual())+' — toque pra avançar' : 'Segurar Dashboard/Planner no mês anterior';
 }
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }
@@ -405,21 +431,6 @@ const PADRAO_SEGQUI_HORAS = 9;
 const PADRAO_SEX_HORAS = 8;
 
 /* ================= LOGO PERSONALIZADA (escolhida pelo usuário no dispositivo) ================= */
-function triggerLogoUpload(){ document.getElementById('logoFileInput').click(); }
-function onLogoFileSelected(ev){
-  const file = ev.target.files && ev.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    comprimirImagemDataUrl(e.target.result, 256).then(dataUrl=>{
-      state.logoApp = dataUrl;
-      persist();
-      aplicarLogoSalva();
-      showToast('Logo atualizada');
-    });
-  };
-  reader.readAsDataURL(file);
-}
 function aplicarLogoSalva(){
   try{
     const saved = state.logoApp;
@@ -486,12 +497,38 @@ function rendaBaseForMonth(user, mKey){
   }
   return state.users[user].income[mKey] || 0;
 }
+function extraNoPeriodo(e, mKey){
+  const fim = e.mesFim || e.mesInicio;
+  return mKey >= e.mesInicio && mKey <= fim;
+}
+function extraRecebidoNoMes(e, mKey){ return !!(e.recebidos && e.recebidos[mKey]); }
+/* Extras do mês que ainda NÃO foram marcados como recebidos (só esses somam na renda; os recebidos já estão no saldo em conta) */
 function extraTotalForMonth(user, mKey){
   return (state.users[user].extras||[]).reduce((sum,e)=>{
-    const fim = e.mesFim || e.mesInicio;
-    if(mKey >= e.mesInicio && mKey <= fim) return sum + (Number(e.valor)||0);
+    if(extraNoPeriodo(e, mKey) && !extraRecebidoNoMes(e, mKey)) return sum + (Number(e.valor)||0);
     return sum;
   }, 0);
+}
+function extrasRecebidosNoMes(user, mKey){
+  return (state.users[user].extras||[]).filter(e=> extraNoPeriodo(e, mKey) && extraRecebidoNoMes(e, mKey));
+}
+function setExtraRecebido(user, id, mKey, recebido){
+  const e = (state.users[user].extras||[]).find(x=>x.id===id);
+  if(!e || !mKey) return false;
+  if(!e.recebidos) e.recebidos = {};
+  if(recebido) e.recebidos[mKey] = true; else delete e.recebidos[mKey];
+  return true;
+}
+function toggleExtraRecebido(id){
+  if(!rendaExtraUser) return;
+  const e = (state.users[rendaExtraUser].extras||[]).find(x=>x.id===id);
+  if(!e) return;
+  setExtraRecebido(rendaExtraUser, id, rendaExtraMes, !extraRecebidoNoMes(e, rendaExtraMes));
+  persist();
+  renderRendaExtraLista();
+  renderRendaTable();
+  renderPanorama();
+  renderMetaPJ();
 }
 function incomeForMonth(user, mKey){
   const isAtual = mKey === mesFinanceiroAtual();
@@ -515,8 +552,10 @@ function dizimoForMonth(user, mKey){
 
 /* ================= RENDA EXTRA (múltiplas entradas, por período) ================= */
 let rendaExtraUser = null;
+let rendaExtraMes = null; // mês da coluna tocada no Planner: é nele que o botão "Recebido" vale
 function abrirRendaExtraModal(user, mKey){
   rendaExtraUser = user;
+  rendaExtraMes = mKey;
   document.getElementById('rendaExtraModalUsuario').textContent = user==='davi'?'Davi':'Cris';
   document.getElementById('extraAjudaDaviField').style.display = user==='cris' ? 'block' : 'none';
   resetarFormExtraItem();
@@ -542,10 +581,14 @@ function renderRendaExtraLista(){
   el.innerHTML = lista.map(e=>{
     const fim = e.mesFim || e.mesInicio;
     const periodo = e.mesInicio===fim ? monthLabelExtensoCurto(e.mesInicio) : `${monthLabelExtensoCurto(e.mesInicio)} – ${monthLabelExtensoCurto(fim)}`;
-    return `<div class="renda-extra-item">
+    const noMes = rendaExtraMes && extraNoPeriodo(e, rendaExtraMes);
+    const rec = noMes && extraRecebidoNoMes(e, rendaExtraMes);
+    const btnRec = noMes ? `<button class="btn-recebido ${rec?'on':''}" onclick="toggleExtraRecebido('${e.id}')">${rec?ICON_CHECK+' Recebido em '+monthLabel(rendaExtraMes):'Marcar recebido em '+monthLabel(rendaExtraMes)}</button>` : '';
+    return `<div class="renda-extra-item ${rec?'recebido':''}">
       <div class="rei-info">
         <div class="rei-desc">${e.desc}</div>
         <div class="rei-periodo">${periodo}</div>
+        ${btnRec}
       </div>
       <div class="rei-valor">${fmtMoney(e.valor)}</div>
       <div class="rei-actions">
@@ -604,6 +647,7 @@ function excluirExtraItem(id){
 function closeRendaExtraModal(){
   document.getElementById('modalRendaExtra').classList.remove('active');
   rendaExtraUser = null;
+  rendaExtraMes = null;
 }
 function futuroValorNoMes(item, mKey){
   // compatibilidade com formato antigo (mês único)

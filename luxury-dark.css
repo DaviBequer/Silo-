@@ -1,263 +1,36 @@
-/* ================= FINAL LUXURY UPGRADE ================= */
-
-:root {
-  --luxury-bg: #0b0d10;
-  --luxury-bg-2: #12171d;
-  --luxury-card: rgba(18, 23, 29, 0.9);
-  --luxury-card-2: rgba(29, 35, 42, 0.95);
-  --luxury-line: rgba(255,255,255,0.08);
-  --luxury-text: #f5f7fa;
-  --luxury-dim: #c9d0d7;
-  --luxury-faint: #8d97a4;
-  --luxury-gold: #d4af67;
-  --luxury-gold-2: #b88932;
-  --luxury-gold-soft: rgba(212, 175, 103, 0.14);
-  --luxury-success: #6ee7b7;
-  --luxury-danger: #ff7d7d;
-  --luxury-warning: #fbbf24;
-  --luxury-shadow: 0 22px 50px rgba(0,0,0,0.45);
-  --luxury-shadow-soft: 0 10px 28px rgba(0,0,0,0.28);
-  --luxury-radius-xl: 28px;
-  --luxury-radius-lg: 22px;
-  --luxury-radius-md: 16px;
+/* ================= TEMA LUXURY DARK ================= */
+/* Ativado com body.tema-luxury (Configurações > Tema). Troca as variáveis do app inteiro; sem a classe, não faz nada. */
+body.tema-luxury{
+  --bg:#0b0d10; --card:#151a20; --card-2:#1d232b; --line:rgba(255,255,255,.09);
+  --text:#f5f7fa; --text-dim:#c9d0d7; --text-faint:#8d97a4;
+  --primary:#b88932; --primary-dim:#9c7227; --primary-tint:rgba(212,175,103,.12);
+  --gold:#d4af67; --gold-dim:#e2c278; --gold-tint:rgba(212,175,103,.14);
+  --success:#6ee7b7; --success-tint:rgba(110,231,183,.12);
+  --danger:#ff7d7d; --danger-tint:rgba(255,125,125,.12);
+  --warning:#fbbf24; --warning-tint:rgba(251,191,36,.13);
+  --lavender:#b9a3d6;
+  --shadow-lg:0 22px 50px rgba(0,0,0,.5); --card-shadow:0 10px 28px rgba(0,0,0,.28);
+  background:radial-gradient(circle at top left, rgba(212,175,103,.10), transparent 20%), linear-gradient(180deg,#0b0d10 0%,#12171d 100%);
+  background-attachment:fixed; color-scheme:dark;
 }
-
-body {
-  background:
-    radial-gradient(circle at top left, rgba(212,175,103,0.12), transparent 18%),
-    radial-gradient(circle at bottom right, rgba(255,255,255,0.03), transparent 25%),
-    linear-gradient(180deg, var(--luxury-bg) 0%, var(--luxury-bg-2) 100%);
-}
-
-.header {
-  background: rgba(9, 11, 14, 0.78);
-  border-bottom: 1px solid var(--luxury-line);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  box-shadow: 0 8px 26px rgba(0,0,0,0.18);
-}
-
-.header-title,
-.fullpage-title,
-.card-title,
-.section-title,
-.pano-hero-valor,
-.acum-card .value,
-.ponto-summary .summary-item .value,
-.receita-card-nome,
-.lv-card-titulo,
-.mkt-stat-value {
-  color: var(--luxury-text);
-  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
-}
-
-.card,
-.section,
-.modal,
-.user-card-combined,
-.tarefas-dashboard,
-.ponto-semanas-card,
-.mkt-stat-card,
-.mkt-rank-item,
-.receita-card,
-.lv-card,
-.cartao-card-item,
-.mercado-item,
-.simulador-painel,
-.acum-card,
-.ponto-summary,
-.check-item-compact,
-.semana-dia,
-.user-tab,
-.month-picker-panel,
-.cat-picker-panel,
-.receita-card-menu,
-.receita-menu-dropdown {
-  background: linear-gradient(180deg, rgba(24,29,35,0.98) 0%, rgba(18,23,29,0.96) 100%);
-  border: 1px solid var(--luxury-line);
-  box-shadow: var(--luxury-shadow-soft);
-}
-
-.card,
-.section,
-.modal {
-  border-radius: var(--luxury-radius-xl);
-}
-
-.card:hover,
-.section:hover,
-.receita-card:hover,
-.lv-card:hover,
-.cartao-card-item:hover,
-.mkt-rank-item:hover,
-.mercado-item:hover {
-  box-shadow: var(--luxury-shadow);
-  border-color: rgba(212, 175, 103, 0.35);
-}
-
-.bottom-nav {
-  background: rgba(10, 13, 16, 0.92);
-  border-top: 1px solid var(--luxury-line);
-  box-shadow: 0 -15px 35px rgba(0,0,0,0.28);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-}
-
-.nav-item {
-  color: var(--luxury-faint);
-  border-radius: 14px;
-}
-
-.nav-item.active {
-  color: var(--luxury-gold);
-  background: rgba(212,175,103,0.08);
-  box-shadow: inset 0 0 0 1px rgba(212,175,103,0.2);
-}
-
-.nav-item.active::after {
-  background: var(--luxury-gold);
-  width: 6px;
-  height: 6px;
-  bottom: 6px;
-}
-
-.btn {
-  background: linear-gradient(180deg, #d9b76d 0%, #bf8f38 100%);
-  color: #1a1208;
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 10px 22px rgba(191,143,56,0.25);
-}
-
-.btn:hover {
-  background: linear-gradient(180deg, #e2c278 0%, #c7932a 100%);
-  box-shadow: 0 14px 30px rgba(191,143,56,0.34);
-}
-
-.btn-outline {
-  background: rgba(255,255,255,0.02);
-  color: var(--luxury-text);
-  border: 1px solid var(--luxury-line);
-}
-
-.field input,
-.field select,
-.field textarea,
-.month-picker-btn,
-.cat-picker-btn,
-.receitas-search,
-.unidade-picker,
-.filter-chip,
-.lv-tom-grid-btn,
-.subtab-btn,
-.user-tab,
-.pano-subtab,
-.modal-close,
-.section-add,
-.section-add-label {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--luxury-line);
-  color: var(--luxury-text);
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus,
-.receitas-search:focus-within,
-.month-picker-btn:focus,
-.cat-picker-btn:focus {
-  border-color: rgba(212,175,103,0.8);
-  box-shadow: 0 0 0 3px rgba(212,175,103,0.12);
-}
-
-.filter-chip.active,
-.dif-chip.active,
-.lv-tom-grid-btn.active,
-.user-tab.active,
-.subtab-btn.active,
-.pano-subtab.active {
-  background: linear-gradient(180deg, #d9b76d 0%, #bf8f38 100%);
-  color: #1a1208;
-  border-color: transparent;
-  box-shadow: 0 10px 22px rgba(191,143,56,0.22);
-}
-
-.receita-card,
-.lv-card {
-  background: linear-gradient(180deg, rgba(22,26,32,0.96) 0%, rgba(17,21,27,0.98) 100%);
-}
-
-.receita-card::before,
-.lv-card::before,
-.cartao-card-item::before,
-.mercado-item::before,
-.mkt-rank-item::before {
-  background: radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 45%);
-}
-
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.76);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.modal {
-  background: linear-gradient(180deg, rgba(18,22,27,0.98) 0%, rgba(12,16,20,0.98) 100%);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 26px 60px rgba(0,0,0,0.52);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.15);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(212,175,103,0.5);
-}
-
-@media (max-width: 767px) {
-  .card,
-  .section {
-    border-radius: 20px;
-  }
-
-  .header {
-    padding: 10px 12px;
-  }
-
-  .bottom-nav {
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .bottom-nav {
-    max-width: 1100px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 20px 20px 0 0;
-  }
-
-  .receita-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .card,
-  .section {
-    padding: 28px 30px;
-  }
-
-  .receita-card:hover,
-  .lv-card:hover,
-  .cartao-card-item:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 26px 52px rgba(0,0,0,0.42);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+body.tema-luxury .header{background:rgba(9,11,14,.82);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-bottom:1px solid var(--line)}
+body.tema-luxury .bottom-nav{background:rgba(10,13,16,.94);border-top:1px solid var(--line)}
+body.tema-luxury .nav-item.active{color:var(--gold)}
+body.tema-luxury .btn:not(.btn-outline){background:linear-gradient(180deg,#d9b76d 0%,#bf8f38 100%);color:#1a1208;border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 20px rgba(191,143,56,.22)}
+body.tema-luxury .btn-outline{background:rgba(255,255,255,.03);color:var(--text);border:1px solid var(--line)}
+body.tema-luxury .card,
+body.tema-luxury .modal{border:1px solid var(--line)}
+body.tema-luxury .modal-overlay{background:rgba(0,0,0,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+body.tema-luxury .modal{box-shadow:0 26px 60px rgba(0,0,0,.55)}
+body.tema-luxury input,body.tema-luxury select,body.tema-luxury textarea{color-scheme:dark}
+body.tema-luxury .field input:focus,body.tema-luxury .field select:focus,body.tema-luxury .field textarea:focus{border-color:rgba(212,175,103,.8);box-shadow:0 0 0 3px rgba(212,175,103,.12)}
+/* elementos com branco fixo no tema claro */
+body.tema-luxury .ios-confirm-card{background:rgba(24,29,35,.96)}
+body.tema-luxury .lay-toolbar{background:rgba(24,29,35,.95)}
+body.tema-luxury .lv-filtro-toggle,
+body.tema-luxury .receita-card-fav,
+body.tema-luxury .receita-card-menu-btn,
+body.tema-luxury .receita-hero-fav,
+body.tema-luxury .receita-foto-fab,
+body.tema-luxury .receita-card-cat{background:rgba(24,29,35,.92);color:var(--text)}
+body.tema-luxury ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}

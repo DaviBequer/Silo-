@@ -949,7 +949,7 @@ function calcularFluxoCaixa(mKey){
     if(base) eventos[diaRecebimento] = (eventos[diaRecebimento]||0) + base;
     (state.users[u].extras||[]).forEach(e=>{
       const fim = e.mesFim || e.mesInicio;
-      if(mKey >= e.mesInicio && mKey <= fim){
+      if(mKey >= e.mesInicio && mKey <= fim && !extraRecebidoNoMes(e, mKey)){
         const d = Math.min(Math.max(parseInt(e.dia)||diaRecebimento,1),28);
         eventos[d] = (eventos[d]||0) + (Number(e.valor)||0);
       }

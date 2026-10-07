@@ -14,24 +14,6 @@ function atualizarLvNavBar(){
   document.getElementById('lvNavBiblioteca')?.classList.toggle('active', !!naBiblioteca);
   document.getElementById('lvNavEstudio')?.classList.toggle('active', !naBiblioteca && ativo);
 }
-function lvIrParaBiblioteca(){
-  document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
-  document.getElementById('pageLouvorForm')?.classList.remove('active');
-  document.body.style.overflow = '';
-  switchAba('louvor');
-  atualizarLvNavBar();
-}
-function lvIrParaEstudio(){
-  if(louvorAtualId && getLouvorAtual()){
-    abrirLouvorDetalhe(louvorAtualId);
-  } else if(state.louvores && state.louvores.length>0){
-    const maisRecente = state.louvores.slice().sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0))[0];
-    abrirLouvorDetalhe(maisRecente.id);
-  } else {
-    openLouvorForm();
-  }
-  atualizarLvNavBar();
-}
 
 /* ================= LOUVOR ================= */
 const LOUVOR_CATEGORIAS = ['Louvor','Harpa Cristã','Corinhos'];

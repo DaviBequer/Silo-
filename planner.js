@@ -2,17 +2,6 @@
 /* ================= LISTA DE TAREFAS (isolado, visual apenas) ================= */
 let tarefaTimerInterval = null;
 
-function closeTarefasPage(){
-  document.getElementById('pageTarefas').classList.remove('active');
-  if(tarefaTimerInterval){ clearInterval(tarefaTimerInterval); tarefaTimerInterval = null; }
-}
-function switchTarefasSubtab(tab){
-  document.getElementById('subtabTarefas').style.display = tab==='tarefas' ? '' : 'none';
-  document.getElementById('subtabSemana').style.display = tab==='semana' ? '' : 'none';
-  document.getElementById('subtabBtnTarefas').classList.toggle('active', tab==='tarefas');
-  document.getElementById('subtabBtnSemana').classList.toggle('active', tab==='semana');
-  if(tab==='semana') renderSemana();
-}
 function novaTarefaCategoria(nome){
   if(!nome) return null;
   let cat = (state.tarefaCategorias||[]).find(c=>c.nome.toLowerCase()===nome.toLowerCase());
@@ -21,19 +10,6 @@ function novaTarefaCategoria(nome){
     state.tarefaCategorias.push(cat);
   }
   return cat.id;
-}
-function salvarTarefa(){
-  const nome = document.getElementById('tarefaNome').value.trim();
-  const desc = document.getElementById('tarefaDesc').value.trim();
-  const catInput = document.getElementById('tarefaCategoria').value.trim();
-  if(!nome){ showToast('Digite o nome da tarefa'); return; }
-  const categoriaId = catInput ? novaTarefaCategoria(catInput) : null;
-  state.tarefas.push({ id:'tf'+Date.now(), nome, desc, categoriaId, feita:false, tempoGasto:0, timerStart:null });
-  persist();
-  document.getElementById('tarefaNome').value = '';
-  document.getElementById('tarefaDesc').value = '';
-  document.getElementById('tarefaCategoria').value = '';
-  renderTarefasModal();
 }
 function toggleTarefa(id){
   const t = state.tarefas.find(t=>t.id===id);
@@ -62,17 +38,6 @@ function pararTarefaTimer(id){
     persist();
     renderTarefasModal();
   }
-}
-function tickTarefaTimers(){
-  (state.tarefas||[]).forEach(t=>{
-    if(t.timerStart){
-      const el = document.getElementById('timerDisplay-'+t.id);
-      if(el){
-        const total = (t.tempoGasto||0) + Math.floor((Date.now()-t.timerStart)/1000);
-        el.textContent = formatTempoTarefa(total);
-      }
-    }
-  });
 }
 function formatTempoTarefa(totalSegundos){
   const h = Math.floor(totalSegundos/3600);
@@ -191,7 +156,9 @@ function renderRendaTable(){
 
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
     const val = extraTotalForMonth(u, mKey);
-    return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirRendaExtraModal('${u}','${mKey}')">${val?fmtMoney(val):'<span class="cell-money-empty">+ Extra</span>'}</td>`;
+    const nRec = extrasRecebidosNoMes(u, mKey).length;
+    const vazio = nRec ? '<span class="cell-money-empty">✓ recebido</span>' : '<span class="cell-money-empty">+ Extra</span>';
+    return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirRendaExtraModal('${u}','${mKey}')">${val?fmtMoney(val)+(nRec?'<div class="extra-rec-nota">+'+nRec+' recebido'+(nRec>1?'s':'')+'</div>':''):vazio}</td>`;
   }).join('')}<td></td></tr>`;
 
   const dizimoRow = (u!=='davi') ? '' : `<tr><td class="row-label" style="color:var(--text-faint)">Dízimo</td>${months.map(mKey=>{
@@ -486,17 +453,46 @@ let cartoesExpandidos = {};
 let secoesGastoColapsadas = {};
 let quitadasMostrarPorCartao = {};
 let faturaMesSelecionado = {};
+/* Fatura de um cartão num mês: parcelas + à vista + assinaturas */
+function faturaCartaoNoMes(cartao, mKey){
+  const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
+  const totalParcelas = compras.reduce((s,item)=>s+compraTrackerValorNoMes(item, mKey), 0);
+  const totalVista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).reduce((s,cv)=>s+Number(cv.valor||0), 0);
+  const totalAssinaturas = (cartao.assinaturas||[]).reduce((s,a)=>s+assinaturaValorNoMes(a, mKey), 0);
+  return totalParcelas + totalVista + totalAssinaturas;
+}
+/* Resumo só da seção dos cartões: sobra do mês − fatura de todos os cartões. O cartão continua FORA da sobra do Dashboard/Planner. */
+function gerarResumoSobraFaturaHtml(){
+  const cartoes = state.cartoesTracker || [];
+  if(!cartoes.length) return '';
+  const hoje = mesFinanceiroAtual();
+  const chips = [];
+  for(let i=0;i<12;i++){
+    const mKey = addMonths(hoje, i);
+    let sobra = 0;
+    try{ sobra = Number(dadosDoMes(mKey).sobra) || 0; }catch(e){ sobra = 0; }
+    const fatura = cartoes.reduce((s,c)=>s+faturaCartaoNoMes(c, mKey), 0);
+    const resta = sobra - fatura;
+    chips.push(`<div class="sf-chip">
+      <div class="fm-mes">${monthLabel(mKey)}</div>
+      <div class="sf-linha"><span>Sobra</span><b>${fmtMoney(sobra)}</b></div>
+      <div class="sf-linha"><span>Fatura</span><b>${fmtMoney(fatura)}</b></div>
+      <div class="sf-linha res ${resta<0?'neg':''}"><span>Resta</span><b>${fmtMoney(resta)}</b></div>
+    </div>`);
+  }
+  return `<div class="sf-resumo">
+    <div class="sf-titulo">Sobra do mês − fatura dos cartões</div>
+    <div class="sf-nota">Só aqui: a sobra do Dashboard continua sem o cartão.</div>
+    <div class="sf-strip">${chips.join('')}</div>
+  </div>`;
+}
 function gerarFaturaMensalHtml(cartao){
   const hoje = mesFinanceiroAtual();
-  const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
   const selecionado = faturaMesSelecionado[cartao.id];
   const meses = [];
   for(let i=0;i<12;i++) meses.push(addMonths(hoje, i));
   return meses.map(mKey=>{
-    const totalParcelas = compras.reduce((s,item)=>s+compraTrackerValorNoMes(item, mKey), 0);
-    const totalVista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).reduce((s,cv)=>s+Number(cv.valor||0), 0);
-    const totalAssinaturas = (cartao.assinaturas||[]).reduce((s,a)=>s+assinaturaValorNoMes(a, mKey), 0);
-    const total = totalParcelas + totalVista + totalAssinaturas;
+    const total = faturaCartaoNoMes(cartao, mKey);
     const sel = selecionado===mKey ? ' selected' : '';
     return `<div class="ct-fatura-chip${sel}" onclick="toggleFaturaMes('${cartao.id}','${mKey}')">
       <div class="fm-mes">${monthLabel(mKey)}</div>
@@ -522,7 +518,7 @@ function renderCartaoTrackerList(){
     list.innerHTML = `<div class="empty-state"><div class="title">Nenhum cartão cadastrado</div><div class="desc">Toque em "+ Cartão" pra começar</div></div>`;
     return;
   }
-  list.innerHTML = cartoes.map(cartao=>{
+  list.innerHTML = gerarResumoSobraFaturaHtml() + cartoes.map(cartao=>{
     const mesSelecionado = faturaMesSelecionado[cartao.id];
     const todasCompras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
     const compras = todasCompras
@@ -1370,11 +1366,6 @@ function getSemanaDates(offset){
   }
   return dates;
 }
-function navSemana(delta){
-  state.semanaOffset = (state.semanaOffset||0) + delta;
-  persist();
-  renderSemana();
-}
 function renderSemana(){
   const dates = getSemanaDates(state.semanaOffset||0);
   const hojeKey = fmtDateKeyLocal(new Date());
@@ -1424,25 +1415,6 @@ function openSemanaItemModal(diaKey, periodo, itemId){
     if(item) document.getElementById('semanaItemTexto').value = item.texto;
   }
   document.getElementById('modalSemanaItem').classList.add('active');
-}
-function salvarSemanaItem(){
-  const diaKey = document.getElementById('semanaItemDiaKey').value;
-  const periodo = document.getElementById('semanaItemPeriodo').value;
-  const itemId = document.getElementById('semanaItemId').value;
-  const texto = document.getElementById('semanaItemTexto').value.trim();
-  if(!texto){ showToast('Digite uma descrição'); return; }
-  if(!state.semanaAgenda[diaKey]) state.semanaAgenda[diaKey] = {};
-  if(!state.semanaAgenda[diaKey][periodo]) state.semanaAgenda[diaKey][periodo] = [];
-  const lista = state.semanaAgenda[diaKey][periodo];
-  if(itemId){
-    const item = lista.find(i=>i.id===itemId);
-    if(item) item.texto = texto;
-  }else{
-    lista.push({ id:'sm'+Date.now(), texto, feito:false });
-  }
-  persist();
-  closeModal('modalSemanaItem');
-  renderSemana();
 }
 function toggleSemanaItem(diaKey, periodo, itemId){
   const item = (state.semanaAgenda[diaKey]?.[periodo]||[]).find(i=>i.id===itemId);

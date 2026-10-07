@@ -25,6 +25,15 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v2.80', itens: [
+    'IA no Planner: adiciona compra no cartão (à vista, parcelada, assinatura) e renda extra por voz, sempre mostrando uma janelinha para você conferir e salvar',
+    'Cartões: resumo mês a mês com sobra, fatura e quanto resta (só ali, a sobra do Dashboard segue sem o cartão)',
+    'Temas Luxury Dark e Premium funcionando (Configurações > Tema) e limpeza de código antigo'
+  ] },
+  { versao: 'v2.79', itens: [
+    'Extra do Planner: marque como recebido em cada mês (toque na linha Extra) e ele para de somar, sem duplicar com o saldo em conta; a IA também marca por voz',
+    'Configurações: opção de segurar Dashboard/Planner no mês anterior sem mexer no Ponto PJ'
+  ] },
   { versao: 'v2.78', itens: [
     'Removidos os microfones antigos (ditado por aba); só o microfone da IA fica, nas abas Dashboard, Planner, Ponto e Mercado. A IA agora também registra o ponto por voz, mostra dias úteis sem cadeado e mexe nas listas do Mercado'
   ] },
@@ -322,6 +331,7 @@ function abrirImportExportModal(){
   renderChangelog();
   const mesInput = document.getElementById('mesAtualManualInput');
   if(mesInput) mesInput.value = mesAtualRef;
+  atualizarBtnMesFinanceiroAtraso();
   
   const storage = calcularStorageUsage();
   
