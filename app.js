@@ -3,9 +3,7 @@ function renderAll(){
   renderPanorama();
   renderPlanner();
   renderPonto();
-  renderReceitas();
   renderLouvor();
-  renderMercado();
 }
 
 /* ========== STORAGE & BACKUP ========== */
@@ -25,6 +23,25 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.1', itens: [
+    'Cartão: cada cartão mostra a fatura em destaque com o status (Aberta, Fechada aguardando pagamento, Vencida gerando juros, Paga ou Paga em parte), pelos dias de fechamento e vencimento',
+    'Cartão: botão Pagar abre uma janela com o valor pago; pagamento menor que a fatura fica parcial (laranja) e o que foi pago deixa de contar no acumulado',
+    'Cartão: compra nova já vem na fatura aberta (no dia do fechamento ela já vai para o mês seguinte); Crédito à Vista agora pede o mês da fatura',
+    'Faixa de faturas do cartão marca as pagas (verde), parciais (laranja) e vencidas (vermelho)',
+    'Ponto PJ: botão Fechar mês (confere os dias úteis trancados, deixa trancar ou editar os que faltam, fecha e avança o mês); mês fechado ganha marca verde e pode ser reaberto; saiu a escolha de mês das configurações',
+    'Dashboard e Contas a pagar: dá para olhar o mês anterior e navegar pelos meses seguintes só para ver; o Concluir mês do topo agora avança só o mês das contas'
+  ]},
+  { versao: 'v3.0', itens: [
+    'Dashboard novo: o antigo Planner agora se chama Dashboard, com as abas Geral e Cartão; o Dashboard antigo, a IA e os temas saíram',
+    'Geral: o Acumulado de vários meses ficou no topo (no lugar do resumo); sem cartão no Fluxo Mensal',
+    'Cartão: tem o próprio Acumulado (sobra do Geral − fatura dos cartões)',
+    'Contas a pagar: botão discreto no Saldo Atual abre a lista do mês com "recebi" do salário e de cada extra, "paguei" do dízimo e as contas; o que está marcado deixa de contar',
+    'Banco de dados: avisa na tela quando não salva, guarda uma cópia neste aparelho, e não deixa um aparelho apagar o que o outro salvou sem perguntar'
+  ]},
+  { versao: 'v2.82', itens: [
+    'Removidas as abas Receitas e Mercado (menu, buscas e IA); backup e importar dados continuam no app',
+    'Botão da IA menor e discreto (meio apagado até tocar)'
+  ]},
   { versao: 'v2.81', itens: [
     'Mês atual: Dashboard e Planner andam juntos (seletor na versão); o Ponto PJ tem o mês dele, só nas configurações do Ponto',
     'Dashboard > Contas: removido o Fluxo de caixa; Contas a pagar agora vem antes de Parcelas terminando'
@@ -355,10 +372,86 @@ function abrirImportExportModal(){
   
 }
 
-/* exportarDadosApp / triggerImportarDados / onImportFileSelected vivem em mercado.js */
+/* ================= IMPORTAR / EXPORTAR TODOS OS DADOS ================= */
+function montarBackupApp(){
+  const versaoEl = document.querySelector('.header-version');
+  return {
+    app: 'Siloe',
+    versaoApp: versaoEl ? versaoEl.textContent.trim() : '',
+    exportadoEm: new Date().toISOString(),
+    mesAtual: mesAtualRef,
+    mesPonto: mesPontoRef,
+    state: state
+  };
+}
+async function compartilharBackupApp(){
+  const nome = `siloe-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const blob = new Blob([JSON.stringify(montarBackupApp(), null, 2)], { type: 'application/json' });
+  try{
+    const arquivo = new File([blob], nome, { type: 'application/json' });
+    if(navigator.canShare && navigator.canShare({ files:[arquivo] })){
+      await navigator.share({ files:[arquivo], title: 'Backup Siloé' });
+      closeModal('modalImportExport');
+      return;
+    }
+  }catch(err){
+    if(err && err.name==='AbortError') return;
+  }
+  exportarDadosApp();
+}
+function exportarDadosApp(){
+  const backup = montarBackupApp();
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dataStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `siloe-backup-${dataStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  closeModal('modalImportExport');
+  showToast('Backup exportado');
+}
+function triggerImportarDados(){
+  document.getElementById('importFileInput').click();
+}
+function onImportFileSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    let backup;
+    try{
+      backup = JSON.parse(e.target.result);
+    }catch(err){
+      showToast('Não foi possível ler esse arquivo.');
+      event.target.value = '';
+      return;
+    }
+    if(!backup || typeof backup !== 'object' || !backup.state){
+      showToast('Esse arquivo não é um backup válido do Siloé.');
+      event.target.value = '';
+      return;
+    }
+    iosConfirm('Importar vai substituir TODOS os dados atuais do app por esse backup. Continuar?').then(ok=>{
+      event.target.value = '';
+      if(!ok) return;
+      const novo = Object.assign(novoEstado(), backup.state);
+      if(backup.mesAtual) novo.mesAtual = backup.mesAtual;
+      state = novo;
+      persistAgora().then(salvou=>{
+        if(salvou) location.reload();
+        else showToast('Erro ao importar: '+((window.SiloSupabase&&window.SiloSupabase.lastError)||'sem conexão com o Supabase'));
+      });
+    });
+  };
+  reader.readAsText(file);
+}
 
 /* ========== BUSCA GLOBAL ========== */
-/* ---------- Nova categoria (genérico: Mercado/Estoque e Cartão à vista) ---------- */
+/* ---------- Nova categoria (Assinatura e Crédito à vista do cartão) ---------- */
 function abrirNovaCategoriaExtra(alvo){
   document.getElementById('categoriaExtraAlvo').value = alvo;
   document.getElementById('categoriaExtraNome').value = '';
@@ -368,19 +461,14 @@ function salvarCategoriaExtra(){
   const alvo = document.getElementById('categoriaExtraAlvo').value;
   const nome = document.getElementById('categoriaExtraNome').value.trim();
   if(!nome){ showToast('Digite o nome da categoria'); return; }
-  const config = alvo==='mercado'
-    ? { customKey:'mercadoCategoriasCustom', base:MERCADO_CATEGORIAS }
-    : { customKey:'credoVistaCategoriasCustom', base:CREDOVISTA_CATEGORIAS };
+  const config = { customKey:'credoVistaCategoriasCustom', base:CREDOVISTA_CATEGORIAS };
   if(!state[config.customKey]) state[config.customKey] = [];
   const jaExiste = config.base.some(c=>c.toLowerCase()===nome.toLowerCase()) || state[config.customKey].some(c=>c.toLowerCase()===nome.toLowerCase());
   if(jaExiste){ showToast('Essa categoria já existe'); closeModal('modalCategoriaExtra'); return; }
   state[config.customKey].push(nome);
   persist();
   closeModal('modalCategoriaExtra');
-  if(alvo==='mercado'){
-    window.estFormCategoriaSelecionada = nome;
-    renderEstFormCategoriaChips();
-  } else if(alvo==='assinatura'){
+  if(alvo==='assinatura'){
     window.assinaturaCategoriaSelecionada = nome;
     renderAssinaturaCategoriaChips();
   } else {
@@ -413,21 +501,9 @@ function onBuscaGlobalInput(v){
     });
   });
 
-  (state.receitas||[]).forEach(r=>{
-    if((r.nome||'').toLowerCase().includes(termo)){
-      resultados.push({ label:r.nome, meta:'Receita', icon:'🍲', onclick:`irParaBuscaReceita('${r.id}')` });
-    }
-  });
-
   (state.louvores||[]).forEach(l=>{
     if((l.titulo||'').toLowerCase().includes(termo) || (l.artista||'').toLowerCase().includes(termo)){
       resultados.push({ label:l.titulo||'Sem título', meta:'Louvor · '+(l.artista||''), icon:'🎵', onclick:`irParaBuscaLouvor('${l.id}')` });
-    }
-  });
-
-  (state.estoque||[]).forEach(e=>{
-    if((e.nome||'').toLowerCase().includes(termo)){
-      resultados.push({ label:e.nome, meta:'Mercado', icon:'🛒', onclick:`irParaBuscaMercado('${e.id}')` });
     }
   });
 
@@ -448,20 +524,10 @@ function irParaBuscaConta(user, cat, id){
   switchAba('planner');
   setTimeout(()=>editGasto(cat, id), 200);
 }
-function irParaBuscaReceita(id){
-  closeModal('modalBuscaGlobal');
-  switchAba('receitas');
-  setTimeout(()=>abrirReceitaDetalhe(id), 200);
-}
 function irParaBuscaLouvor(id){
   closeModal('modalBuscaGlobal');
   switchAba('louvor');
   setTimeout(()=>abrirLouvorDetalhe(id), 200);
-}
-function irParaBuscaMercado(id){
-  closeModal('modalBuscaGlobal');
-  switchAba('mercado');
-  setTimeout(()=>abrirEstoqueForm(id), 200);
 }
 
 function closeModal(modalId){

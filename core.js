@@ -22,22 +22,20 @@ function novoEstado(){
     pagamentosParciais:{},
     historicoMeses:{},
     reserva:0,
+    salarioRecebido:{},
+    dizimoPago:{},
+    faturasCartao:{},
+    pontoFechado:{},
     cartoesTracker:[],
     comprasTracker:[],
     metas:[],
     tarefas:[],
     tarefaCategorias:[],
-    receitas:[],
-    receitaCategorias:[],
     louvores:[],
-    estoque:[],
-    listaCompras:[],
-    preListaCompras:[],
     semanaOffset:0,
     semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} },
     configFonte:'system',
-    configTema:'padrao',
     layoutPrefs:{}
   };
 }
@@ -59,54 +57,152 @@ function setAppFonte(nome){
   persist();
   aplicarFonteApp();
 }
-const TEMAS_APP = { padrao:'', luxury:'tema-luxury', premium:'tema-premium' };
-const TEMAS_COR_BARRA = { padrao:'#2B3038', luxury:'#0b0d10', premium:'#2B3038' };
-function aplicarTemaApp(){
-  const t = TEMAS_APP[state.configTema] !== undefined ? state.configTema : 'padrao';
-  Object.values(TEMAS_APP).forEach(c=>{ if(c) document.body.classList.remove(c); });
-  if(TEMAS_APP[t]) document.body.classList.add(TEMAS_APP[t]);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', TEMAS_COR_BARRA[t]);
-  document.querySelectorAll('.tema-chip').forEach(el=>el.classList.toggle('active', el.dataset.tema===t));
-}
-function setAppTema(nome){
-  state.configTema = nome;
-  persist();
-  aplicarTemaApp();
-}
-function toggleTemaPopup(){
-  document.getElementById('temaPopup')?.classList.toggle('show');
-}
 function toggleFontePopup(){
   document.getElementById('fontePopup')?.classList.toggle('show');
 }
 let state = novoEstado();
 
-/* ================= PERSISTÊNCIA (somente Supabase) ================= */
+/* ================= PERSISTÊNCIA (Supabase + cópia de segurança neste aparelho) ================= */
 let remoteReady = false;   // só vira true depois de ler a nuvem com sucesso; antes disso nada é gravado
 let persistTimer = null;
 let carregarTentativas = 0;
+let salvarPendente = false;      // há alteração que ainda não chegou ao banco
+let salvandoPromise = null;
+let tratandoConflito = false;
+const LOCAL_COPIA_KEY = 'siloe-copia-local-v1';
+const LOCAL_META_KEY = 'siloe-copia-local-meta-v1';
+
+/* --- cópia local: se o banco falhar, a alteração não se perde ao atualizar a página --- */
+function espelharLocal(){
+  try{
+    localStorage.setItem(LOCAL_COPIA_KEY, JSON.stringify(state));
+    localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: true }));
+  }catch(e){ /* sem espaço ou bloqueado: segue sem cópia local */ }
+}
+function marcarLocalSincronizado(){
+  try{ localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false })); }catch(e){}
+}
+function lerCopiaLocalPendente(){
+  try{
+    const meta = JSON.parse(localStorage.getItem(LOCAL_META_KEY) || 'null');
+    if(!meta || !meta.dirty) return null;
+    const st = JSON.parse(localStorage.getItem(LOCAL_COPIA_KEY) || 'null');
+    if(!st || typeof st !== 'object' || !st.users) return null;
+    return { t: meta.t, state: st };
+  }catch(e){ return null; }
+}
+
+/* --- aviso de status do salvamento (bolinha no cabeçalho + faixa vermelha quando falha) --- */
+function garantirSyncUI(){
+  if(document.getElementById('syncDot')) return;
+  const ver = document.querySelector('.header-version');
+  if(ver){
+    const dot = document.createElement('span');
+    dot.id = 'syncDot';
+    dot.style.cssText = 'display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:6px;vertical-align:middle;background:#9aa0a6;opacity:.0;transition:opacity .2s,background .2s';
+    ver.insertAdjacentElement('afterend', dot);
+  }
+  const b = document.createElement('div');
+  b.id = 'syncBanner';
+  b.style.cssText = 'display:none;position:fixed;left:8px;right:8px;top:calc(var(--header-h,64px) + 6px);z-index:900;background:#b3261e;color:#fff;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.3)';
+  b.innerHTML = '<div id="syncBannerMsg"></div><div style="display:flex;gap:8px;margin-top:8px"><button type="button" id="syncBannerBtn" style="flex:1;border:none;border-radius:8px;padding:7px 10px;font-weight:700;font-family:inherit;background:#fff;color:#b3261e;cursor:pointer">Tentar de novo</button></div>';
+  document.body.appendChild(b);
+}
+function atualizarStatusSalvo(estado, detalhe){
+  garantirSyncUI();
+  const dot = document.getElementById('syncDot');
+  const banner = document.getElementById('syncBanner');
+  const msg = document.getElementById('syncBannerMsg');
+  const btn = document.getElementById('syncBannerBtn');
+  if(dot){
+    const cores = { salvo:'#1c9d5b', salvando:'#db8b18', erro:'#e0342b', offline:'#e0342b' };
+    dot.style.background = cores[estado] || '#9aa0a6';
+    dot.style.opacity = estado==='salvo' ? '.55' : '1';
+    dot.title = { salvo:'Tudo salvo no banco', salvando:'Salvando...', erro:'Não salvou', offline:'Sem conexão com o banco' }[estado] || '';
+  }
+  if(!banner) return;
+  if(estado==='erro' || estado==='offline'){
+    let kb = 0; try{ kb = Math.round(JSON.stringify(state).length/1024); }catch(e){}
+    const motivo = detalhe || (window.SiloSupabase && window.SiloSupabase.lastError) || 'sem conexão';
+    msg.textContent = estado==='offline'
+      ? 'Sem conexão com o banco ('+motivo+'). Nada do que você digitar será salvo até conectar.'
+      : 'Não salvou no banco ('+kb+' KB): '+motivo+'. Suas alterações estão guardadas neste aparelho e vão ser enviadas assim que der.';
+    btn.onclick = ()=>{ banner.style.display='none'; estado==='offline' ? carregar() : persistAgora(); };
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 function persist(){
-  if(!remoteReady) return;   // evita sobrescrever a nuvem com estado vazio
+  if(!remoteReady){ atualizarStatusSalvo('offline'); return; }   // evita sobrescrever a nuvem com estado vazio
+  salvarPendente = true;
+  espelharLocal();
   clearTimeout(persistTimer);
   persistTimer = setTimeout(persistAgora, 500);
+  atualizarStatusSalvo('salvando');
+}
+async function tratarConflitoSalvar(){
+  if(tratandoConflito) return false;
+  tratandoConflito = true;
+  try{
+    const sobrescrever = await iosConfirm('Outro aparelho salvou alterações mais novas no banco. Usar o que está neste aparelho e apagar o que o outro salvou? (Não = recarrega com o que está no banco e perde o que você digitou aqui)');
+    if(sobrescrever){
+      await window.SiloSupabase.adotarVersaoDoBanco();
+      return true;   // tenta salvar de novo
+    }
+    try{ localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false })); }catch(e){}
+    location.reload();
+    return false;
+  } finally { tratandoConflito = false; }
+}
+async function tentarSalvarNoBanco(){
+  let ok = false;
+  for(let t=0; t<3 && !ok; t++){
+    ok = await window.SiloSupabase.saveState(state);
+    if(!ok && window.SiloSupabase.conflito){
+      const retentar = await tratarConflitoSalvar();
+      if(!retentar) return false;
+      t--;   // não conta como tentativa
+      continue;
+    }
+    if(!ok && t<2) await new Promise(r=>setTimeout(r, 1500*(t+1)));
+  }
+  return ok;
 }
 async function persistAgora(){
   clearTimeout(persistTimer);
   persistTimer = null;
   if(!remoteReady || !window.SiloSupabase) return false;
-  let ok = false;
-  for(let t=0; t<3 && !ok; t++){
-    ok = await window.SiloSupabase.saveState(state);
-    if(!ok && t<2) await new Promise(r=>setTimeout(r, 1500*(t+1)));
-  }
-  if(!ok && typeof showToast==='function'){
-    let kb = 0; try{ kb = Math.round(JSON.stringify(state).length/1024); }catch(e){}
-    showToast('Não salvou ('+kb+' KB): '+(window.SiloSupabase.lastError||'sem conexão'));
-  }
-  return ok;
+  if(salvandoPromise){ salvarPendente = true; return salvandoPromise; }
+  salvandoPromise = (async ()=>{
+    let ok = false;
+    do{
+      salvarPendente = false;
+      atualizarStatusSalvo('salvando');
+      ok = await tentarSalvarNoBanco();
+      if(!ok){ salvarPendente = true; break; }
+    } while(salvarPendente);
+    if(ok){ marcarLocalSincronizado(); atualizarStatusSalvo('salvo'); }
+    else { atualizarStatusSalvo('erro'); }
+    return ok;
+  })();
+  const r = await salvandoPromise;
+  salvandoPromise = null;
+  return r;
 }
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden && persistTimer) persistAgora(); });
-window.addEventListener('pagehide', ()=>{ if(persistTimer) persistAgora(); });
+/* tenta de novo sozinho: ao voltar a internet e a cada 30 s enquanto houver algo pendente */
+window.addEventListener('online', ()=>{ if(salvarPendente) persistAgora(); });
+setInterval(()=>{ if(salvarPendente && remoteReady && !salvandoPromise && !persistTimer) persistAgora(); }, 30000);
+document.addEventListener('visibilitychange', async ()=>{
+  if(document.hidden){ if(persistTimer || salvarPendente) persistAgora(); return; }
+  /* voltou pro app: se outro aparelho salvou algo novo e aqui não há nada pendente, recarrega */
+  if(remoteReady && !salvarPendente && !persistTimer && !salvandoPromise && window.SiloSupabase){
+    const r = await window.SiloSupabase.checarAtualizacao();
+    if(r.ok && r.mudou && !salvarPendente && !persistTimer && !salvandoPromise) location.reload();
+  }
+});
+window.addEventListener('pagehide', ()=>{ if(persistTimer || salvarPendente) persistAgora(); });
 
 async function carregar(){
   let legado = { state:null, mesAtual:null, logo:null };
@@ -118,6 +214,20 @@ async function carregar(){
     if(!r.ok) throw r.error;
     saved = r.data;
     legado = window.SiloSupabase.lerLegado();
+
+    /* alterações feitas neste aparelho que não chegaram ao banco (ex.: falha de conexão/gravação) */
+    const pend = lerCopiaLocalPendente();
+    if(pend){
+      let igual = false;
+      try{ igual = JSON.stringify(pend.state) === JSON.stringify(saved); }catch(e){}
+      if(igual){ marcarLocalSincronizado(); }
+      else {
+        const quando = new Date(pend.t).toLocaleString('pt-BR');
+        const enviar = await iosConfirm('Este aparelho tem alterações de '+quando+' que não chegaram ao banco. Enviar essas alterações agora? (Não = descarta e usa o que está no banco)');
+        if(enviar){ saved = pend.state; precisaSalvar = true; }
+        else { marcarLocalSincronizado(); }
+      }
+    }
 
     if(!saved && legado.state){ saved = legado.state; precisaSalvar = true; }   // primeira vez: sobe o que estava no aparelho
 
@@ -152,38 +262,14 @@ async function carregar(){
       if(!state.pagamentosParciais) state.pagamentosParciais = {};
       if(!state.contasArquivadas) state.contasArquivadas = {};
       if(state.reserva === undefined) state.reserva = 0;
-      if(!state.receitas) state.receitas = [];
-      if(!state.receitaCategorias) state.receitaCategorias = [];
-      if(!state.mercadoCategoriasCustom) state.mercadoCategoriasCustom = [];
+      if(!state.salarioRecebido) state.salarioRecebido = {};
+      if(!state.dizimoPago) state.dizimoPago = {};
+      if(!state.faturasCartao) state.faturasCartao = {};
+      if(!state.pontoFechado) state.pontoFechado = {};
       if(!state.credoVistaCategoriasCustom) state.credoVistaCategoriasCustom = [];
       if(!state.louvores) state.louvores = [];
-      if(!state.estoque) state.estoque = [];
-      state.estoque.forEach(e=>{ if(!e.precos) e.precos = []; if(!e.historicoCompras) e.historicoCompras = []; });
-      if(!state.listaCompras) state.listaCompras = [];
-      state.listaCompras.forEach(it=>{
-        if(it.valor===undefined) it.valor = 0;
-        if(it.pego===undefined) it.pego = false;
-        if(!it.unidade) it.unidade = 'unidades';
-        delete it.noCarrinho;
-      });
-      if(!state.preListaCompras) state.preListaCompras = [];
       if(state.semanaOffset === undefined) state.semanaOffset = 0;
       if(!state.semanaAgenda) state.semanaAgenda = {};
-      state.receitas.forEach(r=>{
-        if(r.favorito === undefined) r.favorito = false;
-        if(!r.passos){
-          r.passos = r.descricao ? [r.descricao] : [];
-          r.observacoes = r.observacoes || '';
-        }
-        if(r.ingredientes && r.ingredientes.length && typeof r.ingredientes[0] === 'string'){
-          r.ingredientes = r.ingredientes.map(txt=>({ nome: txt, quantidade:'', unidade:'' }));
-        }
-        if(!r.ingredientes) r.ingredientes = [];
-        if(r.tempo === undefined) r.tempo = '';
-        if(r.porcoes === undefined) r.porcoes = '';
-        if(r.dificuldade === undefined) r.dificuldade = '';
-        if(r.cor === undefined) r.cor = '';
-      });
       if(!state.tarefas) state.tarefas = [];
       if(!state.tarefaCategorias) state.tarefaCategorias = [];
       (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
@@ -192,7 +278,6 @@ async function carregar(){
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
       if(!state.configFonte) state.configFonte = 'system';
-      if(!state.configTema) state.configTema = 'padrao';
       if(!state.layoutPrefs) state.layoutPrefs = {};
       mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso ? 1 : 0;
       if(state.mesAtual){
@@ -211,6 +296,18 @@ async function carregar(){
         precisaSalvar = true;
       }
       mesPontoRef = state.mesPonto;
+      if(!state.layoutV3){ state.layoutPrefs = {}; state.layoutV3 = true; precisaSalvar = true; }   // v3.0: telas reorganizadas, zera posições salvas
+      /* migração: o antigo botão "Calcular só pelo saldo em conta" vira "recebi" do salário e dos extras do mês */
+      ['davi','cris'].forEach(u=>{
+        if(!state.users[u].usarSaldoComoBase) return;
+        const mAtual = mesAtualRef;
+        state.salarioRecebido[u+'_'+mAtual] = true;
+        (state.users[u].extras||[]).forEach(e=>{
+          if(mAtual >= e.mesInicio && mAtual <= (e.mesFim||e.mesInicio)){ if(!e.recebidos) e.recebidos = {}; e.recebidos[mAtual] = true; }
+        });
+        state.users[u].usarSaldoComoBase = false;
+        precisaSalvar = true;
+      });
       mesFinanceiroAtrasoRef = 0;
       if(legado.logo && !state.logoApp){ state.logoApp = legado.logo; precisaSalvar = true; }
     } else {
@@ -222,20 +319,20 @@ async function carregar(){
       precisaSalvar = true;
     }
     remoteReady = true;
+    atualizarStatusSalvo('salvo');
   }catch(e){
     console.error('[LOAD] Erro ao carregar estado:', e);
     state = novoEstado();
     remoteReady = false;   // não grava nada até conseguir ler a nuvem
-    if(typeof showToast==='function') showToast('Sem conexão com o Supabase: '+((window.SiloSupabase&&window.SiloSupabase.lastError)||(e&&e.message)||'erro desconhecido'));
+    atualizarStatusSalvo('offline', (window.SiloSupabase&&window.SiloSupabase.lastError)||(e&&e.message)||'erro desconhecido');
     if(carregarTentativas++ < 5) setTimeout(carregar, 8000);
   }
   limparDadosAntigos();
   aplicarFonteApp();
-  aplicarTemaApp();
   if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
   renderAll();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
-  if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility('panorama');
+  if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility('planner');
   await finalizarMigracaoLegado(precisaSalvar, legado);
   compactarImagensDoEstado();
 }
@@ -282,6 +379,9 @@ function limparDadosAntigos(){
     });
   });
   Object.keys(state.ponto.days||{}).forEach(mKey=>{ if(mKey < limitePonto) delete state.ponto.days[mKey]; });
+  ['salarioRecebido','dizimoPago'].forEach(campo=>{
+    Object.keys(state[campo]||{}).forEach(k=>{ const mKey = k.split('_')[1]; if(mKey && mKey < limitePlanner) delete state[campo][k]; });
+  });
   Object.keys(state.paid||{}).forEach(pk=>{
     const mKey = pk.split('_')[0];
     if(mKey < limitePlanner) delete state.paid[pk];
@@ -452,7 +552,6 @@ const ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" s
 const ICON_EYE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
 const ICON_PRATO = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>';
-const ICON_RECEITA_EMPTY = '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1v11"/><path d="M6 2v6"/><path d="M9 2v6"/><path d="M18 2c-2 0-3.5 1.5-3.5 4v4.5c0 1.4 1.1 2.5 2.5 2.5v9"/></svg>';
 const ICON_CLOCK_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
 const ICON_PORCOES_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
 const ICON_DUPLICATE_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
@@ -475,11 +574,8 @@ function switchAba(aba){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
   window.scrollTo(0,0);
   if(aba==='ponto') renderPonto();
-  if(aba==='planner') renderPlanner();
-  if(aba==='panorama') renderPanorama();
-  if(aba==='receitas') renderReceitas();
+  if(aba==='planner'){ renderPlanner(); renderPanorama(); }
   if(aba==='louvor') renderLouvor();
-  if(aba==='mercado') renderMercado();
   if(typeof atualizarLvNavBar==='function') atualizarLvNavBar();
   if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility(aba);
 }
@@ -534,13 +630,21 @@ function toggleExtraRecebido(id){
   renderPanorama();
   renderMetaPJ();
 }
+/* "Recebi": salário já está dentro do saldo em conta, então para de somar */
+function salarioRecebidoNoMes(user, mKey){ return !!(state.salarioRecebido && state.salarioRecebido[user+'_'+mKey]); }
+function setSalarioRecebido(user, mKey, recebido){
+  if(!state.salarioRecebido) state.salarioRecebido = {};
+  if(recebido) state.salarioRecebido[user+'_'+mKey] = true; else delete state.salarioRecebido[user+'_'+mKey];
+}
+function dizimoPagoNoMes(user, mKey){ return !!(state.dizimoPago && state.dizimoPago[user+'_'+mKey]); }
+function setDizimoPago(user, mKey, pago){
+  if(!state.dizimoPago) state.dizimoPago = {};
+  if(pago) state.dizimoPago[user+'_'+mKey] = true; else delete state.dizimoPago[user+'_'+mKey];
+}
 function incomeForMonth(user, mKey){
   const isAtual = mKey === mesFinanceiroAtual();
   const saldo = isAtual ? (state.users[user].saldoAtual || 0) : 0;
-  if(isAtual && state.users[user].usarSaldoComoBase){
-    return saldo;
-  }
-  const base = rendaBaseForMonth(user, mKey);
+  const base = salarioRecebidoNoMes(user, mKey) ? 0 : rendaBaseForMonth(user, mKey);
   const extra = extraTotalForMonth(user, mKey);
   return base + extra + saldo;
 }
@@ -548,8 +652,14 @@ function incomeForMonth(user, mKey){
 function getCategoriasComCustom(base, customKey){
   return base.concat(state[customKey]||[]);
 }
+/* valor do dízimo do mês, mesmo se já foi pago (para mostrar na lista) */
+function dizimoValorCheio(user, mKey){
+  if(user !== 'davi') return 0;
+  return rendaBaseForMonth(user, mKey) * DIZIMO_PERCENT;
+}
 function dizimoForMonth(user, mKey){
   if(user !== 'davi') return 0;
+  if(dizimoPagoNoMes(user, mKey)) return 0;   // já pago: não desconta mais
   const base = rendaBaseForMonth(user, mKey);
   return base * DIZIMO_PERCENT;
 }
@@ -694,7 +804,6 @@ function expensesForMonth(user, mKey){
     if(state.paid[paidKey]) return;
     total += restanteConta(paidKey, v);
   });
-  (state.users[user].cartoes||[]).forEach(c=>{ total += Number((c.gastos||{})[mKey]) || 0; });
   total += dizimoForMonth(user, mKey);
   return total;
 }
@@ -702,7 +811,7 @@ function saldoForMonth(user, mKey){ return incomeForMonth(user,mKey) - expensesF
 function saldoHouseholdForMonth(mKey){ return saldoForMonth('davi',mKey); } // Dashboard: só Davi
 
 function getPanoWindowMonths(){
-  if(state.panoOffset < 0) state.panoOffset = 0;
+  if(state.panoOffset < -1) state.panoOffset = -1;   // pode olhar 1 mês para trás e quantos quiser para a frente
   const base = addMonths(mesFinanceiroAtual(), state.panoOffset);
   const arr = [];
   for(let i=0;i<6;i++) arr.push(addMonths(base,i));

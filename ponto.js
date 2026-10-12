@@ -135,7 +135,9 @@ function toggleSemanaPonto(chave){
 function renderPonto(){
   const mKey = pontoMonthKeyAtual();
   ensurePontoMonth(mKey);
-  document.getElementById('pontoMesLabel').textContent = monthLabelLong(mKey);
+  const fechado = pontoMesFechado(mKey);
+  document.getElementById('pontoMesLabel').innerHTML = monthLabelLong(mKey) + (fechado ? ' <span class="ponto-fechado-ico" title="Mês fechado">✓</span>' : '');
+  document.querySelector('#aba-ponto .ponto-mes-nav')?.classList.toggle('fechado', fechado);
   document.getElementById('pontoValorHora').value = state.ponto.valorHora ? state.ponto.valorHora.toFixed(2).replace('.',',') : '';
 
   const totalDias = daysInMonth(mKey);
@@ -179,7 +181,7 @@ function renderPonto(){
         if(isHoje && d[campo] && nowMin > timeToMin(d[campo])) return 'ph-atrasado';
         return '';
       };
-      diasHtml += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''}">
+      diasHtml += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''}" id="pontoDia-${dia}">
         <div class="pd-head">
           <div class="pd-data">${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
           <div style="display:flex;align-items:center;gap:8px">
@@ -210,6 +212,7 @@ function renderPonto(){
   });
   lista.innerHTML = rows;
   renderPontoSummary();
+  renderPontoFechar();
 }
 
 function computePontoMes(mKey){
@@ -272,10 +275,10 @@ function pontoBannerHtml(mKey){
   const sinal = (m)=> (m>=0?'+':'-')+minToHoursLabel(Math.abs(m));
   if(restantes<=0){
     if(faltamMin<=0){
-      return bannerGeo('positivo','ok','Mês fechado · meta batida',
+      return bannerGeo('positivo','ok','Dias concluídos · meta batida',
         `Todos os ${uteis} dias úteis concluídos · ${faltamMin===0?'exatamente no padrão':sinal(-faltamMin)+' acima do padrão'}`, 1);
     }
-    return bannerGeo('negativo','alerta',`Mês fechado · faltaram ${minToHoursLabel(faltamMin)}`,
+    return bannerGeo('negativo','alerta',`Dias concluídos · faltaram ${minToHoursLabel(faltamMin)}`,
       `Todos os ${uteis} dias úteis concluídos · padrão ${minToHoursLabel(r.padraoMin)}, registrado ${minToHoursLabel(feitoMin)}`, 1);
   }
   if(faltamMin<=0){
@@ -342,35 +345,116 @@ function renderPontoCompare(){
 }
 
 /* ================= PONTO PJ: CONFIGURAÇÃO E EXPORTAÇÃO PDF ================= */
-let pontoConfigMes = null;
-function renderPontoConfigMes(){
-  document.getElementById('pontoConfigMesLabel').textContent = monthLabelLong(pontoConfigMes);
-  document.getElementById('pontoConfigMesNota').style.display = pontoConfigMes===pontoBaseKey() ? 'none' : 'block';
-}
-function pontoConfigNavMes(delta){
-  pontoConfigMes = addMonths(pontoConfigMes, delta);
-  renderPontoConfigMes();
-}
 function openPontoConfigModal(){
   document.getElementById('pontoConfigNome').value = state.ponto.nomeUsuario || '';
-  pontoConfigMes = pontoBaseKey();
-  renderPontoConfigMes();
   document.getElementById('modalPontoConfig').classList.add('active');
 }
-async function salvarPontoConfig(){
-  const nome = document.getElementById('pontoConfigNome').value.trim();
-  state.ponto.nomeUsuario = nome;
+function salvarPontoConfig(){
+  state.ponto.nomeUsuario = document.getElementById('pontoConfigNome').value.trim();
   persist();
-  if(pontoConfigMes && pontoConfigMes !== pontoBaseKey()){
-    const ok = await iosConfirm(`Definir ${monthLabel(pontoConfigMes)} como mês do Ponto PJ?`);
-    if(!ok) return;
-    closeModal('modalPontoConfig');
-    definirMesPonto(pontoConfigMes);
-    showToast('Mês do Ponto PJ: '+monthLabel(pontoConfigMes));
-    return;
-  }
   closeModal('modalPontoConfig');
   showToast('Configuração salva');
+}
+
+/* ================= PONTO PJ: FECHAR MÊS ================= */
+function pontoMesFechado(mKey){ return !!(state.pontoFechado && state.pontoFechado[mKey]); }
+/* dias úteis (seg–sex) que ainda não estão trancados */
+function pontoDiasUteisPendentes(mKey){
+  const out = [];
+  for(let dia=1; dia<=daysInMonth(mKey); dia++){
+    const dt = keyToDate(mKey); dt.setDate(dia);
+    if(dt.getDay()<1 || dt.getDay()>5) continue;
+    if(!getDia(mKey, dia).concluido) out.push(dia);
+  }
+  return out;
+}
+function renderPontoFechar(){
+  const box = document.getElementById('pontoFecharBox');
+  if(!box) return;
+  const mKey = pontoMonthKeyAtual();
+  const base = pontoBaseKey();
+  if(pontoMesFechado(mKey)){
+    const reg = state.pontoFechado[mKey];
+    box.innerHTML = `<div class="ponto-fechar fechado">
+      <div class="pf-info"><b>✓ Mês fechado</b><small>${minToHoursLabel(reg.totalMin||0)} · ${fmtMoney(reg.valor||0)}</small></div>
+      <button type="button" class="fat-btn" onclick="reabrirMesPonto()">Reabrir</button>
+    </div>`;
+    return;
+  }
+  if(mKey > base){
+    box.innerHTML = `<div class="ponto-fechar futuro"><div class="pf-info"><small>Mês à frente: só para visualizar. Feche o mês vigente primeiro.</small></div></div>`;
+    return;
+  }
+  const pend = pontoDiasUteisPendentes(mKey);
+  box.innerHTML = `<div class="ponto-fechar${pend.length?'':' pronto'}">
+    <div class="pf-info"><b>Fechar mês</b><small>${pend.length ? pend.length+(pend.length>1?' dias úteis ainda sem trancar':' dia útil ainda sem trancar') : 'Todos os dias úteis trancados'}</small></div>
+    <button type="button" class="fat-btn pagar" onclick="fecharMesPonto()">Fechar mês</button>
+  </div>`;
+}
+function fecharMesPonto(){
+  const mKey = pontoMonthKeyAtual();
+  if(pontoDiasUteisPendentes(mKey).length){ renderPontoPendentes(); document.getElementById('modalPontoPendentes').classList.add('active'); return; }
+  confirmarFecharMesPonto();
+}
+function renderPontoPendentes(){
+  const mKey = pontoMonthKeyAtual();
+  const pend = pontoDiasUteisPendentes(mKey);
+  if(!pend.length){ closeModal('modalPontoPendentes'); confirmarFecharMesPonto(); return; }
+  document.getElementById('pontoPendentesTitulo').textContent = pend.length+(pend.length>1?' dias úteis sem trancar':' dia útil sem trancar');
+  document.getElementById('pontoPendentesLista').innerHTML = pend.map(dia=>{
+    const d = getDia(mKey, dia);
+    const dt = keyToDate(mKey); dt.setDate(dia);
+    const horas = (d.entrada||'--:--')+'–'+(d.almocoSaida||'--:--')+' · '+(d.almocoVolta||'--:--')+'–'+(d.saida||'--:--');
+    return `<div class="pp-row">
+      <div class="pp-info"><b>${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dt.getDay()]}</small></b><span>${horas} · ${minToHoursLabel(dayTotalMinutes(d))}</span></div>
+      <div class="pp-acoes">
+        <button type="button" class="fat-btn pagar" onclick="pontoPendenteTrancar(${dia})">Trancar</button>
+        <button type="button" class="fat-btn" onclick="pontoPendenteNaoTrabalhei(${dia})">Não trabalhei</button>
+        <button type="button" class="fat-btn" onclick="pontoPendenteEditar(${dia})">Editar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function pontoPendenteTrancar(dia){
+  getDia(pontoMonthKeyAtual(), dia).concluido = true;
+  persist(); renderPonto(); renderPontoPendentes();
+}
+function pontoPendenteNaoTrabalhei(dia){
+  const mKey = pontoMonthKeyAtual();
+  zerarDia(dia);
+  getDia(mKey, dia).concluido = true;
+  persist(); renderPonto(); renderPontoPendentes();
+}
+function pontoPendenteEditar(dia){
+  const mKey = pontoMonthKeyAtual();
+  closeModal('modalPontoPendentes');
+  let w = 0;
+  for(let d=2; d<=dia; d++){ const dt = keyToDate(mKey); dt.setDate(d); if(dt.getDay()===0) w++; }
+  pontoSemanaColapsada[mKey+'-w'+w] = false;
+  renderPonto();
+  setTimeout(()=>{ document.getElementById('pontoDia-'+dia)?.scrollIntoView({ behavior:'smooth', block:'center' }); }, 80);
+}
+async function confirmarFecharMesPonto(){
+  const mKey = pontoMonthKeyAtual();
+  const r = computePontoMes(mKey);
+  const ok = await iosConfirm(`Fechar ${monthLabelLong(mKey)}? Total ${minToHoursLabel(r.totalMin)} · a receber ${fmtMoney(r.valorReceber)}. O Ponto avança para o mês seguinte.`);
+  if(!ok) return;
+  if(!state.pontoFechado) state.pontoFechado = {};
+  state.pontoFechado[mKey] = { em: Date.now(), totalMin: r.totalMin, valor: r.valorReceber };
+  if(mKey === pontoBaseKey()){
+    definirMesPonto(addMonths(mKey, 1));   // avança, salva e redesenha tudo
+  } else {
+    persist(); renderPonto();
+  }
+  showToast(monthLabel(mKey)+' fechado');
+}
+async function reabrirMesPonto(){
+  const mKey = pontoMonthKeyAtual();
+  const ok = await iosConfirm('Reabrir '+monthLabelLong(mKey)+'? Os dias continuam trancados; você só tira a marca de fechado.');
+  if(!ok) return;
+  delete state.pontoFechado[mKey];
+  if(mKey < pontoBaseKey()) definirMesPonto(mKey);
+  else { persist(); renderPonto(); }
 }
 
 let pontoExportTipo = 'mes';
@@ -522,14 +606,11 @@ function gerarPdfPonto(){
 
 /* ================= CONCLUIR MÊS ================= */
 function openConcluirMesModal(){
-  const mesPontoAtual = pontoBaseKey();
   const mesContasAtual = mesFinanceiroAtual();
-  const mesPontoProximo = addMonths(mesPontoAtual, 1);
   const mesContasProximo = addMonths(mesContasAtual, 1);
 
   document.getElementById('concluirMesInfo').innerHTML =
-    `<div class="mc-field"><label>Ponto PJ</label>${monthLabel(mesPontoAtual)} → ${monthLabel(mesPontoProximo)}</div>` +
-    `<div class="mc-field"><label>Contas (Panorama / Planner)</label>${monthLabel(mesContasAtual)} → ${monthLabel(mesContasProximo)}</div>`;
+    `<div class="mc-field"><label>Contas (Dashboard)</label>${monthLabel(mesContasAtual)} → ${monthLabel(mesContasProximo)}</div>`;
 
   const abertas = contasEmAbertoNoMes(mesContasAtual);
   const avisoEl = document.getElementById('concluirMesAviso');
@@ -550,10 +631,7 @@ function confirmarConcluirMes(){
 
   mesAtualRef = addMonths(mesAtualRef, 1);
   state.mesAtual = mesAtualRef;
-  mesPontoRef = addMonths(mesPontoRef, 1);
-  state.mesPonto = mesPontoRef;
   state.panoOffset = 0;
-  state.pontoOffset = 0;
   state.focusMonth = mesFinanceiroAtual();
   persist();
   closeModal('modalConcluirMes');

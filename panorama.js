@@ -1,12 +1,29 @@
 /* ================= RENDER: PANORAMA ================= */
 /* ================= PLANEJADOR DE METAS / SIMULADOR ================= */
-let panoSubtabAtiva = 'resumo';
-function switchPanoSubtab(tab){
-  panoSubtabAtiva = tab;
-  document.querySelectorAll('.pano-subtab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
-  document.getElementById('panoPanelResumo').classList.toggle('active', tab==='resumo');
-  document.getElementById('panoPanelContas').classList.toggle('active', tab==='contas');
+/* ================= DASHBOARD (abas Geral / Cartão) ================= */
+let dashTabAtiva = 'geral';
+function switchDashTab(tab){
+  dashTabAtiva = tab;
+  const aba = document.getElementById('aba-planner');
+  if(aba) aba.dataset.tab = tab;
+  document.querySelectorAll('.dash-tab').forEach(el=>el.classList.toggle('active', el.dataset.dtab===tab));
+  renderPanorama();
   window.scrollTo(0,0);
+  if(typeof applyAllLayouts==='function') setTimeout(applyAllLayouts, 60);
+}
+/* usuário que o Dashboard está mostrando (Davi ou Cris) */
+function userDash(){ return state.currentUser || 'davi'; }
+
+/* Redesenha o que depende de cálculo: acumulado do Geral, acumulado do Cartão e, se estiver aberta, a tela Contas a pagar */
+function renderPanorama(){
+  const months = getPanoWindowMonths();
+  if(!months.includes(state.focusMonth)) state.focusMonth = months[0];
+  const lbl = monthLabel(months[0])+' – '+monthLabel(months[5]);
+  ['panoWindowLabel','panoWindowLabelCartao'].forEach(id=>{ const el = document.getElementById(id); if(el) el.textContent = lbl; });
+  renderAcumTable(months);
+  renderAcumCartao(months);
+  const cp = document.getElementById('pageContasPagar');
+  if(cp && cp.classList.contains('active')) renderContasPagar();
 }
 
 let simuladorMetas = [];
@@ -265,41 +282,6 @@ function salvarMetas(){
 
 /* renderAll vive em app.js (chama todas as 6 abas) */
 
-function renderPanorama(){
-  const months = getPanoWindowMonths();
-  document.getElementById('panoWindowLabel').textContent = monthLabel(months[0])+' – '+monthLabel(months[5]);
-
-  if(!months.includes(state.focusMonth)) state.focusMonth = months[0];
-
-  renderAcumTable(months);
-  renderPanoCharts();
-  renderPanoPonto();
-  renderFluxoCaixa();
-  renderParcelasTerminando();
-  renderComparativoAno();
-  renderVilaoOrcamento();
-  renderPrevisaoProximoMes();
-  renderMetaPJ();
-
-  const userSection = document.getElementById('panoUserSection');
-  const receitaDavi = incomeForMonth('davi', state.focusMonth);
-  const gastosDavi = expensesForMonth('davi', state.focusMonth);
-  const sobraDavi = receitaDavi - gastosDavi;
-  userSection.innerHTML = `<div class="pano-hero" onclick="abrirDetalheAcumulado('${state.focusMonth}')">
-    <div class="pano-hero-label">Sobra em ${monthLabel(state.focusMonth)}</div>
-    <div class="pano-hero-row">
-      <span class="pano-hero-valor ${sobraDavi>=0?'':'negative'}">${fmtMoneySigned(sobraDavi)}</span>
-      <span class="pano-hero-sub">receita ${fmtMoney(receitaDavi)}</span>
-    </div>
-    <div class="pano-hero-sub2">gastos ${fmtMoney(gastosDavi)}</div>
-  </div>`;
-
-  document.getElementById('contasMesLabel').textContent = monthLabel(state.focusMonth);
-  renderChecklist();
-  renderVencendoEmBreve();
-  renderSumarioPanorama();
-}
-
 function categoryTotalForMonth(cat, mKey){
   let total = 0;
   ['davi'].forEach(user=>{ // Dashboard: só Davi
@@ -323,31 +305,6 @@ function categoryTotalForMonth(cat, mKey){
   });
   return total;
 }
-function renderSumarioPanorama(){
-  const summary = document.getElementById('sumarioPanorama');
-  if(!summary) return;
-  const mKeyAtual = state.focusMonth;
-  const rendaTotal = incomeForMonth('davi', mKeyAtual) || 0; // Dashboard: só Davi
-  const totalCartoes = (state.cartoesTracker||[]).reduce((s,c)=>{
-    const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
-    const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
-    return s + usado;
-  },0);
-  const moradia = categoryTotalForMonth('moradia', mKeyAtual);
-  const assinatura = categoryTotalForMonth('assinatura', mKeyAtual);
-  const fixo = categoryTotalForMonth('fixo', mKeyAtual);
-  const futuro = categoryTotalForMonth('futuro', mKeyAtual);
-  document.getElementById('sumarioPanoramaMes').textContent = monthLabel(mKeyAtual);
-  summary.innerHTML = `
-    <div class="summary-row"><span>Renda Total</span><span class="summary-value">${fmtMoney(rendaTotal)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('moradia','${mKeyAtual}')"><span>Moradia</span><span class="summary-value">${fmtMoney(moradia)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('fixo','${mKeyAtual}')"><span>Fixos</span><span class="summary-value">${fmtMoney(fixo)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('assinatura','${mKeyAtual}')"><span>Assinaturas</span><span class="summary-value">${fmtMoney(assinatura)}</span></div>
-    <div class="summary-row summary-row-clickable" onclick="abrirDetalheCategoria('futuro','${mKeyAtual}')"><span>Contas Futuras</span><span class="summary-value">${fmtMoney(futuro)}</span></div>
-    <div class="summary-row"><span>Cartões</span><span class="summary-value">${fmtMoney(totalCartoes)}</span></div>
-  `;
-}
-
 const CATEGORIA_LABELS = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras' };
 function abrirDetalheCategoria(cat, mKey){
   const itens = getContasDoMes(mKey).filter(it=>it.cat===cat);
@@ -372,73 +329,6 @@ function abrirDetalheCategoria(cat, mKey){
       </div>`;
   document.getElementById('detalheCategoriaConteudo').innerHTML = conteudo;
   document.getElementById('modalDetalheCategoria').classList.add('active');
-}
-
-function renderPanoPonto(){
-  const atual = pontoBaseKey();
-  const passado = addMonths(atual, -1);
-  const rAtual = computePontoMes(atual);
-  const rPassado = computePontoMes(passado);
-  document.getElementById('panoPontoHoras').textContent = minToHoursLabel(rAtual.totalMin);
-  document.getElementById('panoPontoValor').textContent = fmtMoney(rAtual.valorReceber);
-
-  const diff = rAtual.valorReceber - rPassado.valorReceber;
-  const pct = rPassado.valorReceber > 0 ? (diff/rPassado.valorReceber*100) : null;
-  document.getElementById('panoPontoComparativo').textContent = pct===null
-    ? 'Sem dados do mês anterior para comparar'
-    : (diff>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(0)+'% ('+fmtMoneySigned(diff)+') vs mês anterior';
-}
-
-function renderPanoCharts(){
-  const wrap = document.getElementById('trendChartWrap');
-  if(!wrap) return;
-  const mKey = state.focusMonth;
-  const renda = incomeForMonth('davi', mKey); // Dashboard: só Davi
-  const bdDavi = expenseBreakdownForMonth('davi', mKey);
-  const cats = ['moradia','fixo','assinatura','futuro','cartao','dizimo'];
-  const catColors = { moradia:'#2B3038', fixo:'#0EA5E9', assinatura:'#DB8B18', futuro:'#E0342B', cartao:'#1C9D5B', dizimo:'#7B5FA6' };
-  const catLabels = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras', cartao:'Cartão', dizimo:'Dízimo' };
-  const totals = {};
-  let gastosTotal = 0;
-  cats.forEach(c=>{ totals[c] = bdDavi[c]||0; gastosTotal += totals[c]; });
-  const sobra = renda - gastosTotal;
-
-  const pctGasto = renda>0 ? Math.min(100,(gastosTotal/renda)*100) : (gastosTotal>0?100:0);
-  const gradGanhos = `conic-gradient(var(--danger) 0% ${pctGasto.toFixed(2)}%, var(--success) ${pctGasto.toFixed(2)}% 100%)`;
-
-  let acc = 0;
-  const catsComValor = cats.filter(c=>totals[c]>0).sort((a,b)=>totals[b]-totals[a]);
-  const segs = catsComValor.map(c=>{
-    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
-    const seg = `${catColors[c]} ${acc.toFixed(2)}% ${(acc+pct).toFixed(2)}%`;
-    acc += pct;
-    return seg;
-  });
-  const gradCat = segs.length ? `conic-gradient(${segs.join(',')})` : `conic-gradient(var(--line) 0% 100%)`;
-  const legendCat = catsComValor.length ? catsComValor.map(c=>{
-    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
-    return `<div class="donut-legend-item"><i style="background:${catColors[c]}"></i><span>${catLabels[c]}</span><b>${pct.toFixed(0)}%</b></div>`;
-  }).join('') : `<div class="donut-legend-item"><span>Sem gastos no mês</span></div>`;
-
-  const stackBar = catsComValor.length ? catsComValor.map(c=>{
-    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
-    return `<div style="width:${pct.toFixed(2)}%;background:${catColors[c]}" title="${catLabels[c]}"></div>`;
-  }).join('') : `<div style="width:100%;background:var(--line)"></div>`;
-  const legendComValor = catsComValor.length ? catsComValor.map(c=>{
-    const pct = gastosTotal>0 ? (totals[c]/gastosTotal*100) : 0;
-    return `<div class="pano-stack-legend-item"><span class="dot" style="background:${catColors[c]}"></span><span class="nome">${catLabels[c]}</span><span class="valor">${pct.toFixed(0)}% · ${fmtMoney(totals[c])}</span></div>`;
-  }).join('') : `<div class="pano-stack-legend-item"><span class="nome">Sem gastos no mês</span></div>`;
-
-  wrap.innerHTML = `
-    <div class="pano-stat-row">
-      <div><span class="k">Ganho</span><span class="v" style="color:var(--success)">${fmtMoney(renda)}</span></div>
-      <div><span class="k">Gastos</span><span class="v" style="color:var(--danger)">${fmtMoney(gastosTotal)}</span></div>
-      <div><span class="k">Sobra</span><span class="v">${fmtMoneySigned(sobra)}</span></div>
-    </div>
-    <div class="pano-stack-title">Para onde foi</div>
-    <div class="pano-stack-bar">${stackBar}</div>
-    <div class="pano-stack-legend">${legendComValor}</div>
-  `;
 }
 
 function expenseBreakdownForMonth(user, mKey){
@@ -473,7 +363,7 @@ function abrirDetalheAcumulado(mKey){
 
   // Composição do mês selecionado
   let composicaoHtml = '';
-  ['davi'].forEach(user=>{ // Dashboard: só Davi
+  [userDash()].forEach(user=>{
     const renda = incomeForMonth(user, mKey);
     const bd = expenseBreakdownForMonth(user, mKey);
     composicaoHtml += `
@@ -490,13 +380,13 @@ function abrirDetalheAcumulado(mKey){
       </div>
     `;
   });
-  const sobraTotal = saldoHouseholdForMonth(mKey);
+  const sobraTotal = saldoForMonth(userDash(), mKey);
 
   // Como chegou no acumulado
   let acumuladoHtml = '';
   let rodante = 0;
   mesesAteAqui.forEach(m=>{
-    const s = saldoHouseholdForMonth(m);
+    const s = saldoForMonth(userDash(), m);
     rodante += s;
     const isAtual = m===mKey;
     acumuladoHtml += `<div class="simulador-linha ${isAtual?'':''}" style="${isAtual?'font-weight:900':''}"><span class="label">${monthLabelExtensoCurto(m)}</span><span class="valor" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></div>`;
@@ -519,9 +409,11 @@ function abrirDetalheAcumulado(mKey){
   document.getElementById('modalDetalheAcumulado').classList.add('active');
 }
 
-function renderAcumTable(months){
+/* Linha do tempo dos meses (usada no acumulado do Geral e no do Cartão) */
+function desenharTimeline(wrapId, months, vals, onclickFn){
+  const wrap = document.getElementById(wrapId);
+  if(!wrap) return;
   const hoje = mesFinanceiroAtual();
-  const vals = months.map(mKey=>saldoHouseholdForMonth(mKey));
   const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
   const range = (max-min) || 1;
   const chartTop = 26, chartH = 40, chartBottom = chartTop + chartH;
@@ -539,7 +431,7 @@ function renderAcumTable(months){
     const isHoje = p.mKey===hoje;
     const cor = isSelected ? 'var(--gold)' : (isHoje ? 'var(--gold)' : 'var(--text-faint)');
     const r = isSelected||isHoje ? 4 : 2.5;
-    return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${cor}" style="cursor:pointer" onclick="selectFocusMonth('${p.mKey}');abrirDetalheAcumulado('${p.mKey}')"/>`;
+    return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${cor}" style="cursor:pointer" onclick="${onclickFn(p.mKey)}"/>`;
   }).join('');
   const labels = pts.map(p=>{
     const cor = p.v>=0 ? 'var(--success)' : 'var(--danger)';
@@ -548,9 +440,9 @@ function renderAcumTable(months){
   }).join('');
   const meses = pts.map(p=>{
     const isSelected = p.mKey===state.focusMonth;
-    return `<div class="acum-timeline-mes${isSelected?' selected':''}" onclick="selectFocusMonth('${p.mKey}');abrirDetalheAcumulado('${p.mKey}')">${monthLabel(p.mKey)}</div>`;
+    return `<div class="acum-timeline-mes${isSelected?' selected':''}" onclick="${onclickFn(p.mKey)}">${monthLabel(p.mKey)}</div>`;
   }).join('');
-  document.getElementById('acumTimelineWrap').innerHTML = `
+  wrap.innerHTML = `
     <svg viewBox="0 0 300 ${chartBottom+6}" width="100%" height="${chartBottom+6}" style="overflow:visible">
       <polyline points="${line}" fill="none" stroke="var(--line)" stroke-width="2"/>
       ${labels}
@@ -559,6 +451,45 @@ function renderAcumTable(months){
     <div class="acum-timeline-meses">${meses}</div>
   `;
 }
+function renderAcumTable(months){
+  const u = userDash();
+  const vals = months.map(mKey=>saldoForMonth(u, mKey));
+  desenharTimeline('acumTimelineWrap', months, vals, m=>`selectFocusMonth('${m}');abrirDetalheAcumulado('${m}')`);
+}
+/* Acumulado do Cartão: sobra do Geral (contas) − fatura dos cartões no mês */
+function faturaTotalNoMes(mKey){
+  return (state.cartoesTracker||[]).reduce((s,c)=>s+faturaRestanteNoMes(c, mKey), 0);
+}
+function sobraDoGeralNoMes(mKey){
+  let sobra = 0;
+  try{ sobra = Number(dadosDoMes(mKey).sobra) || 0; }catch(e){ sobra = 0; }
+  return sobra;
+}
+function renderAcumCartao(months){
+  months = months || getPanoWindowMonths();
+  const vals = months.map(mKey=>sobraDoGeralNoMes(mKey) - faturaTotalNoMes(mKey));
+  desenharTimeline('acumCartaoWrap', months, vals, m=>`selectFocusMonth('${m}');abrirDetalheCartaoMes('${m}')`);
+}
+function abrirDetalheCartaoMes(mKey){
+  const sobra = sobraDoGeralNoMes(mKey);
+  const cartoes = state.cartoesTracker || [];
+  const linhas = cartoes.map(c=>{
+    const f = faturaRestanteNoMes(c, mKey);
+    const paga = faturaStatus(c, mKey).st==='pago';
+    return `<div class="simulador-linha"><span class="label">${c.nome}${paga?' · paga ✓':''}</span><span class="valor">-${fmtMoney(f)}</span></div>`;
+  }).join('') || '<div class="simulador-linha"><span class="label">Nenhum cartão cadastrado</span><span class="valor"></span></div>';
+  const fatura = faturaTotalNoMes(mKey);
+  const resta = sobra - fatura;
+  document.getElementById('detalheAcumuladoTitulo').textContent = monthLabelExtensoCurto(mKey);
+  document.getElementById('detalheAcumuladoConteudo').innerHTML = `
+    <div class="simulador-painel">
+      <h4>${ICON_WALLET}Sobra − fatura em ${monthLabelExtensoCurto(mKey)}</h4>
+      <div class="simulador-linha"><span class="label">Sobra do Geral</span><span class="valor" style="color:${sobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobra)}</span></div>
+      ${linhas}
+      <div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900">Resta</span><span class="valor" style="font-weight:900;color:${resta>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(resta)}</span></div>
+    </div>`;
+  document.getElementById('modalDetalheAcumulado').classList.add('active');
+}
 
 function selectFocusMonth(mKey){
   state.focusMonth = mKey;
@@ -566,7 +497,7 @@ function selectFocusMonth(mKey){
   persist();
 }
 function shiftPanoWindow(delta){
-  state.panoOffset = Math.max(0, state.panoOffset + delta);
+  state.panoOffset = Math.max(-1, Math.min(36, state.panoOffset + delta));
   renderPanorama();
   persist();
 }
@@ -581,9 +512,9 @@ function futuroParcelaNoMes(item, mKey){
   if(idx===-1) return null;
   return { atual: idx+1, total: parcelas };
 }
-function getContasDoMes(mKey){
+function getContasDoMes(mKey, usuario){
   let items = [];
-  ['davi'].forEach(u=>{ // Dashboard: só Davi
+  [usuario || 'davi'].forEach(u=>{
     ['moradia','assinatura','fixo'].forEach(cat=>{
       state.users[u].expenses[cat].forEach(item=>{
         if(item.mesInicio && mKey < item.mesInicio) return;
@@ -609,471 +540,14 @@ function dadosDoMes(mKey){
   const gastoTotal = expensesForMonth('davi', mKey);
   return { renda, gastoTotal, sobra: renda-gastoTotal };
 }
-function renderComparativoAno(){
-  const card = document.getElementById('cardComparativoAno');
-  if(!card) return;
-  const mKey = state.focusMonth;
-  const mesAnterior = addMonths(mKey, -1);
-  const mes3Atras = addMonths(mKey, -3);
-  const atual = dadosDoMes(mKey);
-  const anterior = dadosDoMes(mesAnterior);
-  const tresAtras = dadosDoMes(mes3Atras);
-
-  const temAnterior = anterior.gastoTotal>0 || anterior.renda>0;
-  const tem3Atras = tresAtras.gastoTotal>0 || tresAtras.renda>0;
-  if(!temAnterior && !tem3Atras){
-    card.style.display = 'none';
-    return;
-  }
-  card.style.display = 'block';
-
-  function linhaComparativo(label, base){
-    const diffGasto = base.gastoTotal>0 ? ((atual.gastoTotal-base.gastoTotal)/base.gastoTotal*100) : null;
-    const seta = diffGasto===null ? '' : (diffGasto>0 ? '▲' : (diffGasto<0 ? '▼' : '–'));
-    const cor = diffGasto===null ? 'var(--text-dim)' : (diffGasto>0 ? 'var(--warning)' : 'var(--success)');
-    return `
-      <div style="font-size:11px;color:var(--text-faint);font-weight:700;text-transform:uppercase;margin-top:var(--s2);margin-bottom:2px">${label}</div>
-      <div class="comp-ano-linha"><span>Gastos</span><span>${fmtMoney(base.gastoTotal)} → ${fmtMoney(atual.gastoTotal)}</span>${diffGasto!==null?`<span style="color:${cor};font-weight:800">${seta} ${Math.abs(diffGasto).toFixed(0)}%</span>`:''}</div>
-      <div class="comp-ano-linha"><span>Sobra</span><span>${fmtMoneySigned(base.sobra)} → ${fmtMoneySigned(atual.sobra)}</span></div>
-    `;
-  }
-
-  let html = '';
-  if(temAnterior) html += linhaComparativo('Comparado a '+monthLabel(mesAnterior), anterior);
-  if(tem3Atras) html += linhaComparativo('Comparado a '+monthLabel(mes3Atras)+' (3 meses atrás)', tresAtras);
-  document.getElementById('comparativoAnoBody').innerHTML = html;
-}
-
 /* ================= PREVISÃO DO PRÓXIMO MÊS ================= */
 /* "Certo": moradia/fixo/assinatura recorrentes + Contas Futuras + parcelas de cartão já agendadas (datas conhecidas).
    "Estimado": crédito à vista do cartão, projetado pela média dos últimos 3 meses (é o único gasto sem data previsível). */
-function calcularPrevisaoProximoMes(){
-  const mKey = addMonths(mesFinanceiroAtual(), 1);
-  let certo = 0;
-  ['davi'].forEach(user=>{ // Dashboard: só Davi
-    ['moradia','fixo','assinatura'].forEach(cat=> certo += categoryTotalForMonth(cat, mKey));
-  });
-  const futuro = categoryTotalForMonth('futuro', mKey);
-  certo += futuro;
-  let cartaoParcelas = 0;
-  (state.comprasTracker||[]).forEach(item=> cartaoParcelas += compraTrackerValorNoMes(item, mKey));
-  certo += cartaoParcelas;
-  const estimado = credoVistaMediaUltimosMeses(3);
-  return { mKey, certo, estimado, total: certo+estimado, futuro, cartaoParcelas };
-}
-function renderPrevisaoProximoMes(){
-  const card = document.getElementById('cardPrevisaoProximoMes');
-  if(!card) return;
-  const p = calcularPrevisaoProximoMes();
-  card.style.display = 'block';
-  document.getElementById('previsaoProximoMesTitulo').textContent = 'Previsão para ' + monthLabel(p.mKey);
-  document.getElementById('previsaoProximoMesBody').innerHTML = `
-    <div class="comp-ano-linha"><span>Total previsto</span><span style="font-weight:800">${fmtMoney(p.total)}</span></div>
-    <div class="comp-ano-linha"><span>· Contas conhecidas (fixos, futuras, parcelas)</span><span>${fmtMoney(p.certo)}</span></div>
-    <div class="comp-ano-linha"><span>· Estimativa cartão à vista (média 3 meses)</span><span>${fmtMoney(p.estimado)}</span></div>
-    <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Contas Futuras já agendadas: ${fmtMoney(p.futuro)} — é a parte mais confiável dessa previsão.</div>
-  `;
-}
 /* ================= RESUMO GERAL (página dedicada) ================= */
-function abrirResumoGeral(){
-  document.getElementById('pageResumoGeral').classList.add('active');
-  try{
-    renderResumoGeral();
-  }catch(e){
-    console.error('[RESUMO-GERAL] erro ao montar a página:', e);
-    document.getElementById('resumoGeralConteudo').innerHTML = `<div class="card"><div class="card-title"><div class="left">Não deu pra montar o Resumo Geral</div></div><div class="comp-ano-linha"><span>Erro: ${(e && e.message) ? e.message : e}</span></div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Manda um print dessa tela pro Claude poder corrigir.</div></div>`;
-  }
-}
-function closeResumoGeral(){
-  document.getElementById('pageResumoGeral').classList.remove('active');
-}
-function totalCartoesNoMesAtual(){
-  return (state.cartoesTracker||[]).reduce((s,c)=>{
-    const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
-    const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
-    return s + usado;
-  },0);
-}
-function renderResumoGeral(){
-  const mKey = state.focusMonth;
-  const dados = dadosDoMes(mKey);
-  const vilao = calcularVilaoOrcamento(mKey);
-  const essencialMin = calcularGastoEssencialMinimo(mKey);
-  const mesAnterior = addMonths(mKey, -1);
-  const anterior = dadosDoMes(mesAnterior);
-  const previsao = calcularPrevisaoProximoMes();
-  const contasFuturas = getContasDoMes(mKey).filter(it=>it.cat==='futuro');
-  const totalCartoes = totalCartoesNoMesAtual();
-  const categorias = [
-    { label:'Moradia', valor: categoryTotalForMonth('moradia', mKey) },
-    { label:'Fixos', valor: categoryTotalForMonth('fixo', mKey) },
-    { label:'Assinaturas', valor: categoryTotalForMonth('assinatura', mKey) },
-    { label:'Contas Futuras', valor: categoryTotalForMonth('futuro', mKey) },
-    { label:'Cartão', valor: totalCartoes },
-  ];
-  const maiorCategoria = Math.max(1, ...categorias.map(c=>c.valor));
-  const credoVistaCats = credoVistaTotalPorCategoria(mKey);
-  const credoVistaEntries = Object.entries(credoVistaCats).sort((a,b)=>b[1]-a[1]);
-  const maiorCredoVista = Math.max(1, ...credoVistaEntries.map(e=>e[1]));
-
-  let html = `
-    <div class="rg-hero">
-      <div class="rg-hero-lbl">Saldo de ${monthLabel(mKey)}</div>
-      <div class="rg-hero-val">${fmtMoneySigned(dados.sobra)}</div>
-      <div class="rg-hero-row"><span>Renda ${fmtMoney(dados.renda)}</span><span>Gastos ${fmtMoney(dados.gastoTotal)}</span></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><div class="left">Vilão do Orçamento</div></div>
-      ${vilao ? `<div class="comp-ano-linha"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>${CATEGORIA_LABELS[vilao.cat]}</span><span>${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)}</span><span style="color:var(--danger);font-weight:800">+${vilao.diffPct.toFixed(0)}%</span></div>` : `<div class="comp-ano-linha"><span>Nenhuma categoria disparou em relação ao mês passado</span></div>`}
-      <div class="comp-ano-linha"><span>Gasto essencial mínimo</span><span style="font-weight:800">${fmtMoney(essencialMin)}</span></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><div class="left">Comparado a ${monthLabel(mesAnterior)}</div></div>
-      <div class="comp-ano-linha"><span>Gastos</span><span>${fmtMoney(anterior.gastoTotal)} → ${fmtMoney(dados.gastoTotal)}</span></div>
-      <div class="comp-ano-linha"><span>Sobra</span><span>${fmtMoneySigned(anterior.sobra)} → ${fmtMoneySigned(dados.sobra)}</span></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><div class="left">Previsão para ${monthLabel(previsao.mKey)}</div></div>
-      <div class="comp-ano-linha"><span>Total previsto</span><span style="font-weight:800">${fmtMoney(previsao.total)}</span></div>
-      <div class="comp-ano-linha"><span>· Contas conhecidas</span><span>${fmtMoney(previsao.certo)}</span></div>
-      <div class="comp-ano-linha"><span>· Estimativa cartão à vista</span><span>${fmtMoney(previsao.estimado)}</span></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><div class="left">Gasto por categoria — ${monthLabel(mKey)}</div></div>
-      ${categorias.map(c=>`<div class="rg-cat-bar-row"><span>${c.label}</span><div class="rg-cat-bar-track"><div class="rg-cat-bar-fill" style="width:${Math.round(c.valor/maiorCategoria*100)}%"></div></div><span style="font-weight:700">${fmtMoney(c.valor)}</span></div>`).join('')}
-    </div>
-
-    <div class="card">
-      <div class="card-title"><div class="left">Contas Futuras de ${monthLabel(mKey)}</div></div>
-      ${contasFuturas.length===0 ? '<div class="comp-ano-linha"><span>Nenhuma conta futura neste mês</span></div>' : contasFuturas.map(it=>`<div class="comp-ano-linha"><span>${it.desc}</span><span style="font-weight:700">${fmtMoney(it.valor)}</span></div>`).join('')}
-    </div>
-
-    <div class="card">
-      <div class="card-title"><div class="left">Cartão — à vista por categoria (${monthLabel(mKey)})</div></div>
-      ${credoVistaEntries.length===0 ? '<div class="comp-ano-linha"><span>Nenhum crédito à vista lançado neste mês</span></div>' : credoVistaEntries.map(([cat,valor])=>`<div class="rg-cat-bar-row"><span>${cat}</span><div class="rg-cat-bar-track"><div class="rg-cat-bar-fill" style="width:${Math.round(valor/maiorCredoVista*100)}%"></div></div><span style="font-weight:700">${fmtMoney(valor)}</span></div>`).join('')}
-    </div>
-  `;
-  document.getElementById('resumoGeralConteudo').innerHTML = html;
-}
-
 /* ================= EXPORTAR RESUMO FINANCEIRO EM PDF ================= */
-function exportarResumoFinanceiroPDF(){
-  if(typeof window.jspdf === 'undefined'){
-    showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
-    return;
-  }
-  const mKey = state.focusMonth;
-  const dados = dadosDoMes(mKey);
-  const vilao = calcularVilaoOrcamento(mKey);
-  const previsao = calcularPrevisaoProximoMes();
-  const contasFuturas = getContasDoMes(mKey).filter(it=>it.cat==='futuro');
-  const totalCartoes = totalCartoesNoMesAtual();
-  const credoVistaCats = credoVistaTotalPorCategoria(mKey);
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'pt', format:'a4' });
-  const graphite = [37,41,46];
-  const pageW = 595;
-  const marginX = 40;
-
-  doc.setFillColor(...graphite);
-  doc.rect(0,0,pageW,70,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(15);
-  doc.text('RESUMO FINANCEIRO — SILOÉ', marginX, 32);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(10.5);
-  doc.text(monthLabelLong(mKey), marginX, 50);
-
-  let y = 96;
-  doc.setTextColor(30,30,32);
-  doc.setFontSize(11);
-  doc.setFont('helvetica','bold');
-  doc.text(`Renda: ${fmtMoney(dados.renda)}   Gastos: ${fmtMoney(dados.gastoTotal)}   Sobra: ${fmtMoneySigned(dados.sobra)}`, marginX, y);
-  y += 24;
-
-  doc.autoTable({
-    startY: y,
-    head: [['Categoria','Valor no mês']],
-    body: [
-      ['Moradia', fmtMoney(categoryTotalForMonth('moradia', mKey))],
-      ['Fixos', fmtMoney(categoryTotalForMonth('fixo', mKey))],
-      ['Assinaturas', fmtMoney(categoryTotalForMonth('assinatura', mKey))],
-      ['Contas Futuras', fmtMoney(categoryTotalForMonth('futuro', mKey))],
-      ['Cartão (parcelas + à vista)', fmtMoney(totalCartoes)],
-    ],
-    theme: 'grid',
-    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
-    bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
-    styles: { lineColor:[230,230,232], lineWidth:0.5 },
-    margin: { left:marginX, right:marginX }
-  });
-  y = doc.lastAutoTable.finalY + 24;
-
-  if(contasFuturas.length){
-    doc.autoTable({
-      startY: y,
-      head: [['Contas Futuras — ' + monthLabel(mKey), 'Valor']],
-      body: contasFuturas.map(it=>[it.desc, fmtMoney(it.valor)]),
-      theme: 'grid',
-      headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
-      bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
-      styles: { lineColor:[230,230,232], lineWidth:0.5 },
-      margin: { left:marginX, right:marginX }
-    });
-    y = doc.lastAutoTable.finalY + 24;
-  }
-
-  const credoRows = Object.entries(credoVistaCats);
-  if(credoRows.length){
-    doc.autoTable({
-      startY: y,
-      head: [['Cartão à vista por categoria', 'Valor']],
-      body: credoRows.map(([cat,valor])=>[cat, fmtMoney(valor)]),
-      theme: 'grid',
-      headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
-      bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
-      styles: { lineColor:[230,230,232], lineWidth:0.5 },
-      margin: { left:marginX, right:marginX }
-    });
-    y = doc.lastAutoTable.finalY + 24;
-  }
-
-  doc.autoTable({
-    startY: y,
-    head: [['Mês','Cartão','Moradia/Fixos/Assin.','Contas Futuras','Total do mês']],
-    body: [0,1,2,3,4,5].map(i=>{
-      const m = addMonths(mKey, i);
-      const bd = expenseBreakdownForMonth('davi', m);
-      const contas = bd.moradia + bd.fixo + bd.assinatura;
-      return [monthLabel(m), fmtMoney(bd.cartao), fmtMoney(contas), fmtMoney(bd.futuro), fmtMoney(bd.total)];
-    }),
-    theme: 'grid',
-    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
-    bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
-    styles: { lineColor:[230,230,232], lineWidth:0.5 },
-    margin: { left:marginX, right:marginX }
-  });
-  y = doc.lastAutoTable.finalY + 24;
-
-  doc.autoTable({
-    startY: y,
-    head: [['Previsão — ' + monthLabel(previsao.mKey), 'Valor']],
-    body: [
-      ['Contas conhecidas (fixos, futuras, parcelas)', fmtMoney(previsao.certo)],
-      ['Estimativa cartão à vista (média 3 meses)', fmtMoney(previsao.estimado)],
-      ['Total previsto', fmtMoney(previsao.total)],
-    ],
-    theme: 'grid',
-    headStyles: { fillColor:graphite, textColor:255, fontStyle:'bold', fontSize:9.5 },
-    bodyStyles: { fontSize:9.5, textColor:[40,40,40] },
-    styles: { lineColor:[230,230,232], lineWidth:0.5 },
-    margin: { left:marginX, right:marginX }
-  });
-  y = doc.lastAutoTable.finalY + 20;
-
-  doc.setFontSize(8);
-  doc.setTextColor(140,140,144);
-  if(vilao){
-    doc.text(`Vilão do orçamento: ${CATEGORIA_LABELS[vilao.cat]} subiu ${vilao.diffPct.toFixed(0)}% (${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)})`, marginX, y);
-  }
-
-  const fileName = `Resumo Financeiro - ${monthLabel(mKey)}.pdf`;
-  const blob = doc.output('blob');
-  const file = new File([blob], fileName, { type:'application/pdf' });
-  if(navigator.canShare && navigator.canShare({ files:[file] })){
-    navigator.share({ files:[file], title:'Resumo Financeiro', text:monthLabel(mKey) }).catch(()=>{
-      doc.save(fileName);
-    });
-  }else{
-    doc.save(fileName);
-  }
-}
-
-function toggleVilaoInfo(){
-  const el = document.getElementById('vilaoInfoPopup');
-  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
-}
 /* ================= VILÃO DO ORÇAMENTO ================= */
-function calcularVilaoOrcamento(mKey){
-  const categorias = ['moradia','fixo','assinatura','futuro'];
-  const mesAnterior = addMonths(mKey, -1);
-  let vilao = null;
-  categorias.forEach(cat=>{
-    const atual = categoryTotalForMonth(cat, mKey);
-    const anterior = categoryTotalForMonth(cat, mesAnterior);
-    if(anterior <= 0 || atual <= anterior) return;
-    const diffPct = (atual-anterior)/anterior*100;
-    if(!vilao || diffPct > vilao.diffPct){
-      vilao = { cat, atual, anterior, diffPct };
-    }
-  });
-  return vilao;
-}
-function calcularGastoEssencialMinimo(mKey){
-  return getContasDoMes(mKey).reduce((s,it)=> it.essencial!==false ? s + (Number(it.valor)||0) : s, 0);
-}
-function renderVilaoOrcamento(){
-  const card = document.getElementById('cardVilaoOrcamento');
-  if(!card) return;
-  const mKey = state.focusMonth;
-  const vilao = calcularVilaoOrcamento(mKey);
-  const essencialMin = calcularGastoEssencialMinimo(mKey);
-  if(!vilao && essencialMin<=0){ card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  let html = '';
-  if(vilao){
-    html += `<div class="comp-ano-linha"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>${CATEGORIA_LABELS[vilao.cat]}</span><span>${fmtMoney(vilao.anterior)} → ${fmtMoney(vilao.atual)}</span><span style="color:var(--danger);font-weight:800">+${vilao.diffPct.toFixed(0)}%</span></div>`;
-  }
-  html += `<div class="comp-ano-linha"><span>Gasto essencial mínimo</span><span style="font-weight:800">${fmtMoney(essencialMin)}</span></div>`;
-  document.getElementById('vilaoOrcamentoBody').innerHTML = html;
-}
-
 /* ================= FLUXO DE CAIXA DIÁRIO ================= */
-function calcularFluxoCaixa(mKey){
-  const eventos = {};
-  const diaRecebimento = state.diaRecebimentoRenda || 5;
-  ['davi'].forEach(u=>{ // Dashboard: só Davi
-    const isAtual = mKey === mesFinanceiroAtual();
-    if(isAtual && state.users[u].usarSaldoComoBase){
-      const saldo = state.users[u].saldoAtual || 0;
-      if(saldo) eventos[diaRecebimento] = (eventos[diaRecebimento]||0) + saldo;
-      return;
-    }
-    const base = rendaBaseForMonth(u, mKey) + (isAtual ? (state.users[u].saldoAtual||0) : 0);
-    if(base) eventos[diaRecebimento] = (eventos[diaRecebimento]||0) + base;
-    (state.users[u].extras||[]).forEach(e=>{
-      const fim = e.mesFim || e.mesInicio;
-      if(mKey >= e.mesInicio && mKey <= fim && !extraRecebidoNoMes(e, mKey)){
-        const d = Math.min(Math.max(parseInt(e.dia)||diaRecebimento,1),28);
-        eventos[d] = (eventos[d]||0) + (Number(e.valor)||0);
-      }
-    });
-  });
-  getContasDoMes(mKey).forEach(it=>{
-    const d = Math.min(Math.max(parseInt(it.dia)||1,1),28);
-    eventos[d] = (eventos[d]||0) - (Number(it.valor)||0);
-  });
-  const dias = Object.keys(eventos).map(Number).sort((a,b)=>a-b);
-  let acumulado = 0;
-  let pontos = [];
-  let minPonto = null;
-  dias.forEach(d=>{
-    acumulado += eventos[d];
-    const p = { dia:d, delta:eventos[d], saldo:acumulado };
-    pontos.push(p);
-    if(!minPonto || p.saldo < minPonto.saldo) minPonto = p;
-  });
-  return { pontos, minPonto, diaRecebimento };
-}
-async function editarDiaRecebimento(){
-  const atual = state.diaRecebimentoRenda || 5;
-  const novo = await pedirNumeroModal('Dia de recebimento', 'Em que dia do mês a renda entra? (1 a 28, usado só pra estimar o fluxo de caixa)', atual);
-  if(novo === null) return;
-  const n = Math.min(28, Math.max(1, parseInt(novo)||5));
-  state.diaRecebimentoRenda = n;
-  persist();
-  renderFluxoCaixa();
-}
-function renderFluxoCaixa(){
-  const mKey = state.focusMonth;
-  const labelEl = document.getElementById('fluxoCaixaMesLabel');
-  if(!labelEl) return;
-  labelEl.textContent = monthLabel(mKey);
-  const { pontos, minPonto } = calcularFluxoCaixa(mKey);
-  const resumoEl = document.getElementById('fluxoCaixaResumo');
-  const listaEl = document.getElementById('fluxoCaixaLista');
-  if(pontos.length===0){
-    resumoEl.innerHTML = `<div class="empty-state-sm">Sem movimentações neste mês</div>`;
-    listaEl.innerHTML = '';
-    return;
-  }
-  if(minPonto && minPonto.saldo < 0){
-    resumoEl.innerHTML = `<div class="fluxo-destaque negativo"><div class="fluxo-destaque-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="fluxo-destaque-txt"><div class="fluxo-destaque-label">Ponto mais apertado</div><div class="fluxo-destaque-sub">Dia ${minPonto.dia} · saldo projetado</div></div><div class="fluxo-destaque-valor">${fmtMoneySigned(minPonto.saldo)}</div></div>`;
-  } else {
-    resumoEl.innerHTML = `<div class="fluxo-destaque positivo"><div class="fluxo-destaque-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="fluxo-destaque-txt"><div class="fluxo-destaque-label">Mês tranquilo</div><div class="fluxo-destaque-sub">O saldo projetado não fica negativo em nenhum dia</div></div></div>`;
-  }
-  listaEl.innerHTML = pontos.map(p=>{
-    const isMin = minPonto && p.dia===minPonto.dia && p.saldo===minPonto.saldo;
-    return `<div class="fluxo-linha${isMin?' fluxo-linha-min':''}">
-      <span class="fluxo-dia">Dia ${p.dia}</span>
-      <span class="fluxo-delta ${p.delta>=0?'positive':'negative'}">${fmtMoneySigned(p.delta)}</span>
-      <span class="fluxo-saldo ${p.saldo>=0?'positive':'negative'}">${fmtMoneySigned(p.saldo)}</span>
-    </div>`;
-  }).join('');
-}
-
 /* ================= PARCELAS TERMINANDO ================= */
-function getParcelasTerminando(mKeyRef, janelaMeses){
-  const resultado = [];
-  ['davi','cris'].forEach(u=>{
-    (state.users[u].expenses.futuro||[]).forEach(item=>{
-      if(item.recorrente) return;
-      const parcelas = item.parcelas || 1;
-      if(parcelas<=1 || !item.mesInicio) return;
-      const mesFim = addMonths(item.mesInicio, parcelas-1);
-      let dentro = false;
-      let m = mKeyRef;
-      for(let i=0;i<janelaMeses;i++){
-        if(m===mesFim){ dentro = true; break; }
-        m = addMonths(m,1);
-      }
-      if(dentro){
-        resultado.push({ user:u, desc:item.desc, valor: futuroValorNoMes(item, mesFim), mesFim, origem:'conta' });
-      }
-    });
-  });
-  (state.comprasTracker||[]).forEach(item=>{
-    if(item.pago || !item.mesInicio) return;
-    const c = compraTrackerCalc(item);
-    if(!c.mesFim || c.parcelas<=1) return;
-    let dentro = false;
-    let m = mKeyRef;
-    for(let i=0;i<janelaMeses;i++){
-      if(m===c.mesFim){ dentro = true; break; }
-      m = addMonths(m,1);
-    }
-    if(dentro){
-      resultado.push({ user:null, desc:item.nome+' (cartão)', valor:c.valorParcela, mesFim:c.mesFim, origem:'cartao' });
-    }
-  });
-  resultado.sort((a,b)=> a.mesFim < b.mesFim ? -1 : 1);
-  return resultado;
-}
-function renderParcelasTerminando(){
-  const card = document.getElementById('cardParcelasTerminando');
-  if(!card) return;
-  const lista = getParcelasTerminando(state.focusMonth, 4);
-  if(lista.length===0){ card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  const grupos = {};
-  lista.forEach(p=>{ (grupos[p.mesFim] = grupos[p.mesFim] || []).push(p); });
-  const meses = Object.keys(grupos).sort();
-  const dica = meses.some(m=>grupos[m].length>=2)
-    ? `<div class="parcela-dica"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Meses com várias parcelas acabando juntas: não gaste todo o alívio em outra coisa</span></div>` : '';
-  document.getElementById('parcelasTerminandoLista').innerHTML = dica + meses.map(m=>{
-    const arr = grupos[m];
-    const total = arr.reduce((s,x)=>s+(x.valor||0),0);
-    return `<div class="parcela-mes${arr.length>=2?' junto':''}">
-      <div class="parcela-mes-head">
-        <span class="parcela-mes-nome">${monthLabel(m)}</span>
-        <span class="parcela-mes-badge">${arr.length} ${arr.length===1?'parcela':'parcelas'}</span>
-        <span class="parcela-mes-total">libera ${fmtMoney(total)}/mês</span>
-      </div>
-      ${arr.map(x=>`<div class="parcela-fim-item">
-        ${x.user?`<span class="user-tag ${x.user}">${x.user==='davi'?'Davi':'Cris'}</span>`:''}
-        <span class="parcela-fim-desc">${x.desc}</span>
-        <span class="parcela-fim-info">${fmtMoney(x.valor)}/mês</span>
-      </div>`).join('')}
-    </div>`;
-  }).join('');
-}
-
 /* ================= LEMBRETE DE VENCIMENTO ================= */
 function diasParaVencimento(it, mKey){
   const d = keyToDate(mKey);
@@ -1081,94 +555,148 @@ function diasParaVencimento(it, mKey){
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   return Math.round((alvo - hoje) / 86400000);
 }
-async function editarDiasAviso(){
-  const atual = state.diasAvisoVencimento ?? 3;
-  const novo = await pedirNumeroModal('Aviso de vencimento', 'Avisar com quantos dias de antecedência antes do vencimento? (0 a 15)', atual);
-  if(novo === null) return;
-  const n = Math.min(15, Math.max(0, parseInt(novo)||0));
-  state.diasAvisoVencimento = n;
-  persist();
-  renderChecklist();
-}
-function renderVencendoEmBreve(){
-  const el = document.getElementById('vencendoEmBreveBanner');
-  if(!el) return;
-  const mKey = state.focusMonth;
-  const diasAviso = state.diasAvisoVencimento ?? 3;
-  const itens = getContasDoMes(mKey).filter(it=>{
-    const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
-    if(state.paid[paidKey]) return false;
-    const dias = diasParaVencimento(it, mKey);
-    return dias !== null && dias >= 0 && dias <= diasAviso;
-  });
-  if(itens.length===0){ el.style.display = 'none'; el.innerHTML=''; return; }
-  el.style.display = 'block';
-  el.innerHTML = `<div class="vencendo-titulo">⏰ Vencendo em breve</div>` + itens.map(it=>{
-    const dias = diasParaVencimento(it, mKey);
-    const label = dias===0 ? 'vence hoje' : (dias===1 ? 'vence amanhã' : `vence em ${dias}d`);
-    return `<div class="vencendo-item"><span>${it.desc}</span><span class="vencendo-tag">${label}</span></div>`;
-  }).join('');
-}
 function contasEmAbertoNoMes(mKey){
   return getContasDoMes(mKey).filter(it=>{
     const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
     return !state.paid[paidKey];
   }).length;
 }
-function renderChecklist(){
-  const mKey = state.focusMonth;
+/* ================= CONTAS A PAGAR DO MÊS (recebi / paguei / contas) ================= */
+let contasPagarMes = null;
+function abrirContasPagar(mKey){
+  contasPagarMes = (typeof mKey==='string' && /^\d{4}-\d{2}$/.test(mKey)) ? mKey : mesFinanceiroAtual();
+  document.getElementById('pageContasPagar').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  renderContasPagar();
+}
+function cpNavMes(delta){
+  const novo = addMonths(contasPagarMes || mesFinanceiroAtual(), delta);
+  if(novo < todayKey() || novo > addMonths(mesFinanceiroAtual(), 36)) return;
+  contasPagarMes = novo;
+  renderContasPagar();
+}
+function fecharContasPagar(){
+  document.getElementById('pageContasPagar').classList.remove('active');
+  document.body.style.overflow = '';
+}
+function finalizarContasPagar(){
+  persist();
+  fecharContasPagar();
+  renderPlanner();
+  renderPanorama();
+  showToast('Contas do mês salvas');
+}
+function cpAtualizarTudo(){
+  persist();
+  renderPlanner();
+  renderPanorama();   // redesenha também esta tela (ela está aberta)
+}
+function cpToggleSalario(u, mKey){
+  setSalarioRecebido(u, mKey, !salarioRecebidoNoMes(u, mKey));
+  cpAtualizarTudo();
+}
+function cpToggleExtra(u, id, mKey){
+  const e = (state.users[u].extras||[]).find(x=>x.id===id);
+  if(!e) return;
+  setExtraRecebido(u, id, mKey, !extraRecebidoNoMes(e, mKey));
+  cpAtualizarTudo();
+}
+function cpToggleDizimo(u, mKey){
+  setDizimoPago(u, mKey, !dizimoPagoNoMes(u, mKey));
+  cpAtualizarTudo();
+}
+const CP_ICON_OK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+function cpLinhaSwitch(titulo, sub, valor, ligado, onclick, rotuloOn, rotuloOff){
+  return `<div class="cp-row${ligado?' feito':''}">
+    <div class="cp-info">
+      <div class="cp-titulo">${ligado?CP_ICON_OK:''}${titulo}</div>
+      ${sub?`<div class="cp-sub">${sub}</div>`:''}
+    </div>
+    <div class="cp-valor${ligado?' riscado':''}">${fmtMoney(valor)}</div>
+    <button type="button" class="cp-switch${ligado?' on':''}" onclick="${onclick}" aria-pressed="${ligado}" title="${ligado?rotuloOn:rotuloOff}"><span></span></button>
+  </div>`;
+}
+function renderContasPagar(){
+  const mKey = contasPagarMes || mesFinanceiroAtual();
+  const u = userDash();
+  const nomeU = u==='davi' ? 'Davi' : 'Cris';
+  document.getElementById('contasPagarMesLabel').textContent = monthLabel(mKey)+' · '+nomeU;
+  const podeVoltar = mKey > todayKey();
+  let html = `<div class="cp-mes-nav">
+    <button type="button" onclick="cpNavMes(-1)" ${podeVoltar?'':'disabled'} aria-label="Mês anterior">◀</button>
+    <div class="cp-mes-label">${monthLabelLong(mKey)}${mKey===mesFinanceiroAtual()?' <small>atual</small>':''}</div>
+    <button type="button" onclick="cpNavMes(1)" aria-label="Próximo mês">▶</button>
+  </div>`;
+
+  /* --- Recebimentos --- */
+  const salario = rendaBaseForMonth(u, mKey);
+  const extras = (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey));
+  let recebHtml = '';
+  if(salario > 0 || salarioRecebidoNoMes(u, mKey)){
+    const sub = u==='davi' ? 'Ponto PJ de '+monthLabel(addMonths(mKey,-1)) : 'Renda do mês';
+    recebHtml += cpLinhaSwitch('Salário', sub, salario, salarioRecebidoNoMes(u, mKey), `cpToggleSalario('${u}','${mKey}')`, 'Recebido (toque para voltar a somar)', 'Marcar como recebido');
+  }
+  extras.forEach(e=>{
+    recebHtml += cpLinhaSwitch(e.desc, 'Extra', Number(e.valor)||0, extraRecebidoNoMes(e, mKey), `cpToggleExtra('${u}','${e.id}','${mKey}')`, 'Recebido (toque para voltar a somar)', 'Marcar como recebido');
+  });
+  if(recebHtml){
+    html += `<div class="cp-bloco"><div class="cp-bloco-titulo">Recebimentos <small>ligado = recebi (já está no saldo, para de somar)</small></div>${recebHtml}</div>`;
+  }
+
+  /* --- Dízimo --- */
+  if(u==='davi'){
+    const dz = dizimoValorCheio(u, mKey);
+    if(dz > 0 || dizimoPagoNoMes(u, mKey)){
+      html += `<div class="cp-bloco"><div class="cp-bloco-titulo">Dízimo <small>ligado = paguei (para de descontar)</small></div>${cpLinhaSwitch('Dízimo (10%)', '', dz, dizimoPagoNoMes(u, mKey), `cpToggleDizimo('${u}','${mKey}')`, 'Pago (toque para voltar a descontar)', 'Marcar como pago')}</div>`;
+    }
+  }
+
+  /* --- Contas --- */
   const mesAnteriorKey = addMonths(mKey, -1);
   const arquivadas = state.contasArquivadas || {};
-
-  let itemsAtual = getContasDoMes(mKey).map(it=>Object.assign({}, it, { mesOrigem: mKey }));
-  let itemsAnterior = getContasDoMes(mesAnteriorKey).map(it=>Object.assign({}, it, { mesOrigem: mesAnteriorKey }));
-
+  let itemsAtual = getContasDoMes(mKey, u).map(it=>Object.assign({}, it, { mesOrigem: mKey }));
+  let itemsAnterior = getContasDoMes(mesAnteriorKey, u).map(it=>Object.assign({}, it, { mesOrigem: mesAnteriorKey }));
   itemsAtual = itemsAtual.filter(it=> !arquivadas[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]);
   itemsAnterior = itemsAnterior.filter(it=>{
     const pk = mesAnteriorKey+'_'+it.user+'_'+it.cat+'_'+it.id;
     return !state.paid[pk] && !arquivadas[pk];
   });
-
   const items = itemsAnterior.concat(itemsAtual);
-
-  const list = document.getElementById('contasChecklist');
-  if(items.length === 0){
-    list.innerHTML = `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Planner</div></div>`;
-    return;
-  }
   items.sort((a,b)=>{
     if(a.mesOrigem !== b.mesOrigem) return a.mesOrigem < b.mesOrigem ? -1 : 1;
-    if(a.user !== b.user) return a.user === 'davi' ? -1 : 1;
-    return (b.valor||0) - (a.valor||0);
+    return (a.dia||1) - (b.dia||1);
   });
-  list.innerHTML = items.map(it=>{
-    const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
-    const isPaid = !!state.paid[paidKey];
-    const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
-    const isParcial = !isPaid && valorPago > 0;
-    const logo = it.logoUrl
-      ? `<img src="${it.logoUrl}" class="conta-logo">`
-      : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
-    const tagMes = it.mesOrigem !== mKey ? `<span class="conta-mes-tag">${monthLabel(it.mesOrigem)}</span>` : '';
-    const isNova = it.mesInicio && it.mesInicio === it.mesOrigem;
-    const diasAviso = state.diasAvisoVencimento ?? 3;
-    const diasVenc = !isPaid ? diasParaVencimento(it, it.mesOrigem) : null;
-    const venceEmBreve = diasVenc !== null && diasVenc >= 0 && diasVenc <= diasAviso;
-    const valorMudouRecente = it.cat==='assinatura' && it.historico && it.historico.length>0 && it.historico[it.historico.length-1].mKey===mesFinanceiroAtual();
-    const badges = `${isNova?'<span class="badge-nova">NOVA</span>':''}${it.tipo==='variavel'?'<span class="badge-variavel">VARIÁVEL</span>':''}${it.essencial===false?'<span class="badge-nao-essencial">NÃO ESSENCIAL</span>':''}${valorMudouRecente?`<span class="badge-mudou">valor mudou (era ${fmtMoney(it.historico[it.historico.length-1].valor)})</span>`:''}${venceEmBreve?`<span class="badge-vence">${diasVenc===0?'vence hoje':diasVenc===1?'vence amanhã':'vence em '+diasVenc+'d'}</span>`:''}`;
-    const corDia = diasVenc===null ? '' : (diasVenc<=3?' dia-urgente':(diasVenc<=7?' dia-proximo':' dia-distante'));
-    return `<div class="check-item-compact ${isPaid?'paid':''}"
-      onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
-      ${logo}
-      <div class="info">
-        <div class="desc">${it.desc}</div>
-        <div class="meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · <span class="dia-tag${corDia}">dia ${it.dia}</span>${tagMes}</div>
-        <div class="valor-linha">${fmtMoney(it.valor)}${isParcial?`<span class="valor-parcial">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
-        ${badges?`<div class="badges-linha">${badges}</div>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  let contasHtml;
+  if(items.length === 0){
+    contasHtml = `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Dashboard</div></div>`;
+  } else {
+    contasHtml = items.map(it=>{
+      const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
+      const isPaid = !!state.paid[paidKey];
+      const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
+      const isParcial = !isPaid && valorPago > 0;
+      const logo = it.logoUrl
+        ? `<img src="${it.logoUrl}" class="conta-logo">`
+        : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
+      const tagMes = it.mesOrigem !== mKey ? `<span class="conta-mes-tag">${monthLabel(it.mesOrigem)}</span>` : '';
+      const diasAviso = state.diasAvisoVencimento ?? 3;
+      const diasVenc = !isPaid ? diasParaVencimento(it, it.mesOrigem) : null;
+      const corDia = diasVenc===null ? '' : (diasVenc<=3?' dia-urgente':(diasVenc<=7?' dia-proximo':' dia-distante'));
+      return `<div class="check-item-compact ${isPaid?'paid':''}"
+        onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
+        ${logo}
+        <div class="info">
+          <div class="desc">${isPaid?CP_ICON_OK+' ':''}${it.desc}</div>
+          <div class="meta"><span class="dia-tag${corDia}">dia ${it.dia}</span>${tagMes}</div>
+          <div class="valor-linha">${fmtMoney(it.valor)}${isParcial?`<span class="valor-parcial">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  html += `<div class="cp-bloco"><div class="cp-bloco-titulo">Contas <small>toque = paga · segure = pagamento parcial</small></div><div class="checklist">${contasHtml}</div></div>`;
+  document.getElementById('contasPagarConteudo').innerHTML = html;
 }
+
 let contaTapTimer = null;
 let contaTapClickTimer = null;
 let iosConfirmResolve = null;
@@ -1263,7 +791,7 @@ function onContaLogoSelected(event){
         item.logoUrl = url;
         persist();
         document.getElementById('editarContaLogoPreview').innerHTML = `<img src="${item.logoUrl}" class="conta-logo-grande">`;
-        renderChecklist();
+        renderPanorama();
       });
     }
   };
@@ -1276,7 +804,7 @@ function removerContaLogo(){
     delete item.logoUrl;
     persist();
     document.getElementById('editarContaLogoPreview').innerHTML = `<div class="conta-logo-grande conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`;
-    renderChecklist();
+    renderPanorama();
   }
 }
 function salvarPagamentoConta(){
@@ -1317,26 +845,4 @@ function gastosBrutosMes(user, mKey){
   ex.futuro.forEach(i=>{ t += futuroValorNoMes(i, mKey); });
   (state.users[user].cartoes||[]).forEach(c=>{ t += Number((c.gastos||{})[mKey]) || 0; });
   return t;
-}
-function renderMetaPJ(){
-  const el = document.getElementById('cardMetaPJ');
-  if(!el) return;
-  const meses = [0,1,2].map(i=> addMonths(mesFinanceiroAtual(), i));
-  const linhas = meses.map((m,i)=>{
-    const gastos = gastosBrutosMes('davi', m);
-    const contrib = contribCrisForMonth(m);
-    const precisa = Math.max(gastos - contrib, 0) / (1 - DIZIMO_PERCENT);
-    const crisRenda = (state.users.cris.income[m]||0) + extraTotalForMonth('cris', m);
-    const crisSobra = crisRenda - gastosBrutosMes('cris', m) - contrib;
-    return `<tr><td class="row-label">${monthLabel(m).slice(0,3)}${i===0?'<small> atual</small>':''}</td>
-      <td>${fmtMoney(gastos)}</td>
-      <td>${fmtMoney(contrib)}</td>
-      <td style="font-weight:800">${fmtMoney(precisa)}</td>
-      <td style="color:${crisSobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(crisSobra)}</td></tr>`;
-  }).join('');
-  el.innerHTML = `<div class="card-title"><div class="left">Meta para sair do PJ</div></div>
-    <div class="ponto-table-wrap"><table class="money-table">
-      <thead><tr><th style="text-align:left;padding-left:10px">Mês</th><th>Seus gastos</th><th>Ajuda Cris</th><th>Precisa ganhar</th><th>Sobra da Cris</th></tr></thead>
-      <tbody>${linhas}</tbody></table></div>
-    <div class="meta" style="margin-top:8px;color:var(--text-dim);font-size:11px">Precisa ganhar = (seus gastos − ajuda da Cris) mais 10% de dízimo sobre o que entrar. A ajuda da Cris é a soma dos extras dela marcados "vai ajudar o Davi" no Planner.</div>`;
 }

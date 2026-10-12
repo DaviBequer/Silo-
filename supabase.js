@@ -17,6 +17,7 @@
   }
 
   const client = getClient();
+  let ultimoUpdatedAt = null;   // updated_at da última leitura/gravação deste aparelho (detecta outro aparelho salvando por cima)
 
   window.SiloSupabase = {
     enabled: !!client,
@@ -33,31 +34,65 @@
           .eq('user_id', USER_ID)
           .maybeSingle();
         if (error && error.code !== 'PGRST116') throw error;
-        return { ok:true, data: data ? data.data : null };
+        ultimoUpdatedAt = data ? data.updated_at : null;
+        return { ok:true, data: data ? data.data : null, updatedAt: ultimoUpdatedAt };
       } catch (e) {
         console.error('[SUPABASE] Erro ao carregar estado:', e);
         this.lastError = String((e && (e.message || e.code)) || e).slice(0,120);
         return { ok:false, error:e };
       }
     },
+    // Grava o estado. Só grava por cima se ninguém mais salvou depois da última leitura deste aparelho.
+    // Retorna true/false; this.conflito fica true quando outro aparelho salvou algo mais novo.
     async saveState(payload){
-      if (!client) return false;
+      if (!client) { this.lastError = 'Supabase não configurado'; return false; }
+      this.conflito = false;
       try {
         const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
-        const { error } = await client
+        const agora = new Date().toISOString();
+        if (ultimoUpdatedAt) {
+          const { data, error } = await client
+            .from('app_state')
+            .update({ data: parsed, updated_at: agora })
+            .eq('user_id', USER_ID)
+            .eq('updated_at', ultimoUpdatedAt)
+            .select('updated_at');
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            this.conflito = true;
+            this.lastError = 'Outro aparelho salvou alterações mais novas';
+            return false;
+          }
+          ultimoUpdatedAt = data[0].updated_at;
+          return true;
+        }
+        const { data, error } = await client
           .from('app_state')
-          .upsert({
-            user_id: USER_ID,
-            data: parsed,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
+          .upsert({ user_id: USER_ID, data: parsed, updated_at: agora }, { onConflict: 'user_id' })
+          .select('updated_at');
         if (error) throw error;
+        ultimoUpdatedAt = (data && data[0] && data[0].updated_at) || agora;
         return true;
       } catch (e) {
         console.error('[SUPABASE] Erro ao salvar estado:', e);
-        this.lastError = String((e && (e.message || e.code)) || e).slice(0,120);
+        this.lastError = String((e && (e.message || e.code)) || e).slice(0,160);
         return false;
       }
+    },
+    // Só consulta o updated_at no banco (leve) para saber se outro aparelho salvou algo novo
+    async checarAtualizacao(){
+      if (!client) return { ok:false };
+      try {
+        const { data, error } = await client.from('app_state').select('updated_at').eq('user_id', USER_ID).maybeSingle();
+        if (error && error.code !== 'PGRST116') throw error;
+        return { ok:true, updatedAt: data ? data.updated_at : null, mudou: !!(data && ultimoUpdatedAt && data.updated_at !== ultimoUpdatedAt) };
+      } catch (e) { return { ok:false }; }
+    },
+    // Usuário escolheu sobrescrever o que o outro aparelho salvou: adota o updated_at atual do banco como base
+    async adotarVersaoDoBanco(){
+      const r = await this.checarAtualizacao();
+      if (r.ok) ultimoUpdatedAt = r.updatedAt;
+      return r.ok;
     },
     // MIGRAÇÃO ÚNICA: lê o que sobrou no localStorage. Pode apagar estas duas funções quando todos os aparelhos já tiverem migrado.
     lerLegado(){

@@ -7,8 +7,6 @@ const ICON_LAY_LOCK_OPEN = '<svg width="13" height="13" viewBox="0 0 24 24" fill
 const ICON_LAY_LOCK_CLOSED = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
 const LAYOUT_GROUPS = {
-  panoResumo: { selector:'#panoPanelResumo', defaultSpan:4, masonry:true },
-  panoContas: { selector:'#panoPanelContas', defaultSpan:12, masonry:true },
   planner:    { selector:'#aba-planner',     defaultSpan:4, masonry:true }
 };
 
@@ -55,7 +53,7 @@ function ensureLayoutPrefs(groupKey, bp){
   return p;
 }
 function isLayoutFixedEl(el){
-  return el.classList.contains('user-tabs') || el.classList.contains('plan-faixa') || el.dataset.layoutFixed==='1';
+  return el.classList.contains('user-tabs') || el.classList.contains('dash-tabs') || el.dataset.layoutFixed==='1';
 }
 function getLayoutItems(groupKey){
   const cfg = LAYOUT_GROUPS[groupKey];
@@ -243,7 +241,7 @@ function toggleLayoutEditMode(){
 function updateLayoutBtnVisibility(aba){
   const btn = document.getElementById('btnLayoutEdit');
   if(!btn) return;
-  const mostrar = (aba==='panorama' || aba==='planner');
+  const mostrar = (aba==='planner');
   btn.style.display = mostrar ? '' : 'none';
   if(!mostrar && layoutEditActive) toggleLayoutEditMode();
 }

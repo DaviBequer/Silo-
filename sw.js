@@ -1,10 +1,8 @@
-const CACHE_NAME = 'siloe-cache-v81';
-const APP_VERSION = '2.81';
+const CACHE_NAME = 'siloe-cache-v31';
+const APP_VERSION = '3.1';
 const ARQUIVOS = [
   './index.html',
   `./style.css?v=${APP_VERSION}`,
-  `./luxury-dark.css?v=${APP_VERSION}`,
-  `./premium.css?v=${APP_VERSION}`,
   `./supabase.js?v=${APP_VERSION}`,
   `./core.js?v=${APP_VERSION}`,
   `./comando.js?v=${APP_VERSION}`,
@@ -13,10 +11,7 @@ const ARQUIVOS = [
   `./panorama.js?v=${APP_VERSION}`,
   `./planner.js?v=${APP_VERSION}`,
   `./ponto.js?v=${APP_VERSION}`,
-  `./receitas.js?v=${APP_VERSION}`,
   `./louvor.js?v=${APP_VERSION}`,
-  `./mercado.js?v=${APP_VERSION}`,
-  `./ia-voz.js?v=${APP_VERSION}`,
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

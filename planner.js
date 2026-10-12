@@ -115,11 +115,10 @@ function renderTarefasModal(){
 function renderPlanner(){
   const u = state.currentUser;
   document.getElementById('saldoAtualInput').value = state.users[u].saldoAtual ? state.users[u].saldoAtual.toFixed(2).replace('.',',') : '';
-  renderPlannerSaldoModoBtn();
-  document.getElementById('btnAddCartao').style.display = (u==='davi') ? '' : 'none';
+  const hdr = document.querySelector('.header');
+  if(hdr) document.documentElement.style.setProperty('--header-h', hdr.offsetHeight+'px');
 
   renderRendaTable();
-  renderPlannerFaixa();
   ['moradia','assinatura','fixo','futuro'].forEach(cat=> renderGastoGrid(cat));
   renderCartaoTrackerList();
   renderReservaBadge();
@@ -135,7 +134,6 @@ function renderRendaTable(){
   const months = [];
   const numMeses = fluxoMesesExpandido ? 12 : 6;
   for(let i=0;i<numMeses;i++) months.push(addMonths(mesFinanceiroAtual(), i));
-  const cartoes = (u==='davi') ? (state.users[u].cartoes || []) : [];
   const hoje = mesFinanceiroAtual();
   const btnToggle = document.getElementById('btnToggleFluxoMeses');
   if(btnToggle) btnToggle.classList.toggle('expandido', fluxoMesesExpandido);
@@ -146,6 +144,9 @@ function renderRendaTable(){
   }).join('')}<th></th></tr>`;
 
   const rendaRow = `<tr><td class="row-label">Renda</td>${months.map(mKey=>{
+    if(salarioRecebidoNoMes(u, mKey)){
+      return `<td class="cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirContasPagar('${mKey}')"><span class="cell-money-empty feito-tag">✓ recebido</span></td>`;
+    }
     if(u==='davi'){
       const val = rendaBaseForMonth(u, mKey);
       return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:700">${fmtMoney(val)}</td>`;
@@ -162,18 +163,12 @@ function renderRendaTable(){
   }).join('')}<td></td></tr>`;
 
   const dizimoRow = (u!=='davi') ? '' : `<tr><td class="row-label" style="color:var(--text-faint)">Dízimo</td>${months.map(mKey=>{
+    if(dizimoPagoNoMes(u, mKey)){
+      return `<td class="cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirContasPagar('${mKey}')"><span class="cell-money-empty feito-tag">✓ pago</span></td>`;
+    }
     const val = dizimoForMonth(u, mKey);
     return `<td class="${mKey===hoje?'current-col':''}" style="color:var(--text-faint);font-weight:600">${fmtMoney(val)}</td>`;
   }).join('')}<td></td></tr>`;
-
-  const cartaoRows = (u!=='davi') ? '' : (cartoes.length === 0
-    ? `<tr><td class="row-label" style="color:var(--text-faint);font-weight:500" colspan="${months.length+2}">Nenhum cartão — toque em + acima</td></tr>`
-    : cartoes.map(c=>{
-      return `<tr class="cartao-row"><td class="row-label">${c.nome}</td>${months.map(mKey=>{
-        const val = (c.gastos||{})[mKey] || 0;
-        return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" enterkeyhint="next" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setCartaoGasto('${c.id}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
-      }).join('')}<td><span class="cartao-actions"><button class="btn-icon-sm" onclick="editCartao('${c.id}')">${ICON_EDIT}</button><button class="btn-icon-sm" onclick="deleteCartao('${c.id}')">${ICON_TRASH}</button></span></td></tr>`;
-    }).join(''));
 
   const sobraRow = `<tr class="total-row"><td class="row-label">Sobra estimada</td>${months.map(mKey=>{
     const s = saldoForMonth(u, mKey);
@@ -181,31 +176,7 @@ function renderRendaTable(){
   }).join('')}<td></td></tr>`;
 
   document.getElementById('rendaTableThead').innerHTML = thead;
-  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + cartaoRows + sobraRow;
-  renderPlannerFaixa();
-}
-
-/* Faixa fixa no topo do Planner: mostra o resultado do mês enquanto edita (usa os mesmos cálculos do Dashboard) */
-function renderPlannerFaixa(){
-  const el = document.getElementById('planFaixa');
-  if(!el) return;
-  const hdr = document.querySelector('.header');
-  if(hdr) document.documentElement.style.setProperty('--header-h', hdr.offsetHeight+'px');
-  const u = state.currentUser;
-  const mKey = mesFinanceiroAtual();
-  const emConta = state.users[u].saldoAtual || 0;
-  const total = incomeForMonth(u, mKey);
-  const aReceber = total - emConta;
-  const aPagar = expensesForMonth(u, mKey);
-  const sobra = total - aPagar;
-  const cor = v => v>=0 ? 'var(--success)' : 'var(--danger)';
-  el.innerHTML = `<div class="plan-faixa-mes"><span>${monthLabelExtenso(mKey)}</span><button type="button" class="section-add-label" onclick="openGastoModal('futuro', null, 'simples')">+ Gasto futuro</button></div>
-    <div class="plan-faixa-grid">
-      <div><span>Em conta</span><b>${fmtMoney(emConta)}</b></div>
-      <div><span>A receber</span><b>${fmtMoney(aReceber)}</b></div>
-      <div><span>A pagar</span><b>${fmtMoney(aPagar)}</b></div>
-      <div><span>Sobra prevista</span><b style="color:${cor(sobra)}">${fmtMoneySigned(sobra)}</b></div>
-    </div>`;
+  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + sobraRow;
 }
 
 function setIncome(user, mKey, valStr){
@@ -223,25 +194,6 @@ function setSaldoAtual(valStr){
   renderPanorama();
   persist();
 }
-function toggleUsarSaldoComoBase(){
-  const u = state.currentUser;
-  state.users[u].usarSaldoComoBase = !state.users[u].usarSaldoComoBase;
-  persist();
-  renderPlannerSaldoModoBtn();
-  renderRendaTable();
-  renderPanorama();
-}
-function renderPlannerSaldoModoBtn(){
-  const u = state.currentUser;
-  const btn = document.getElementById('btnSaldoModo');
-  if(!btn) return;
-  const ativo = !!state.users[u].usarSaldoComoBase;
-  btn.classList.toggle('active', ativo);
-  btn.innerHTML = ativo
-    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>Calculando pelo saldo em conta — toque pra voltar a somar a renda'
-    : 'Já recebi tudo e comecei a pagar? Toque pra calcular só pelo saldo em conta';
-}
-
 function openReservaModal(){
   document.getElementById('reservaValorInput').value = state.reserva ? state.reserva.toFixed(2).replace('.',',') : '';
   document.getElementById('reservaMetaInput').value = state.reservaMeta ? state.reservaMeta.toFixed(2).replace('.',',') : '';
@@ -461,42 +413,156 @@ function faturaCartaoNoMes(cartao, mKey){
   const totalAssinaturas = (cartao.assinaturas||[]).reduce((s,a)=>s+assinaturaValorNoMes(a, mKey), 0);
   return totalParcelas + totalVista + totalAssinaturas;
 }
-/* Resumo só da seção dos cartões: sobra do mês − fatura de todos os cartões. O cartão continua FORA da sobra do Dashboard/Planner. */
-function gerarResumoSobraFaturaHtml(){
-  const cartoes = state.cartoesTracker || [];
-  if(!cartoes.length) return '';
-  const hoje = mesFinanceiroAtual();
-  const chips = [];
-  for(let i=0;i<12;i++){
-    const mKey = addMonths(hoje, i);
-    let sobra = 0;
-    try{ sobra = Number(dadosDoMes(mKey).sobra) || 0; }catch(e){ sobra = 0; }
-    const fatura = cartoes.reduce((s,c)=>s+faturaCartaoNoMes(c, mKey), 0);
-    const resta = sobra - fatura;
-    chips.push(`<div class="sf-chip">
-      <div class="fm-mes">${monthLabel(mKey)}</div>
-      <div class="sf-linha"><span>Sobra</span><b>${fmtMoney(sobra)}</b></div>
-      <div class="sf-linha"><span>Fatura</span><b>${fmtMoney(fatura)}</b></div>
-      <div class="sf-linha res ${resta<0?'neg':''}"><span>Resta</span><b>${fmtMoney(resta)}</b></div>
-    </div>`);
+/* ================= STATUS DA FATURA DO CARTÃO ================= */
+/* Fatura "M" = a que fecha no dia de fechamento do mês M e vence no dia de vencimento (no mesmo mês, ou no seguinte se o vencimento é menor que o fechamento) */
+function diaNoMesData(mKey, dia){
+  const d = keyToDate(mKey);
+  return new Date(d.getFullYear(), d.getMonth(), Math.min(Math.max(1, dia), daysInMonth(mKey)));
+}
+function cartaoDatasFatura(cartao, mKey){
+  const fech = parseInt(cartao.fechamento)||0, venc = parseInt(cartao.vencimento)||0;
+  if(!fech || !venc) return null;
+  return { fecha: diaNoMesData(mKey, fech), vence: venc > fech ? diaNoMesData(mKey, venc) : diaNoMesData(addMonths(mKey,1), venc) };
+}
+function fmtDiaMesCurto(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+function faturaRegistro(cartao, mKey){ return (state.faturasCartao||{})[cartao.id+'_'+mKey] || null; }
+function faturaPagaValor(cartao, mKey){ const r = faturaRegistro(cartao, mKey); return r ? (Number(r.pago)||0) : 0; }
+/* quanto ainda falta pagar da fatura (o que já foi pago deixa de contar) */
+function faturaRestanteNoMes(cartao, mKey){
+  return Math.max(0, faturaCartaoNoMes(cartao, mKey) - faturaPagaValor(cartao, mKey));
+}
+/* st: aberto | fechado (aguardando pagamento) | vencido (gerando juros) | parcial (pago em parte) | pago | vazio */
+function faturaStatus(cartao, mKey){
+  const total = faturaCartaoNoMes(cartao, mKey), pago = faturaPagaValor(cartao, mKey);
+  const resta = Math.max(0, total - pago);
+  const datas = cartaoDatasFatura(cartao, mKey);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  let st;
+  if(total < 0.005 && pago < 0.005) st = 'vazio';
+  else if(pago > 0 && resta < 0.005) st = 'pago';
+  else if(!datas) st = pago > 0 ? 'parcial' : 'aberto';
+  else if(hoje < datas.fecha) st = pago > 0 ? 'parcial' : 'aberto';
+  else if(hoje > datas.vence) st = 'vencido';
+  else st = pago > 0 ? 'parcial' : 'fechado';
+  return { st, total, pago, resta, datas };
+}
+/* fatura que está aberta hoje: a compra nova entra nela. No dia do fechamento ela já fecha e abre a do mês seguinte. */
+function faturaAbertaMes(cartao){
+  const hoje = new Date();
+  const mReal = monthKey(hoje);
+  const fech = parseInt(cartao && cartao.fechamento)||0;
+  if(!fech) return mesFinanceiroAtual();
+  return hoje.getDate() >= Math.min(fech, daysInMonth(mReal)) ? addMonths(mReal, 1) : mReal;
+}
+/* fatura em destaque no cartão: a escolhida na faixa de meses, senão a mais antiga ainda por pagar, senão a aberta */
+function faturaFocoMes(cartao){
+  const sel = faturaMesSelecionado[cartao.id];
+  if(sel) return sel;
+  const mReal = monthKey(new Date());
+  for(let i=-3;i<=0;i++){
+    const m = addMonths(mReal, i);
+    const s = faturaStatus(cartao, m);
+    if((s.st==='vencido' || s.st==='fechado' || s.st==='parcial') && s.resta > 0.005) return m;
   }
-  return `<div class="sf-resumo">
-    <div class="sf-titulo">Sobra do mês − fatura dos cartões</div>
-    <div class="sf-nota">Só aqui: a sobra do Dashboard continua sem o cartão.</div>
-    <div class="sf-strip">${chips.join('')}</div>
+  return faturaAbertaMes(cartao);
+}
+const FATURA_ROTULO = { aberto:'Aberta', fechado:'Fechada · aguardando pagamento', vencido:'VENCIDA · gerando juros', parcial:'Pago em parte', pago:'Paga', vazio:'Sem fatura' };
+function faturaCaixaHtml(cartao){
+  const mKey = faturaFocoMes(cartao);
+  const f = faturaStatus(cartao, mKey);
+  const datasTxt = f.datas ? `fecha ${fmtDiaMesCurto(f.datas.fecha)} · vence ${fmtDiaMesCurto(f.datas.vence)}` : 'cadastre o fechamento e o vencimento no cartão';
+  let detalhe = '';
+  if(f.st==='pago'){
+    const reg = faturaRegistro(cartao, mKey);
+    const ult = reg && reg.pagamentos && reg.pagamentos.length ? reg.pagamentos[reg.pagamentos.length-1].em : null;
+    detalhe = `Pago ${fmtMoney(f.pago)}${ult?' em '+fmtDiaMesCurto(new Date(ult)):''}`;
+  } else if(f.pago > 0){
+    detalhe = `Pago ${fmtMoney(f.pago)} · falta ${fmtMoney(f.resta)}`;
+  } else if(f.st!=='vazio'){
+    detalhe = `Valor ${fmtMoney(f.total)}`;
+  }
+  const botao = (f.st==='vazio') ? '' : (f.st==='pago'
+    ? `<button type="button" class="fat-btn" onclick="abrirPagarFatura('${cartao.id}','${mKey}')">Ver / desfazer</button>`
+    : `<button type="button" class="fat-btn pagar" onclick="abrirPagarFatura('${cartao.id}','${mKey}')">Pagar</button>`);
+  return `<div class="fat-box ${f.st}">
+    <div class="fat-top"><span class="fat-pill ${f.st}">${f.st==='pago'?'✓ ':''}${FATURA_ROTULO[f.st]}</span><span class="fat-mes">Fatura ${monthLabel(mKey)}</span></div>
+    <div class="fat-linha"><span>${detalhe}</span>${botao}</div>
+    <div class="fat-datas">${datasTxt}</div>
   </div>`;
 }
+let pagarFaturaAlvo = null;
+function abrirPagarFatura(cartaoId, mKey){
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  if(!cartao) return;
+  pagarFaturaAlvo = { cartaoId, mKey };
+  renderPagarFatura();
+  document.getElementById('modalPagarFatura').classList.add('active');
+}
+function renderPagarFatura(){
+  const { cartaoId, mKey } = pagarFaturaAlvo;
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  const f = faturaStatus(cartao, mKey);
+  const reg = faturaRegistro(cartao, mKey);
+  document.getElementById('pagarFaturaTitulo').textContent = cartao.nome+' · '+monthLabel(mKey);
+  const hist = reg && reg.pagamentos && reg.pagamentos.length
+    ? reg.pagamentos.map(p=>`<div class="simulador-linha"><span class="label">Pago em ${fmtDiaMesCurto(new Date(p.em))}</span><span class="valor">${fmtMoney(p.valor)}</span></div>`).join('')
+    : '';
+  document.getElementById('pagarFaturaResumo').innerHTML = `
+    <div class="simulador-linha"><span class="label">Valor da fatura</span><span class="valor">${fmtMoney(f.total)}</span></div>
+    ${hist}
+    <div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:6px;padding-top:8px"><span class="label" style="font-weight:900">Total pago</span><span class="valor" style="font-weight:900">${fmtMoney(f.pago)}</span></div>
+    ${f.st==='vencido' ? '<div class="fat-aviso-juros">Fatura vencida: está gerando juros.</div>' : ''}`;
+  const quitada = f.st==='pago';
+  document.getElementById('pagarFaturaCampo').style.display = quitada ? 'none' : '';
+  document.getElementById('pagarFaturaBtnConfirmar').style.display = quitada ? 'none' : '';
+  document.getElementById('pagarFaturaBtnDesfazer').style.display = (f.pago>0) ? '' : 'none';
+  document.getElementById('pagarFaturaValor').value = f.resta.toFixed(2).replace('.',',');
+  document.getElementById('pagarFaturaNota').textContent = 'Se pagar menos que o valor, fica como pagamento parcial (laranja).';
+}
+function confirmarPagarFatura(){
+  if(!pagarFaturaAlvo) return;
+  const { cartaoId, mKey } = pagarFaturaAlvo;
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  if(!cartao) return;
+  const f = faturaStatus(cartao, mKey);
+  let v = parseMoney(document.getElementById('pagarFaturaValor').value);
+  if(!(v>0)){ showToast('Digite o valor pago'); return; }
+  v = Math.min(v, f.resta > 0 ? f.resta : v);
+  if(!state.faturasCartao) state.faturasCartao = {};
+  const k = cartaoId+'_'+mKey;
+  const reg = state.faturasCartao[k] || { pago:0, pagamentos:[] };
+  reg.pago = Math.round(((Number(reg.pago)||0) + v)*100)/100;
+  reg.pagamentos = (reg.pagamentos||[]).concat([{ valor:v, em:Date.now() }]);
+  state.faturasCartao[k] = reg;
+  persist();
+  closeModal('modalPagarFatura');
+  const depois = faturaStatus(cartao, mKey);
+  renderCartaoTrackerList(); renderPanorama();
+  showToast(depois.st==='pago' ? 'Fatura paga' : 'Pagamento parcial registrado · falta '+fmtMoney(depois.resta));
+}
+async function desfazerPagamentoFatura(){
+  if(!pagarFaturaAlvo) return;
+  const ok = await iosConfirm('Apagar os pagamentos registrados dessa fatura?');
+  if(!ok) return;
+  const { cartaoId, mKey } = pagarFaturaAlvo;
+  if(state.faturasCartao) delete state.faturasCartao[cartaoId+'_'+mKey];
+  persist();
+  closeModal('modalPagarFatura');
+  renderCartaoTrackerList(); renderPanorama();
+  showToast('Pagamentos da fatura apagados');
+}
 function gerarFaturaMensalHtml(cartao){
-  const hoje = mesFinanceiroAtual();
+  const inicio = [todayKey(), mesFinanceiroAtual()].sort()[0];
   const selecionado = faturaMesSelecionado[cartao.id];
   const meses = [];
-  for(let i=0;i<12;i++) meses.push(addMonths(hoje, i));
+  for(let i=0;i<13;i++) meses.push(addMonths(inicio, i));
   return meses.map(mKey=>{
-    const total = faturaCartaoNoMes(cartao, mKey);
+    const f = faturaStatus(cartao, mKey);
     const sel = selecionado===mKey ? ' selected' : '';
-    return `<div class="ct-fatura-chip${sel}" onclick="toggleFaturaMes('${cartao.id}','${mKey}')">
-      <div class="fm-mes">${monthLabel(mKey)}</div>
-      <div class="fm-valor">${fmtMoney(total)}</div>
+    const marca = f.st==='pago' ? '<span class="fm-ok">✓</span>' : (f.st==='vencido' ? '<span class="fm-ok venc">!</span>' : '');
+    return `<div class="ct-fatura-chip st-${f.st}${sel}" onclick="toggleFaturaMes('${cartao.id}','${mKey}')">
+      <div class="fm-mes">${monthLabel(mKey)}${marca}</div>
+      <div class="fm-valor">${fmtMoney(f.total)}</div>
     </div>`;
   }).join('');
 }
@@ -510,15 +576,13 @@ function scrollFaturaMensal(cartaoId, dir){
 function renderCartaoTrackerList(){
   const list = document.getElementById('cartaoTrackerList');
   if(!list) return;
-  const secao = document.getElementById('secaoCartaoTracker');
-  if(secao) secao.style.display = (state.currentUser==='davi') ? '' : 'none';
-  if(state.currentUser!=='davi') return;
+  if(typeof renderAcumCartao==='function') renderAcumCartao();
   const cartoes = state.cartoesTracker || [];
   if(cartoes.length === 0){
     list.innerHTML = `<div class="empty-state"><div class="title">Nenhum cartão cadastrado</div><div class="desc">Toque em "+ Cartão" pra começar</div></div>`;
     return;
   }
-  list.innerHTML = gerarResumoSobraFaturaHtml() + cartoes.map(cartao=>{
+  list.innerHTML = cartoes.map(cartao=>{
     const mesSelecionado = faturaMesSelecionado[cartao.id];
     const todasCompras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
     const compras = todasCompras
@@ -601,6 +665,7 @@ function renderCartaoTrackerList(){
       <div class="ct-disponivel-val">${fmtMoney(disponivel)}</div>
       <div class="ct-bar"><div class="ct-bar-fill" style="width:${percentUsado}%"></div></div>
       <div class="ct-foot"><span>Gasto ${fmtMoney(usado)}</span><span>Fecha dia ${cartao.fechamento||'—'} · Vence dia ${cartao.vencimento||'—'} · Total ${fmtMoney(limite)}</span></div>
+      ${faturaCaixaHtml(cartao)}
       <div class="ct-fatura-mensal">
         <button class="btn-icon-sm" onclick="scrollFaturaMensal('${cartao.id}',-1)">‹</button>
         <div class="ct-fatura-mensal-strip" id="faturaStrip-${cartao.id}">${gerarFaturaMensalHtml(cartao)}</div>
@@ -782,10 +847,17 @@ function openCompraTrackerModal(cartaoId, compraId){
     compraTrackerLogoUrlAtual = null;
     document.getElementById('compraTrackerValor').value = '';
     document.getElementById('compraTrackerParcelas').value = 1;
-    createMonthPicker('compraTrackerMesInicioPicker', 'compraTrackerMesInicio', mesFinanceiroAtual());
+    const cartaoRef = (state.cartoesTracker||[]).find(c=>c.id===(cartaoId || document.getElementById('compraTrackerCartaoId').value)) || state.cartoesTracker[0];
+    createMonthPicker('compraTrackerMesInicioPicker', 'compraTrackerMesInicio', faturaAbertaMes(cartaoRef));
   }
   renderCompraTrackerLogoPreview();
   document.getElementById('modalCompraTracker').classList.add('active');
+}
+/* trocou de cartão numa compra nova: o mês de início vai para a fatura que está aberta naquele cartão */
+function onCompraCartaoChange(){
+  if(document.getElementById('compraTrackerId').value) return;
+  const cartao = (state.cartoesTracker||[]).find(c=>c.id===document.getElementById('compraTrackerCartaoId').value);
+  if(cartao) createMonthPicker('compraTrackerMesInicioPicker', 'compraTrackerMesInicio', faturaAbertaMes(cartao));
 }
 function salvarCompraTracker(){
   const id = document.getElementById('compraTrackerId').value;
@@ -844,14 +916,13 @@ function openCredoVistaModal(cartaoId, credoId){
       document.getElementById('credoVistaDescricao').value = item.descricao || '';
       document.getElementById('credoVistaValor').value = (item.valor||0).toFixed(2).replace('.',',');
       window.credoVistaCategoriaSelecionada = item.categoria || 'Outros';
-      // o campo mostra o mês da compra; o que fica salvo (mKey) é a fatura, 1 mês depois
-      createMonthPicker('credoVistaMesPicker', 'credoVistaMes', item.mKey ? addMonths(item.mKey, -1) : todayKey());
+      createMonthPicker('credoVistaMesPicker', 'credoVistaMes', item.mKey || faturaAbertaMes(cartao));
     }
   }else{
     document.getElementById('credoVistaDescricao').value = '';
     document.getElementById('credoVistaValor').value = '';
     window.credoVistaCategoriaSelecionada = 'Outros';
-    createMonthPicker('credoVistaMesPicker', 'credoVistaMes', todayKey());
+    createMonthPicker('credoVistaMesPicker', 'credoVistaMes', faturaAbertaMes((state.cartoesTracker||[]).find(c=>c.id===cartaoId)));
   }
   renderCredoVistaCategoriaChips();
   document.getElementById('modalCredoVista').classList.add('active');
@@ -862,8 +933,8 @@ function salvarCredoVista(){
   const descricao = document.getElementById('credoVistaDescricao').value.trim();
   const valor = parseMoney(document.getElementById('credoVistaValor').value);
   const categoria = window.credoVistaCategoriaSelecionada || 'Outros';
-  const mesCompra = document.getElementById('credoVistaMes').value || todayKey();
-  const mKey = addMonths(mesCompra, 1); // compra em setembro entra na fatura de outubro
+  const cartaoRef = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+  const mKey = document.getElementById('credoVistaMes').value || faturaAbertaMes(cartaoRef);   // mês da fatura (a aberta hoje, a menos que você troque)
   if(!valor){ showToast('Digite o valor'); return; }
   const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
   if(!cartao){ showToast('Cartão não encontrado'); return; }
@@ -1031,59 +1102,6 @@ function excluirCompraTracker(id){
 }
 
 /* ================= CARTÕES DE CRÉDITO ================= */
-function openCartaoModal(id){
-  if(state.currentUser !== 'davi'){ showToast('Cartões disponíveis apenas para o Davi'); return; }
-  document.getElementById('cartaoId').value = id || '';
-  document.getElementById('modalCartaoTitle').textContent = id ? 'Editar Cartão' : 'Novo Cartão';
-  if(id){
-    const c = state.users[state.currentUser].cartoes.find(x=>x.id===id);
-    document.getElementById('cartaoNome').value = c ? c.nome : '';
-  }else{
-    document.getElementById('cartaoNome').value = '';
-  }
-  document.getElementById('modalCartao').classList.add('active');
-}
-function editCartao(id){ openCartaoModal(id); }
-function saveCartao(){
-  if(state.currentUser !== 'davi') return;
-  const id = document.getElementById('cartaoId').value;
-  const nome = document.getElementById('cartaoNome').value.trim();
-  if(!nome){ showToast('Digite o nome do cartão'); return; }
-  const list = state.users[state.currentUser].cartoes;
-  if(id){
-    const c = list.find(x=>x.id===id);
-    if(c) c.nome = nome;
-  }else{
-    list.push({ id:'c'+Date.now()+Math.floor(Math.random()*1000), nome, gastos:{} });
-  }
-  closeModal('modalCartao');
-  renderRendaTable();
-  renderPanorama();
-  persist();
-  showToast('Cartão salvo');
-}
-function deleteCartao(id){
-  if(state.currentUser !== 'davi') return;
-  const list = state.users[state.currentUser].cartoes;
-  const idx = list.findIndex(x=>x.id===id);
-  if(idx>-1) list.splice(idx,1);
-  renderRendaTable();
-  renderPanorama();
-  persist();
-  showToast('Cartão removido');
-}
-function setCartaoGasto(cardId, mKey, valStr){
-  if(state.currentUser !== 'davi') return;
-  const v = parseMoney(valStr);
-  const c = state.users[state.currentUser].cartoes.find(x=>x.id===cardId);
-  if(!c) return;
-  if(!c.gastos) c.gastos = {};
-  c.gastos[mKey] = v;
-  renderRendaTable();
-  renderPanorama();
-  persist();
-}
-
 /* ================= MODAL GASTO ================= */
 function updateGastoFieldsVisibility(){
   const cat = document.getElementById('gastoCat').value;
