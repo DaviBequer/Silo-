@@ -43,7 +43,21 @@ function renderResumoMes(){
   const elSobra = document.getElementById('resumoSobra');
   elSobra.textContent = fmtMoneySigned(sobra);
   elSobra.className = 'resumo-stat-val ' + (sobra >= 0 ? 'pos' : 'neg');
-  const abertas = getContasDoMes(mKey, u).filter(it=>!state.paid[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]).length;
+  /* atalhos: cartão / empréstimo contando (ou não) neste mês */
+  const elInc = document.getElementById('resumoInclui');
+  if(elInc){
+    const chip = (tipo, rotulo, valor)=>{
+      const on = incluiNoGeral(tipo, mKey);
+      return `<button type="button" class="inclui-chip${on?' on':''}" onclick="toggleGeralMes('${tipo}','${mKey}')" title="${on?'Toque para tirar deste mês':'Toque para contar neste mês'}"><span class="mini-switch${on?' on':''}"><span></span></span>${rotulo} <b>${fmtMoney(valor)}</b></button>`;
+    };
+    let h = '';
+    if(u==='davi' && (state.cartoesTracker||[]).length) h += chip('cartao', 'Cartão', cartaoValorGeralNoMes(mKey));
+    if(u==='davi' && (state.emprestimos||[]).length) h += chip('emprestimo', 'Empréstimo', emprestimoValorGeralNoMes(mKey));
+    elInc.innerHTML = h;
+    elInc.style.display = h ? '' : 'none';
+  }
+  const dizimoAberto = (u==='davi' && dizimoValorCheio(u, mKey) > 0 && !dizimoPagoNoMes(u, mKey)) ? 1 : 0;
+  const abertas = getContasDoMes(mKey, u).filter(it=>!state.paid[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]).length + cpExtrasAbertosNoMes(mKey, u) + dizimoAberto;
   document.getElementById('resumoContasAbertas').textContent = abertas ? abertas+' em aberto ›' : 'tudo pago ›';
 }
 
@@ -484,6 +498,8 @@ function faturaTotalNoMes(mKey){
 function sobraDoGeralNoMes(mKey){
   let sobra = 0;
   try{ sobra = Number(dadosDoMes(mKey).sobra) || 0; }catch(e){ sobra = 0; }
+  /* se o cartão já entrou no Geral, devolve aqui para não descontar a fatura duas vezes */
+  if(!(state.historicoMeses && state.historicoMeses[mKey])) sobra += extrasGeralNoMes('davi', mKey).cartao;
   return sobra;
 }
 function renderAcumCartao(months){
@@ -599,6 +615,7 @@ function cpNavMes(delta){
 function fecharContasPagar(){
   document.getElementById('pageContasPagar').classList.remove('active');
   document.body.style.overflow = '';
+  renderPlanner();   // garante que o Dashboard mostra o que foi marcado/desmarcado lá
 }
 /* Finalizar = conclui o mês atual e já passa para o próximo (se a tela estiver mostrando outro mês, só salva) */
 async function finalizarContasPagar(){
@@ -608,7 +625,7 @@ async function finalizarContasPagar(){
     showToast('Contas de '+monthLabel(mKey)+' salvas');
     return;
   }
-  const abertas = contasEmAbertoNoMes(mKey);
+  const abertas = contasEmAbertoNoMes(mKey) + cpExtrasAbertosNoMes(mKey, userDash());
   if(abertas > 0){
     const ok = await iosConfirm(`Ainda há ${abertas} conta${abertas>1?'s':''} em aberto em ${monthLabel(mKey)}. Concluir o mês e passar para ${monthLabel(addMonths(mKey,1))} mesmo assim?`);
     if(!ok) return;
@@ -636,15 +653,46 @@ function cpToggleDizimo(u, mKey){
   cpAtualizarTudo();
 }
 const CP_ICON_OK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-function cpLinhaSwitch(titulo, sub, valor, ligado, onclick, rotuloOn, rotuloOff){
-  return `<div class="cp-row${ligado?' feito':''}">
-    <div class="cp-info">
-      <div class="cp-titulo">${ligado?CP_ICON_OK:''}${titulo}</div>
-      ${sub?`<div class="cp-sub">${sub}</div>`:''}
+/* linha padrão da tela Contas do mês: logo · título/sub · valor · bolinha de feito */
+function cpItem(o){
+  const logo = o.logoUrl
+    ? `<img src="${o.logoUrl}" class="cp-logo" alt="">`
+    : `<div class="cp-logo cp-logo-ph">${o.icone || (o.titulo||'?').charAt(0).toUpperCase()}</div>`;
+  return `<div class="cp-item${o.feito?' feito':''}${o.parcial?' parcial':''}" ${o.attrs||''}>
+    ${logo}
+    <div class="cp-item-info">
+      <div class="cp-item-tit">${o.titulo}${o.tag||''}</div>
+      ${o.sub?`<div class="cp-item-sub">${o.sub}</div>`:''}
     </div>
-    <div class="cp-valor${ligado?' riscado':''}">${fmtMoney(valor)}</div>
-    <button type="button" class="cp-switch${ligado?' on':''}" onclick="${onclick}" aria-pressed="${ligado}" title="${ligado?rotuloOn:rotuloOff}"><span></span></button>
+    <div class="cp-item-val">${fmtMoney(o.valor)}${o.valorSub?`<small>${o.valorSub}</small>`:''}</div>
+    <span class="cp-check" aria-hidden="true">${o.feito?CP_ICON_OK:''}</span>
   </div>`;
+}
+function cpBloco(titulo, dica, corpo){
+  return `<div class="cp-bloco"><div class="cp-bloco-titulo">${titulo}${dica?`<small>${dica}</small>`:''}</div>${corpo}</div>`;
+}
+/* parcelas de empréstimo que vencem no mês (pagas e a pagar) */
+function cpParcelasEmprestimoNoMes(mKey){
+  const out = [];
+  (state.emprestimos||[]).forEach(emp=>{
+    for(let k=1; k<=emp.numParcelas; k++){
+      const venc = empVencimento(emp, k);
+      if(monthKey(venc)===mKey) out.push({ emp, k, venc, pago: empParcela(emp, k) });
+    }
+  });
+  return out.sort((a,b)=>a.venc-b.venc);
+}
+/* itens de cartão/empréstimo que entram na tela (só se estiverem ligados no Geral do mês) */
+function cpExtrasDoMes(mKey, u){
+  const cartoes = (u==='davi' && incluiNoGeral('cartao', mKey))
+    ? (state.cartoesTracker||[]).map(c=>({ c, f: faturaStatus(c, mKey) })).filter(x=>x.f.total>0.004 || x.f.pago>0.004)
+    : [];
+  const parcelas = (u==='davi' && incluiNoGeral('emprestimo', mKey) && typeof empVencimento==='function') ? cpParcelasEmprestimoNoMes(mKey) : [];
+  return { cartoes, parcelas };
+}
+function cpExtrasAbertosNoMes(mKey, u){
+  const x = cpExtrasDoMes(mKey, u);
+  return x.cartoes.filter(i=>i.f.st!=='pago').length + x.parcelas.filter(p=>!p.pago).length;
 }
 function renderContasPagar(){
   const mKey = contasPagarMes || mesFinanceiroAtual();
@@ -652,78 +700,98 @@ function renderContasPagar(){
   const nomeU = u==='davi' ? 'Davi' : 'Cris';
   document.getElementById('contasPagarMesLabel').textContent = monthLabel(mKey)+' · '+nomeU;
   const podeVoltar = mKey > todayKey();
-  let html = `<div class="cp-mes-nav">
-    <button type="button" onclick="cpNavMes(-1)" ${podeVoltar?'':'disabled'} aria-label="Mês anterior">◀</button>
-    <div class="cp-mes-label">${monthLabelLong(mKey)}${mKey===mesFinanceiroAtual()?' <small>atual</small>':''}</div>
-    <button type="button" onclick="cpNavMes(1)" aria-label="Próximo mês">▶</button>
-  </div>`;
+  let totalPagar = 0, totalPago = 0, nItens = 0, nFeitos = 0;
+  const conta = (valor, feito, pagoParcial)=>{ nItens++; if(feito){ nFeitos++; totalPago += valor; } else { totalPago += (pagoParcial||0); totalPagar += Math.max(0, valor-(pagoParcial||0)); } };
 
   /* --- Recebimentos --- */
   const salario = rendaBaseForMonth(u, mKey);
   const extras = (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey));
-  let recebHtml = '';
+  let receb = '', aReceber = 0;
   if(salario > 0 || salarioRecebidoNoMes(u, mKey)){
-    const sub = u==='davi' ? 'Ponto PJ de '+monthLabel(addMonths(mKey,-1)) : 'Renda do mês';
-    recebHtml += cpLinhaSwitch('Salário', sub, salario, salarioRecebidoNoMes(u, mKey), `cpToggleSalario('${u}','${mKey}')`, 'Recebido (toque para voltar a somar)', 'Marcar como recebido');
+    const ok = salarioRecebidoNoMes(u, mKey);
+    if(!ok) aReceber += salario;
+    receb += cpItem({ titulo:'Salário', sub: u==='davi' ? 'Ponto PJ de '+monthLabel(addMonths(mKey,-1)) : 'Renda do mês', valor:salario, feito:ok, icone:'$', attrs:`onclick="cpToggleSalario('${u}','${mKey}')"` });
   }
   extras.forEach(e=>{
-    recebHtml += cpLinhaSwitch(e.desc, 'Extra', Number(e.valor)||0, extraRecebidoNoMes(e, mKey), `cpToggleExtra('${u}','${e.id}','${mKey}')`, 'Recebido (toque para voltar a somar)', 'Marcar como recebido');
+    const ok = extraRecebidoNoMes(e, mKey);
+    if(!ok) aReceber += Number(e.valor)||0;
+    receb += cpItem({ titulo:e.desc, sub:'Extra', valor:Number(e.valor)||0, feito:ok, icone:'+', attrs:`onclick="cpToggleExtra('${u}','${e.id}','${mKey}')"` });
   });
-  if(recebHtml){
-    html += `<div class="cp-bloco"><div class="cp-bloco-titulo">Recebimentos <small>ligado = recebi (já está no saldo, para de somar)</small></div>${recebHtml}</div>`;
-  }
 
-  /* --- Dízimo --- */
+  /* --- Contas (dízimo + contas do mês e atrasadas do mês anterior) --- */
+  let contasHtml = '';
   if(u==='davi'){
     const dz = dizimoValorCheio(u, mKey);
-    if(dz > 0 || dizimoPagoNoMes(u, mKey)){
-      html += `<div class="cp-bloco"><div class="cp-bloco-titulo">Dízimo <small>ligado = paguei (para de descontar)</small></div>${cpLinhaSwitch('Dízimo (10%)', '', dz, dizimoPagoNoMes(u, mKey), `cpToggleDizimo('${u}','${mKey}')`, 'Pago (toque para voltar a descontar)', 'Marcar como pago')}</div>`;
+    const ok = dizimoPagoNoMes(u, mKey);
+    if(dz > 0 || ok){
+      conta(dz, ok);
+      contasHtml += cpItem({ titulo:'Dízimo', sub:'10% da renda', valor:dz, feito:ok, icone:'%', attrs:`onclick="cpToggleDizimo('${u}','${mKey}')"` });
     }
   }
-
-  /* --- Contas --- */
   const mesAnteriorKey = addMonths(mKey, -1);
   const arquivadas = state.contasArquivadas || {};
-  let itemsAtual = getContasDoMes(mKey, u).map(it=>Object.assign({}, it, { mesOrigem: mKey }));
-  let itemsAnterior = getContasDoMes(mesAnteriorKey, u).map(it=>Object.assign({}, it, { mesOrigem: mesAnteriorKey }));
-  itemsAtual = itemsAtual.filter(it=> !arquivadas[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]);
-  itemsAnterior = itemsAnterior.filter(it=>{
-    const pk = mesAnteriorKey+'_'+it.user+'_'+it.cat+'_'+it.id;
-    return !state.paid[pk] && !arquivadas[pk];
+  let itemsAtual = getContasDoMes(mKey, u).map(it=>Object.assign({}, it, { mesOrigem: mKey }))
+    .filter(it=> !arquivadas[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]);
+  let itemsAnterior = getContasDoMes(mesAnteriorKey, u).map(it=>Object.assign({}, it, { mesOrigem: mesAnteriorKey }))
+    .filter(it=>{ const pk = mesAnteriorKey+'_'+it.user+'_'+it.cat+'_'+it.id; return !state.paid[pk] && !arquivadas[pk]; });
+  const items = itemsAnterior.concat(itemsAtual).sort((a,b)=> a.mesOrigem!==b.mesOrigem ? (a.mesOrigem<b.mesOrigem?-1:1) : (a.dia||1)-(b.dia||1));
+  items.forEach(it=>{
+    const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
+    const isPaid = !!state.paid[paidKey];
+    const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
+    const isParcial = !isPaid && valorPago > 0;
+    conta(Number(it.valor)||0, isPaid, valorPago);
+    const diasVenc = !isPaid ? diasParaVencimento(it, it.mesOrigem) : null;
+    const corDia = diasVenc===null ? '' : (diasVenc<0?' atrasada':(diasVenc<=3?' urgente':''));
+    const quando = diasVenc===null ? `dia ${it.dia}` : (diasVenc<0 ? `venceu dia ${it.dia}` : (diasVenc===0 ? 'vence hoje' : (diasVenc<=3 ? `vence em ${diasVenc} dia${diasVenc>1?'s':''}` : `dia ${it.dia}`)));
+    contasHtml += cpItem({
+      titulo: it.desc, logoUrl: it.logoUrl,
+      sub: `<span class="cp-dia${corDia}">${quando}</span>`,
+      tag: it.mesOrigem!==mKey ? `<span class="cp-tag">${monthLabel(it.mesOrigem)}</span>` : '',
+      valor: Number(it.valor)||0, valorSub: isParcial ? 'pago '+fmtMoney(valorPago) : '',
+      feito: isPaid, parcial: isParcial,
+      attrs: `onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()"`
+    });
   });
-  const items = itemsAnterior.concat(itemsAtual);
-  items.sort((a,b)=>{
-    if(a.mesOrigem !== b.mesOrigem) return a.mesOrigem < b.mesOrigem ? -1 : 1;
-    return (a.dia||1) - (b.dia||1);
+
+  /* --- Cartão e Empréstimo (se ligados no Geral deste mês) --- */
+  const ex = cpExtrasDoMes(mKey, u);
+  let cartaoHtml = '';
+  ex.cartoes.forEach(({c, f})=>{
+    const ok = f.st==='pago';
+    conta(ok ? f.pago : f.total, ok, ok ? 0 : f.pago);
+    const sub = f.datas ? (venceHojeFatura(f) ? 'vence hoje · sem juros' : (f.st==='vencido' ? 'vencida · gerando juros' : 'vence '+fmtDiaMesCurto(f.datas.vence))) : 'Fatura '+monthLabel(mKey);
+    cartaoHtml += cpItem({ titulo:c.nome, logoUrl:c.logoUrl, sub:`<span class="cp-dia${f.st==='vencido'?' atrasada':''}">${sub}</span>`,
+      valor: ok ? f.pago : f.total, valorSub: (!ok && f.pago>0.004) ? 'pago '+fmtMoney(f.pago) : '', feito: ok, parcial: !ok && f.pago>0.004,
+      attrs:`onclick="abrirPagarFatura('${c.id}','${mKey}')"` });
   });
-  let contasHtml;
-  if(items.length === 0){
-    contasHtml = `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Dashboard</div></div>`;
-  } else {
-    contasHtml = items.map(it=>{
-      const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
-      const isPaid = !!state.paid[paidKey];
-      const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
-      const isParcial = !isPaid && valorPago > 0;
-      const logo = it.logoUrl
-        ? `<img src="${it.logoUrl}" class="conta-logo">`
-        : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
-      const tagMes = it.mesOrigem !== mKey ? `<span class="conta-mes-tag">${monthLabel(it.mesOrigem)}</span>` : '';
-      const diasAviso = state.diasAvisoVencimento ?? 3;
-      const diasVenc = !isPaid ? diasParaVencimento(it, it.mesOrigem) : null;
-      const corDia = diasVenc===null ? '' : (diasVenc<=3?' dia-urgente':(diasVenc<=7?' dia-proximo':' dia-distante'));
-      return `<div class="check-item-compact ${isPaid?'paid':''}"
-        onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()">
-        ${logo}
-        <div class="info">
-          <div class="desc">${isPaid?CP_ICON_OK+' ':''}${it.desc}</div>
-          <div class="meta"><span class="dia-tag${corDia}">dia ${it.dia}</span>${tagMes}</div>
-          <div class="valor-linha">${fmtMoney(it.valor)}${isParcial?`<span class="valor-parcial">· pago ${fmtMoney(valorPago)}</span>`:''}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-  html += `<div class="cp-bloco"><div class="cp-bloco-titulo">Contas <small>toque = paga · segure = pagamento parcial</small></div><div class="checklist">${contasHtml}</div></div>`;
+  let empHtml = '';
+  ex.parcelas.forEach(({emp, k, venc, pago})=>{
+    conta(pago ? pago.valorPago : emp.valorParcela, !!pago);
+    empHtml += cpItem({ titulo:escapeHtmlEmp(emp.nome||'Empréstimo'), logoUrl:emp.logoUrl,
+      sub:`Parcela ${k} de ${emp.numParcelas} · vence ${String(venc.getDate()).padStart(2,'0')}/${String(venc.getMonth()+1).padStart(2,'0')}`,
+      valor: pago ? pago.valorPago : emp.valorParcela, valorSub: pago && pago.tipo==='antecipada' ? 'antecipada' : '', feito: !!pago,
+      attrs: pago ? `onclick="desfazerParcelaEmp('${emp.id}',${k})"` : `onclick="abrirPagarParcelaEmp('${emp.id}',${k})"` });
+  });
+
+  /* --- montagem --- */
+  const pct = nItens ? Math.round(nFeitos/nItens*100) : 0;
+  let html = `<div class="cp-mes-nav">
+    <button type="button" onclick="cpNavMes(-1)" ${podeVoltar?'':'disabled'} aria-label="Mês anterior">◀</button>
+    <div class="cp-mes-label">${monthLabelLong(mKey)}${mKey===mesFinanceiroAtual()?' <small>atual</small>':''}</div>
+    <button type="button" onclick="cpNavMes(1)" aria-label="Próximo mês">▶</button>
+  </div>
+  <div class="cp-resumo">
+    <div class="cp-resumo-lbl">Falta pagar</div>
+    <div class="cp-resumo-val">${fmtMoney(totalPagar)}</div>
+    <div class="cp-resumo-bar"><div style="width:${pct}%"></div></div>
+    <div class="cp-resumo-sub"><span><b>${nFeitos} de ${nItens}</b> pagas · ${fmtMoney(totalPago)}</span>${aReceber>0.004?`<span>a receber <b>${fmtMoney(aReceber)}</b></span>`:''}</div>
+  </div>`;
+  if(receb) html += cpBloco('Recebimentos', 'toque quando cair na conta', receb);
+  html += cpBloco('Contas', 'toque = paga · segure = pagamento parcial',
+    contasHtml || `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Dashboard</div></div>`);
+  if(cartaoHtml) html += cpBloco('Cartão', 'toque para pagar a fatura', cartaoHtml);
+  if(empHtml) html += cpBloco('Empréstimo', 'toque para pagar a parcela', empHtml);
   document.getElementById('contasPagarConteudo').innerHTML = html;
 }
 
@@ -774,6 +842,7 @@ function confirmarEArquivarConta(paidKey){
   state.contasArquivadas[paidKey] = true;
   if(state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
   persist();
+  renderPlanner();
   renderPanorama();
   if(navigator.vibrate) navigator.vibrate([10,30,10]);
 }
@@ -781,6 +850,7 @@ function togglePaid(paidKey){
   state.paid[paidKey] = !state.paid[paidKey];
   if(state.paid[paidKey] && state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
   persist();
+  renderPlanner();   // listas do Dashboard (paga/aberta e o resumo de cada bloco)
   renderPanorama();
 }
 

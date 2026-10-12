@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Copiar ponto</title>
+<link rel="icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Página aberta pelo link do PDF do ponto: mostra o texto pronto e copia para colar na planilha.
+     Os dados vêm no próprio link (depois do #), não passam por servidor nem banco. */
+  :root{--bg:#F6F7F9;--card:#fff;--line:#ECEFF3;--text:#0F172A;--dim:#55627A;--faint:#94A0B4;--ok:#15803D}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;padding:24px 16px;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
+  .card{width:100%;max-width:520px;background:var(--card);border-radius:20px;padding:24px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.05)}
+  h1{font-size:18px;font-weight:700}
+  .sub{color:var(--dim);font-size:13px;margin:2px 0 16px}
+  pre{background:#F3F5F8;border-radius:12px;padding:14px 16px;font-family:ui-monospace,Consolas,monospace;font-size:13.5px;line-height:1.7;overflow-x:auto;tab-size:8;white-space:pre}
+  button{width:100%;margin-top:16px;border:none;border-radius:12px;padding:15px;background:var(--text);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+  button.ok{background:var(--ok)}
+  .dica{font-size:12.5px;color:var(--dim);margin-top:12px;text-align:center}
+  .vazio{color:var(--dim);text-align:center;padding:24px 0}
+</style>
+</head>
+<body>
+<div class="card" id="conteudo"><div class="vazio">Carregando…</div></div>
+<script>
+(function(){
+  const el = document.getElementById('conteudo');
+  let dados = null;
+  try{
+    const b64 = location.hash.replace(/^#/, '').replace(/-/g,'+').replace(/_/g,'/');
+    dados = JSON.parse(decodeURIComponent(escape(atob(b64))));
+  }catch(e){ dados = null; }
+  if(!dados || !Array.isArray(dados.d) || !dados.d.length){
+    el.innerHTML = '<div class="vazio">Link sem horários. Abra pelo botão “Copiar para planilha” do PDF.</div>';
+    return;
+  }
+  const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  /* texto pronto: uma linha por dia, Entrada · Almoço · Volta · Saída separados por TAB */
+  const texto = dados.d.map(r=>r.slice(1,5).map(v=>v==='—'?'':v).join('\t')).join('\n');
+  el.innerHTML = `
+    <h1>${esc(dados.n || 'Horários')}</h1>
+    <div class="sub">${esc(dados.t || '')}</div>
+    <pre id="texto">${esc(texto)}</pre>
+    <button id="btn">Copiar</button>
+    <div class="dica">Na planilha, clique na célula da Entrada do primeiro dia e cole (Ctrl+V).</div>`;
+  const btn = document.getElementById('btn');
+  btn.onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(texto); }
+    catch(e){
+      const ta = document.createElement('textarea'); ta.value = texto; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){} ta.remove();
+    }
+    btn.textContent = '✓ Copiado — agora é só colar'; btn.classList.add('ok');
+  };
+})();
+</script>
+</body>
+</html>

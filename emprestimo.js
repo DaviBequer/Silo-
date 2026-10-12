@@ -2,6 +2,11 @@
    Tabela Price: parcelas iguais. Cada parcela fica "pendente", "paga" (no vencimento) ou
    "antecipada" (paga antes, com desconto dos juros que não correram). */
 
+/* empréstimo mexe na sobra do Geral e na tela Contas do mês: redesenha as duas */
+function empAtualizarOutrasTelas(){
+  if(typeof renderPlanner==='function') renderPlanner();
+  if(typeof renderPanorama==='function') renderPanorama();
+}
 function garantirEmprestimos(){
   if(!Array.isArray(state.emprestimos)) state.emprestimos = [];
   return state.emprestimos;
@@ -98,11 +103,16 @@ function renderEmprestimos(){
         <span class="emp-parc-val">${valor}${extra}</span>
       </div>`);
     }
+    const cor = corDaLogo(emp.logoUrl, renderEmprestimos);
     return `<div class="card resumo-card emp-card">
+      <div class="ct-face${cor?' colorida':''}"${estiloFaceCor(cor)}>
       <div class="resumo-topo">
-        <div>
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          ${emp.logoUrl?`<img src="${emp.logoUrl}" class="conta-logo-sm" alt="">`:''}
+          <div style="min-width:0">
           <div class="resumo-mes">${escapeHtmlEmp(emp.nome||'Empréstimo')}</div>
           <div class="emp-sub">${emp.numParcelas}× ${fmtMoney(emp.valorParcela)}${taxa>0?' · '+taxa.toFixed(2).replace('.',',')+'% a.m.':''}</div>
+          </div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn-icon-sm" onclick="abrirFormEmprestimo('${emp.id}')" title="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
@@ -113,6 +123,7 @@ function renderEmprestimos(){
       <div class="ponto-valor-grande">${quitado?'✓':fmtMoney(r.saldoHoje)}</div>
       <div class="emp-progresso"><div style="width:${pct}%"></div></div>
       <div class="ponto-horas-sub"><span>${quitadas} de ${emp.numParcelas}</span> parcelas quitadas${r.vencidas?` · <b class="emp-alerta">${r.vencidas} vencida${r.vencidas>1?'s':''}</b>`:''}</div>
+      </div>
       <div class="resumo-stats">
         <div class="resumo-stat"><div class="resumo-stat-lbl">Já paguei</div><div class="resumo-stat-val">${fmtMoney(r.pago)}</div></div>
         <div class="resumo-stat"><div class="resumo-stat-lbl">Faltam</div><div class="resumo-stat-val">${r.pend.length} parcela${r.pend.length===1?'':'s'}</div></div>
@@ -131,6 +142,20 @@ function escapeHtmlEmp(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;'
 
 /* ---------- cadastro / edição ---------- */
 let empEditandoId = null;
+let empLogoAtual = null;
+function renderEmpLogoPreview(){
+  document.getElementById('empLogoPreview').innerHTML = empLogoAtual ? `<img src="${empLogoAtual}" alt="">` : '<span>sem logo</span>';
+  document.getElementById('empLogoRemover').style.display = empLogoAtual ? '' : 'none';
+}
+function onEmpLogoSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{ comprimirImagemDataUrl(e.target.result).then(url=>{ empLogoAtual = url; renderEmpLogoPreview(); }); };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+function removerEmpLogo(){ empLogoAtual = null; renderEmpLogoPreview(); }
 function abrirFormEmprestimo(id){
   empEditandoId = id || null;
   const emp = id ? empPorId(id) : null;
@@ -141,6 +166,8 @@ function abrirFormEmprestimo(id){
   document.getElementById('empNumParcelas').value = emp ? emp.numParcelas : '';
   document.getElementById('empPrimeiroVenc').value = emp ? emp.primeiroVenc : '';
   document.getElementById('empTaxa').value = emp && emp.taxaMensal ? String(emp.taxaMensal).replace('.',',') : '';
+  empLogoAtual = emp ? (emp.logoUrl || null) : null;
+  renderEmpLogoPreview();
   document.getElementById('empSimQtd').value = 1;
   document.getElementById('empSimData').value = '';
   atualizarPreviaFormEmp();
@@ -250,6 +277,7 @@ function atualizarPreviaFormEmp(){
 function salvarEmprestimo(){
   const f = lerFormEmp();
   if(!(f.valorParcela>0) || !(f.numParcelas>0) || !f.primeiroVenc){ showToast('Preencha parcela, nº de parcelas e 1º vencimento'); return; }
+  f.logoUrl = empLogoAtual || null;
   const lista = garantirEmprestimos();
   if(empEditandoId){
     const emp = empPorId(empEditandoId);
@@ -260,7 +288,7 @@ function salvarEmprestimo(){
   }
   persist();
   closeModal('modalEmprestimo');
-  renderEmprestimos();
+  renderEmprestimos(); empAtualizarOutrasTelas();
   showToast('Empréstimo salvo');
 }
 async function excluirEmprestimo(id){
@@ -270,16 +298,16 @@ async function excluirEmprestimo(id){
   if(!ok) return;
   state.emprestimos = garantirEmprestimos().filter(e=>e.id!==id);
   persist();
-  renderEmprestimos();
+  renderEmprestimos(); empAtualizarOutrasTelas();
 }
 
 /* ---------- pagar a próxima parcela ---------- */
-let empPagarId = null;
-function abrirPagarParcelaEmp(id){
+let empPagarId = null, empPagarK = null;
+function abrirPagarParcelaEmp(id, kEspecifica){
   const emp = empPorId(id);
-  const k = empPendentes(emp)[0];
+  const k = (kEspecifica && !empParcela(emp, kEspecifica)) ? kEspecifica : empPendentes(emp)[0];
   if(!k) return;
-  empPagarId = id;
+  empPagarId = id; empPagarK = k;
   const venc = empVencimento(emp, k);
   document.getElementById('empPagarInfo').textContent = `Parcela ${k} de ${emp.numParcelas} · vence ${venc.toLocaleDateString('pt-BR')}`;
   document.getElementById('empPagarValor').value = empFmtValorInput(emp.valorParcela);
@@ -288,7 +316,7 @@ function abrirPagarParcelaEmp(id){
 }
 function confirmarPagarParcelaEmp(){
   const emp = empPorId(empPagarId);
-  const k = emp && empPendentes(emp)[0];
+  const k = emp && ((empPagarK && !empParcela(emp, empPagarK)) ? empPagarK : empPendentes(emp)[0]);
   if(!k) return;
   const valor = parseMoney(document.getElementById('empPagarValor').value);
   if(!(valor>0)){ showToast('Informe o valor pago'); return; }
@@ -296,7 +324,7 @@ function confirmarPagarParcelaEmp(){
   emp.pagas[k] = { tipo:'paga', valorPago: valor, data: document.getElementById('empPagarData').value || empHojeISO() };
   persist();
   closeModal('modalEmpPagar');
-  renderEmprestimos();
+  renderEmprestimos(); empAtualizarOutrasTelas();
   showToast('Parcela '+k+' paga');
 }
 
@@ -370,7 +398,7 @@ function confirmarAmortizacaoEmp(){
   });
   persist();
   closeModal('modalEmpAmortizar');
-  renderEmprestimos();
+  renderEmprestimos(); empAtualizarOutrasTelas();
   showToast(est.ks.length+' parcela'+(est.ks.length>1?'s':'')+' antecipada'+(est.ks.length>1?'s':'')+' · desconto '+fmtMoney(Math.max(0, est.nominal-pago)));
 }
 
@@ -383,5 +411,5 @@ async function desfazerParcelaEmp(id, k){
   if(!ok) return;
   delete emp.pagas[k];
   persist();
-  renderEmprestimos();
+  renderEmprestimos(); empAtualizarOutrasTelas();
 }

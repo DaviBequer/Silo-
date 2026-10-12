@@ -13,6 +13,38 @@ renderHeaderHoje();
 setInterval(renderHeaderHoje, 60000);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) renderHeaderHoje(); });
 
+/* ========== ENTER = PRÓXIMO CAMPO (janelas e subpáginas) ==========
+   Enter num campo pula para o próximo campo visível da mesma janela; no último, fecha o teclado.
+   Campos que já tratam o Enter por conta própria (onkeydown) ficam de fora. */
+function camposNavegaveis(container){
+  return [...container.querySelectorAll('input, select, textarea')].filter(el=>
+    !el.disabled && !el.readOnly && el.type!=='file' && el.type!=='checkbox' && el.type!=='radio' && el.type!=='hidden' &&
+    el.offsetParent !== null);
+}
+function containerDoCampo(el){ return el.closest('.modal, .fullpage, .aba'); }
+document.addEventListener('focusin', e=>{
+  const el = e.target;
+  if(!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement) || el.hasAttribute('onkeydown')) return;
+  const box = containerDoCampo(el);
+  if(!box || !box.closest('.modal, .fullpage')) return;
+  const lista = camposNavegaveis(box);
+  el.setAttribute('enterkeyhint', lista.indexOf(el) < lista.length-1 ? 'next' : 'done');   // tecla "Próximo" no teclado do celular
+});
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Enter' || e.isComposing || e.defaultPrevented) return;
+  const el = e.target;
+  if(!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement) || el.hasAttribute('onkeydown')) return;
+  const box = containerDoCampo(el);
+  if(!box || !box.closest('.modal, .fullpage')) return;
+  const lista = camposNavegaveis(box);
+  const i = lista.indexOf(el);
+  if(i === -1) return;
+  e.preventDefault();   // o "change" do campo dispara sozinho quando o foco sai dele
+  const prox = lista[i+1];
+  if(prox){ prox.focus(); if(prox.select && prox.type!=='date' && prox.type!=='number') try{ prox.select(); }catch(_){} }
+  else el.blur();
+});
+
 /* ========== RENDERIZAÇÃO ========== */
 function renderAll(){
   renderPanorama();
@@ -39,6 +71,16 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.3', itens: [
+    'Cartão e Empréstimo entram no Geral para mostrar a sobra real, com liga/desliga em todos os meses ou só em um',
+    'Contas do mês redesenhada: resumo com barra, bolinha de pago em todas as linhas e blocos de Cartão e Empréstimo',
+    'Cartão: botões "+ Parcelada" e "Ajuste da fatura" (diferença para o valor do banco vira lançamento); fatura no dia do vencimento mostra "vence hoje · sem juros"',
+    'Cartão e Empréstimo com a cor da logo no topo do card',
+    'Cada bloco de contas mostra o total do mês e, se já pagou algo, pago / falta com barra',
+    'Ponto PJ: mês centralizado, PDF minimalista sem valores, período Personalizado com os dias trancados, botões de copiar dia/semana e link "Copiar para planilha" no PDF',
+    'Todas as janelas no mesmo padrão (folha no celular, cartão no computador, interruptores no lugar das caixinhas) e Enter pula para o próximo campo',
+    'Correções: marcar/desmarcar em Contas do mês atualiza o Dashboard; fatura considerada paga mostra o valor pago'
+  ]},
   { versao: 'v3.2', itens: [
     'Visual novo, premium e minimalista: paleta neutra com azul, fonte Inter, cards sem borda e sem caixa dentro de caixa',
     'Dashboard reorganizado: Resumo do mês no topo (saldo, vai entrar, falta pagar, sobra prevista e Contas do mês), contas em seguida, Fluxo mensal e Projeção do saldo embaixo',

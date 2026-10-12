@@ -438,6 +438,49 @@ function comprimirImagemDataUrl(dataUrl, lado, qualidade){
     }catch(e){ resolve(dataUrl); }
   });
 }
+/* ===== COR DA LOGO: cor principal da imagem, para pintar o cartão/empréstimo =====
+   Devolve { fundo, texto } já calculado, ou null enquanto calcula (aí chama aoTerminar uma vez). */
+const corLogoCache = {};
+function corDaLogo(url, aoTerminar){
+  if(!url) return null;
+  if(corLogoCache[url] !== undefined) return corLogoCache[url] === 'pendente' ? null : corLogoCache[url];
+  corLogoCache[url] = 'pendente';
+  const img = new Image();
+  img.onload = ()=>{
+    let cor = null;
+    try{
+      const N = 48, cv = document.createElement('canvas'); cv.width = N; cv.height = N;
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, N, N);
+      const px = ctx.getImageData(0, 0, N, N).data;
+      const baldes = {};
+      for(let i=0; i<px.length; i+=4){
+        const r=px[i], g=px[i+1], b=px[i+2], a=px[i+3];
+        if(a < 200) continue;
+        const mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+        if(mn > 225) continue;                       // quase branco: fundo da logo
+        const peso = 1 + (mx-mn)/32;                 // cores vivas pesam mais que cinzas
+        const k = (r>>5)+'-'+(g>>5)+'-'+(b>>5);
+        const bk = baldes[k] || (baldes[k] = { p:0, r:0, g:0, b:0 });
+        bk.p += peso; bk.r += r*peso; bk.g += g*peso; bk.b += b*peso;
+      }
+      const melhor = Object.values(baldes).sort((a,b)=>b.p-a.p)[0];
+      if(melhor){
+        const r = Math.round(melhor.r/melhor.p), g = Math.round(melhor.g/melhor.p), b = Math.round(melhor.b/melhor.p);
+        const lum = (0.2126*r + 0.7152*g + 0.0722*b)/255;
+        cor = { fundo:`rgb(${r},${g},${b})`, texto: lum > 0.62 ? '#0F172A' : '#FFFFFF', claro: lum > 0.62 };
+      }
+    }catch(e){ cor = null; }
+    corLogoCache[url] = cor;
+    if(cor && typeof aoTerminar==='function') aoTerminar();
+  };
+  img.onerror = ()=>{ corLogoCache[url] = null; };
+  img.src = url;
+  return null;
+}
+/* estilo inline da "face" colorida (cartão/empréstimo) */
+function estiloFaceCor(cor){
+  return cor ? ` style="--face-bg:${cor.fundo};--face-tx:${cor.texto}"` : '';
+}
 // Uma vez só: reduz logos grandes que já estão salvas (fotos de receitas já são comprimidas e ficam como estão)
 async function compactarImagensDoEstado(){
   if(!remoteReady || state.imagensCompactadasV1) return;
@@ -796,7 +839,51 @@ function expensesForMonth(user, mKey){
     total += restanteConta(paidKey, v);
   });
   total += dizimoForMonth(user, mKey);
+  total += extrasGeralNoMes(user, mKey).total;
   return total;
+}
+/* ===== Cartão e Empréstimo dentro do Geral (sobra real) =====
+   Interruptor geral por tipo + exceções por mês. Só no Dashboard do Davi (cartões e empréstimos são dele). */
+function geralCfg(){
+  if(!state.incluirGeral) state.incluirGeral = { cartao:true, emprestimo:true, meses:{} };
+  if(!state.incluirGeral.meses) state.incluirGeral.meses = {};
+  return state.incluirGeral;
+}
+function incluiNoGeral(tipo, mKey){
+  const cfg = geralCfg();
+  const m = cfg.meses[mKey];
+  return (m && typeof m[tipo]==='boolean') ? m[tipo] : cfg[tipo] !== false;
+}
+function cartaoValorGeralNoMes(mKey){
+  if(typeof faturaRestanteNoMes!=='function') return 0;
+  return (state.cartoesTracker||[]).reduce((s,c)=>s+faturaRestanteNoMes(c, mKey), 0);
+}
+function emprestimoValorGeralNoMes(mKey){
+  if(typeof empPendentes!=='function') return 0;
+  return (state.emprestimos||[]).reduce((s,emp)=>s+empPendentes(emp).filter(k=>monthKey(empVencimento(emp,k))===mKey).length*(Number(emp.valorParcela)||0), 0);
+}
+function extrasGeralNoMes(user, mKey){
+  if(user!=='davi' || !state.users) return { cartao:0, emprestimo:0, total:0 };
+  const cartao = incluiNoGeral('cartao', mKey) ? cartaoValorGeralNoMes(mKey) : 0;
+  const emprestimo = incluiNoGeral('emprestimo', mKey) ? emprestimoValorGeralNoMes(mKey) : 0;
+  return { cartao, emprestimo, total: cartao + emprestimo };
+}
+/* liga/desliga só um mês */
+function toggleGeralMes(tipo, mKey){
+  const cfg = geralCfg();
+  const novo = !incluiNoGeral(tipo, mKey);
+  if(!cfg.meses[mKey]) cfg.meses[mKey] = {};
+  if(novo === (cfg[tipo] !== false)) delete cfg.meses[mKey][tipo]; else cfg.meses[mKey][tipo] = novo;
+  if(!Object.keys(cfg.meses[mKey]).length) delete cfg.meses[mKey];
+  persist(); renderPlanner(); renderPanorama();
+}
+/* liga/desliga em todos os meses (zera as exceções daquele tipo) */
+function toggleGeralTudo(tipo){
+  const cfg = geralCfg();
+  cfg[tipo] = cfg[tipo] === false;
+  Object.keys(cfg.meses).forEach(m=>{ delete cfg.meses[m][tipo]; if(!Object.keys(cfg.meses[m]).length) delete cfg.meses[m]; });
+  persist(); renderPlanner(); renderPanorama();
+  showToast((tipo==='cartao'?'Cartão':'Empréstimo')+(cfg[tipo]?' entra':' sai')+' do Geral em todos os meses');
 }
 function saldoForMonth(user, mKey){ return incomeForMonth(user,mKey) - expensesForMonth(user,mKey); }
 function saldoHouseholdForMonth(mKey){ return saldoForMonth('davi',mKey); } // Dashboard: só Davi
