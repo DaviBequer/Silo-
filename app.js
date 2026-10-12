@@ -22,9 +22,9 @@ function renderHeaderHoje(){
   const data = DIA_SEMANA[hoje.getDay()]+', '+hoje.getDate()+' de '+MES_NOMES_LONGOS[hoje.getMonth()].toLowerCase();
   const dataCurta = DIA_SEMANA[hoje.getDay()]+', '+hoje.getDate()+' '+MES_NOMES[hoje.getMonth()].toLowerCase();
   const resto = faltam===0 ? 'último dia do mês' : (faltam===1 ? 'falta 1 dia p/ o fim do mês' : 'faltam '+faltam+' dias p/ o fim do mês');
-  const restoCurto = faltam===0 ? 'último dia' : faltam+' dia'+(faltam>1?'s':'')+' p/ fim do mês';
+  const restoCurto = faltam===0 ? 'último dia' : 'faltam '+faltam+' dia'+(faltam>1?'s':'');
   const f = headerFaltaPagar();
-  const falta = f ? `<button type="button" class="hh-falta${f.total>0.004?'':' ok'}" onclick="headerFaltaDetalhe()" title="Gastos que faltam pagar${f.meta?' + meta de sobra':''} em ${monthLabel(f.m)}">${f.total>0.004?`Falta pagar <b>${fmtMoney(f.total)}</b>`:'<b>✓ Tudo pago</b>'}</button>` : '';
+  const falta = f ? `<button type="button" class="hh-falta${f.total>0.004?'':' ok'}" onclick="headerFaltaDetalhe()" title="Gastos que faltam pagar${f.meta?' + meta de sobra':''} em ${monthLabel(f.m)}">${f.total>0.004?`<span class="hh-longo">Falta pagar</span><span class="hh-curto">A pagar</span> <b>${fmtMoney(f.total)}</b>`:'<b>✓ Tudo pago</b>'}</button>` : '';
   el.innerHTML = `<div class="hh-linha1"><span class="hh-longo">${data}</span><span class="hh-curto">${dataCurta}</span></div>
     <div class="hh-linha2"><span class="hh-longo">${resto}</span><span class="hh-curto">${restoCurto}</span>${falta?'<span class="hh-sep">·</span>'+falta:''}</div>`;
 }
@@ -91,6 +91,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.5', itens: [
+    'No computador as abas usam a largura toda; Ponto PJ e Vendas com o resumo à esquerda e o resto à direita',
+    'Ponto PJ: Valor da hora e Fechar mês num rodapé compacto',
+    'Cabeçalho no celular com textos mais curtos para o "A pagar" não cortar'
+  ]},
   { versao: 'v3.4', itens: [
     'Nova aba Vendas: comissão de setup (no mês da venda) e de recorrência (a partir do mês seguinte, enquanto o cliente estiver ativo), com configuração de % e de dois modelos de venda',
     'Metas de sobra mês a mês: sobra do Fluxo (empréstimo dentro, cartão fora) + comissões = projetada, quanto falta e quantas vendas de cada modelo ainda faltam',

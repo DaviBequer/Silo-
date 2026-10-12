@@ -1551,3 +1551,32 @@ body.lay-dragging-active{cursor:grabbing}
 .vc-sim-mes-st{font-size:12px;font-weight:600}
 .vc-sim-nota{font-size:12px;color:var(--text-faint);margin-top:12px}
 @media(max-width:360px){ .header-hoje .hh-linha2 .hh-curto{display:none} }
+/* ===== largura total no computador (sem margens vazias dos lados) ===== */
+@media(min-width:1024px){
+  .aba{max-width:none !important;margin:0;padding:24px 32px}
+  #aba-planner.active{padding:24px 32px}
+  /* Ponto: resumo à esquerda (fixo ao rolar) e registros à direita */
+  #aba-ponto.active{display:grid;grid-template-columns:minmax(360px,420px) 1fr;gap:24px;align-items:start}
+  #aba-ponto.active > .resumo-card{position:sticky;top:calc(var(--header-h,64px) + 16px);margin:0}
+  #aba-ponto.active > .card:not(.resumo-card){margin:0}
+  #aba-ponto .resumo-stats{grid-template-columns:repeat(3,1fr)}
+  /* Vendas: resumo à esquerda; metas e vendas à direita */
+  #aba-vendas.active #vendasConteudo{display:grid;grid-template-columns:minmax(360px,420px) 1fr;gap:24px;align-items:start}
+  #vendasConteudo > .resumo-card{grid-row:span 2;position:sticky;top:calc(var(--header-h,64px) + 16px);margin:0}
+  #vendasConteudo > .card{margin:0}
+}
+
+/* ===== Ponto: Valor da hora + Fechar mês numa linha só, compacta ===== */
+.ponto-rodape{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.ponto-rodape .ponto-valor-hora{margin:0;padding:0;border:none;flex:1 1 170px;gap:10px;font-size:12.5px}
+.ponto-rodape .ponto-valor-hora .input-money{width:120px}
+.ponto-rodape .ponto-valor-hora input{min-height:0;padding:7px 10px;font-size:14px}
+.ponto-rodape #pontoFecharBox{flex:1 1 200px;min-width:0}
+.ponto-rodape #pontoFecharBox:empty{display:none}
+.ponto-rodape .ponto-fechar,.ponto-rodape .ponto-fechar.pronto,.ponto-rodape .ponto-fechar.fechado{border:none;margin:0;padding:0;gap:10px;justify-content:flex-end}
+.ponto-rodape .pf-info{display:flex;flex-direction:column;align-items:flex-end;text-align:right;line-height:1.25;min-width:0}
+.ponto-rodape .pf-info b{font-size:12.5px}
+.ponto-rodape .pf-info small{font-size:11px;color:var(--text-faint)}
+.ponto-rodape .fat-btn{padding:6px 12px;font-size:12px;border-radius:9px;white-space:nowrap}
+#aba-ponto .resumo-card .ponto-rodape #pontoFecharBox:not(:empty){margin:0}
+@media(max-width:400px){ .header-hoje .hh-linha2 .hh-curto:not(.hh-falta *){display:none} }
