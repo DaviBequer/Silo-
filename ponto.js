@@ -511,6 +511,12 @@ function selecionarPontoExportSemana(idx){
   });
 }
 
+/* link do botão do PDF: página copiar.html do app publicado com os horários no "#" (não vão a servidor nenhum) */
+const PONTO_URL_COPIAR = 'https://davibequer.github.io/Silo-/copiar.html';
+function pontoLinkCopiar(linhas, periodo){
+  const dados = linhas.map(r=>r.join(',')).join(';');   // 07:03,12:00,13:01,17:00;07:03,...
+  return PONTO_URL_COPIAR + '#h=' + encodeURIComponent(dados) + '&p=' + encodeURIComponent(periodo||'');
+}
 function gerarPdfPonto(){
   if(typeof window.jspdf === 'undefined'){
     showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
@@ -590,26 +596,24 @@ function gerarPdfPonto(){
     didParseCell: (data)=>{ if(data.section==='head' && data.column.index===0) data.cell.styles.halign='left'; if(data.section==='foot' && data.column.index===0) data.cell.styles.halign='left'; }
   });
 
-  /* ---- Bloco CSV para colar na planilha: uma linha por dia, Entrada;Almoço;Volta;Saída ----
-     Texto puro, cada linha uma linha de texto do PDF: quem recebe seleciona, copia e cola. */
-  const csv = dias.map(dia=>{
+  /* ---- Botão "Copiar para planilha" ----
+     Um PDF não consegue copiar nada sozinho (os leitores bloqueiam), então o botão abre a página
+     copiar.html, que copia os horários com TAB entre as colunas: colando numa célula, cada dia
+     cai numa linha e cada horário na sua coluna. Os horários vão no próprio link, depois do "#". */
+  const urlCopiar = pontoLinkCopiar(dias.map(dia=>{
     const d = getDia(mKey, dia);
-    return [d.entrada||'', d.almocoSaida||'', d.almocoVolta||'', d.saida||''].join(';');
-  });
-  const alturaLinha = 14;
-  let y = doc.lastAutoTable.finalY + 36;
-  if(y + 46 + csv.length*alturaLinha > 800){ doc.addPage(); y = 56; }
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...suave);
-  doc.text('PARA COLAR NA PLANILHA', marginX, y);
-  doc.setFontSize(8.5);
-  doc.text('Selecione as linhas abaixo, copie e cole na célula da Entrada do primeiro dia. Separador: ponto e vírgula (;).', marginX, y+13);
-  y += 32;
-  doc.setFont('courier','normal'); doc.setFontSize(10); doc.setTextColor(...tinta);
-  csv.forEach(l=>{
-    if(y > 800){ doc.addPage(); y = 56; doc.setFont('courier','normal'); doc.setFontSize(10); doc.setTextColor(...tinta); }
-    doc.text(l, marginX, y);
-    y += alturaLinha;
-  });
+    return [d.entrada||'', d.almocoSaida||'', d.almocoVolta||'', d.saida||''];
+  }), periodoLabel);
+  let y = doc.lastAutoTable.finalY + 30;
+  if(y + 40 > 800){ doc.addPage(); y = 56; }
+  const bw = 210, bh = 34, bx = marginX;
+  doc.setFillColor(...tinta);
+  doc.roundedRect(bx, y, bw, bh, 9, 9, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(255,255,255);
+  doc.text('Copiar para planilha', bx + bw/2, y + 21.5, { align:'center' });
+  doc.link(bx, y, bw, bh, { url: urlCopiar });
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...suave);
+  doc.text('Copia os horários (Entrada, Almoço, Volta, Saída). Na planilha, clique uma vez na célula e cole (Ctrl+V).', bx + bw + 14, y + 20, { maxWidth: pageW - marginX - (bx + bw + 14) });
 
   const dataExporto = monthLabel(mKey);
   const fileName = `Ponto PJ - ${nome || 'Davi Bequer'} - ${dataExporto}.pdf`;

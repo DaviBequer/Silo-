@@ -91,6 +91,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.6', itens: [
+    'Ponto PJ: o PDF tem o botão "Copiar para planilha" — copia os horários com tabulação, e colando numa célula cada dia vai para uma linha e cada horário para sua coluna'
+  ]},
   { versao: 'v3.5', itens: [
     'No computador as abas usam a largura toda; Ponto PJ e Vendas com o resumo à esquerda e o resto à direita',
     'Ponto PJ: Valor da hora e Fechar mês num rodapé compacto',
