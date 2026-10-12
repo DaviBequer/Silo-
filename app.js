@@ -1,9 +1,25 @@
+/* ========== CABEÇALHO: data de hoje e dias até o fim do mês ========== */
+function renderHeaderHoje(){
+  const el = document.getElementById('headerHoje');
+  if(!el) return;
+  const hoje = new Date();
+  const ultimo = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+  const faltam = ultimo - hoje.getDate();
+  const data = DIA_SEMANA[hoje.getDay()]+', '+hoje.getDate()+' de '+MES_NOMES_LONGOS[hoje.getMonth()].toLowerCase();
+  const resto = faltam===0 ? 'último dia do mês' : (faltam===1 ? 'falta 1 dia p/ o fim do mês' : 'faltam '+faltam+' dias p/ o fim do mês');
+  el.innerHTML = `<div class="header-hoje-data">${data}</div><div class="header-hoje-resto">${resto}</div>`;
+}
+renderHeaderHoje();
+setInterval(renderHeaderHoje, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) renderHeaderHoje(); });
+
 /* ========== RENDERIZAÇÃO ========== */
 function renderAll(){
   renderPanorama();
   renderPlanner();
   renderPonto();
   renderLouvor();
+  if(typeof renderEmprestimos==='function') renderEmprestimos();
 }
 
 /* ========== STORAGE & BACKUP ========== */
@@ -23,6 +39,16 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.2', itens: [
+    'Visual novo, premium e minimalista: paleta neutra com azul, fonte Inter, cards sem borda e sem caixa dentro de caixa',
+    'Dashboard reorganizado: Resumo do mês no topo (saldo, vai entrar, falta pagar, sobra prevista e Contas do mês), contas em seguida, Fluxo mensal e Projeção do saldo embaixo',
+    'Nova aba Empréstimo: parcelas, amortização antecipando as últimas parcelas, desconto obtido e simulador com a conta detalhada',
+    'Cartão: opção "Considerar fatura paga" com o valor total que você pagou',
+    'Contas do mês: Finalizar conclui o mês e já passa para o próximo',
+    'Ponto PJ reorganizado; saiu o gráfico de tendência semanal',
+    'Cabeçalho mostra a data de hoje e quantos dias faltam para o fim do mês',
+    'Saíram o botão de editar layout e a escolha manual de mês; conflito entre aparelhos agora fica com a edição mais recente, sem perguntar'
+  ]},
   { versao: 'v3.1', itens: [
     'Cartão: cada cartão mostra a fatura em destaque com o status (Aberta, Fechada aguardando pagamento, Vencida gerando juros, Paga ou Paga em parte), pelos dias de fechamento e vencimento',
     'Cartão: botão Pagar abre uma janela com o valor pago; pagamento menor que a fatura fica parcial (laranja) e o que foi pago deixa de contar no acumulado',
@@ -350,8 +376,6 @@ function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
   renderChangelog();
-  const mesInput = document.getElementById('mesAtualManualInput');
-  if(mesInput) mesInput.value = mesAtualRef;
   
   const storage = calcularStorageUsage();
   

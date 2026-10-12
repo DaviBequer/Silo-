@@ -122,6 +122,7 @@ function renderPlanner(){
   ['moradia','assinatura','fixo','futuro'].forEach(cat=> renderGastoGrid(cat));
   renderCartaoTrackerList();
   renderReservaBadge();
+  renderResumoMes();
 }
 
 let fluxoMesesExpandido = false;
@@ -427,18 +428,23 @@ function cartaoDatasFatura(cartao, mKey){
 function fmtDiaMesCurto(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
 function faturaRegistro(cartao, mKey){ return (state.faturasCartao||{})[cartao.id+'_'+mKey] || null; }
 function faturaPagaValor(cartao, mKey){ const r = faturaRegistro(cartao, mKey); return r ? (Number(r.pago)||0) : 0; }
+/* "considerar paga": a fatura fica quitada com o valor informado, mesmo que diferente do total calculado */
+function faturaQuitada(cartao, mKey){ const r = faturaRegistro(cartao, mKey); return !!(r && r.quitada); }
 /* quanto ainda falta pagar da fatura (o que já foi pago deixa de contar) */
 function faturaRestanteNoMes(cartao, mKey){
+  if(faturaQuitada(cartao, mKey)) return 0;
   return Math.max(0, faturaCartaoNoMes(cartao, mKey) - faturaPagaValor(cartao, mKey));
 }
 /* st: aberto | fechado (aguardando pagamento) | vencido (gerando juros) | parcial (pago em parte) | pago | vazio */
 function faturaStatus(cartao, mKey){
   const total = faturaCartaoNoMes(cartao, mKey), pago = faturaPagaValor(cartao, mKey);
-  const resta = Math.max(0, total - pago);
+  const quitada = faturaQuitada(cartao, mKey);
+  const resta = quitada ? 0 : Math.max(0, total - pago);
   const datas = cartaoDatasFatura(cartao, mKey);
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   let st;
-  if(total < 0.005 && pago < 0.005) st = 'vazio';
+  if(quitada) st = 'pago';
+  else if(total < 0.005 && pago < 0.005) st = 'vazio';
   else if(pago > 0 && resta < 0.005) st = 'pago';
   else if(!datas) st = pago > 0 ? 'parcial' : 'aberto';
   else if(hoje < datas.fecha) st = pago > 0 ? 'parcial' : 'aberto';
@@ -475,7 +481,7 @@ function faturaCaixaHtml(cartao){
   if(f.st==='pago'){
     const reg = faturaRegistro(cartao, mKey);
     const ult = reg && reg.pagamentos && reg.pagamentos.length ? reg.pagamentos[reg.pagamentos.length-1].em : null;
-    detalhe = `Pago ${fmtMoney(f.pago)}${ult?' em '+fmtDiaMesCurto(new Date(ult)):''}`;
+    detalhe = `Pago ${fmtMoney(f.pago)}${ult?' em '+fmtDiaMesCurto(new Date(ult)):''}${Math.abs(f.pago-f.total)>=0.01?' · fatura '+fmtMoney(f.total):''}`;
   } else if(f.pago > 0){
     detalhe = `Pago ${fmtMoney(f.pago)} · falta ${fmtMoney(f.resta)}`;
   } else if(f.st!=='vazio'){
@@ -517,7 +523,14 @@ function renderPagarFatura(){
   document.getElementById('pagarFaturaBtnConfirmar').style.display = quitada ? 'none' : '';
   document.getElementById('pagarFaturaBtnDesfazer').style.display = (f.pago>0) ? '' : 'none';
   document.getElementById('pagarFaturaValor').value = f.resta.toFixed(2).replace('.',',');
-  document.getElementById('pagarFaturaNota').textContent = 'Se pagar menos que o valor, fica como pagamento parcial (laranja).';
+  document.getElementById('pagarFaturaQuitar').checked = true;
+  atualizarNotaPagarFatura();
+}
+function atualizarNotaPagarFatura(){
+  const quitar = document.getElementById('pagarFaturaQuitar').checked;
+  document.getElementById('pagarFaturaNota').textContent = quitar
+    ? 'A fatura fica paga com o valor que você digitar, mesmo que seja diferente do total (juros, desconto, ajuste).'
+    : 'Se pagar menos que o valor, fica como pagamento parcial (laranja).';
 }
 function confirmarPagarFatura(){
   if(!pagarFaturaAlvo) return;
@@ -525,12 +538,14 @@ function confirmarPagarFatura(){
   const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
   if(!cartao) return;
   const f = faturaStatus(cartao, mKey);
+  const quitar = document.getElementById('pagarFaturaQuitar').checked;
   let v = parseMoney(document.getElementById('pagarFaturaValor').value);
   if(!(v>0)){ showToast('Digite o valor pago'); return; }
-  v = Math.min(v, f.resta > 0 ? f.resta : v);
+  if(!quitar) v = Math.min(v, f.resta > 0 ? f.resta : v);
   if(!state.faturasCartao) state.faturasCartao = {};
   const k = cartaoId+'_'+mKey;
   const reg = state.faturasCartao[k] || { pago:0, pagamentos:[] };
+  if(quitar) reg.quitada = true;
   reg.pago = Math.round(((Number(reg.pago)||0) + v)*100)/100;
   reg.pagamentos = (reg.pagamentos||[]).concat([{ valor:v, em:Date.now() }]);
   state.faturasCartao[k] = reg;

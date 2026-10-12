@@ -142,17 +142,24 @@ function persist(){
   persistTimer = setTimeout(persistAgora, 500);
   atualizarStatusSalvo('salvando');
 }
+function tempoUltimaEdicaoLocal(){
+  try{ const meta = JSON.parse(localStorage.getItem(LOCAL_META_KEY) || 'null'); return (meta && meta.t) || Date.now(); }
+  catch(e){ return Date.now(); }
+}
+/* outro aparelho salvou no meio do caminho: vence a edição mais recente, sem perguntar */
 async function tratarConflitoSalvar(){
   if(tratandoConflito) return false;
   tratandoConflito = true;
   try{
-    const sobrescrever = await iosConfirm('Outro aparelho salvou alterações mais novas no banco. Usar o que está neste aparelho e apagar o que o outro salvou? (Não = recarrega com o que está no banco e perde o que você digitou aqui)');
-    if(sobrescrever){
+    const r = await window.SiloSupabase.checarAtualizacao();
+    if(!r.ok) return false;
+    const tBanco = r.updatedAt ? Date.parse(r.updatedAt) : 0;
+    if(tempoUltimaEdicaoLocal() >= tBanco){
       await window.SiloSupabase.adotarVersaoDoBanco();
-      return true;   // tenta salvar de novo
+      return true;   // edição daqui é mais nova: tenta salvar de novo por cima
     }
-    try{ localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false })); }catch(e){}
-    location.reload();
+    marcarLocalSincronizado();
+    location.reload();   // banco é mais novo: recarrega com ele
     return false;
   } finally { tratandoConflito = false; }
 }
@@ -222,9 +229,9 @@ async function carregar(){
       try{ igual = JSON.stringify(pend.state) === JSON.stringify(saved); }catch(e){}
       if(igual){ marcarLocalSincronizado(); }
       else {
-        const quando = new Date(pend.t).toLocaleString('pt-BR');
-        const enviar = await iosConfirm('Este aparelho tem alterações de '+quando+' que não chegaram ao banco. Enviar essas alterações agora? (Não = descarta e usa o que está no banco)');
-        if(enviar){ saved = pend.state; precisaSalvar = true; }
+        /* vence a edição mais recente: a deste aparelho ou a que está no banco */
+        const tBanco = r.updatedAt ? Date.parse(r.updatedAt) : 0;
+        if(pend.t > tBanco){ saved = pend.state; precisaSalvar = true; }
         else { marcarLocalSincronizado(); }
       }
     }
@@ -400,20 +407,6 @@ function daysInMonth(key){ const d=keyToDate(key); return new Date(d.getFullYear
 function todayKey(){ return addMonths(mesAtualRef, -1); } // mês real de referência (1 antes do mês do Dashboard/Planner)
 function mesFinanceiroAtual(){ return mesAtualRef; } // mês atual do Dashboard/Planner
 function pontoBaseKey(){ return mesPontoRef; } // mês atual do Ponto PJ
-async function aplicarMesAtualManual(){
-  const valor = document.getElementById('mesAtualManualInput')?.value;
-  if(!valor) return;
-  const ok = await iosConfirm(`Definir ${monthLabel(valor)} como mês atual? Isso muda o mês atual do Dashboard e do Planner.`);
-  if(!ok) return;
-  definirMesAtual(valor);
-}
-function definirMesAtual(valor){
-  mesAtualRef = valor;
-  state.mesAtual = valor;
-  persist();
-  if(state.focusMonth) state.focusMonth = mesFinanceiroAtual();
-  renderAll();
-}
 function definirMesPonto(valor){
   mesPontoRef = valor;
   state.mesPonto = valor;
@@ -628,7 +621,6 @@ function toggleExtraRecebido(id){
   renderRendaExtraLista();
   renderRendaTable();
   renderPanorama();
-  renderMetaPJ();
 }
 /* "Recebi": salário já está dentro do saldo em conta, então para de somar */
 function salarioRecebidoNoMes(user, mKey){ return !!(state.salarioRecebido && state.salarioRecebido[user+'_'+mKey]); }
@@ -748,7 +740,6 @@ function salvarExtraItem(){
   renderRendaExtraLista();
   renderRendaTable();
   renderPanorama();
-  renderMetaPJ();
   showToast('Extra salvo');
 }
 function excluirExtraItem(id){

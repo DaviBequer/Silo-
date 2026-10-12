@@ -73,20 +73,10 @@ function applyLayout(groupKey){
   const { container, items } = getLayoutItems(groupKey);
   if(!container) return;
   const bp = currentBp();
-  const prefs = ensureLayoutPrefs(groupKey, bp);
-  if(prefs.order.length){
-    const byId = {}; items.forEach(el=>byId[el.dataset.lid]=el);
-    const ordenados = prefs.order.map(id=>byId[id]).filter(Boolean);
-    const resto = items.filter(el=>!prefs.order.includes(el.dataset.lid));
-    ordenados.concat(resto).forEach(el=>container.appendChild(el));
-  }
+  /* o botão de editar layout saiu: a ordem é a do HTML e a largura no desktop vem de data-span */
   items.forEach(el=>{
-    const lid = el.dataset.lid;
-    const locked = !!prefs.locked[lid];
-    el.dataset.locked = locked ? '1' : '0';
-    el.classList.toggle('lay-locked', locked);
     if(bp==='desktop'){
-      const span = prefs.w[lid] || cfg.defaultSpan;
+      const span = parseInt(el.dataset.span) || cfg.defaultSpan;
       el.style.gridColumn = 'span '+span;
       el.style.height=''; el.style.overflow='';
     } else {

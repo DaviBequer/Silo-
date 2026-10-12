@@ -8,6 +8,7 @@ function switchDashTab(tab){
   if(aba) aba.dataset.tab = tab;
   document.querySelectorAll('.dash-tab').forEach(el=>el.classList.toggle('active', el.dataset.dtab===tab));
   renderPanorama();
+  if(tab==='emprestimo' && typeof renderEmprestimos==='function') renderEmprestimos();
   window.scrollTo(0,0);
   if(typeof applyAllLayouts==='function') setTimeout(applyAllLayouts, 60);
 }
@@ -20,10 +21,30 @@ function renderPanorama(){
   if(!months.includes(state.focusMonth)) state.focusMonth = months[0];
   const lbl = monthLabel(months[0])+' – '+monthLabel(months[5]);
   ['panoWindowLabel','panoWindowLabelCartao'].forEach(id=>{ const el = document.getElementById(id); if(el) el.textContent = lbl; });
+  renderResumoMes();
   renderAcumTable(months);
   renderAcumCartao(months);
   const cp = document.getElementById('pageContasPagar');
   if(cp && cp.classList.contains('active')) renderContasPagar();
+}
+
+/* Resumo do mês atual no topo do Dashboard: o que entra, o que falta pagar e quanto sobra */
+function renderResumoMes(){
+  const elMes = document.getElementById('resumoMesLabel');
+  if(!elMes || !state.users) return;
+  const u = userDash(), mKey = mesFinanceiroAtual();
+  const saldo = state.users[u].saldoAtual || 0;
+  const entra = incomeForMonth(u, mKey) - saldo;
+  const sai = expensesForMonth(u, mKey);
+  const sobra = saldoForMonth(u, mKey);
+  elMes.textContent = monthLabelLong(mKey);
+  document.getElementById('resumoEntra').textContent = fmtMoney(entra);
+  document.getElementById('resumoSai').textContent = fmtMoney(sai);
+  const elSobra = document.getElementById('resumoSobra');
+  elSobra.textContent = fmtMoneySigned(sobra);
+  elSobra.className = 'resumo-stat-val ' + (sobra >= 0 ? 'pos' : 'neg');
+  const abertas = getContasDoMes(mKey, u).filter(it=>!state.paid[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]).length;
+  document.getElementById('resumoContasAbertas').textContent = abertas ? abertas+' em aberto ›' : 'tudo pago ›';
 }
 
 let simuladorMetas = [];
@@ -579,12 +600,21 @@ function fecharContasPagar(){
   document.getElementById('pageContasPagar').classList.remove('active');
   document.body.style.overflow = '';
 }
-function finalizarContasPagar(){
-  persist();
+/* Finalizar = conclui o mês atual e já passa para o próximo (se a tela estiver mostrando outro mês, só salva) */
+async function finalizarContasPagar(){
+  const mKey = contasPagarMes || mesFinanceiroAtual();
+  if(mKey !== mesFinanceiroAtual()){
+    persist(); fecharContasPagar(); renderPlanner(); renderPanorama();
+    showToast('Contas de '+monthLabel(mKey)+' salvas');
+    return;
+  }
+  const abertas = contasEmAbertoNoMes(mKey);
+  if(abertas > 0){
+    const ok = await iosConfirm(`Ainda há ${abertas} conta${abertas>1?'s':''} em aberto em ${monthLabel(mKey)}. Concluir o mês e passar para ${monthLabel(addMonths(mKey,1))} mesmo assim?`);
+    if(!ok) return;
+  }
   fecharContasPagar();
-  renderPlanner();
-  renderPanorama();
-  showToast('Contas do mês salvas');
+  concluirMesAtual();
 }
 function cpAtualizarTudo(){
   persist();

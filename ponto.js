@@ -241,12 +241,14 @@ function renderPontoSummary(){
   document.getElementById('pontoTotalHoras').textContent = minToHoursLabel(r.totalMin);
   document.getElementById('pontoValorReceber').textContent = fmtMoney(r.valorReceber);
   document.getElementById('pontoPadrao').textContent = minToHoursLabel(r.padraoMin);
-  document.getElementById('pontoDiferenca').textContent = (r.diffMin>=0?'+':'')+minToHoursLabel(r.diffMin);
-  document.getElementById('pontoImpacto').textContent = (r.impacto>=0?'+':'-')+fmtMoney(Math.abs(r.impacto));
+  const elDif = document.getElementById('pontoDiferenca');
+  elDif.textContent = (r.diffMin>=0?'+':'')+minToHoursLabel(r.diffMin);
+  elDif.className = 'resumo-stat-val ' + (r.diffMin>=0 ? 'pos' : 'neg');
+  const elImp = document.getElementById('pontoImpacto');
+  elImp.textContent = (r.impacto>=0?'+':'-')+fmtMoney(Math.abs(r.impacto));
+  elImp.className = 'resumo-stat-val ' + (r.impacto>=0 ? 'pos' : 'neg');
 
-  renderPontoCompare();
   renderPontoMetaDiaria(mKey, r);
-  renderPontoSemanasChart(mKey);
 }
 
 /* situação do mês pelos dias trancados (cadeado) */
@@ -293,55 +295,6 @@ function renderPontoMetaDiaria(mKey, r){
   const el = document.getElementById('pontoMetaDiaria');
   if(!el) return;
   el.innerHTML = pontoBannerHtml(mKey);
-}
-
-function renderPontoSemanasChart(mKey){
-  const container = document.getElementById('pontoSemanasChart');
-  if(!container) return;
-  const semanas = pontoSemanasDoMes(mKey);
-  if(semanas.length===0){ container.innerHTML = ''; return; }
-  const dados = semanas.map((s,i)=>{
-    let totalMin=0, padraoMin=0;
-    for(let dia=s.inicio; dia<=s.fim; dia++){
-      const d = getDia(mKey,dia);
-      const dt = keyToDate(mKey); dt.setDate(dia);
-      const dow = dt.getDay();
-      if(dow>=1 && dow<=4) padraoMin += PADRAO_SEGQUI_HORAS*60;
-      else if(dow===5) padraoMin += PADRAO_SEX_HORAS*60;
-      totalMin += dayTotalMinutes(d);
-    }
-    return { label:'S'+(i+1), totalMin, padraoMin };
-  });
-  const maxMin = Math.max(...dados.map(d=>Math.max(d.totalMin,d.padraoMin)), 60);
-  container.innerHTML = dados.map(d=>{
-    const pctTotal = Math.min(100, (d.totalMin/maxMin)*100);
-    const abaixo = d.totalMin < d.padraoMin;
-    return `<div class="ponto-semana-col">
-      <div class="ponto-semana-barra-wrap">
-        <div class="ponto-semana-barra ${abaixo?'abaixo':'ok'}" style="height:${pctTotal}%"></div>
-      </div>
-      <div class="ponto-semana-label">${d.label}</div>
-      <div class="ponto-semana-valor">${minToHoursLabel(d.totalMin)}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderPontoCompare(){
-  const passado = addMonths(pontoBaseKey(), -1);
-  const atual = pontoBaseKey();
-  const proximo = addMonths(pontoBaseKey(), 1);
-  const meses = [passado, atual, proximo];
-  const container = document.getElementById('pontoCompareStrip');
-  if(!container) return;
-  container.innerHTML = meses.map(mKey=>{
-    const r = computePontoMes(mKey);
-    const isAtual = mKey === atual;
-    return `<div class="compare-col ${isAtual?'compare-atual':''}">
-      <div class="compare-label">${monthLabel(mKey)}</div>
-      <div class="compare-value">${minToHoursLabel(r.totalMin)}</div>
-      <div class="compare-sub">${fmtMoney(r.valorReceber)}</div>
-    </div>`;
-  }).join('');
 }
 
 /* ================= PONTO PJ: CONFIGURAÇÃO E EXPORTAÇÃO PDF ================= */
@@ -623,6 +576,11 @@ function openConcluirMesModal(){
   document.getElementById('modalConcluirMes').classList.add('active');
 }
 function confirmarConcluirMes(){
+  closeModal('modalConcluirMes');
+  concluirMesAtual();
+}
+/* fecha o mês atual do Dashboard (guarda o resumo no histórico) e avança para o próximo */
+function concluirMesAtual(){
   const mesQueFecha = mesFinanceiroAtual();
   const renda = incomeForMonth('davi', mesQueFecha) + incomeForMonth('cris', mesQueFecha);
   const gastoTotal = expensesForMonth('davi', mesQueFecha) + expensesForMonth('cris', mesQueFecha);
@@ -634,7 +592,6 @@ function confirmarConcluirMes(){
   state.panoOffset = 0;
   state.focusMonth = mesFinanceiroAtual();
   persist();
-  closeModal('modalConcluirMes');
   renderAll();
   showToast('Mês concluído — avançou para ' + monthLabel(mesFinanceiroAtual()));
 }

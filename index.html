@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-<meta name="theme-color" content="#2B3038">
+<meta name="theme-color" content="#F4F6F9">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Siloé">
@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.1">
+<link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
 
@@ -24,12 +24,12 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.1</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.2</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;flex-shrink:0">
-    <button class="header-btn" id="btnLayoutEdit" onclick="toggleLayoutEditMode()" title="Editar layout" style="display:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+  <div class="header-hoje" id="headerHoje"></div>
+  <div class="header-acoes" style="display:flex;gap:8px;flex-shrink:0">
     <button class="header-btn" onclick="abrirBuscaGlobal()" title="Buscar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
     <button class="header-btn" onclick="openConcluirMesModal()" title="Concluir mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
   </div>
@@ -38,45 +38,38 @@
 <!-- PLANNER -->
 <div class="aba active" id="aba-planner" data-tab="geral">
 
-  <div class="dash-tabs">
-    <button type="button" class="dash-tab active" data-dtab="geral" onclick="switchDashTab('geral')">Geral</button>
-    <button type="button" class="dash-tab" data-dtab="cartao" onclick="switchDashTab('cartao')">Cartão</button>
-  </div>
-
-  <div class="user-tabs dg">
-    <button class="user-tab active" id="tabDavi" onclick="switchUser('davi')">Davi</button>
-    <button class="user-tab cris" id="tabCris" onclick="switchUser('cris')">Cris</button>
-  </div>
-
-  <div class="card card-flat dg" id="cardAcumulado">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Acumulado</div></div>
-    <div class="pano-nav">
-      <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)">◀</button>
-      <div class="pano-nav-label" id="panoWindowLabel"></div>
-      <button class="pano-nav-btn" onclick="shiftPanoWindow(1)">▶</button>
+  <div class="dash-switches" data-layout-fixed="1">
+    <div class="dash-tabs">
+      <button type="button" class="dash-tab active" data-dtab="geral" onclick="switchDashTab('geral')">Geral</button>
+      <button type="button" class="dash-tab" data-dtab="cartao" onclick="switchDashTab('cartao')">Cartão</button>
+      <button type="button" class="dash-tab" data-dtab="emprestimo" onclick="switchDashTab('emprestimo')">Empréstimo</button>
     </div>
-    <div class="acum-timeline" id="acumTimelineWrap"></div>
+    <div class="user-tabs dg">
+      <button class="user-tab active" id="tabDavi" onclick="switchUser('davi')">Davi</button>
+      <button class="user-tab cris" id="tabCris" onclick="switchUser('cris')">Cris</button>
+    </div>
   </div>
 
-  <div class="card dg">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Saldo Atual</div><div style="display:flex;gap:4px"><button class="btn-icon-sm btn-contas-pagar" onclick="abrirContasPagar()" title="Contas a pagar e recebimentos do mês" aria-label="Contas a pagar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button><button class="btn-icon-sm" onclick="openReservaModal()" title="Reserva"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M12 11V7a4 4 0 0 1 8 0v1"/><circle cx="12" cy="16" r="1.5"/></svg></button></div></div>
-    <div class="field">
-      <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
+  <!-- RESUMO DO MÊS: o principal, em cima -->
+  <div class="card dg resumo-card" id="cardResumo" data-span="12">
+    <div class="resumo-topo">
+      <div class="resumo-mes" id="resumoMesLabel"></div>
+      <button type="button" class="resumo-link" onclick="openReservaModal()">Reserva</button>
     </div>
+    <div class="resumo-label">Saldo em conta</div>
+    <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
     <div class="reserva-badge" id="reservaBadge" style="display:none" onclick="openReservaModal()"></div>
-  </div>
-
-  <div class="card card-flat dg">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><div style="display:flex;gap:4px"><button class="btn-icon-sm fluxo-meses-toggle" id="btnToggleFluxoMeses" onclick="toggleFluxoMeses()" title="Ver mais meses"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button></div></div>
-    <div class="ponto-table-wrap">
-      <table class="money-table">
-        <thead id="rendaTableThead"></thead>
-        <tbody id="rendaTableBody"></tbody>
-      </table>
+    <div class="resumo-stats">
+      <div class="resumo-stat"><div class="resumo-stat-lbl">Vai entrar</div><div class="resumo-stat-val pos" id="resumoEntra">—</div></div>
+      <div class="resumo-stat"><div class="resumo-stat-lbl">Falta pagar</div><div class="resumo-stat-val neg" id="resumoSai">—</div></div>
+      <div class="resumo-stat"><div class="resumo-stat-lbl">Sobra prevista</div><div class="resumo-stat-val" id="resumoSobra">—</div></div>
     </div>
+    <button type="button" class="resumo-btn" onclick="abrirContasPagar()">
+      <span>Contas do mês</span><span class="resumo-btn-info" id="resumoContasAbertas"></span>
+    </button>
   </div>
 
-  <div class="section dg" id="secao-moradia">
+  <div class="section dg" id="secao-moradia" data-span="6">
     <div class="section-head" onclick="toggleSecaoGasto('moradia')" style="cursor:pointer">
       <div class="section-title">Moradia</div>
       <button type="button" class="section-toggle" onclick="toggleSecaoGasto('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -86,7 +79,7 @@
     <div id="grid-moradia-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section dg" id="secao-assinatura">
+  <div class="section dg" id="secao-assinatura" data-span="6">
     <div class="section-head" onclick="toggleSecaoGasto('assinatura')" style="cursor:pointer">
       <div class="section-title">Assinaturas</div>
       <button type="button" class="section-toggle" onclick="toggleSecaoGasto('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -96,7 +89,7 @@
     <div id="grid-assinatura-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section dg" id="secao-fixo">
+  <div class="section dg" id="secao-fixo" data-span="6">
     <div class="section-head" onclick="toggleSecaoGasto('fixo')" style="cursor:pointer">
       <div class="section-title">Fixos</div>
       <button type="button" class="section-toggle" onclick="toggleSecaoGasto('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -106,7 +99,7 @@
     <div id="grid-fixo-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section dg" id="secao-futuro">
+  <div class="section dg" id="secao-futuro" data-span="6">
     <div class="section-head">
       <div class="section-title" onclick="toggleSecaoGasto('futuro')" style="cursor:pointer;flex:1">Contas Futuras</div>
       <div style="display:flex;gap:6px">
@@ -118,8 +111,41 @@
     <div id="grid-futuro-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="card card-flat dc" id="cardAcumCartao">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Acumulado do cartão</div></div>
+  <!-- GERAL: detalhes e projeção, depois das contas -->
+  <div class="card dg" data-span="12">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><div style="display:flex;gap:4px"><button class="btn-icon-sm fluxo-meses-toggle" id="btnToggleFluxoMeses" onclick="toggleFluxoMeses()" title="Ver mais meses"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button></div></div>
+    <div class="ponto-table-wrap">
+      <table class="money-table">
+        <thead id="rendaTableThead"></thead>
+        <tbody id="rendaTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card dg" id="cardAcumulado" data-span="8">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Projeção do saldo</div></div>
+    <div class="pano-nav">
+      <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)">◀</button>
+      <div class="pano-nav-label" id="panoWindowLabel"></div>
+      <button class="pano-nav-btn" onclick="shiftPanoWindow(1)">▶</button>
+    </div>
+    <div class="acum-timeline" id="acumTimelineWrap"></div>
+  </div>
+
+  <button type="button" class="card dg atalho-card" data-span="4" onclick="openSimuladorModal()">
+    <span class="atalho-icone"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg></span>
+    <span class="atalho-txt"><strong>Simular compra</strong><small>Veja como uma meta afeta seu orçamento</small></span>
+    <svg class="atalho-seta" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+
+  <!-- CARTÃO: lista primeiro, projeção depois -->
+  <div class="card dc" id="secaoCartaoTracker" data-span="12">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><div style="display:flex;align-items:center;gap:8px"><button class="section-add" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div></div>
+    <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
+  </div>
+
+  <div class="card dc" id="cardAcumCartao" data-span="12">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Sobra depois da fatura</div></div>
     <div class="pano-nav">
       <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)">◀</button>
       <div class="pano-nav-label" id="panoWindowLabelCartao"></div>
@@ -129,62 +155,46 @@
     <div class="sf-nota" style="text-align:center;margin-top:6px">Sobra do Geral − fatura dos cartões</div>
   </div>
 
-  <div class="card dc" id="secaoCartaoTracker">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><div style="display:flex;align-items:center;gap:8px"><button class="section-add" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div></div>
-    <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
-  </div>
-
-  <div class="card dg" style="background:linear-gradient(160deg,var(--primary),var(--primary-dim));text-align:center;padding:24px;margin-bottom:var(--s4);position:relative;overflow:hidden;box-shadow:var(--shadow-lg)">
-    <div class="hero-inline-title" style="color:#fff;justify-content:center;position:relative;z-index:1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>Planeje Suas Compras Futuras</div>
-    <div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-bottom:16px;position:relative;z-index:1">Simule como suas metas afetariam seu orçamento</div>
-    <button class="btn" style="background:#fff;color:var(--primary);position:relative;z-index:1" onclick="openSimuladorModal()">Gerar Orçamento</button>
-  </div>
+  <!-- EMPRÉSTIMO -->
+  <div class="de" id="emprestimoLista" data-span="12"></div>
 
 </div>
 
 <!-- PONTO PJ -->
 <div class="aba" id="aba-ponto">
 
-  <div class="card">
-    <div class="card-title">
-      <div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Ponto PJ</div>
+  <!-- RESUMO DO MÊS DO PONTO -->
+  <div class="card resumo-card">
+    <div class="resumo-topo">
+      <div class="ponto-mes-nav">
+        <button onclick="pontoNavMes(-1)" aria-label="Mês anterior">◀</button>
+        <div class="mes-label" id="pontoMesLabel"></div>
+        <button onclick="pontoNavMes(1)" aria-label="Próximo mês">▶</button>
+      </div>
       <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn-icon-sm" onclick="openPontoConfigModal()" title="Configurações"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-        <button class="btn-icon-sm" onclick="openPontoExportModal()" title="Exportar PDF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
+          <button class="btn-icon-sm" onclick="openPontoConfigModal()" title="Configurações"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+          <button class="btn-icon-sm" onclick="openPontoExportModal()" title="Exportar PDF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
       </div>
     </div>
-
-    <div class="ponto-summary">
-      <div class="summary-grid">
-        <div class="summary-item"><div class="label">Total de Horas</div><div class="value" id="pontoTotalHoras">00:00</div></div>
-        <div class="summary-item"><div class="label">Valor a Receber</div><div class="value" id="pontoValorReceber">R$ 0,00</div></div>
-      </div>
-      <div class="comparacao">
-        <div><div class="comp-label">Padrão</div><div class="comp-value" id="pontoPadrao">00:00</div></div>
-        <div><div class="comp-label">Diferença</div><div class="comp-value" id="pontoDiferenca">00:00</div></div>
-        <div><div class="comp-label">Impacto</div><div class="comp-value" id="pontoImpacto">R$ 0,00</div></div>
-      </div>
+    <div class="resumo-label">A receber</div>
+    <div class="ponto-valor-grande" id="pontoValorReceber">R$ 0,00</div>
+    <div class="ponto-horas-sub"><span id="pontoTotalHoras">00:00</span> trabalhadas</div>
+    <div class="resumo-stats">
+      <div class="resumo-stat"><div class="resumo-stat-lbl">Padrão</div><div class="resumo-stat-val" id="pontoPadrao">00:00</div></div>
+      <div class="resumo-stat"><div class="resumo-stat-lbl">Diferença</div><div class="resumo-stat-val" id="pontoDiferenca">00:00</div></div>
+      <div class="resumo-stat"><div class="resumo-stat-lbl">Impacto</div><div class="resumo-stat-val" id="pontoImpacto">R$ 0,00</div></div>
     </div>
-
-    <div class="ponto-compare" id="pontoCompareStrip"></div>
-
     <div id="pontoMetaDiaria" class="ponto-meta-diaria"></div>
-
-    <div class="ponto-semanas-card">
-      <div class="ponto-semanas-titulo">Tendência semanal</div>
-      <div id="pontoSemanasChart" class="ponto-semanas-chart"></div>
-    </div>
-
-    <div class="ponto-mes-nav">
-      <button onclick="pontoNavMes(-1)">◀</button>
-      <div class="mes-label" id="pontoMesLabel"></div>
-      <button onclick="pontoNavMes(1)">▶</button>
-    </div>
     <div id="pontoFecharBox"></div>
-    <div class="field" style="margin-bottom:14px">
-      <label>Valor da Hora</label>
-      <input type="text" id="pontoValorHora" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this); onValorHoraInput(this)">
-    </div>
+    <label class="ponto-valor-hora">
+      <span>Valor da hora</span>
+      <span class="input-money"><input type="text" id="pontoValorHora" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this); onValorHoraInput(this)"></span>
+    </label>
+  </div>
+
+  <!-- DIAS -->
+  <div class="card">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Registros do mês</div></div>
     <div id="pontoDiasLista" class="ponto-dias-lista"></div>
   </div>
 
@@ -470,6 +480,7 @@
     <div class="field full" id="pagarFaturaCampo">
       <label>Valor pago agora</label>
       <div class="input-money"><input type="text" id="pagarFaturaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+      <label class="fat-quitar"><input type="checkbox" id="pagarFaturaQuitar" checked onchange="atualizarNotaPagarFatura()"><span>Considerar fatura paga</span></label>
       <div class="sf-nota" id="pagarFaturaNota" style="margin-top:6px"></div>
     </div>
     <div class="modal-actions">
@@ -575,6 +586,114 @@
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalConcluirMes')">Cancelar</button>
       <button class="btn btn-block" onclick="confirmarConcluirMes()">Concluir Mês</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAIS DO EMPRÉSTIMO -->
+<div class="modal-overlay" id="modalEmprestimo">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="empFormTitulo">Novo empréstimo</h3>
+      <button class="modal-close" onclick="closeModal('modalEmprestimo')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Nome</label>
+      <input type="text" id="empNome" placeholder="Ex.: Empréstimo Inter">
+    </div>
+    <div class="field full">
+      <label>Valor que caiu na conta</label>
+      <div class="input-money"><input type="text" id="empValorRecebido" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarPreviaFormEmp()"></div>
+    </div>
+    <div class="field full">
+      <label>Valor da parcela</label>
+      <div class="input-money"><input type="text" id="empValorParcela" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarPreviaFormEmp()"></div>
+    </div>
+    <div class="field full">
+      <label>Número de parcelas</label>
+      <input type="number" id="empNumParcelas" inputmode="numeric" min="1" placeholder="Ex.: 24" oninput="atualizarPreviaFormEmp()">
+    </div>
+    <div class="field full">
+      <label>Vencimento da 1ª parcela</label>
+      <input type="date" id="empPrimeiroVenc" onchange="atualizarPreviaFormEmp()">
+    </div>
+    <div class="field full">
+      <label>Taxa de juros ao mês, em % (opcional)</label>
+      <input type="text" id="empTaxa" inputmode="decimal" placeholder="Em branco = calcula sozinho" oninput="atualizarPreviaFormEmp()">
+    </div>
+    <div class="emp-sim">
+      <div class="emp-sim-tit">Simulação</div>
+      <div id="empSimContas"></div>
+      <div id="empSimAntecipacao">
+        <div class="emp-sim-tit" style="margin-top:14px">Se eu antecipar…</div>
+        <div class="emp-sim-linha">
+          <div class="emp-stepper">
+            <button type="button" onclick="mudarQtdSimEmp(-1)" aria-label="Menos">−</button>
+            <input type="number" id="empSimQtd" min="1" value="1" inputmode="numeric" oninput="atualizarPreviaFormEmp()" aria-label="Últimas parcelas">
+            <button type="button" onclick="mudarQtdSimEmp(1)" aria-label="Mais">+</button>
+          </div>
+          <span class="emp-sim-de">últimas, pagando em</span>
+          <input type="date" id="empSimData" onchange="atualizarPreviaFormEmp()">
+        </div>
+        <div id="empSimDesconto"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalEmprestimo')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarEmprestimo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEmpPagar">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Pagar parcela</h3>
+      <button class="modal-close" onclick="closeModal('modalEmpPagar')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="caption" id="empPagarInfo" style="margin-bottom:12px"></div>
+    <div class="field full">
+      <label>Valor pago</label>
+      <div class="input-money"><input type="text" id="empPagarValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div class="field full">
+      <label>Data do pagamento</label>
+      <input type="date" id="empPagarData">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalEmpPagar')">Cancelar</button>
+      <button class="btn btn-block" onclick="confirmarPagarParcelaEmp()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEmpAmortizar">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Amortizar</h3>
+      <button class="modal-close" onclick="closeModal('modalEmpAmortizar')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="caption" style="margin-bottom:12px">Antecipa as últimas parcelas. Quanto mais longe o vencimento, maior o desconto.</div>
+    <div class="field full">
+      <label>Quantas parcelas antecipar</label>
+      <div class="emp-stepper">
+        <button type="button" onclick="mudarQtdAmortEmp(-1)" aria-label="Menos">−</button>
+        <input type="number" id="empAmortQtd" min="1" value="1" inputmode="numeric" oninput="atualizarAmortizacaoEmp(true)">
+        <button type="button" onclick="mudarQtdAmortEmp(1)" aria-label="Mais">+</button>
+      </div>
+    </div>
+    <div class="field full">
+      <label>Data do pagamento</label>
+      <input type="date" id="empAmortData" onchange="atualizarAmortizacaoEmp(true)">
+    </div>
+    <div class="field full">
+      <label>Valor pago de fato (o que o banco cobrou)</label>
+      <div class="input-money"><input type="text" id="empAmortValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarAmortizacaoEmp(false)"></div>
+    </div>
+    <div id="empAmortInfo"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalEmpAmortizar')">Cancelar</button>
+      <button class="btn btn-block" onclick="confirmarAmortizacaoEmp()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -917,13 +1036,6 @@
       </div>
     </div>
     <div style="margin-bottom:var(--s3)">
-      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;font-weight:600">Mês atual</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="month" id="mesAtualManualInput" style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card-2);color:var(--text);font-family:inherit;font-size:14px">
-        <button class="btn btn-outline" style="flex:0 0 auto" onclick="aplicarMesAtualManual()">Definir</button>
-      </div>
-    </div>
-    <div style="margin-bottom:var(--s3)">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;display:flex;justify-content:space-between">
         <span>Armazenamento usado</span>
         <span id="storagePercent">0%</span>
@@ -1191,15 +1303,16 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=3.1"></script>
-<script src="core.js?v=3.1"></script>
-<script src="comando.js?v=3.1"></script>
-<script src="layout.js?v=3.1"></script>
-<script src="app.js?v=3.1"></script>
-<script src="panorama.js?v=3.1"></script>
-<script src="planner.js?v=3.1"></script>
-<script src="ponto.js?v=3.1"></script>
-<script src="louvor.js?v=3.1"></script>
+<script src="supabase.js?v=3.2"></script>
+<script src="core.js?v=3.2"></script>
+<script src="comando.js?v=3.2"></script>
+<script src="layout.js?v=3.2"></script>
+<script src="app.js?v=3.2"></script>
+<script src="panorama.js?v=3.2"></script>
+<script src="planner.js?v=3.2"></script>
+<script src="ponto.js?v=3.2"></script>
+<script src="louvor.js?v=3.2"></script>
+<script src="emprestimo.js?v=3.2"></script>
 <script>carregar();</script>
 </body>
 </html>
