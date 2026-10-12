@@ -32,6 +32,7 @@ function renderPanorama(){
 function renderResumoMes(){
   const elMes = document.getElementById('resumoMesLabel');
   if(!elMes || !state.users) return;
+  if(typeof renderHeaderHoje==='function') renderHeaderHoje();   // "falta pagar" do cabeçalho acompanha
   const u = userDash(), mKey = mesFinanceiroAtual();
   const saldo = state.users[u].saldoAtual || 0;
   const entra = incomeForMonth(u, mKey) - saldo;

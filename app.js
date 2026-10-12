@@ -1,4 +1,18 @@
-/* ========== CABEÇALHO: data de hoje e dias até o fim do mês ========== */
+/* ========== CABEÇALHO: data de hoje, dias até o fim do mês e quanto falta pagar ========== */
+/* Falta pagar = gastos do mês do Dashboard que ainda não foram pagos (some quando você paga)
+   + a meta de sobra do mês definida em Vendas (o que você quer guardar também "precisa sair" do saldo) */
+function headerFaltaPagar(){
+  if(!state || !state.users || typeof expensesForMonth!=='function') return null;
+  const u = (typeof userDash==='function') ? userDash() : 'davi';
+  const m = mesFinanceiroAtual();
+  const gastos = expensesForMonth(u, m);
+  const meta = (u==='davi' && typeof vendasMeta==='function') ? (vendasMeta(m) || 0) : 0;
+  return { m, gastos, meta, total: gastos + meta };
+}
+function headerFaltaDetalhe(){
+  const f = headerFaltaPagar(); if(!f) return;
+  showToast(`${monthLabel(f.m)}: gastos a pagar ${fmtMoney(f.gastos)}${f.meta?` + meta de sobra ${fmtMoney(f.meta)}`:''}`);
+}
 function renderHeaderHoje(){
   const el = document.getElementById('headerHoje');
   if(!el) return;
@@ -6,8 +20,13 @@ function renderHeaderHoje(){
   const ultimo = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
   const faltam = ultimo - hoje.getDate();
   const data = DIA_SEMANA[hoje.getDay()]+', '+hoje.getDate()+' de '+MES_NOMES_LONGOS[hoje.getMonth()].toLowerCase();
+  const dataCurta = DIA_SEMANA[hoje.getDay()]+', '+hoje.getDate()+' '+MES_NOMES[hoje.getMonth()].toLowerCase();
   const resto = faltam===0 ? 'último dia do mês' : (faltam===1 ? 'falta 1 dia p/ o fim do mês' : 'faltam '+faltam+' dias p/ o fim do mês');
-  el.innerHTML = `<div class="header-hoje-data">${data}</div><div class="header-hoje-resto">${resto}</div>`;
+  const restoCurto = faltam===0 ? 'último dia' : faltam+' dia'+(faltam>1?'s':'')+' p/ fim do mês';
+  const f = headerFaltaPagar();
+  const falta = f ? `<button type="button" class="hh-falta${f.total>0.004?'':' ok'}" onclick="headerFaltaDetalhe()" title="Gastos que faltam pagar${f.meta?' + meta de sobra':''} em ${monthLabel(f.m)}">${f.total>0.004?`Falta pagar <b>${fmtMoney(f.total)}</b>`:'<b>✓ Tudo pago</b>'}</button>` : '';
+  el.innerHTML = `<div class="hh-linha1"><span class="hh-longo">${data}</span><span class="hh-curto">${dataCurta}</span></div>
+    <div class="hh-linha2"><span class="hh-longo">${resto}</span><span class="hh-curto">${restoCurto}</span>${falta?'<span class="hh-sep">·</span>'+falta:''}</div>`;
 }
 renderHeaderHoje();
 setInterval(renderHeaderHoje, 60000);
@@ -52,6 +71,7 @@ function renderAll(){
   renderPonto();
   renderLouvor();
   if(typeof renderEmprestimos==='function') renderEmprestimos();
+  if(typeof renderVendas==='function') renderVendas();
 }
 
 /* ========== STORAGE & BACKUP ========== */
@@ -71,6 +91,17 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.4', itens: [
+    'Nova aba Vendas: comissão de setup (no mês da venda) e de recorrência (a partir do mês seguinte, enquanto o cliente estiver ativo), com configuração de % e de dois modelos de venda',
+    'Metas de sobra mês a mês: sobra do Fluxo (empréstimo dentro, cartão fora) + comissões = projetada, quanto falta e quantas vendas de cada modelo ainda faltam',
+    'Quando a projeção passa da meta, sugere amortizar o excedente no empréstimo',
+    'Empréstimo: novo modo "Amortizar por valor", que calcula quantas parcelas do fim o valor quita',
+    'Louvor: importar cifra de PDF ou foto (leitura de imagem), com título, artista e tom pelo nome do arquivo',
+    'Louvor: "Organizar blocos" nomeia as partes e troca blocos iguais por "Repete - ..."',
+    'Louvor: folha nova (acordes em cima da sílaba, colunas automáticas, fonte normal ou monoespaçada), edição direto na folha e PDF fiel pela impressão',
+    'Louvor: slides com acordes (fundo branco, para os músicos); "Repete" mostra a letra inteira nos slides',
+    'Ponto PJ: PDF com os horários em texto (Entrada;Almoço;Volta;Saída) para colar na planilha; saíram os botões de copiar'
+  ]},
   { versao: 'v3.3', itens: [
     'Cartão e Empréstimo entram no Geral para mostrar a sobra real, com liga/desliga em todos os meses ou só em um',
     'Contas do mês redesenhada: resumo com barra, bolinha de pago em todas as linhas e blocos de Cartão e Empréstimo',

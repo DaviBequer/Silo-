@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.3">
+<link rel="stylesheet" href="style.css?v=3.4">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.3</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.4</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -204,6 +204,11 @@
 
 </div>
 
+<!-- VENDAS -->
+<div class="aba" id="aba-vendas">
+  <div id="vendasConteudo"></div>
+</div>
+
 <!-- LOUVOR: BIBLIOTECA -->
 <div class="aba" id="aba-louvor">
 
@@ -233,6 +238,7 @@
 <nav class="bottom-nav">
   <button class="nav-item active" onclick="switchAba('planner')" data-aba="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></button>
   <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span>Ponto PJ</span></button>
+  <button class="nav-item" onclick="switchAba('vendas')" data-aba="vendas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Vendas</span></button>
   <button class="nav-item" onclick="switchAba('louvor')" data-aba="louvor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Louvor</span></button>
 </nav>
 
@@ -619,6 +625,135 @@
   </div>
 </div>
 
+<!-- MODAIS DE VENDAS -->
+<div class="modal-overlay" id="modalVenda">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="vendaFormTitulo">Nova venda</h3>
+      <button class="modal-close" onclick="closeModal('modalVenda')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Cliente</label>
+      <input type="text" id="vendaCliente" placeholder="Nome do cliente">
+    </div>
+    <div class="field full">
+      <label>Data da venda</label>
+      <input type="date" id="vendaData">
+    </div>
+    <div class="field full">
+      <label>Modelo</label>
+      <div class="dificuldade-chips" id="vendaModeloChips"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Setup</label>
+        <div class="input-money"><input type="text" id="vendaSetup" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarPreviaVenda()"></div>
+      </div>
+      <div class="field">
+        <label>Mensalidade</label>
+        <div class="input-money"><input type="text" id="vendaMensal" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarPreviaVenda()"></div>
+      </div>
+    </div>
+    <div id="vendaPrevia"></div>
+    <div class="field full">
+      <label>Status</label>
+      <div class="dificuldade-chips" id="vendaStatusChips">
+        <button type="button" class="dif-chip active" data-val="ativo" onclick="selecionarStatusVenda('ativo')">Ativo</button>
+        <button type="button" class="dif-chip" data-val="cancelado" onclick="selecionarStatusVenda('cancelado')">Cancelado</button>
+      </div>
+    </div>
+    <div class="field full" id="vendaCancelField" style="display:none">
+      <label>Cancelado em (a recorrência para a partir deste mês)</label>
+      <input type="date" id="vendaCancelData">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalVenda')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarVenda()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalVendasConfig">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Vendas</h3>
+      <button class="modal-close" onclick="closeModal('modalVendasConfig')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="vc-abas">
+      <button type="button" class="vc-aba active" data-aba="comissao" onclick="vcTrocarAba('comissao')">Comissões</button>
+      <button type="button" class="vc-aba" data-aba="simulacao" onclick="vcTrocarAba('simulacao')">Simulação</button>
+    </div>
+
+    <!-- COMISSÕES -->
+    <div class="vc-painel" id="vcPainelComissao">
+      <div class="vc-titulo">Quanto você ganha</div>
+      <div class="field-row">
+        <div class="field"><label>% do setup</label><div class="vc-pct"><input type="text" id="vcPctSetup" inputmode="decimal" placeholder="70" oninput="vcAtualizar()"><span>%</span></div></div>
+        <div class="field"><label>% da mensalidade</label><div class="vc-pct"><input type="text" id="vcPctRec" inputmode="decimal" placeholder="30" oninput="vcAtualizar()"><span>%</span></div></div>
+      </div>
+
+      <div class="vc-modelo">
+        <div class="vc-modelo-topo"><span class="vc-letra">A</span><input type="text" id="vcNomeA" class="vc-nome" placeholder="Plano A" oninput="vcAtualizar()"></div>
+        <div class="field-row">
+          <div class="field"><label>Setup médio</label><div class="input-money"><input type="text" id="vcSetupA" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);vcAtualizar()"></div></div>
+          <div class="field"><label>Mensalidade média</label><div class="input-money"><input type="text" id="vcMensalA" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);vcAtualizar()"></div></div>
+        </div>
+        <div class="vc-recebe" id="vcRecebeA"></div>
+      </div>
+
+      <div class="vc-modelo">
+        <div class="vc-modelo-topo"><span class="vc-letra">B</span><input type="text" id="vcNomeB" class="vc-nome" placeholder="Plano B" oninput="vcAtualizar()"></div>
+        <div class="field-row">
+          <div class="field"><label>Setup médio</label><div class="input-money"><input type="text" id="vcSetupB" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);vcAtualizar()"></div></div>
+          <div class="field"><label>Mensalidade média</label><div class="input-money"><input type="text" id="vcMensalB" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);vcAtualizar()"></div></div>
+        </div>
+        <div class="vc-recebe" id="vcRecebeB"></div>
+      </div>
+    </div>
+
+    <!-- SIMULAÇÃO -->
+    <div class="vc-painel" id="vcPainelSimulacao" style="display:none">
+      <div class="vc-titulo">Se eu vender…</div>
+      <div class="vc-sim-linha">
+        <span class="vc-letra">A</span><span class="vc-sim-nome" id="vcSimNomeA">Plano A</span>
+        <div class="emp-stepper vc-stepper"><button type="button" onclick="vcSimMudar('A',-1)" aria-label="Menos">−</button><input type="number" id="vcSimQtdA" min="0" value="0" inputmode="numeric" oninput="vcAtualizar()"><button type="button" onclick="vcSimMudar('A',1)" aria-label="Mais">+</button></div>
+      </div>
+      <div class="vc-sim-linha">
+        <span class="vc-letra">B</span><span class="vc-sim-nome" id="vcSimNomeB">Plano B</span>
+        <div class="emp-stepper vc-stepper"><button type="button" onclick="vcSimMudar('B',-1)" aria-label="Menos">−</button><input type="number" id="vcSimQtdB" min="0" value="0" inputmode="numeric" oninput="vcAtualizar()"><button type="button" onclick="vcSimMudar('B',1)" aria-label="Mais">+</button></div>
+      </div>
+      <div class="field full" style="margin-top:12px">
+        <label>Mês das vendas</label>
+        <select id="vcSimMes" onchange="vcAtualizar()"></select>
+      </div>
+      <div id="vcSimResultado"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalVendasConfig')">Fechar</button>
+      <button class="btn btn-block" onclick="salvarVendasConfig()">Salvar comissões</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalVendaMeta">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="vendaMetaTitulo">Meta de sobra</h3>
+      <button class="modal-close" onclick="closeModal('modalVendaMeta')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="field full">
+      <label>Quanto quer que sobre neste mês</label>
+      <div class="input-money"><input type="text" id="vendaMetaValor" inputmode="numeric" placeholder="Ex.: 1.000,00" oninput="maskMoneyInput(this)"></div>
+    </div>
+    <div id="vendaMetaInfo"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="salvarMetaVendas(true)">Remover meta</button>
+      <button class="btn btn-block" onclick="salvarMetaVendas(false)">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAIS DO EMPRÉSTIMO -->
 <div class="modal-overlay" id="modalEmprestimo">
   <div class="modal">
@@ -712,6 +847,18 @@
     </div>
     <div class="caption" style="margin-bottom:12px">Antecipa as últimas parcelas. Quanto mais longe o vencimento, maior o desconto.</div>
     <div class="field full">
+      <label>Como quer amortizar</label>
+      <div class="dificuldade-chips" id="empAmortModoChips">
+        <button type="button" class="dif-chip active" data-val="parcelas" onclick="selecionarModoAmortEmp('parcelas')">Por parcelas</button>
+        <button type="button" class="dif-chip" data-val="valor" onclick="selecionarModoAmortEmp('valor')">Por valor</button>
+      </div>
+    </div>
+    <div class="field full" id="empAmortAlvoField" style="display:none">
+      <label>Quanto quer usar para amortizar</label>
+      <div class="input-money"><input type="text" id="empAmortAlvo" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);aplicarValorAlvoAmortEmp()"></div>
+      <div class="caption" id="empAmortAlvoNota" style="margin-top:6px"></div>
+    </div>
+    <div class="field full" id="empAmortQtdField">
       <label>Quantas parcelas antecipar</label>
       <div class="emp-stepper">
         <button type="button" onclick="mudarQtdAmortEmp(-1)" aria-label="Menos">−</button>
@@ -721,7 +868,7 @@
     </div>
     <div class="field full">
       <label>Data do pagamento</label>
-      <input type="date" id="empAmortData" onchange="atualizarAmortizacaoEmp(true)">
+      <input type="date" id="empAmortData" onchange="empAmortModo==='valor' ? aplicarValorAlvoAmortEmp() : atualizarAmortizacaoEmp(true)">
     </div>
     <div class="field full">
       <label>Valor pago de fato (o que o banco cobrou)</label>
@@ -833,6 +980,11 @@
             <input type="date" id="lvDataAgendamento" class="lv-data-agendamento" onchange="salvarLouvorData(this.value)">
           </div>
         </div>
+        <div class="lv-ferramentas">
+          <label class="lv-ferr-btn"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)">Importar PDF ou foto</label>
+          <button type="button" class="lv-ferr-btn" onclick="lvOrganizarBlocos()">Organizar blocos</button>
+        </div>
+        <div class="lv-import-status" id="lvEdicaoImportStatus"></div>
         <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
       </div>
     </div>
@@ -847,8 +999,16 @@
         <div class="field full">
           <label>Colunas</label>
           <div class="dificuldade-chips">
+            <button type="button" class="dif-chip" id="lvColunaAuto" onclick="setLouvorColunas('auto')">Automático</button>
             <button type="button" class="dif-chip" id="lvColuna1" onclick="setLouvorColunas(1)">1 coluna</button>
             <button type="button" class="dif-chip" id="lvColuna2" onclick="setLouvorColunas(2)">2 colunas</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Fonte da letra</label>
+          <div class="dificuldade-chips">
+            <button type="button" class="dif-chip" id="lvFonteMono" onclick="setLvPdfFonte('mono')">Monoespaçada</button>
+            <button type="button" class="dif-chip" id="lvFonteSans" onclick="setLvPdfFonte('sans')">Normal</button>
           </div>
         </div>
         <div class="field full">
@@ -899,7 +1059,11 @@
           </div>
         </div>
       </div>
-      <div class="lv-pdf-preview" id="lvPdfPreview"></div>
+      <div class="lv-ferramentas">
+        <button type="button" class="lv-ferr-btn" id="lvBtnEditarFolha" onclick="lvAlternarEdicaoFolha()">Editar na folha</button>
+        <button type="button" class="lv-ferr-btn primario" onclick="imprimirLouvorPdf()">Imprimir / Salvar PDF</button>
+      </div>
+      <div class="lv-pdf-wrap"><div class="lv-pdf-preview" id="lvPdfPreview"></div></div>
       <button class="receita-salvar-fab" onclick="exportarLouvorPdf()" title="Baixar PDF" aria-label="Baixar PDF">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>
       </button>
@@ -945,6 +1109,10 @@
           </div>
         </div>
       </div>
+      <label class="checkbox-field lv-slides-acordes">
+        <input type="checkbox" id="lvSlidesComAcordes" onchange="setLvSlidesComAcordes(this.checked)">
+        <span>Com acordes <small>fundo branco, acordes em cima da letra (para os músicos)</small></span>
+      </label>
       <div class="lv-slides-nav">
         <button class="btn-icon-sm" onclick="lvSlideNav(-1)">◀</button>
         <span id="lvSlideCounter">1 / 1</span>
@@ -964,8 +1132,15 @@
   <div class="fullpage-header">
     <button class="header-btn" onclick="closeLouvorForm()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fullpage-title">Novo Louvor</div>
+    <span style="width:32px;flex-shrink:0"></span>
   </div>
   <div class="fullpage-content">
+    <label class="lv-importar">
+      <input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoNovo(event)">
+      <span class="lv-importar-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>
+      <span class="lv-importar-txt"><b>Importar PDF ou foto da cifra</b><small>Preenche título, artista, tom e monta a cifra com os blocos</small></span>
+    </label>
+    <div class="lv-import-status" id="lvNovoImportStatus"></div>
     <div class="field full">
       <label>Título</label>
       <input type="text" id="lvNovoTitulo" placeholder="Nome do louvor">
@@ -1330,7 +1505,7 @@
       <label style="display:flex;justify-content:space-between;align-items:center">Dias trancados <button type="button" class="link-btn-sm" id="pontoExportDiasTodos" onclick="togglePontoExportTodosDias()">Selecionar todos</button></label>
       <div class="dificuldade-chips ponto-dias-chips" id="pontoExportDiasChips"></div>
     </div>
-    <div class="caption" style="margin-bottom:12px">O PDF leva só os horários e as horas — nenhum valor em dinheiro — e um botão “Copiar para planilha” para quem receber.</div>
+    <div class="caption" style="margin-bottom:12px">O PDF leva só os horários e as horas — nenhum valor em dinheiro — e, no fim, os horários em texto (Entrada;Almoço;Volta;Saída) para copiar e colar na planilha.</div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalPontoExport')">Cancelar</button>
       <button class="btn btn-block" onclick="gerarPdfPonto()">Gerar PDF</button>
@@ -1346,16 +1521,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=3.3"></script>
-<script src="core.js?v=3.3"></script>
-<script src="comando.js?v=3.3"></script>
-<script src="layout.js?v=3.3"></script>
-<script src="app.js?v=3.3"></script>
-<script src="panorama.js?v=3.3"></script>
-<script src="planner.js?v=3.3"></script>
-<script src="ponto.js?v=3.3"></script>
-<script src="louvor.js?v=3.3"></script>
-<script src="emprestimo.js?v=3.3"></script>
+<script src="supabase.js?v=3.4"></script>
+<script src="core.js?v=3.4"></script>
+<script src="comando.js?v=3.4"></script>
+<script src="layout.js?v=3.4"></script>
+<script src="app.js?v=3.4"></script>
+<script src="panorama.js?v=3.4"></script>
+<script src="planner.js?v=3.4"></script>
+<script src="ponto.js?v=3.4"></script>
+<script src="louvor.js?v=3.4"></script>
+<script src="louvor-extra.js?v=3.4"></script>
+<script src="emprestimo.js?v=3.4"></script>
+<script src="vendas.js?v=3.4"></script>
 <script>carregar();</script>
 </body>
 </html>

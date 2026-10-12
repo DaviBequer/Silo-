@@ -1,5 +1,4 @@
 /* ================= PONTO PJ ================= */
-const ICON_COPIAR_PONTO = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
 function pontoMonthKeyAtual(){ return addMonths(pontoBaseKey(), state.pontoOffset); }
 function ensurePontoMonth(mKey){
   if(!state.ponto.days[mKey]) state.ponto.days[mKey] = {};
@@ -189,7 +188,6 @@ function renderPonto(){
             <div class="pd-total ${total===0?'zero':''}">${minToHoursLabel(total)}</div>
             <button class="btn-icon-sm ${travado?'concluido-ativo':''}" onclick="toggleDiaConcluido(${dia})" title="${travado?'Reabrir dia':'Marcar como concluído'}">${travado?ICON_CHECK:ICON_UNLOCK}</button>
             <button class="btn-icon-sm" onclick="zerarDia(${dia})" title="Não trabalhei" ${travado?'disabled':''}>${ICON_BAN}</button>
-            <button class="btn-icon-sm" onclick="copiarPontoDia(${dia}, event)" title="Copiar horários p/ planilha">${ICON_COPIAR_PONTO}</button>
           </div>
         </div>
         <div class="ponto-horarios-grid">
@@ -207,7 +205,6 @@ function renderPonto(){
     rows += `<div class="ponto-semana-grupo ${colapsada?'colapsada':''}">
       <div class="ponto-semana-head" onclick="toggleSemanaPonto('${chave}')">
         <span>Semana ${wIdx+1} <small>${String(primeiroDia).padStart(2,'0')}–${String(ultimoDia).padStart(2,'0')}</small></span>
-        <button type="button" class="ponto-copiar-semana" onclick="copiarPontoSemana([${diasDaSemana.join(',')}], event)" title="Copiar a semana p/ planilha">${ICON_COPIAR_PONTO} Copiar</button>
         <button type="button" class="section-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
       </div>
       <div class="ponto-semana-dias">${diasHtml}</div>
@@ -479,40 +476,7 @@ function pontoExportDias(){
   return out;
 }
 
-/* ===== COPIAR PARA PLANILHA: uma linha por dia, colunas Entrada · Almoço · Volta · Saída (separadas por TAB) =====
-   Colando numa célula do Excel/Google Planilhas, cada horário cai na sua coluna e cada dia na sua linha. */
-function pontoLinhaPlanilha(mKey, dia){
-  const d = getDia(mKey, dia);
-  return [d.entrada||'', d.almocoSaida||'', d.almocoVolta||'', d.saida||''].join('\t');
-}
-async function copiarTextoPlanilha(texto, msgOk){
-  try{
-    await navigator.clipboard.writeText(texto);
-  }catch(e){
-    const ta = document.createElement('textarea');
-    ta.value = texto; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select();
-    try{ document.execCommand('copy'); }catch(_){}
-    ta.remove();
-  }
-  showToast(msgOk);
-}
-function copiarPontoDias(dias, rotulo){
-  const mKey = pontoMonthKeyAtual();
-  if(!dias.length){ showToast('Nenhum dia para copiar'); return; }
-  copiarTextoPlanilha(dias.map(dia=>pontoLinhaPlanilha(mKey, dia)).join('\n'), `${rotulo}: ${dias.length} dia${dias.length>1?'s':''} copiado${dias.length>1?'s':''} · cole na célula da Entrada`);
-}
-function copiarPontoDia(dia, ev){
-  if(ev) ev.stopPropagation();
-  copiarPontoDias([dia], 'Dia '+String(dia).padStart(2,'0'));
-}
-function copiarPontoSemana(dias, ev){
-  if(ev) ev.stopPropagation();
-  const mKey = pontoMonthKeyAtual();
-  /* semana: só dias úteis, para bater com as linhas da planilha */
-  const uteis = dias.filter(dia=>{ const dt=keyToDate(mKey); dt.setDate(dia); return dt.getDay()>=1 && dt.getDay()<=5; });
-  copiarPontoDias(uteis, 'Semana');
-}function pontoSemanasDoMes(mKey){
+function pontoSemanasDoMes(mKey){
   const totalDias = daysInMonth(mKey);
   const semanas = [];
   let atual = null;
@@ -547,14 +511,6 @@ function selecionarPontoExportSemana(idx){
   });
 }
 
-/* link que vai no PDF: abre a página de cópia do app publicado. Os horários vão depois do "#",
-   então não são enviados a servidor nenhum — só o navegador de quem abre lê. */
-const PONTO_URL_COPIAR = 'https://davibequer.github.io/Silo-/copiar.html';
-function pontoLinkCopiarPlanilha(nome, periodo, linhas){
-  const json = JSON.stringify({ n:nome||'', t:periodo, d:linhas });
-  const b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  return PONTO_URL_COPIAR + '#' + b64;
-}
 function gerarPdfPonto(){
   if(typeof window.jspdf === 'undefined'){
     showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
@@ -613,15 +569,6 @@ function gerarPdfPonto(){
   doc.setLineWidth(0.8);
   doc.line(marginX, 112, pageW-marginX, 112);
 
-  /* ---- Botão "Copiar para planilha": link para a página copiar.html com os horários no próprio link ---- */
-  const urlCopiar = pontoLinkCopiarPlanilha(nome, periodoLabel, linhas);
-  const bw = 150, bh = 30, bx = pageW - marginX - bw, by = 62;
-  doc.setDrawColor(...tinta); doc.setLineWidth(0.8);
-  doc.roundedRect(bx, by, bw, bh, 8, 8, 'S');
-  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...tinta);
-  doc.text('Copiar para planilha', bx + bw/2, by + 19, { align:'center' });
-  doc.link(bx, by, bw, bh, { url: urlCopiar });
-
   /* ---- Planilha ---- */
   doc.autoTable({
     startY: 128,
@@ -641,6 +588,27 @@ function gerarPdfPonto(){
       }
     },
     didParseCell: (data)=>{ if(data.section==='head' && data.column.index===0) data.cell.styles.halign='left'; if(data.section==='foot' && data.column.index===0) data.cell.styles.halign='left'; }
+  });
+
+  /* ---- Bloco CSV para colar na planilha: uma linha por dia, Entrada;Almoço;Volta;Saída ----
+     Texto puro, cada linha uma linha de texto do PDF: quem recebe seleciona, copia e cola. */
+  const csv = dias.map(dia=>{
+    const d = getDia(mKey, dia);
+    return [d.entrada||'', d.almocoSaida||'', d.almocoVolta||'', d.saida||''].join(';');
+  });
+  const alturaLinha = 14;
+  let y = doc.lastAutoTable.finalY + 36;
+  if(y + 46 + csv.length*alturaLinha > 800){ doc.addPage(); y = 56; }
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...suave);
+  doc.text('PARA COLAR NA PLANILHA', marginX, y);
+  doc.setFontSize(8.5);
+  doc.text('Selecione as linhas abaixo, copie e cole na célula da Entrada do primeiro dia. Separador: ponto e vírgula (;).', marginX, y+13);
+  y += 32;
+  doc.setFont('courier','normal'); doc.setFontSize(10); doc.setTextColor(...tinta);
+  csv.forEach(l=>{
+    if(y > 800){ doc.addPage(); y = 56; doc.setFont('courier','normal'); doc.setFontSize(10); doc.setTextColor(...tinta); }
+    doc.text(l, marginX, y);
+    y += alturaLinha;
   });
 
   const dataExporto = monthLabel(mKey);

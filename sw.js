@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v33';
-const APP_VERSION = '3.3';
+const CACHE_NAME = 'siloe-cache-v34';
+const APP_VERSION = '3.4';
 const ARQUIVOS = [
   './index.html',
   `./style.css?v=${APP_VERSION}`,
@@ -12,7 +12,9 @@ const ARQUIVOS = [
   `./planner.js?v=${APP_VERSION}`,
   `./ponto.js?v=${APP_VERSION}`,
   `./louvor.js?v=${APP_VERSION}`,
+  `./louvor-extra.js?v=${APP_VERSION}`,
   `./emprestimo.js?v=${APP_VERSION}`,
+  `./vendas.js?v=${APP_VERSION}`,
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

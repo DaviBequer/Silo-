@@ -1,0 +1,591 @@
+/* ========== LOUVOR — extras: importar PDF/foto, blocos automáticos, edição na folha, PDF por impressão e slides com acordes ==========
+   Tudo grava no mesmo formato de texto do louvor.js ([Seção], linha de acordes em cima da letra),
+   então as cifras antigas continuam funcionando. As bibliotecas pesadas (leitor de PDF e OCR) só
+   são baixadas quando você importa um arquivo. */
+
+const LVI_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const LVI_PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const LVI_TESSERACT = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';
+/* acorde no texto importado (aceita sus/add/maj, números e extensões entre parênteses) */
+const LVI_CHORD_RE = /^([A-G][#b]?)((?:maj|min|dim|aug|sus|add|m|M)?\d*(?:\([^)]*\))?)(?:\/([A-G][#b]?))?$/;
+
+function lviCarregarScript(url, pronto){
+  if(pronto()) return Promise.resolve();
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = ()=> resolve();
+    s.onerror = ()=> reject(new Error('não consegui baixar o leitor (verifique a internet)'));
+    document.head.appendChild(s);
+  });
+}
+let lviWorkerPronto = false;
+function lviPdfPronto(){
+  return lviCarregarScript(LVI_PDFJS, ()=>typeof pdfjsLib!=='undefined').then(()=>{
+    if(lviWorkerPronto) return;
+    /* worker como Blob: funciona igual no app instalado e no navegador */
+    return fetch(LVI_PDFJS_WORKER).then(r=>r.text()).then(src=>{
+      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([src], { type:'text/javascript' }));
+      lviWorkerPronto = true;
+    });
+  });
+}
+
+/* ---------- leitura do PDF com texto ---------- */
+function lviClustersDoPdf(file){
+  return lviPdfPronto().then(()=>file.arrayBuffer()).then(buf=>pdfjsLib.getDocument({ data: buf }).promise).then(async pdf=>{
+    let out = [];
+    for(let p=1; p<=pdf.numPages; p++){
+      const tc = await (await pdf.getPage(p)).getTextContent();
+      const items = tc.items.filter(i=>i.str!=='').map(i=>({ s:i.str, x:i.transform[4], y:i.transform[5], w:i.width }));
+      items.sort((a,b)=>(b.y-a.y) || (a.x-b.x));
+      const clusters = [];
+      items.forEach(it=>{
+        const last = clusters[clusters.length-1];
+        if(last && Math.abs(last.y-it.y) <= 3) last.items.push(it);
+        else clusters.push({ y:it.y, items:[it], page:p });
+      });
+      clusters.forEach(c=>c.items.sort((a,b)=>a.x-b.x));
+      out = out.concat(clusters);
+    }
+    return out;
+  });
+}
+
+/* ---------- OCR (foto ou PDF escaneado) ---------- */
+function lviEhImagem(f){ return /^image\//.test(f.type) || /\.(png|jpe?g|webp|bmp|gif)$/i.test(f.name||''); }
+function lviCanvasDoArquivo(file){
+  if(lviEhImagem(file)){
+    return new Promise((resolve, reject)=>{
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = ()=>{
+        const esc = Math.min(3, Math.max(1, 2200/img.naturalWidth));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.naturalWidth*esc); cv.height = Math.round(img.naturalHeight*esc);
+        const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url); resolve([cv]);
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('não consegui abrir essa imagem (use PNG, JPG ou WEBP)')); };
+      img.src = url;
+    });
+  }
+  return lviPdfPronto().then(()=>file.arrayBuffer()).then(buf=>pdfjsLib.getDocument({ data: buf }).promise).then(async pdf=>{
+    const out = [];
+    for(let p=1; p<=pdf.numPages; p++){
+      const page = await pdf.getPage(p);
+      const vp = page.getViewport({ scale:3 });
+      const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+      await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      out.push(cv);
+    }
+    return out;
+  });
+}
+function lviPalavrasOcr(data){
+  if(data.words && data.words.length) return data.words;
+  const out = [];
+  (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(w=>out.push(w)))));
+  return out;
+}
+async function lviClustersDoOcr(file, status){
+  const canvases = await lviCanvasDoArquivo(file);
+  status('Baixando o leitor de imagem (na primeira vez demora um pouco)...');
+  await lviCarregarScript(LVI_TESSERACT, ()=>typeof Tesseract!=='undefined');
+  const worker = await Tesseract.createWorker('por', 1, { logger: m=>{ if(m.status==='recognizing text') status('Lendo a imagem... '+Math.round(m.progress*100)+'%'); } });
+  let out = [];
+  const paraItens = data=>lviPalavrasOcr(data).filter(w=>w.text && w.text.trim()).map(w=>({ s:w.text.trim(), x:w.bbox.x0, y:-(w.bbox.y0+w.bbox.y1)/2, w:w.bbox.x1-w.bbox.x0, y0:w.bbox.y0, y1:w.bbox.y1 }));
+  for(let idx=0; idx<canvases.length; idx++){
+    const cv = canvases[idx];
+    const res = await worker.recognize(cv);
+    const items = paraItens(res.data);
+    items.sort((a,b)=>(b.y-a.y) || (a.x-b.x));
+    const hs = items.map(i=>i.y1-i.y0).sort((a,b)=>a-b);
+    const tol = Math.max(8, (hs.length ? hs[Math.floor(hs.length/2)] : 28)*0.5);
+    const clusters = [];
+    items.forEach(it=>{
+      const last = clusters[clusters.length-1];
+      if(last && Math.abs(last.y-it.y) <= tol) last.items.push(it);
+      else clusters.push({ y:it.y, items:[it], page:idx+1 });
+    });
+    clusters.forEach(c=>c.items.sort((a,b)=>a.x-b.x));
+    /* segunda leitura só nas linhas que parecem de acordes, aceitando apenas caracteres de acorde */
+    /* só linhas curtas em que a primeira leitura já achou acordes em pelo menos metade das palavras
+       (evita transformar letra com palavras curtas, como "Com todo o meu ser", em acordes) */
+    const linhasAcorde = clusters.filter(c=>{
+      if(!lviLinhaCurta(c)) return false;
+      const toks = [];
+      c.items.forEach(it=>it.s.trim().split(/\s+/).forEach(t=>{ t = lviLimpa(t); if(t) toks.push(t); }));
+      return toks.filter(t=>lviCorrigeAcorde(t)!==null).length / toks.length >= 0.5;
+    });
+    if(linhasAcorde.length){
+      status('Conferindo os acordes...');
+      await worker.setParameters({ tessedit_char_whitelist:'ABCDEFGabdgijmnsuM#/()0123456789', tessedit_pageseg_mode:'11' });
+      for(const c of linhasAcorde){
+        const top = Math.min(...c.items.map(i=>i.y0)), bot = Math.max(...c.items.map(i=>i.y1)), h = bot-top;
+        const t = Math.max(0, Math.floor(top-h*0.4)), b = Math.min(cv.height, Math.ceil(bot+h*0.4));
+        const r2 = await worker.recognize(cv, { rectangle:{ left:0, top:t, width:cv.width, height:b-t } });
+        const ws = paraItens(r2.data);
+        if(ws.length && ws.every(i=>lviCorrigeAcorde(i.s)!==null)){ ws.sort((a,b)=>a.x-b.x); c.items = ws; }
+      }
+      await worker.setParameters({ tessedit_char_whitelist:'', tessedit_pageseg_mode:'3' });
+    }
+    out = out.concat(clusters);
+  }
+  await worker.terminate();
+  return out;
+}
+
+/* ---------- de linhas lidas para letra + acordes ---------- */
+function lviLetra(items){
+  let text = '', xs = [], prevEnd = null;
+  items.forEach(it=>{
+    const cw = it.w / Math.max(it.s.length, 1);
+    if(prevEnd!==null && text && text.slice(-1)!==' ' && it.s[0]!==' ' && it.x-prevEnd > cw*0.4){ text += ' '; xs.push(prevEnd); }
+    for(let k=0;k<it.s.length;k++){ text += it.s[k]; xs.push(it.x + cw*k); }
+    prevEnd = it.x + it.w;
+  });
+  let a = 0, b = text.length-1;
+  while(a<=b && text[a]===' ') a++;
+  while(b>=a && text[b]===' ') b--;
+  return { text:text.slice(a,b+1), xs:xs.slice(a,b+1), end:prevEnd };
+}
+function lviLimpa(t){ return t.replace(/^[|,.;:'"`]+|[|,.;:'"`]+$/g, ''); }
+/* confusões comuns do OCR em acordes ("6" no lugar de "G", "(" no lugar de "C"...) */
+const LVI_FIX = { '6':'G', '8':'B', '(':'C', '[':'C', '{':'C', '€':'C', '©':'C', '0':'D' };
+function lviCorrigeAcorde(raw){
+  const t = lviLimpa(raw);
+  if(!t) return null;
+  if(LVI_CHORD_RE.test(t)) return t;
+  const f = LVI_FIX[t.charAt(0)];
+  if(f && LVI_CHORD_RE.test(f+t.slice(1))) return f+t.slice(1);
+  const up = t.charAt(0).toUpperCase()+t.slice(1);
+  return LVI_CHORD_RE.test(up) ? up : null;
+}
+function lviPalavraDeSecao(items){
+  if(items.length > 4) return null;
+  for(const it of items){
+    const w = it.s.replace(/[^A-Za-zÀ-ÿ]/g, '');
+    if(/refr[ãaâ]o/i.test(w)) return 'Refrão';
+    const m = /^(coro|ponte|intro|solo|final)$/i.exec(w);
+    if(m) return m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase();
+  }
+  return null;
+}
+function lviLinhaCurta(c){
+  const toks = [];
+  c.items.forEach(it=>it.s.trim().split(/\s+/).forEach(t=>{ t = lviLimpa(t); if(t) toks.push(t); }));
+  if(!toks.length || toks.length > 10) return false;
+  return toks.every(t=>t.length<=4 && !/^[-–—─_=~]+$/.test(t));
+}
+const LVI_ROTULOS = /^(intro|introdu[cç][aã]o|refr[aã]o|pr[eé][-\s]?refr[aã]o|coro|ponte|solo|final|interl[uú]dio|instrumental|tag|(primeira|segunda|terceira|quarta|quinta|sexta|s[eé]tima|oitava|nona|d[eé]cima)\s+parte|parte\s*\d+|estrofe\s*\d*|verso\s*\d*|repete\b.*)$/i;
+function lviRotuloDe(text){
+  const t = (text||'').replace(/^[\s\-–—─_=\[\](){}:.]+|[\s\-–—─_=\[\](){}:.]+$/g, '');
+  return t && LVI_ROTULOS.test(t) ? t : null;
+}
+function lviLinhasDosClusters(clusters, tolerante){
+  const gaps = [];
+  for(let i=1;i<clusters.length;i++) if(clusters[i].page===clusters[i-1].page) gaps.push(clusters[i-1].y-clusters[i].y);
+  gaps.sort((a,b)=>a-b);
+  const mediana = gaps.length ? gaps[Math.floor(gaps.length/2)] : 30;
+  const pre = []; let prev = null;
+  clusters.forEach(c=>{
+    const toks = [];
+    c.items.forEach(it=>it.s.trim().split(/\s+/).forEach(t=>{ t = tolerante ? lviLimpa(t) : t; if(t) toks.push(t); }));
+    if(!toks.length) return;
+    const nAc = toks.filter(t=>tolerante ? lviCorrigeAcorde(t)!==null : LVI_CHORD_RE.test(t)).length;
+    const curtos = toks.every(t=>t.length<=4);
+    const ehAcordes = tolerante ? (nAc>=1 && toks.length<=10 && (nAc/toks.length>=0.7 || (curtos && toks.length-nAc<=1))) : nAc===toks.length;
+    if(prev && prev.page===c.page && (prev.y-c.y) > mediana*1.6) pre.push({ type:'blank' });
+    prev = c;
+    const junto = c.items.map(it=>it.s).join('');
+    const tracos = (junto.match(/[-–—─]/g)||[]).length;
+    if(ehAcordes){
+      const acordes = [];
+      c.items.forEach(it=>{ const re = /\S+/g; let m; while((m = re.exec(it.s))){ const nm = tolerante ? lviCorrigeAcorde(m[0]) : m[0]; if(nm && LVI_CHORD_RE.test(nm)) acordes.push({ name:nm, x: it.x + it.w*m.index/it.s.length }); } });
+      pre.push({ type:'chordrow', chords:acordes });
+    } else if(tolerante && lviPalavraDeSecao(c.items)){
+      pre.push({ type:'label', text: lviPalavraDeSecao(c.items) });
+    } else if(lviRotuloDe(c.items.map(it=>it.s).join(' '))){
+      pre.push({ type:'label', text: lviRotuloDe(c.items.map(it=>it.s).join(' ')) });
+    } else if(tracos>=3 && /^[-–—─_=\s\p{L}]*$/u.test(junto)){
+      const rot = tolerante ? '' : junto.replace(/[-–—─_=]/g,'').trim();
+      pre.push(rot ? { type:'label', text:rot } : { type:'rule' });
+    } else {
+      pre.push({ type:'lyric', info: lviLetra(c.items) });
+    }
+  });
+  const out = []; let tituloFeito = false;
+  for(let j=0;j<pre.length;j++){
+    const r = pre[j];
+    if(r.type==='chordrow'){
+      const nx = pre[j+1];
+      if(nx && nx.type==='lyric'){
+        const info = nx.info;
+        out.push({ type:'lyric', text:info.text, chords: r.chords.map(ch=>{
+          let idx;
+          if(ch.x >= info.end) idx = info.text.length;
+          else { let best = 0, d = Infinity; info.xs.forEach((x,k)=>{ const dd = Math.abs(x-ch.x); if(dd<d){ d = dd; best = k; } }); idx = best; }
+          return { name:ch.name, idx };
+        }) });
+        j++;
+      } else out.push({ type:'chords', chords:r.chords });
+    } else if(r.type==='lyric'){
+      if(!tituloFeito){ out.push({ type:'title', text:r.info.text }); tituloFeito = true; }
+      else out.push({ type:'lyric', text:r.info.text, chords:[] });
+    } else out.push(r);
+  }
+  return out;
+}
+
+/* ---------- blocos: nomeia, detecta repetição ("Repete - Refrão") ---------- */
+const LVI_ORD = ['Primeira parte','Segunda parte','Terceira parte','Quarta parte','Quinta parte','Sexta parte','Sétima parte','Oitava parte','Nona parte','Décima parte'];
+function lviAssinatura(s){
+  return JSON.stringify(s.lines.map(l=> l.type==='chords' ? ['c', l.chords.map(c=>c.name)] : ['l', (l.text||'').replace(/\s+$/,''), (l.chords||[]).map(c=>[c.name, c.idx])]));
+}
+function lviMontaBlocos(rows){
+  let titulo = '', cur = null, n = 0;
+  const secoes = [];
+  const abre = nome=>{ cur = { name:nome, lines:[] }; secoes.push(cur); };
+  rows.forEach(r=>{
+    if(r.type==='title'){ titulo = r.text; return; }
+    if(r.type==='label'){ abre(r.text); if(/^repete/i.test(r.text)) cur = null; return; }
+    if(r.type==='blank' || r.type==='rule'){ if(cur && cur.lines.length) cur = null; return; }
+    if(!cur) abre('');
+    cur.lines.push(r);
+  });
+  const vistos = [];
+  secoes.forEach(s=>{
+    if(!s.lines.length) return;
+    const k = lviAssinatura(s);
+    const igual = vistos.find(v=>v.k===k);
+    if(igual){ s.repeatOf = igual.s; if(s.name && !igual.s.name) igual.s.name = s.name; return; }
+    vistos.push({ k, s });
+  });
+  secoes.forEach((s,i)=>{
+    if(s.name || s.repeatOf) return;
+    const temLetra = s.lines.some(l=>l.type==='lyric');
+    if(!temLetra){ s.name = i===0 ? 'Intro' : 'Instrumental'; return; }
+    s.name = n < LVI_ORD.length ? LVI_ORD[n] : 'Parte '+(n+1);
+    n++;
+  });
+  /* "Artista - Música - Tom" no topo da cifra */
+  const t = titulo.replace(/\s*-\s*[A-G6][#b]?m?\s*$/, '').trim();
+  let artista = '', nome = t;
+  const partes = t.split(/\s+-\s+/);
+  if(partes.length===2 && !/^\d/.test(partes[0])){ artista = partes[0]; nome = partes[1]; }
+  const km = /[-–]\s*([A-G][#b]?)(m?)\s*$/.exec(titulo);
+  return { titulo:nome, artista, secoes, tom: km ? km[1] : null, menor: !!(km && km[2]) };
+}
+/* nome do arquivo "Cantor - Música - Tom" */
+function lviNomeDoArquivo(nome){
+  if(!nome) return null;
+  const base = nome.replace(/\.[^.]+$/,'').replace(/\s*\(\d+\)\s*$/,'').replace(/_/g,' ').trim();
+  const partes = base.split(/\s+[-–]\s+/).map(p=>p.trim()).filter(Boolean);
+  let tom = null, menor = false;
+  const km = /^([A-G][#b]?)(m?)$/.exec(partes[partes.length-1]||'');
+  if(km && partes.length>=2){ tom = km[1]; menor = !!km[2]; partes.pop(); }
+  if(partes.length===2) return { artista:partes[0], titulo:partes[1], tom, menor };
+  if(tom) return { artista:'', titulo:partes.join(' - '), tom, menor };
+  return null;
+}
+/* linha de acordes em texto, cada acorde na coluna da sílaba (sem encostar no anterior) */
+function lviLinhaDeAcordes(chords){
+  let s = '';
+  chords.slice().sort((a,b)=>a.idx-b.idx).forEach(c=>{
+    const pos = Math.max(c.idx, s.length ? s.length+1 : 0);
+    while(s.length < pos) s += ' ';
+    s += c.name;
+  });
+  return s;
+}
+/* blocos → texto do Siloé ([Seção] + acordes em cima da letra) */
+function lviBlocosParaTexto(secoes){
+  const linhas = [];
+  secoes.forEach(s=>{
+    if(linhas.length) linhas.push('');
+    if(s.repeatOf){ linhas.push('['+(s.label || ('Repete - '+s.repeatOf.name))+']'); return; }
+    linhas.push('['+(s.name||'Parte')+']');
+    s.lines.forEach(r=>{
+      if(r.type==='chords'){ linhas.push(r.chords.map(c=>c.name).join('   ')); return; }
+      if(r.chords && r.chords.length) linhas.push(lviLinhaDeAcordes(r.chords));
+      linhas.push(r.text && r.text.trim() ? r.text : ' ');
+    });
+  });
+  return linhas.join('\n');
+}
+/* tom importado → formato do Siloé (tom menor guarda o relativo maior + marca de menor) */
+function lviTomSiloe(raiz, menor){
+  if(!raiz) return { tomOriginal:'', tomModoMenor:false };
+  const r = ({ 'D#':'Eb', 'G#':'Ab', 'A#':'Bb', 'Gb':'F#' })[raiz] || raiz;
+  return menor ? { tomOriginal: lvShiftNote(r, 3) || r, tomModoMenor:true } : { tomOriginal: lvShiftNote(r, 0) || r, tomModoMenor:false };
+}
+
+/* ---------- importar: arquivo → { titulo, artista, tom, conteudo } ---------- */
+async function lviImportar(file, status){
+  let rows = [];
+  if(!lviEhImagem(file)){
+    status('Lendo o PDF...');
+    const cl = await lviClustersDoPdf(file);
+    rows = lviLinhasDosClusters(cl, false);
+  }
+  let usouOcr = false;
+  if(!rows.filter(r=>r.type==='lyric' || r.type==='chords').length){
+    usouOcr = true;
+    const cl = await lviClustersDoOcr(file, status);
+    rows = lviLinhasDosClusters(cl, true);
+  }
+  if(!rows.length) throw new Error('não encontrei texto nesse arquivo');
+  const doc = lviMontaBlocos(rows);
+  const fi = lviNomeDoArquivo(file.name);
+  const raiz = (fi && fi.tom) || doc.tom;
+  const menor = fi && fi.tom ? fi.menor : doc.menor;
+  return {
+    titulo: (fi && fi.titulo) || doc.titulo || '',
+    artista: (fi && fi.artista) || doc.artista || '',
+    tom: lviTomSiloe(raiz, menor),
+    conteudo: lviBlocosParaTexto(doc.secoes),
+    blocos: doc.secoes.length,
+    usouOcr
+  };
+}
+function lviStatus(id, texto, erro){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.textContent = texto || '';
+  el.classList.toggle('erro', !!erro);
+}
+
+/* no cadastro de um louvor novo */
+async function lvImportarNoNovo(ev){
+  const file = ev.target.files[0]; ev.target.value = '';
+  if(!file) return;
+  try{
+    const r = await lviImportar(file, t=>lviStatus('lvNovoImportStatus', t));
+    if(r.titulo) document.getElementById('lvNovoTitulo').value = r.titulo;
+    if(r.artista) document.getElementById('lvNovoArtista').value = r.artista;
+    if(r.tom.tomOriginal){ window.lvNovoTomOriginal = r.tom.tomOriginal; window.lvNovoTomModoMenor = r.tom.tomModoMenor; atualizarLvNovoTomBox(); }
+    window.lvNovoConteudo = r.conteudo;
+    lviStatus('lvNovoImportStatus', `✓ Cifra importada (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' por leitura de imagem — confira os acordes depois':''}. Toque em "Criar e Abrir".`);
+  }catch(e){
+    lviStatus('lvNovoImportStatus', 'Não consegui ler: '+(e && e.message ? e.message : e)+'. Você pode colar a cifra como texto depois.', true);
+  }
+}
+/* dentro de um louvor já existente (substitui o texto) */
+async function lvImportarNoAtual(ev){
+  const file = ev.target.files[0]; ev.target.value = '';
+  const l = getLouvorAtual(); if(!file || !l) return;
+  if((l.conteudo||'').trim() && !(await iosConfirm('Substituir a cifra atual pelo conteúdo do arquivo?'))) return;
+  try{
+    const r = await lviImportar(file, t=>lviStatus('lvEdicaoImportStatus', t));
+    l.conteudo = r.conteudo;
+    if(!(l.titulo||'').trim() && r.titulo) l.titulo = r.titulo;
+    if(!(l.artista||'').trim() && r.artista) l.artista = r.artista;
+    if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; }
+    persist();
+    abrirLouvorDetalhe(l.id);
+    lviStatus('lvEdicaoImportStatus', `✓ Importado (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' — lido da imagem, confira os acordes':''}.`);
+  }catch(e){
+    lviStatus('lvEdicaoImportStatus', 'Não consegui ler: '+(e && e.message ? e.message : e), true);
+  }
+}
+
+/* ---------- organizar blocos no texto que já existe ---------- */
+function lviTextoParaLinhas(conteudo){
+  const { items } = lvParseContent(conteudo);
+  const rows = [];
+  items.forEach(it=>{
+    if(it.type==='section'){ rows.push({ type:'label', text:it.label }); return; }
+    if(it.type==='blank'){ rows.push({ type:'blank' }); return; }
+    if(it.type==='divider' || it.type==='colbreak'){ rows.push({ type:'rule' }); return; }
+    if(it.type==='pair'){
+      const acordes = lvAcordesDaLinha(it.chordLine);
+      if(!(it.lyricLine||'').trim()) rows.push({ type:'chords', chords: acordes.map(c=>({ name:c.name })) });
+      else rows.push({ type:'lyric', text: it.lyricLine.replace(/\s+$/,''), chords: acordes.map(c=>({ name:c.name, idx: Math.min(c.idx, it.lyricLine.length) })) });
+    }
+  });
+  return rows;
+}
+async function lvOrganizarBlocos(){
+  const l = getLouvorAtual(); if(!l) return;
+  if(!(l.conteudo||'').trim()){ showToast('Cole ou importe a cifra primeiro'); return; }
+  const ok = await iosConfirm('Organizar em blocos? Os trechos sem nome ganham nome (Intro, Primeira parte...) e os blocos iguais viram "Repete". Os marcadores - -- --- saem.');
+  if(!ok) return;
+  const doc = lviMontaBlocos(lviTextoParaLinhas(l.conteudo));
+  l.conteudo = lviBlocosParaTexto(doc.secoes);
+  persist();
+  document.getElementById('lvConteudo').value = l.conteudo;
+  const reps = doc.secoes.filter(s=>s.repeatOf).length;
+  showToast(`${doc.secoes.length} blocos${reps?` · ${reps} repetido${reps>1?'s':''} virou "Repete"`:''}`);
+}
+
+/* ---------- edição direto na folha (aba Visualizar) ---------- */
+window.lvEditandoFolha = false;
+function lvAlternarEdicaoFolha(){
+  window.lvEditandoFolha = !window.lvEditandoFolha;
+  renderLouvorPdfPreview();
+  showToast(window.lvEditandoFolha ? 'Toque na letra, nos acordes, no título ou nos blocos para corrigir' : 'Edição na folha travada');
+}
+function lvAplicarEdicaoFolha(){
+  const el = document.getElementById('lvPdfPreview'); if(!el) return;
+  const on = !!window.lvEditandoFolha;
+  el.classList.toggle('editando', on);
+  el.querySelectorAll('.lv-c, .lv-t:not(.pad), .lv-sheet-title, .lv-sheet-artist, .lv-sheet-section').forEach(x=>{
+    if(on){ x.contentEditable = 'true'; x.spellcheck = false; } else x.removeAttribute('contenteditable');
+  });
+  const btn = document.getElementById('lvBtnEditarFolha');
+  if(btn){ btn.classList.toggle('ativo', on); btn.textContent = on ? 'Travar edição' : 'Editar na folha'; }
+  if(!el._lvEventos){
+    el._lvEventos = true;
+    el.addEventListener('focusout', lvSincronizarFolha);
+    el.addEventListener('keydown', e=>{ if(window.lvEditandoFolha && e.key==='Enter'){ e.preventDefault(); e.target.blur(); } });
+    el.addEventListener('paste', e=>{
+      if(!e.target.isContentEditable) return;
+      e.preventDefault();
+      document.execCommand('insertText', false, (e.clipboardData||window.clipboardData).getData('text').replace(/\s*\n\s*/g,' '));
+    });
+  }
+}
+/* o que foi digitado na folha volta para o texto da cifra (e continua valendo ao trocar de tom) */
+function lvSincronizarFolha(e){
+  if(!window.lvEditandoFolha) return;
+  const l = getLouvorAtual(); if(!l) return;
+  const alvo = e.target;
+  let linhas = (l.conteudo||'').split('\n');
+  let reorganizou = false;
+  if(alvo.dataset && alvo.dataset.campo){
+    const v = alvo.textContent.trim();
+    if(alvo.dataset.campo==='titulo'){ l.titulo = v; document.getElementById('lvTitulo').value = v; document.getElementById('louvorDetalheHeaderTitle').textContent = v || 'Sem título'; }
+    else { l.artista = v; document.getElementById('lvArtista').value = v; }
+    persist(); renderLouvorLista();
+    return;
+  }
+  if(alvo.classList.contains('lv-sheet-section')){
+    const si = Number(alvo.dataset.si);
+    const antigo = ((linhas[si]||'').match(/^\s*\[(.+)\]\s*$/)||[])[1];
+    const novo = alvo.textContent.trim();
+    if(!novo || !antigo){ renderLouvorPdfPreview(); return; }
+    linhas[si] = '['+novo+']';
+    /* "[Repete - Antigo]" acompanha o novo nome */
+    linhas = linhas.map(x=>{ const m = /^\s*\[\s*repete\s*[-–:]?\s*(.+)\]\s*$/i.exec(x); return (m && m[1].trim().toLowerCase()===antigo.trim().toLowerCase()) ? '[Repete - '+novo+']' : x; });
+  } else {
+    const linha = alvo.closest && alvo.closest('.lv-linha');
+    if(!linha) return;
+    const delta = l.transpose || 0;
+    let texto = '';
+    const acordes = [];
+    linha.querySelectorAll('.lv-seg').forEach(sg=>{
+      const c = sg.querySelector('.lv-c').textContent.trim();
+      const tEl = sg.querySelector('.lv-t');
+      const t = tEl.classList.contains('pad') ? '' : tEl.textContent.replace(/ /g,' ').replace(/\n/g,'');
+      if(c) c.split(/\s+/).forEach((nome, k)=>acordes.push({ name: delta ? lvTransposeChord(nome, -delta) : nome, idx: texto.length + (k?1:0) }));
+      texto += t;
+    });
+    const ci = linha.dataset.ci === '' ? null : Number(linha.dataset.ci);
+    const li = linha.dataset.li === '' ? null : Number(linha.dataset.li);
+    const linhaAcordes = li===null ? acordes.map(a=>a.name).join('   ') : lviLinhaDeAcordes(acordes);
+    if(li!==null) linhas[li] = texto.trim() ? texto : ' ';
+    if(ci!==null){
+      if(acordes.length) linhas[ci] = linhaAcordes;
+      else { linhas.splice(ci, 1); reorganizou = true; }
+    } else if(acordes.length && li!==null){
+      linhas.splice(li, 0, linhaAcordes); reorganizou = true;
+    }
+  }
+  l.conteudo = linhas.join('\n');
+  persist();
+  const ta = document.getElementById('lvConteudo'); if(ta) ta.value = l.conteudo;
+  /* se mudou a quantidade de linhas, redesenha (os números das linhas mudam) */
+  if(reorganizou || alvo.classList.contains('lv-sheet-section')) setTimeout(renderLouvorPdfPreview, 0);
+}
+
+/* ---------- PDF pela impressão (fiel à folha, A4, sem cabeçalho do navegador) ---------- */
+function imprimirLouvorPdf(){
+  const l = getLouvorAtual(); if(!l) return;
+  const editava = window.lvEditandoFolha;
+  window.lvEditandoFolha = false;
+  renderLouvorPdfPreview();
+  const src = document.getElementById('lvPdfPreview');
+  let area = document.getElementById('lvPrintArea');
+  if(!area){ area = document.createElement('div'); area.id = 'lvPrintArea'; document.body.appendChild(area); }
+  const copia = src.cloneNode(true);
+  copia.removeAttribute('id');
+  copia.style.zoom = 1;
+  area.innerHTML = ''; area.appendChild(copia);
+  let pg = document.getElementById('lvPrintPagina');
+  if(!pg){ pg = document.createElement('style'); pg.id = 'lvPrintPagina'; document.head.appendChild(pg); }
+  pg.textContent = `@page{size:A4 ${l.pdfOrientacao==='paisagem'?'landscape':'portrait'};margin:0}`;
+  const tituloAntes = document.title;
+  /* o navegador usa o título da página como nome sugerido do PDF: "Artista - Música - Tom" */
+  document.title = [l.artista, l.titulo||'Sem título', lvTomAtual(l)].filter(Boolean).join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
+  document.body.classList.add('lv-imprimindo');
+  const fim = ()=>{
+    document.body.classList.remove('lv-imprimindo');
+    document.title = tituloAntes;
+    area.innerHTML = '';
+    window.removeEventListener('afterprint', fim);
+    if(editava){ window.lvEditandoFolha = true; renderLouvorPdfPreview(); }
+  };
+  window.addEventListener('afterprint', fim);
+  setTimeout(()=>window.print(), 50);
+}
+
+/* ---------- slides com acordes (fundo branco, acordes em laranja em cima da letra) ---------- */
+function setLvSlidesComAcordes(v){
+  const l = getLouvorAtual(); if(!l) return;
+  l.slidesComAcordes = !!v;
+  persist();
+  lvSlideIndex = 0;
+  renderLouvorSlidePreview();
+}
+/* blocos com os pares acorde+letra; "Repete" traz o bloco original inteiro; até 4 linhas por slide */
+function lvSlidesComAcordesDados(l){
+  const delta = l.transpose || 0;
+  const { items } = lvParseContent(l.conteudo);
+  const blocos = []; let cur = null;
+  items.forEach(it=>{
+    if(it.type==='section'){ cur = { label:it.label, pares:[] }; blocos.push(cur); return; }
+    if(it.type==='pair'){
+      if(!cur){ cur = { label:'', pares:[] }; blocos.push(cur); }
+      cur.pares.push({ acordes: lvTransposeChordLine(it.chordLine||'', delta), letra: it.lyricLine||'' });
+    }
+  });
+  const slides = [];
+  blocos.forEach((b, i)=>{
+    let pares = b.pares, label = b.label;
+    const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(b.label||'');
+    if(rep && !pares.length){
+      const orig = blocos.slice(0, i).find(o=>(o.label||'').trim().toLowerCase()===rep[1].trim().toLowerCase());
+      if(orig){ pares = orig.pares; label = orig.label; }
+    }
+    for(let k=0; k<pares.length; k+=4) slides.push({ label, pares: pares.slice(k, k+4) });
+  });
+  return slides;
+}
+function lvExportarSlidesComAcordes(l, PptxCtor){
+  const pres = new PptxCtor();
+  pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
+  pres.layout = 'WIDE';
+  const capa = pres.addSlide();
+  capa.background = { color:'FFFFFF' };
+  capa.addText(l.titulo||'Sem título', { x:0.5, y:2.5, w:12.3, h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'1D1D1F', align:'center' });
+  const tom = lvTomAtual(l);
+  capa.addText([l.artista, tom ? 'Tom: '+tom : ''].filter(Boolean).join('   ·   ') || ' ', { x:0.5, y:3.9, w:12.3, h:0.8, fontSize:22, color:'8A8A90', align:'center' });
+  lvSlidesComAcordesDados(l).forEach(s=>{
+    const runs = [];
+    s.pares.forEach(p=>{
+      if(p.acordes.trim()) runs.push({ text:p.acordes, color:'EF7D22', bold:true });
+      if(p.letra.trim()) runs.push({ text:p.letra, color:'1D1D1F', bold:false });
+    });
+    if(!runs.length) return;
+    const maior = Math.max(...runs.map(r=>r.text.length), 1);
+    const fs = Math.floor(Math.min(30, 12.3*72/(maior*0.62), 6.2*72/(runs.length*1.25)));
+    const sl = pres.addSlide();
+    sl.background = { color:'FFFFFF' };
+    if(s.label) sl.addText(s.label.toUpperCase(), { x:0.5, y:0.2, w:12.3, h:0.45, fontSize:13, bold:true, color:'6C6F7A', charSpacing:2 });
+    sl.addText(runs.map((r,i)=>({ text:r.text || ' ', options:{ color:r.color, bold:r.bold, breakLine: i<runs.length-1 } })), { x:0.6, y:0.8, w:12.1, h:6.3, fontSize:fs, fontFace:'Consolas', align:'left', valign:'top' });
+  });
+  const nome = [l.artista, l.titulo||'Sem título', tom].filter(Boolean).join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
+  pres.writeFile({ fileName: nome + ' (com acordes).pptx' });
+}

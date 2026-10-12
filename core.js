@@ -612,6 +612,7 @@ function switchAba(aba){
   if(aba==='ponto') renderPonto();
   if(aba==='planner'){ renderPlanner(); renderPanorama(); }
   if(aba==='louvor') renderLouvor();
+  if(aba==='vendas' && typeof renderVendas==='function') renderVendas();
   if(typeof atualizarLvNavBar==='function') atualizarLvNavBar();
   if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility(aba);
 }

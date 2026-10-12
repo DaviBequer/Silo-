@@ -6,6 +6,7 @@
 function empAtualizarOutrasTelas(){
   if(typeof renderPlanner==='function') renderPlanner();
   if(typeof renderPanorama==='function') renderPanorama();
+  if(typeof renderVendas==='function') renderVendas();   // saldo devedor e sugestão de amortização
 }
 function garantirEmprestimos(){
   if(!Array.isArray(state.emprestimos)) state.emprestimos = [];
@@ -330,7 +331,8 @@ function confirmarPagarParcelaEmp(){
 
 /* ---------- amortizar: antecipa as últimas parcelas ---------- */
 let empAmortId = null;
-function abrirAmortizarEmp(id){
+let empAmortModo = 'parcelas';   // 'parcelas' (quantas do fim) | 'valor' (quanto quero amortizar)
+function abrirAmortizarEmp(id, valorSugerido){
   const emp = empPorId(id);
   const pend = empPendentes(emp);
   if(!pend.length) return;
@@ -339,8 +341,45 @@ function abrirAmortizarEmp(id){
   qtd.max = pend.length;
   qtd.value = 1;
   document.getElementById('empAmortData').value = empHojeISO();
-  atualizarAmortizacaoEmp(true);
+  document.getElementById('empAmortAlvo').value = valorSugerido ? empFmtValorInput(valorSugerido) : '';
+  selecionarModoAmortEmp(valorSugerido ? 'valor' : 'parcelas');
   document.getElementById('modalEmpAmortizar').classList.add('active');
+}
+function selecionarModoAmortEmp(modo){
+  empAmortModo = modo;
+  document.querySelectorAll('#empAmortModoChips .dif-chip').forEach(el=>el.classList.toggle('active', el.dataset.val===modo));
+  document.getElementById('empAmortQtdField').style.display = modo==='parcelas' ? '' : 'none';
+  document.getElementById('empAmortAlvoField').style.display = modo==='valor' ? '' : 'none';
+  if(modo==='valor') aplicarValorAlvoAmortEmp(); else atualizarAmortizacaoEmp(true);
+}
+/* por valor: quantas parcelas do fim cabem no valor (pelo valor de hoje de cada uma) */
+function empQtdPorValor(emp, valor, dataISO){
+  const dia = dataISO ? new Date(dataISO+'T00:00:00') : new Date(); dia.setHours(0,0,0,0);
+  const pend = empPendentes(emp).slice().reverse();   // da última para a primeira
+  let qtd = 0, custo = 0;
+  for(const k of pend){
+    const vp = empValorPresente(emp, k, dia);
+    if(custo + vp > valor + 0.005) break;
+    custo += vp; qtd++;
+  }
+  const proxima = pend[qtd] ? empValorPresente(emp, pend[qtd], dia) : 0;
+  return { qtd, custo, sobra: Math.max(0, valor - custo), proxima };
+}
+function aplicarValorAlvoAmortEmp(){
+  const emp = empPorId(empAmortId);
+  if(!emp) return;
+  const alvo = parseMoney(document.getElementById('empAmortAlvo').value);
+  const r = empQtdPorValor(emp, alvo, document.getElementById('empAmortData').value);
+  const nota = document.getElementById('empAmortAlvoNota');
+  if(!(alvo>0)){ nota.textContent = 'Digite quanto quer usar para amortizar.'; document.getElementById('empAmortQtd').value = 1; atualizarAmortizacaoEmp(true); return; }
+  if(r.qtd===0){
+    nota.innerHTML = `Esse valor não cobre nem a última parcela hoje (<b>${fmtMoney(r.proxima)}</b>).`;
+    document.getElementById('empAmortQtd').value = 1;
+  } else {
+    nota.innerHTML = `Quita as <b>${r.qtd} últimas parcela${r.qtd>1?'s':''}</b> por cerca de <b>${fmtMoney(r.custo)}</b>${r.sobra>0.01?` · sobram <b>${fmtMoney(r.sobra)}</b>${r.proxima?` (a próxima custaria ${fmtMoney(r.proxima)})`:''}`:''}.`;
+    document.getElementById('empAmortQtd').value = r.qtd;
+  }
+  atualizarAmortizacaoEmp(true);
 }
 function empParcelasAmortizar(emp, qtd){ return empPendentes(emp).slice(-qtd); }
 function empEstimativaAmort(emp, qtd, dataISO){

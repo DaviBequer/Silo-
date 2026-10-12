@@ -106,6 +106,8 @@ function openLouvorForm(){
   window.lvNovoCategoriaSelecionada = 'Louvor';
   window.lvNovoTomOriginal = '';
   window.lvNovoTomModoMenor = false;
+  window.lvNovoConteudo = '';   // preenchido se importar um PDF/foto
+  const st = document.getElementById('lvNovoImportStatus'); if(st){ st.textContent = ''; st.classList.remove('erro'); }
   renderLvNovoCategoriaChips();
   atualizarLvNovoTomBox();
   document.getElementById('pageLouvorForm').classList.add('active');
@@ -140,8 +142,8 @@ function criarLouvor(){
     transpose: 0,
     dataAgendamento: document.getElementById('lvNovoData').value || '',
     status: 'producao',
-    colunas: 2,
-    conteudo: '',
+    colunas: 'auto',
+    conteudo: window.lvNovoConteudo || '',
     criadoEm: Date.now()
   };
   state.louvores.push(novo);
@@ -413,10 +415,11 @@ function lvTomGridEscolher(nota, modoMenor){
    --   (dois traços)       -> linha divisória no PDF
    ---  (três traços)       -> força quebra de coluna no PDF
 ------------------------------------------------------------------------------ */
-const LV_CHORD_SUFFIXES = ['maj7','majsus4','madd9','madd11','msus2','msus4','mdim7','m7b5','m7M','maj9','maj','min','dim7','dim','aug','sus2','sus4','add9','add11','add2',
-  'm7','m9','m6','m11','m13','7M','9M','6','7','9','11','13','m','M'];
+const LV_CHORD_SUFFIXES = ['maj7','majsus4','madd9','madd11','msus2','msus4','mdim7','m7b5','m7M','maj9','maj','min','dim7','dim','aug','sus2','sus4','sus','add9','add11','add2',
+  'm7','m9','m6','m11','m13','m4','7M','9M','2','4','5','6','7','9','11','13','m','M'];
 const LV_CHORD_SUFFIX_RE = LV_CHORD_SUFFIXES.sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
-const LV_CHORD_RE = new RegExp(`^[A-G](#|b)?(${LV_CHORD_SUFFIX_RE})?(\\/[A-G](#|b)?)?$`);
+/* aceita também extensões entre parênteses, ex.: E(9), A7(4) */
+const LV_CHORD_RE = new RegExp(`^[A-G](#|b)?(${LV_CHORD_SUFFIX_RE})?(\\([^)]*\\))?(\\/[A-G](#|b)?)?$`);
 function isChordLine(line){
   const trimmed = line.trim();
   if(!trimmed) return false;
@@ -463,14 +466,14 @@ function lvTransposeChordLine(line, delta){
 function lvParseContent(conteudo){
   const rawLines = (conteudo||'').split('\n');
   const items = [];
-  let pendingChord = null;
+  let pendingChord = null;   // { text, idx } — idx = número da linha no texto (para editar direto na folha)
   let currentLabel = '';
   const slides = [];
   let currentSlideLines = null;
 
   function flushPendingChord(){
     if(pendingChord !== null){
-      items.push({ type:'pair', chordLine: pendingChord, lyricLine: '' });
+      items.push({ type:'pair', chordLine: pendingChord.text, chordIdx: pendingChord.idx, lyricLine: '', lyricIdx: null });
       pendingChord = null;
     }
   }
@@ -479,7 +482,7 @@ function lvParseContent(conteudo){
     slides.push({ label: currentLabel, lines: currentSlideLines });
   }
 
-  rawLines.forEach(raw=>{
+  rawLines.forEach((raw, i)=>{
     const trimmed = raw.trim();
     if(trimmed === '---'){ flushPendingChord(); items.push({type:'colbreak'}); return; }
     if(trimmed === '--'){ flushPendingChord(); items.push({type:'divider'}); return; }
@@ -488,7 +491,7 @@ function lvParseContent(conteudo){
     if(sectionMatch){
       flushPendingChord();
       currentLabel = sectionMatch[1];
-      items.push({ type:'section', label: currentLabel });
+      items.push({ type:'section', label: currentLabel, idx: i });
       startNewSlide();
       return;
     }
@@ -499,24 +502,70 @@ function lvParseContent(conteudo){
     }
     if(isChordLine(trimmed)){
       flushPendingChord();
-      pendingChord = raw;
+      pendingChord = { text: raw, idx: i };
       return;
     }
-    items.push({ type:'pair', chordLine: pendingChord||'', lyricLine: raw });
+    items.push({ type:'pair', chordLine: pendingChord ? pendingChord.text : '', chordIdx: pendingChord ? pendingChord.idx : null, lyricLine: raw, lyricIdx: i });
     pendingChord = null;
     if(currentSlideLines === null) startNewSlide();
     currentSlideLines.push(raw);
   });
   flushPendingChord();
-  return { items, slides: slides.filter(s=>s.lines.length>0) };
+
+  /* "[Repete - Refrão]" sem letra: nos slides, repete a letra do bloco original */
+  const expandidos = [], originais = [];
+  slides.forEach(s=>{
+    const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(s.label||'');
+    if(rep && !s.lines.length){
+      const alvo = rep[1].trim().toLowerCase();
+      expandidos.push(...originais.filter(o=>(o.label||'').trim().toLowerCase()===alvo).map(o=>({ label:o.label, lines:o.lines.slice() })));
+      return;
+    }
+    originais.push(s);
+    expandidos.push(s);
+  });
+  return { items, slides: expandidos.filter(s=>s.lines.length>0) };
 }
 
 /* ---------- PDF ---------- */
 function setLouvorColunas(n){
   const l = getLouvorAtual(); if(!l) return;
-  l.colunas = n;
+  l.colunas = n;   // 1, 2 ou 'auto'
   persist();
   renderLouvorPdfPreview();
+}
+function setLvPdfFonte(v){
+  const l = getLouvorAtual(); if(!l) return;
+  l.pdfFonte = v;   // 'mono' | 'sans'
+  persist();
+  renderLouvorPdfPreview();
+}
+/* colunas que valem de fato (no automático, decide na hora de desenhar a folha) */
+const lvColsAuto = {};
+function lvColunasEfetivas(l){ return l.colunas==='auto' ? (lvColsAuto[l.id] || 2) : (Number(l.colunas)||2); }
+function lvEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+/* linha de acordes (texto) → lista de acordes com a posição (coluna) de cada um */
+function lvAcordesDaLinha(chordLine){
+  const out = [], re = /\S+/g; let m;
+  while((m = re.exec(chordLine||''))) out.push({ name: m[0], idx: m.index });
+  return out;
+}
+/* um par acorde+letra vira trechos: cada acorde fica em cima do pedaço da letra onde ele começa */
+function lvPairHtml(it, delta){
+  const acordes = lvAcordesDaLinha(it.chordLine).map(c=>({ name: lvTransposeChord(c.name, delta), idx: c.idx }));
+  const letra = it.lyricLine || '';
+  const seg = (c, t, pad)=>`<span class="lv-seg"><span class="lv-c">${lvEsc(c)}</span><span class="lv-t${pad?' pad':''}">${lvEsc(t)}</span></span>`;
+  let html = '';
+  if(!letra.trim()){
+    html = acordes.map(c=>seg(c.name, '   ', true)).join('');
+  } else if(!acordes.length){
+    html = seg('', letra);
+  } else {
+    const cs = acordes.map(c=>({ name:c.name, idx: Math.min(c.idx, letra.length) }));
+    if(cs[0].idx > 0) html += seg('', letra.slice(0, cs[0].idx));
+    cs.forEach((c, i)=>{ html += seg(c.name, letra.slice(c.idx, i+1<cs.length ? cs[i+1].idx : letra.length)); });
+  }
+  return `<div class="lv-linha${acordes.length?'':' sem-acorde'}" data-ci="${it.chordIdx??''}" data-li="${it.lyricIdx??''}">${html}</div>`;
 }
 function setLvPdfOrientacao(v){
   const l = getLouvorAtual(); if(!l) return;
@@ -573,40 +622,80 @@ function renderLouvorPdfPreview(){
   document.getElementById('lvPdfEspacamentoLabel').textContent = l.pdfEspacamento.toFixed(1);
   document.getElementById('lvPdfMargemLabel').textContent = l.pdfMargem+'pt';
 
+  ['auto',1,2].forEach(n=>document.getElementById('lvColuna'+(n==='auto'?'Auto':n))?.classList.toggle('active', l.colunas===n));
+  document.getElementById('lvFonteMono')?.classList.toggle('active', (l.pdfFonte||'mono')==='mono');
+  document.getElementById('lvFonteSans')?.classList.toggle('active', l.pdfFonte==='sans');
+
   const delta = l.transpose || 0;
   const { items } = lvParseContent(l.conteudo);
-  const lineStyle = `line-height:${l.pdfAlturaLinha};letter-spacing:${l.pdfEspacamento}px`;
-  let bodyHtml = '';
+  let bodyHtml = '', nSecoes = 0, aberta = false, blocoHtml = '', blocoLinhas = 0;
+  /* cada bloco (pílula + linhas) fica junto e separado do próximo por uma linha fina;
+     bloco muito comprido (ex.: música sem seções) pode quebrar entre colunas */
+  const fecha = ()=>{ if(aberta){ bodyHtml += `<div class="lv-bloco${blocoLinhas>14?' longo':''}">${blocoHtml}</div>`; aberta = false; blocoHtml = ''; blocoLinhas = 0; } };
+  const abre = ()=>{ if(!aberta){ aberta = true; blocoHtml = ''; blocoLinhas = 0; } };
   items.forEach(it=>{
     if(it.type==='section'){
-      bodyHtml += `<div class="lv-sheet-section-wrap"><span class="lv-sheet-section">${it.label}</span></div>`;
+      fecha(); abre(); nSecoes++;
+      const rep = /^repete\b/i.test(it.label);
+      blocoHtml += `<div class="lv-sheet-section-wrap${rep?' rep':''}"><span class="lv-sheet-section" data-si="${it.idx}">${lvEsc(it.label)}</span></div>`;
     }else if(it.type==='divider'){
-      bodyHtml += `<div class="lv-sheet-divider"></div>`;
+      abre(); blocoHtml += `<div class="lv-sheet-divider"></div>`;
     }else if(it.type==='colbreak'){
-      bodyHtml += `<div class="lv-colbreak"></div>`;
+      fecha(); bodyHtml += `<div class="lv-colbreak"></div>`;
     }else if(it.type==='blank'){
-      bodyHtml += `<div class="lv-sheet-blank"></div>`;
+      if(aberta) blocoHtml += `<div class="lv-sheet-blank"></div>`;
     }else if(it.type==='pair'){
-      const chordLine = lvTransposeChordLine(it.chordLine||'', delta);
-      bodyHtml += chordLine.trim() ? `<div class="lv-sheet-chordline" style="font-size:${l.pdfTamanhoTexto}px;${lineStyle}">${chordLine}</div>` : '';
-      bodyHtml += `<div class="lv-sheet-lyricline" style="font-size:${l.pdfTamanhoTexto}px;${lineStyle}">${it.lyricLine || ' '}</div>`;
+      abre(); blocoHtml += lvPairHtml(it, delta); blocoLinhas++;
     }
   });
+  fecha();
   const tomAtual = lvTomAtual(l);
   const previewEl = document.getElementById('lvPdfPreview');
-  previewEl.classList.toggle('paisagem', l.pdfOrientacao==='paisagem');
-  previewEl.style.padding = l.pdfMargem+'px';
+  const paisagem = l.pdfOrientacao==='paisagem';
+  previewEl.style.zoom = 1;   // mede no tamanho real; o zoom de tela é aplicado no fim
+  previewEl.classList.toggle('paisagem', paisagem);
+  previewEl.classList.toggle('sans', l.pdfFonte==='sans');
+  previewEl.classList.toggle('editando', !!window.lvEditandoFolha);
+  previewEl.style.padding = l.pdfMargem+'pt';
+  previewEl.style.setProperty('--lv-fs', l.pdfTamanhoTexto+'pt');
+  previewEl.style.setProperty('--lv-lh', l.pdfAlturaLinha);
+  previewEl.style.setProperty('--lv-ls', l.pdfEspacamento+'px');
   previewEl.innerHTML = `
     <div class="lv-sheet-header">
       <div class="lv-sheet-header-text">
-        <div class="lv-sheet-title" style="font-size:${l.pdfTamanhoTitulo}px">${l.titulo||'Sem título'}</div>
-        <div class="lv-sheet-artist">${l.artista||''}</div>
+        <div class="lv-sheet-title" data-campo="titulo" style="font-size:${l.pdfTamanhoTitulo+8}pt">${lvEsc(l.titulo||'Sem título')}</div>
+        <div class="lv-sheet-artist" data-campo="artista">${lvEsc(l.artista||'')}</div>
       </div>
       ${tomAtual?`<div class="lv-sheet-tom-box"><span>TOM</span><b>${tomAtual}</b></div>`:''}
     </div>
-    <div class="lv-sheet-cols" style="column-count:${l.colunas}">${bodyHtml || '<p class="empty-hint">Sem conteúdo ainda.</p>'}</div>
+    <div class="lv-sheet-cols">${bodyHtml || '<p class="empty-hint">Sem conteúdo ainda.</p>'}</div>
   `;
+  if(typeof lvAplicarEdicaoFolha==='function') lvAplicarEdicaoFolha();
+
+  /* colunas e tamanho: reduz a letra só o necessário para a linha mais larga caber na coluna */
+  const cols = previewEl.querySelector('.lv-sheet-cols');
+  const largura = cols.clientWidth;
+  let maxW = 0;
+  cols.querySelectorAll('.lv-linha').forEach(li=>{ let w = 0; li.childNodes.forEach(c=>{ w += c.getBoundingClientRect().width; }); if(w > maxW) maxW = w; });
+  const gap = 30;
+  const fsPara = n => { const colW = (largura - gap*(n-1))/n; return maxW > colW ? Math.max(6, l.pdfTamanhoTexto * colW / maxW * 0.98) : l.pdfTamanhoTexto; };
+  let n;
+  if(l.colunas==='auto'){ n = (nSecoes >= 3 && fsPara(2) >= l.pdfTamanhoTexto*0.8) ? 2 : 1; lvColsAuto[l.id] = n; }
+  else n = Number(l.colunas)||2;
+  cols.style.columnCount = n;
+  previewEl.style.setProperty('--lv-fs', fsPara(n).toFixed(2)+'pt');
+  lvAjustarZoomFolha();
 }
+/* a folha tem o tamanho real do A4; em tela pequena ela só é mostrada menor (zoom), sem mudar o desenho */
+function lvAjustarZoomFolha(){
+  const el = document.getElementById('lvPdfPreview');
+  if(!el || !el.parentElement) return;
+  el.style.zoom = 1;
+  const disp = el.parentElement.clientWidth;
+  const w = el.offsetWidth;
+  if(w && disp && w > disp) el.style.zoom = (disp / w).toFixed(3);
+}
+window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelPdf')?.classList.contains('active')) lvAjustarZoomFolha(); });
 function exportarLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
@@ -651,7 +740,7 @@ function exportarLouvorPdf(){
   doc.line(marginX, 70, pageW-marginX, 70);
 
   const { items } = lvParseContent(l.conteudo);
-  const cols = l.colunas || 2;
+  const cols = lvColunasEfetivas(l);
   const colWidth = cols===2 ? (pageW - marginX*2 - 20)/2 : (pageW - marginX*2);
   const colX = [marginX, marginX + colWidth + 20];
   const startY = 96;
@@ -769,12 +858,24 @@ function renderLouvorSlidePreview(){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
   renderLouvorSlideConfigPainel();
-  const { slides } = lvParseContent(l.conteudo);
+  const comAcordes = !!l.slidesComAcordes;
+  const chk = document.getElementById('lvSlidesComAcordes'); if(chk) chk.checked = comAcordes;
+  const { slides } = comAcordes ? { slides: lvSlidesComAcordesDados(l) } : lvParseContent(l.conteudo);
   const total = slides.length + 1;
   if(lvSlideIndex >= total) lvSlideIndex = total-1;
   if(lvSlideIndex < 0) lvSlideIndex = 0;
   document.getElementById('lvSlideCounter').textContent = `${lvSlideIndex+1} / ${total}`;
   const el = document.getElementById('lvSlidePreview');
+  el.classList.toggle('com-acordes', comAcordes);
+  if(comAcordes){
+    if(lvSlideIndex === 0){
+      el.innerHTML = `<div class="lv-slide-title">${lvEsc(l.titulo||'Sem título')}</div><div class="lv-slide-artist">${lvEsc([l.artista, lvTomAtual(l)?'Tom: '+lvTomAtual(l):''].filter(Boolean).join('  ·  '))}</div>`;
+    } else {
+      const s = slides[lvSlideIndex-1];
+      el.innerHTML = `${s.label?`<div class="lv-slide-label">${lvEsc(s.label)}</div>`:''}<div class="lv-slide-cifra">${s.pares.map(p=>(p.acordes.trim()?`<div class="c">${lvEsc(p.acordes)}</div>`:'')+(p.letra.trim()?`<div class="t">${lvEsc(p.letra)}</div>`:'')).join('')}</div>`;
+    }
+    return;
+  }
   const espacamentoStyle = `letter-spacing:${l.slideEspacamento}px`;
   if(lvSlideIndex === 0){
     el.style.alignItems = 'center';
@@ -788,7 +889,7 @@ function renderLouvorSlidePreview(){
 }
 function lvSlideNav(delta){
   const l = getLouvorAtual(); if(!l) return;
-  const { slides } = lvParseContent(l.conteudo);
+  const slides = l.slidesComAcordes ? lvSlidesComAcordesDados(l) : lvParseContent(l.conteudo).slides;
   const total = slides.length + 1;
   lvSlideIndex = Math.max(0, Math.min(total-1, lvSlideIndex + delta));
   renderLouvorSlidePreview();
@@ -801,6 +902,7 @@ function exportarLouvorSlides(){
     showToast('Não foi possível carregar o gerador de slides.');
     return;
   }
+  if(l.slidesComAcordes) return lvExportarSlidesComAcordes(l, PptxCtor);
   const pres = new PptxCtor();
   pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
   pres.layout = 'WIDE';
