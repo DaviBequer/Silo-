@@ -1580,3 +1580,29 @@ body.lay-dragging-active{cursor:grabbing}
 .ponto-rodape .fat-btn{padding:6px 12px;font-size:12px;border-radius:9px;white-space:nowrap}
 #aba-ponto .resumo-card .ponto-rodape #pontoFecharBox:not(:empty){margin:0}
 @media(max-width:400px){ .header-hoje .hh-linha2 .hh-curto:not(.hh-falta *){display:none} }
+
+/* ===== ABERTURA: logo entra, "respira" enquanto carrega e sai com zoom revelando o app ===== */
+body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
+.splash{position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .45s ease,visibility 0s linear .45s}
+.splash-logo{width:88px;height:88px;border-radius:22px;object-fit:cover;box-shadow:0 10px 30px rgba(15,23,42,.18);animation:splashEntra .7s cubic-bezier(.2,.8,.2,1) both,splashRespira 1.8s ease-in-out .9s infinite}
+.splash-nome{font-size:18px;font-weight:800;letter-spacing:-.01em;color:var(--text);animation:splashNome .6s cubic-bezier(.2,.8,.2,1) .25s both}
+.splash.saindo{opacity:0;visibility:hidden;pointer-events:none}
+.splash.saindo .splash-logo{animation:splashSai .45s cubic-bezier(.4,0,.2,1) both}
+.splash.saindo .splash-nome{animation:none;opacity:0;transition:opacity .2s}
+.splash.oculta{display:none}
+@keyframes splashEntra{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
+@keyframes splashRespira{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes splashNome{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes splashSai{from{transform:scale(1)}to{transform:scale(1.35)}}
+@media (prefers-reduced-motion:reduce){.splash-logo,.splash-nome,.splash.saindo .splash-logo{animation:none}}
+
+/* ===== LOGIN ===== */
+.login-tela{display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);align-items:center;justify-content:center;padding:16px}
+.login-tela.show{display:flex}
+.login-card{width:100%;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--card-shadow);padding:28px 22px;display:flex;flex-direction:column;gap:10px;text-align:center}
+.login-logo{width:56px;height:56px;border-radius:14px;margin:0 auto 4px;object-fit:cover}
+.login-titulo{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.01em}
+.login-sub{font-size:13px;color:var(--text-dim);margin-bottom:8px}
+.login-input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card-2);font-size:16px;font-family:inherit;color:var(--text);outline:none}
+.login-input:focus{border-color:var(--gold)}
+.login-erro{min-height:16px;font-size:12.5px;color:var(--danger)}

@@ -2,7 +2,7 @@
 /* Falta pagar = gastos do mês do Dashboard que ainda não foram pagos (some quando você paga)
    + a meta de sobra do mês definida em Vendas (o que você quer guardar também "precisa sair" do saldo) */
 function headerFaltaPagar(){
-  if(!state || !state.users || typeof expensesForMonth!=='function') return null;
+  if(!remoteReady || !state || !state.users || typeof computePontoMes!=='function') return null;   // só depois que tudo carregou
   const u = (typeof userDash==='function') ? userDash() : 'davi';
   const m = mesFinanceiroAtual();
   const gastos = expensesForMonth(u, m);
@@ -91,6 +91,14 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.7', itens: [
+    'Abertura com a logo animada enquanto os dados carregam (não mostra mais R$ 0,00)',
+    'Login com e-mail e senha (uma vez por aparelho) para proteger os dados, e "Sair deste aparelho" em Dados do App',
+    'Celular e computador salvando juntos: as alterações dos dois são juntadas em vez de uma apagar a outra',
+    'Voltaram a funcionar o botão voltar do celular, o Enter para ir ao próximo campo e a atualização do "falta pagar"',
+    'A setinha de recolher Moradia, Assinaturas e Fixos voltou a funcionar',
+    'App mais leve: logos e ícones menores, dados antigos sem uso removidos e slides do Louvor baixados só quando usados'
+  ]},
   { versao: 'v3.6', itens: [
     'Ponto PJ: o PDF tem o botão "Copiar para planilha" — copia os horários com tabulação, e colando numa célula cada dia vai para uma linha e cada horário para sua coluna'
   ]},
@@ -457,7 +465,9 @@ function abrirImportExportModal(){
   document.getElementById('modalImportExport').classList.add('active');
   document.body.style.overflow = 'hidden';
   renderChangelog();
-  
+  const btnSair = document.getElementById('btnSairApp');   // só aparece se este aparelho entrou com login
+  if(btnSair && window.SiloSupabase) window.SiloSupabase.temSessao().then(s=>{ btnSair.style.display = s ? '' : 'none'; });
+
   const storage = calcularStorageUsage();
   
   const usedMB = (storage.usado / (1024*1024)).toFixed(2);

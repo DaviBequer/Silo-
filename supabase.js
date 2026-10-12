@@ -2,7 +2,7 @@
   const SUPABASE_URL = window.SUPABASE_URL || window.__SUPABASE_URL__ || '';
   const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY__ || '';
 
-  // ID fixo: todos os aparelhos enxergam os mesmos dados. Não compartilhe este arquivo publicamente.
+  // ID fixo: todos os aparelhos enxergam os mesmos dados. Quem protege os dados é o login + RLS no banco, não este ID.
   const USER_ID = 'siloe_b28aad42c1064df76ef2b8fe4def8dd2';
 
   // Chaves antigas do localStorage: lidas só uma vez, para migrar os dados para o Supabase.
@@ -11,12 +11,15 @@
   function getClient(){
     if (!window.supabase) return null;
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+    // Sessão fica guardada no aparelho: entra uma vez e não pede de novo
     return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'siloe-auth' }
     });
   }
 
   const client = getClient();
+  // ?teste na URL: lê o banco de verdade mas não grava nada (para conferir mudanças na prévia)
+  const MODO_TESTE = /[?&]teste\b/.test(location.search);
   let ultimoUpdatedAt = null;   // updated_at da última leitura/gravação deste aparelho (detecta outro aparelho salvando por cima)
 
   window.SiloSupabase = {
@@ -24,6 +27,26 @@
     userId: USER_ID,
     lastError: '',
     client,
+    /* ===== LOGIN: com a proteção (RLS) ligada no banco, só quem entrou com e-mail e senha lê e grava ===== */
+    async temSessao(){
+      if (!client) return false;
+      try { const { data } = await client.auth.getSession(); return !!(data && data.session); }
+      catch (e) { return false; }
+    },
+    async entrar(email, senha){
+      if (!client) return { ok:false, erro:'Supabase não configurado' };
+      try {
+        const { error } = await client.auth.signInWithPassword({ email, password: senha });
+        if (error) throw error;
+        return { ok:true };
+      } catch (e) {
+        const m = String((e && e.message) || e);
+        return { ok:false, erro: /invalid/i.test(m) ? 'E-mail ou senha incorretos' : m.slice(0,120) };
+      }
+    },
+    async sair(){
+      if (client) { try { await client.auth.signOut(); } catch (e) {} }
+    },
     // Retorna { ok:true, data } (data = null se ainda não existe) ou { ok:false, error }
     async loadState(){
       if (!client) return { ok:false, error:new Error('Supabase não configurado') };
@@ -47,6 +70,7 @@
     async saveState(payload){
       if (!client) { this.lastError = 'Supabase não configurado'; return false; }
       this.conflito = false;
+      if (MODO_TESTE) { console.info('[TESTE] gravação ignorada (?teste na URL)'); return true; }
       try {
         const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
         const agora = new Date().toISOString();

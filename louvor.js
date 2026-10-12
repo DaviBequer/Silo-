@@ -894,9 +894,15 @@ function lvSlideNav(delta){
   lvSlideIndex = Math.max(0, Math.min(total-1, lvSlideIndex + delta));
   renderLouvorSlidePreview();
 }
-function exportarLouvorSlides(){
+/* gerador de slides (~470 KB) só é baixado quando for usado */
+const LV_PPTXGEN = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+async function exportarLouvorSlides(){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
+  if(!(window.pptxgen || window.PptxGenJS)){
+    showToast('Preparando os slides...');
+    try{ await lviCarregarScript(LV_PPTXGEN, ()=>!!(window.pptxgen || window.PptxGenJS)); }catch(e){}
+  }
   const PptxCtor = window.pptxgen || window.PptxGenJS;
   if(typeof PptxCtor === 'undefined'){
     showToast('Não foi possível carregar o gerador de slides.');

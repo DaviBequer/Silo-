@@ -146,28 +146,76 @@ function tempoUltimaEdicaoLocal(){
   try{ const meta = JSON.parse(localStorage.getItem(LOCAL_META_KEY) || 'null'); return (meta && meta.t) || Date.now(); }
   catch(e){ return Date.now(); }
 }
-/* outro aparelho salvou no meio do caminho: vence a edição mais recente, sem perguntar */
+/* ===== MESCLA ENTRE APARELHOS =====
+   baseSincronizada = o último estado que este aparelho sabe que está igual ao banco (JSON).
+   Se outro aparelho salvou no meio do caminho, junta as duas edições campo a campo:
+   o que só um lado mudou fica; se os dois mudaram o mesmo campo, vence a edição daqui (a mais recente).
+   Listas de itens com id (contas, cartões, empréstimos...) são mescladas item a item. */
+let baseSincronizada = null;
+const AUSENTE = undefined;
+function mesmoValor(a, b){ return a === b || JSON.stringify(a) === JSON.stringify(b); }
+function ehObjeto(v){ return v && typeof v === 'object' && !Array.isArray(v); }
+function listaComIds(v){ return Array.isArray(v) && v.length > 0 && v.every(i => ehObjeto(i) && i.id != null); }
+function mesclarValor(base, local, remoto){
+  if(mesmoValor(local, base)) return remoto;
+  if(mesmoValor(remoto, base) || mesmoValor(local, remoto)) return local;
+  if(ehObjeto(local) && ehObjeto(remoto)){
+    const b = ehObjeto(base) ? base : {};
+    const out = {};
+    new Set([...Object.keys(remoto), ...Object.keys(local)]).forEach(k=>{
+      const v = mesclarValor(b[k], local[k], remoto[k]);
+      if(v !== AUSENTE) out[k] = v;
+    });
+    return out;
+  }
+  const vazioOuIds = v => (Array.isArray(v) && v.length === 0) || listaComIds(v);
+  if(vazioOuIds(local) && vazioOuIds(remoto) && (base === AUSENTE || vazioOuIds(base))){
+    const mapa = l => { const m = new Map(); (l||[]).forEach(i => m.set(String(i.id), i)); return m; };
+    const mb = mapa(base), ml = mapa(local), mr = mapa(remoto);
+    const ordem = [...mr.keys(), ...[...ml.keys()].filter(id => !mr.has(id))];
+    const out = [];
+    ordem.forEach(id=>{
+      const v = mesclarValor(mb.get(id), ml.get(id), mr.get(id));
+      if(v !== AUSENTE) out.push(v);
+    });
+    return out;
+  }
+  return local;   // os dois mudaram o mesmo campo: fica a edição deste aparelho
+}
+/* outro aparelho salvou no meio do caminho: busca a versão do banco e mescla com a daqui */
 async function tratarConflitoSalvar(){
   if(tratandoConflito) return false;
   tratandoConflito = true;
   try{
-    const r = await window.SiloSupabase.checarAtualizacao();
-    if(!r.ok) return false;
-    const tBanco = r.updatedAt ? Date.parse(r.updatedAt) : 0;
-    if(tempoUltimaEdicaoLocal() >= tBanco){
-      await window.SiloSupabase.adotarVersaoDoBanco();
-      return true;   // edição daqui é mais nova: tenta salvar de novo por cima
+    if(!baseSincronizada){
+      /* sem base para comparar: vence a edição mais recente (comportamento antigo) */
+      const r = await window.SiloSupabase.checarAtualizacao();
+      if(!r.ok) return false;
+      const tBanco = r.updatedAt ? Date.parse(r.updatedAt) : 0;
+      if(tempoUltimaEdicaoLocal() >= tBanco){ await window.SiloSupabase.adotarVersaoDoBanco(); return true; }
+      marcarLocalSincronizado();
+      location.reload();
+      return false;
     }
-    marcarLocalSincronizado();
-    location.reload();   // banco é mais novo: recarrega com ele
-    return false;
+    const r = await window.SiloSupabase.loadState();   // também passa a usar o updated_at do banco como referência
+    if(!r.ok || !r.data) return false;
+    const base = JSON.parse(baseSincronizada);
+    state = mesclarValor(base, state, r.data);
+    baseSincronizada = JSON.stringify(r.data);
+    espelharLocal();
+    if(typeof renderAll === 'function') renderAll();
+    if(typeof showToast === 'function') showToast('Alterações do outro aparelho foram juntadas');
+    return true;
   } finally { tratandoConflito = false; }
 }
 async function tentarSalvarNoBanco(){
-  let ok = false;
+  let ok = false, mesclas = 0;
   for(let t=0; t<3 && !ok; t++){
-    ok = await window.SiloSupabase.saveState(state);
-    if(!ok && window.SiloSupabase.conflito){
+    const enviado = JSON.stringify(state);
+    ok = await window.SiloSupabase.saveState(enviado);
+    if(ok){ baseSincronizada = enviado; break; }
+    if(window.SiloSupabase.conflito){
+      if(++mesclas > 5) return false;
       const retentar = await tratarConflitoSalvar();
       if(!retentar) return false;
       t--;   // não conta como tentativa
@@ -220,6 +268,9 @@ async function carregar(){
     const r = await window.SiloSupabase.loadState();
     if(!r.ok) throw r.error;
     saved = r.data;
+    baseSincronizada = r.data ? JSON.stringify(r.data) : null;
+    /* banco protegido e este aparelho ainda não entrou: o registro fica invisível. Pede login em vez de começar do zero */
+    if(!saved && !(await window.SiloSupabase.temSessao())){ mostrarLogin(); return; }
     legado = window.SiloSupabase.lerLegado();
 
     /* alterações feitas neste aparelho que não chegaram ao banco (ex.: falha de conexão/gravação) */
@@ -284,6 +335,10 @@ async function carregar(){
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; if(!c.assinaturas) c.assinaturas=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
+      /* restos de recursos que saíram do app (receitas, mercado, estoque...): só ocupavam espaço no banco */
+      ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','configTema','metaPJ'].forEach(k=>{
+        if(k in state){ delete state[k]; precisaSalvar = true; }
+      });
       if(!state.configFonte) state.configFonte = 'system';
       if(!state.layoutPrefs) state.layoutPrefs = {};
       mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso ? 1 : 0;
@@ -338,10 +393,57 @@ async function carregar(){
   aplicarFonteApp();
   if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
   renderAll();
+  fecharSplash();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility('planner');
   await finalizarMigracaoLegado(precisaSalvar, legado);
   compactarImagensDoEstado();
+}
+/* ===== ABERTURA (logo animada) ===== */
+/* fica pelo menos o tempo da animação de entrada, para não "piscar" quando os dados chegam rápido */
+const SPLASH_MINIMO_MS = 1000;
+function fecharSplash(imediato){
+  const el = document.getElementById('splash');
+  const sair = ()=>{
+    document.body.classList.remove('carregando');
+    if(!el) return;
+    el.classList.add('saindo');
+    setTimeout(()=>el.classList.add('oculta'), 500);
+  };
+  const falta = SPLASH_MINIMO_MS - performance.now();
+  if(imediato || falta <= 0) sair(); else setTimeout(sair, falta);
+}
+function mostrarSplash(){
+  document.body.classList.add('carregando');
+  const el = document.getElementById('splash');
+  if(el) el.classList.remove('saindo', 'oculta');
+}
+/* ===== LOGIN (só aparece quando o banco exige) ===== */
+function mostrarLogin(){
+  fecharSplash(true);
+  document.getElementById('loginTela')?.classList.add('show');
+  setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
+}
+async function entrarNoApp(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  const btn = document.getElementById('loginBtn');
+  const erro = document.getElementById('loginErro');
+  if(!email || !senha) return;
+  btn.disabled = true; btn.textContent = 'Entrando…'; erro.textContent = '';
+  const r = await window.SiloSupabase.entrar(email, senha);
+  btn.disabled = false; btn.textContent = 'Entrar';
+  if(!r.ok){ erro.textContent = r.erro; return; }
+  document.getElementById('loginSenha').value = '';
+  document.getElementById('loginTela').classList.remove('show');
+  mostrarSplash();
+  carregarTentativas = 0;
+  carregar();
+}
+async function sairDoApp(){
+  if(salvarPendente || persistTimer){ await persistAgora(); }
+  await window.SiloSupabase.sair();
+  location.reload();
 }
 // Migração única do localStorage -> Supabase (pode ser apagada quando todos os aparelhos já tiverem migrado)
 async function finalizarMigracaoLegado(precisaSalvar, legado){
@@ -417,8 +519,16 @@ function definirMesPonto(valor){
 function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtMoneySigned(v){ return v>=0 ? fmtMoney(v) : '-'+fmtMoney(Math.abs(v)); }
 /* ================= IMAGENS (logos reduzidas antes de ir para a nuvem) ================= */
+/* logos aparecem com no máximo 56px: 112px cobre telas retina. Sem transparência vira JPEG (bem menor que PNG) */
+function imagemTemTransparencia(cv){
+  try{
+    const px = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    for(let i=3; i<px.length; i+=4){ if(px[i] < 250) return true; }
+    return false;
+  }catch(e){ return true; }
+}
 function comprimirImagemDataUrl(dataUrl, lado, qualidade){
-  lado = lado || 160; qualidade = qualidade || 0.85;
+  lado = lado || 112; qualidade = qualidade || 0.85;
   return new Promise(resolve=>{
     try{
       const img = new Image();
@@ -428,8 +538,7 @@ function comprimirImagemDataUrl(dataUrl, lado, qualidade){
           const w = Math.max(1, Math.round(img.width*esc)), h = Math.max(1, Math.round(img.height*esc));
           const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
           cv.getContext('2d').drawImage(img, 0, 0, w, h);
-          const png = /^data:image\/(png|svg|webp|gif)/.test(dataUrl);
-          const out = png ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', qualidade);
+          const out = imagemTemTransparencia(cv) ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', qualidade);
           resolve(out.length < dataUrl.length ? out : dataUrl);
         }catch(e){ resolve(dataUrl); }
       };
@@ -481,31 +590,27 @@ function corDaLogo(url, aoTerminar){
 function estiloFaceCor(cor){
   return cor ? ` style="--face-bg:${cor.fundo};--face-tx:${cor.texto}"` : '';
 }
-// Uma vez só: reduz logos grandes que já estão salvas (fotos de receitas já são comprimidas e ficam como estão)
+// Uma vez só: reduz as logos que já estão salvas para o tamanho em que aparecem na tela
 async function compactarImagensDoEstado(){
-  if(!remoteReady || state.imagensCompactadasV1) return;
+  if(!remoteReady || state.imagensCompactadasV2) return;
   const lista = [];
   const varrer = (o)=>{
     if(!o || typeof o!=='object') return;
     Object.keys(o).forEach(k=>{
       const v = o[k];
-      if(typeof v==='string' && v.startsWith('data:image/') && v.length>40000) lista.push([o,k]);
+      if(typeof v==='string' && v.startsWith('data:image/') && v.length>12000) lista.push([o,k]);
       else if(v && typeof v==='object') varrer(v);
     });
   };
-  Object.keys(state).forEach(k=>{
-    if(k==='receitas') return;
-    const v = state[k];
-    if(typeof v==='string' && v.startsWith('data:image/') && v.length>40000) lista.push([state,k]);
-    else if(v && typeof v==='object') varrer(v);
-  });
+  varrer(state);
   let alteradas = 0;
   for(const [o,k] of lista){
     const antes = o[k];
-    const depois = await comprimirImagemDataUrl(antes, k==='logoApp' ? 256 : 160);
+    const depois = await comprimirImagemDataUrl(antes, k==='logoApp' ? 192 : 112);
     if(depois.length < antes.length){ o[k] = depois; alteradas++; }
   }
-  state.imagensCompactadasV1 = true;
+  delete state.imagensCompactadasV1;
+  state.imagensCompactadasV2 = true;
   await persistAgora();
   if(alteradas>0){
     if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
@@ -826,6 +931,7 @@ function expensesForMonth(user, mKey){
   let total = 0;
   ['moradia','assinatura','fixo'].forEach(cat=>{
     ex[cat].forEach(item=>{
+      if(item.arquivado) return;
       if(item.mesInicio && mKey < item.mesInicio) return; // ainda não começou a contar
       const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
       if(state.paid[paidKey]) return; // já pago neste mês, não conta mais

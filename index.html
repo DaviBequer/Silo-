@@ -12,10 +12,10 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.6">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=3.7">
 </head>
-<body>
+<body class="carregando">
 
 <div class="header">
   <div class="header-brand">
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.6</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.7</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -76,8 +76,8 @@
   <div class="section dg" id="secao-moradia" data-span="6">
     <div class="section-head" onclick="toggleSecaoGasto('moradia')" style="cursor:pointer">
       <div class="section-title">Moradia</div>
-      <button type="button" class="section-toggle" onclick="toggleSecaoGasto('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-      <button class="section-add" onclick="event.stopPropagation();openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <button type="button" class="section-toggle" aria-label="Recolher ou abrir" onclick="event.stopPropagation();toggleSecaoGasto('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="section-add" aria-label="Adicionar conta" onclick="event.stopPropagation();openGastoModal('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-moradia"></div>
     <div id="grid-moradia-arquivados" class="grid-arquivados"></div>
@@ -86,8 +86,8 @@
   <div class="section dg" id="secao-assinatura" data-span="6">
     <div class="section-head" onclick="toggleSecaoGasto('assinatura')" style="cursor:pointer">
       <div class="section-title">Assinaturas</div>
-      <button type="button" class="section-toggle" onclick="toggleSecaoGasto('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-      <button class="section-add" onclick="event.stopPropagation();openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <button type="button" class="section-toggle" aria-label="Recolher ou abrir" onclick="event.stopPropagation();toggleSecaoGasto('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="section-add" aria-label="Adicionar conta" onclick="event.stopPropagation();openGastoModal('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-assinatura"></div>
     <div id="grid-assinatura-arquivados" class="grid-arquivados"></div>
@@ -96,8 +96,8 @@
   <div class="section dg" id="secao-fixo" data-span="6">
     <div class="section-head" onclick="toggleSecaoGasto('fixo')" style="cursor:pointer">
       <div class="section-title">Fixos</div>
-      <button type="button" class="section-toggle" onclick="toggleSecaoGasto('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
-      <button class="section-add" onclick="event.stopPropagation();openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <button type="button" class="section-toggle" aria-label="Recolher ou abrir" onclick="event.stopPropagation();toggleSecaoGasto('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="section-add" aria-label="Adicionar conta" onclick="event.stopPropagation();openGastoModal('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div id="grid-fixo"></div>
     <div id="grid-fixo-arquivados" class="grid-arquivados"></div>
@@ -144,7 +144,7 @@
 
   <!-- CARTÃO: lista primeiro, projeção depois -->
   <div class="card dc" id="secaoCartaoTracker" data-span="12">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><div style="display:flex;align-items:center;gap:8px"><button class="section-add" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div></div>
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><div style="display:flex;align-items:center;gap:8px"><button class="section-add" aria-label="Adicionar conta" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div></div>
     <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
   </div>
 
@@ -263,7 +263,7 @@
           </div>
         </div>
       </div>
-      <button class="modal-close" onclick="closeEditarConta()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeEditarConta()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="modal-destaque">
       <span>Valor da conta</span>
@@ -288,7 +288,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <h3 id="modalGastoTitle">Adicionar Gasto</h3>
-      <button class="modal-close" onclick="closeModal('modalGasto')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalGasto')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div id="gastoLogoPreview"></div>
@@ -392,7 +392,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="modalCartaoCardTitle">Novo Cartão</h3>
-      <button class="modal-close" onclick="closeModal('modalCartaoCard')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCartaoCard')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field-row-desktop">
     <input type="hidden" id="cartaoCardId">
@@ -431,7 +431,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="modalCompraTrackerTitle">Nova Compra</h3>
-      <button class="modal-close" onclick="closeModal('modalCompraTracker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCompraTracker')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <input type="hidden" id="compraTrackerId">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -487,7 +487,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Pagar fatura · <span id="pagarFaturaTitulo"></span></h3>
-      <button class="modal-close" onclick="closeModal('modalPagarFatura')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPagarFatura')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
     <div class="simulador-painel" id="pagarFaturaResumo"></div>
     <div class="field full" id="pagarFaturaCampo">
@@ -507,7 +507,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Ajuste da fatura · <span id="ajusteFaturaTitulo"></span></h3>
-      <button class="modal-close" onclick="closeModal('modalAjusteFatura')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalAjusteFatura')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
     <div class="cp-mes-nav">
       <button type="button" onclick="ajusteFaturaNavMes(-1)" aria-label="Mês anterior">◀</button>
@@ -531,7 +531,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="modalCredoVistaTitle">Crédito à Vista</h3>
-      <button class="modal-close" onclick="closeModal('modalCredoVista')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCredoVista')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <input type="hidden" id="credoVistaCartaoId">
     <input type="hidden" id="credoVistaId">
@@ -573,7 +573,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="modalAssinaturaTitle">Assinatura</h3>
-      <button class="modal-close" onclick="closeModal('modalAssinatura')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalAssinatura')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <input type="hidden" id="assinaturaCartaoId">
     <input type="hidden" id="assinaturaId">
@@ -616,7 +616,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Concluir Mês</h3>
-      <button class="modal-close" onclick="closeModal('modalConcluirMes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalConcluirMes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div id="concluirMesInfo"></div>
     <div id="concluirMesAviso" class="check-item urgent" style="display:none;margin-top:12px"></div>
@@ -632,7 +632,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="vendaFormTitulo">Nova venda</h3>
-      <button class="modal-close" onclick="closeModal('modalVenda')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalVenda')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field full">
       <label>Cliente</label>
@@ -679,7 +679,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Vendas</h3>
-      <button class="modal-close" onclick="closeModal('modalVendasConfig')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalVendasConfig')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="vc-abas">
       <button type="button" class="vc-aba active" data-aba="comissao" onclick="vcTrocarAba('comissao')">Comissões</button>
@@ -742,7 +742,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="vendaMetaTitulo">Meta de sobra</h3>
-      <button class="modal-close" onclick="closeModal('modalVendaMeta')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalVendaMeta')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field full">
       <label>Quanto quer que sobre neste mês</label>
@@ -761,7 +761,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="empFormTitulo">Novo empréstimo</h3>
-      <button class="modal-close" onclick="closeModal('modalEmprestimo')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalEmprestimo')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field full">
       <label>Nome</label>
@@ -823,7 +823,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Pagar parcela</h3>
-      <button class="modal-close" onclick="closeModal('modalEmpPagar')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalEmpPagar')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="caption" id="empPagarInfo" style="margin-bottom:12px"></div>
     <div class="field full">
@@ -845,7 +845,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Amortizar</h3>
-      <button class="modal-close" onclick="closeModal('modalEmpAmortizar')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalEmpAmortizar')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="caption" style="margin-bottom:12px">Antecipa as últimas parcelas. Quanto mais longe o vencimento, maior o desconto.</div>
     <div class="field full">
@@ -888,7 +888,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Reserva</h3>
-      <button class="modal-close" onclick="closeModal('modalReserva')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalReserva')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="caption" style="margin-bottom:12px">Dinheiro que está na conta mas não entra no saldo disponível — só pra controle visual.</div>
     <div class="field full">
@@ -915,7 +915,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Nova Categoria</h3>
-      <button class="modal-close" onclick="closeModal('modalCategoriaExtra')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCategoriaExtra')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <input type="hidden" id="categoriaExtraAlvo">
     <div class="field full">
@@ -932,7 +932,7 @@
 <!-- FULLPAGE: Contas a pagar do mês -->
 <div class="fullpage" id="pageContasPagar">
   <div class="fullpage-header">
-    <button class="header-btn" onclick="fecharContasPagar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-btn" aria-label="Voltar" onclick="fecharContasPagar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fullpage-title cp-titulo-pagina">Contas do mês<small id="contasPagarMesLabel"></small></div>
     <span style="width:36px;flex-shrink:0"></span>
   </div>
@@ -943,7 +943,7 @@
 <!-- FULLPAGE: Detalhe do Louvor (Edição / PDF / Slides) -->
 <div class="fullpage" id="pageComando">
   <div class="fullpage-header">
-    <button class="header-btn" onclick="fecharComando()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-btn" aria-label="Voltar" onclick="fecharComando()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fullpage-title">Comando</div>
     <div style="width:28px"></div>
   </div>
@@ -952,9 +952,9 @@
 
 <div class="fullpage" id="pageLouvorDetalhe">
   <div class="fullpage-header">
-    <button class="header-btn" onclick="closeLouvorDetalhe()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-btn" aria-label="Voltar" onclick="closeLouvorDetalhe()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fullpage-title" id="louvorDetalheHeaderTitle"></div>
-    <button class="header-btn" onclick="excluirLouvorAtual()" style="color:var(--danger);border-color:var(--danger-tint)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+    <button class="header-btn" aria-label="Excluir" onclick="excluirLouvorAtual()" style="color:var(--danger);border-color:var(--danger-tint)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
   </div>
   <div class="lv-subtabs">
     <button class="lv-subtab active" data-tab="edicao" onclick="switchLouvorSubtab('edicao')">Edição</button>
@@ -1132,7 +1132,7 @@
 <!-- FULLPAGE: Novo Louvor (formulário rápido) -->
 <div class="fullpage" id="pageLouvorForm">
   <div class="fullpage-header">
-    <button class="header-btn" onclick="closeLouvorForm()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="header-btn" aria-label="Voltar" onclick="closeLouvorForm()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fullpage-title">Novo Louvor</div>
     <span style="width:32px;flex-shrink:0"></span>
   </div>
@@ -1174,7 +1174,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Escolher Tom</h3>
-      <button class="modal-close" onclick="closeModal('modalLvTom')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalLvTom')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="lv-hint">Um toque = tom maior. Toque duas vezes seguidas na mesma nota = relativo menor.</div>
     <div class="lv-tom-grid" id="lvTomGrid"></div>
@@ -1186,7 +1186,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Atualizações</h3>
-      <button class="modal-close" onclick="closeModal('modalAtualizacoes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalAtualizacoes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div style="font-size:13px;color:var(--text-faint);margin-bottom:var(--s3)">v2.3</div>
     <div style="display:flex;flex-direction:column;gap:var(--s2);margin-bottom:var(--s3);max-height:300px;overflow-y:auto">
@@ -1219,7 +1219,7 @@
   <div class="modal" style="max-height:85vh;display:flex;flex-direction:column">
     <div class="modal-header">
       <h3>Buscar</h3>
-      <button class="modal-close" onclick="closeModal('modalBuscaGlobal')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalBuscaGlobal')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="receitas-search" style="margin-bottom:var(--s3)">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -1234,7 +1234,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Dados do App</h3>
-      <button class="modal-close" onclick="closeModal('modalImportExport')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalImportExport')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div style="margin-bottom:var(--s4)">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;font-weight:600">O que mudou</div>
@@ -1267,6 +1267,7 @@
       <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
     </div>
     <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="compartilharBackupApp()">Enviar backup (Drive, WhatsApp...)</button>
+    <button class="btn btn-outline btn-block" id="btnSairApp" style="margin-top:8px;display:none;color:var(--danger)" onclick="sairDoApp()">Sair deste aparelho</button>
     <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
   </div>
 </div>
@@ -1275,7 +1276,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="numeroSimplesTitulo">Valor</h3>
-      <button class="modal-close" onclick="cancelarNumeroModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="cancelarNumeroModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field full">
       <label id="numeroSimplesDica">Número</label>
@@ -1303,7 +1304,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="detalheAcumuladoTitulo">Detalhamento</h3>
-      <button class="modal-close" onclick="closeModal('modalDetalheAcumulado')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalDetalheAcumulado')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div id="detalheAcumuladoConteudo"></div>
   </div>
@@ -1313,7 +1314,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="detalheCategoriaTitulo">Categoria</h3>
-      <button class="modal-close" onclick="closeModal('modalDetalheCategoria')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalDetalheCategoria')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div id="detalheCategoriaConteudo"></div>
   </div>
@@ -1323,7 +1324,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Renda Extra — <span id="rendaExtraModalUsuario"></span></h3>
-      <button class="modal-close" onclick="closeRendaExtraModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeRendaExtraModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div id="rendaExtraLista" style="margin-bottom:var(--s4)"></div>
     <div class="card" style="margin:0">
@@ -1385,7 +1386,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Gerar Orçamento</h3>
-      <button class="modal-close" onclick="closeSimulador()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeSimulador()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
 
     <div class="simulador-painel">
@@ -1459,7 +1460,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="pontoPendentesTitulo">Dias sem trancar</h3>
-      <button class="modal-close" onclick="closeModal('modalPontoPendentes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPontoPendentes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
     <div class="sf-nota" style="margin-bottom:10px">Tranque cada dia para poder fechar o mês. Quando acabarem os pendentes, o fechamento continua sozinho.</div>
     <div id="pontoPendentesLista"></div>
@@ -1471,7 +1472,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Configurações do Ponto</h3>
-      <button class="modal-close" onclick="closeModal('modalPontoConfig')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPontoConfig')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field full">
       <label>Nome (aparece no PDF exportado)</label>
@@ -1489,7 +1490,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Exportar Ponto PJ</h3>
-      <button class="modal-close" onclick="closeModal('modalPontoExport')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPontoExport')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field full">
       <label>Período</label>
@@ -1515,26 +1516,44 @@
   </div>
 </div>
 
+<!-- ABERTURA: logo animada enquanto os dados chegam (evita mostrar R$ 0,00) -->
+<div class="splash" id="splash" aria-label="Carregando">
+  <img src="icon-192.png" alt="" class="splash-logo">
+  <div class="splash-nome">Siloé</div>
+</div>
+
+<!-- LOGIN: aparece só quando o banco exige login e este aparelho ainda não entrou -->
+<div class="login-tela" id="loginTela">
+  <form class="login-card" onsubmit="event.preventDefault();entrarNoApp()">
+    <img src="icon-192.png" alt="" class="login-logo">
+    <div class="login-titulo">Siloé</div>
+    <div class="login-sub">Entre uma vez neste aparelho</div>
+    <input type="email" id="loginEmail" class="login-input" placeholder="E-mail" autocomplete="username" required>
+    <input type="password" id="loginSenha" class="login-input" placeholder="Senha" autocomplete="current-password" required>
+    <div class="login-erro" id="loginErro"></div>
+    <button type="submit" class="btn btn-block" id="loginBtn">Entrar</button>
+  </form>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3"></script>
 <script>
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=3.6"></script>
-<script src="core.js?v=3.6"></script>
-<script src="comando.js?v=3.6"></script>
-<script src="layout.js?v=3.6"></script>
-<script src="app.js?v=3.6"></script>
-<script src="panorama.js?v=3.6"></script>
-<script src="planner.js?v=3.6"></script>
-<script src="ponto.js?v=3.6"></script>
-<script src="louvor.js?v=3.6"></script>
-<script src="louvor-extra.js?v=3.6"></script>
-<script src="emprestimo.js?v=3.6"></script>
-<script src="vendas.js?v=3.6"></script>
+<script src="supabase.js?v=3.7"></script>
+<script src="core.js?v=3.7"></script>
+<script src="comando.js?v=3.7"></script>
+<script src="layout.js?v=3.7"></script>
+<script src="app.js?v=3.7"></script>
+<script src="panorama.js?v=3.7"></script>
+<script src="planner.js?v=3.7"></script>
+<script src="ponto.js?v=3.7"></script>
+<script src="louvor.js?v=3.7"></script>
+<script src="louvor-extra.js?v=3.7"></script>
+<script src="emprestimo.js?v=3.7"></script>
+<script src="vendas.js?v=3.7"></script>
 <script>carregar();</script>
 </body>
 </html>
