@@ -426,11 +426,24 @@ function openPontoExportModal(){
 }
 function selecionarPontoExportTipo(val){
   pontoExportTipo = val;
-  document.querySelectorAll('#pontoExportTipoChips .dif-chip').forEach(el=>{
+  document.querySelectorAll('#pontoExportTipoChips button').forEach(el=>{
     el.classList.toggle('active', el.dataset.val===val);
   });
   document.getElementById('pontoExportSemanaField').style.display = val==='semana' ? 'block' : 'none';
   document.getElementById('pontoExportDiasField').style.display = val==='personalizado' ? 'block' : 'none';
+  renderPontoExportResumo();
+}
+/* resumo do que vai no PDF: quantos dias e o total de horas */
+function renderPontoExportResumo(){
+  const el = document.getElementById('pontoExportResumo'); if(!el) return;
+  const mKey = pontoMonthKeyAtual();
+  const dias = pontoExportDias();
+  const min = dias.reduce((s,dia)=>s + dayTotalMinutes(getDia(mKey, dia)), 0);
+  const btn = document.querySelector('#modalPontoExport .modal-actions .btn:not(.btn-outline)');
+  if(btn) btn.disabled = !dias.length;
+  el.innerHTML = dias.length
+    ? `<span>${dias.length} dia${dias.length>1?'s':''} no PDF</span><b>${minToHoursLabel(min)}</b>`
+    : `<span>${pontoExportTipo==='personalizado' ? 'Escolha os dias' : 'Nenhum dia trabalhado nesse período'}</span>`;
 }
 /* Personalizado: só aparecem os dias já trancados (cadeado) */
 function pontoDiasTrancados(mKey){
@@ -442,12 +455,15 @@ function renderPontoExportDiasChips(){
   const mKey = pontoMonthKeyAtual();
   const dias = pontoDiasTrancados(mKey);
   const el = document.getElementById('pontoExportDiasChips');
-  if(!dias.length){ el.innerHTML = '<div class="caption">Nenhum dia trancado neste mês ainda.</div>'; return; }
+  const todos = document.getElementById('pontoExportDiasTodos');
+  if(!dias.length){ el.innerHTML = '<div class="pe-vazio">Nenhum dia trancado neste mês ainda.</div>'; todos.style.display = 'none'; renderPontoExportResumo(); return; }
+  todos.style.display = '';
   el.innerHTML = dias.map(dia=>{
     const dt = keyToDate(mKey); dt.setDate(dia);
-    return `<button type="button" class="dif-chip ponto-dia-chip${pontoExportDiasSel.has(dia)?' active':''}" onclick="togglePontoExportDia(${dia})">${String(dia).padStart(2,'0')}<small>${DIA_SEMANA[dt.getDay()]}</small></button>`;
+    return `<button type="button" class="pe-chip${pontoExportDiasSel.has(dia)?' active':''}" onclick="togglePontoExportDia(${dia})">${String(dia).padStart(2,'0')}<small>${DIA_SEMANA[dt.getDay()]}</small></button>`;
   }).join('');
-  document.getElementById('pontoExportDiasTodos').textContent = pontoExportDiasSel.size===dias.length ? 'Limpar seleção' : 'Selecionar todos';
+  todos.textContent = pontoExportDiasSel.size===dias.length ? 'Limpar' : 'Selecionar todos';
+  renderPontoExportResumo();
 }
 function togglePontoExportDia(dia){
   if(pontoExportDiasSel.has(dia)) pontoExportDiasSel.delete(dia); else pontoExportDiasSel.add(dia);
@@ -501,22 +517,17 @@ function renderPontoExportSemanaChips(){
   const semanas = pontoSemanasDoMes(mKey);
   const el = document.getElementById('pontoExportSemanaChips');
   el.innerHTML = semanas.map((s,i)=>
-    `<button type="button" class="dif-chip${i===0?' active':''}" onclick="selecionarPontoExportSemana(${i})">${String(s.inicio).padStart(2,'0')}–${String(s.fim).padStart(2,'0')}</button>`
+    `<button type="button" class="pe-chip${i===0?' active':''}" onclick="selecionarPontoExportSemana(${i})">${String(s.inicio).padStart(2,'0')}–${String(s.fim).padStart(2,'0')}<small>Semana ${i+1}</small></button>`
   ).join('');
 }
 function selecionarPontoExportSemana(idx){
   pontoExportSemanaIdx = idx;
-  document.querySelectorAll('#pontoExportSemanaChips .dif-chip').forEach((el,i)=>{
+  document.querySelectorAll('#pontoExportSemanaChips .pe-chip').forEach((el,i)=>{
     el.classList.toggle('active', i===idx);
   });
+  renderPontoExportResumo();
 }
 
-/* link do botão do PDF: página copiar.html do app publicado com os horários no "#" (não vão a servidor nenhum) */
-const PONTO_URL_COPIAR = 'https://davibequer.github.io/Silo-/copiar.html';
-function pontoLinkCopiar(linhas, periodo){
-  const dados = linhas.map(r=>r.join(',')).join(';');   // 07:03,12:00,13:01,17:00;07:03,...
-  return PONTO_URL_COPIAR + '#h=' + encodeURIComponent(dados) + '&p=' + encodeURIComponent(periodo||'');
-}
 function gerarPdfPonto(){
   if(typeof window.jspdf === 'undefined'){
     showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
@@ -528,19 +539,20 @@ function gerarPdfPonto(){
   let periodoLabel = monthLabelLong(mKey);
   if(pontoExportTipo === 'semana' && dias.length){
     periodoLabel = `${monthLabelLong(mKey)} · dias ${String(dias[0]).padStart(2,'0')} a ${String(dias[dias.length-1]).padStart(2,'0')}`;
-  } else if(pontoExportTipo === 'personalizado'){
-    periodoLabel = `${monthLabelLong(mKey)} · ${dias.length} dia${dias.length>1?'s':''} selecionado${dias.length>1?'s':''}`;
-  }
+  }   /* "Escolher dias": só o mês; a quantidade de dias aparece embaixo do total */
 
   /* só horários e horas trabalhadas — nenhum valor em dinheiro */
   let totalMin = 0;
-  const linhas = dias.map(dia=>{
+  const infoDias = [];   // para desenhar o dia (negrito) + dia da semana (cinza) e separar as semanas
+  const linhas = dias.map((dia,i)=>{
     const d = getDia(mKey, dia);
     const dateObj = keyToDate(mKey); dateObj.setDate(dia);
     const min = dayTotalMinutes(d);
     totalMin += min;
+    const novaSemana = i > 0 && (dateObj.getDay() < infoDias[i-1].dow || dia - dias[i-1] > 6);
+    infoDias.push({ data:`${String(dia).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}`, semana:DIA_SEMANA[dateObj.getDay()], dow:dateObj.getDay(), novaSemana });
     return [
-      `${String(dia).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}  ${DIA_SEMANA[dateObj.getDay()]}`,
+      '',
       d.entrada || '—', d.almocoSaida || '—', d.almocoVolta || '—', d.saida || '—',
       minToHoursLabel(min)
     ];
@@ -554,66 +566,92 @@ function gerarPdfPonto(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4' });
   const nome = state.ponto.nomeUsuario || '';
-  const pageW = 595;
-  const marginX = 48;
-  const tinta = [17,24,39], suave = [107,114,128], linha = [229,231,235];
+  const pageW = 595, pageH = 842;
+  const marginX = 48, direita = pageW - marginX;
+  const tinta = [17,24,39], suave = [107,114,128], claro = [156,163,175], linha = [229,231,235], linhaSemana = [203,208,216], azul = [37,99,235];
+  const espaco = n=>{ if(doc.setCharSpace) doc.setCharSpace(n); };
+  const nDias = linhas.length;
 
-  /* ---- Cabeçalho minimalista: texto e uma linha fina ---- */
-  doc.setTextColor(...suave);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(9);
-  doc.text('REGISTRO DE PONTO', marginX, 56);
-  doc.setTextColor(...tinta);
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(18);
-  doc.text(nome || 'Registro de ponto', marginX, 78);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
-  doc.setTextColor(...suave);
-  doc.text(periodoLabel, marginX, 96);
-  doc.setDrawColor(...linha);
-  doc.setLineWidth(0.8);
-  doc.line(marginX, 112, pageW-marginX, 112);
+  /* ---- Cabeçalho: nome e período à esquerda, total de horas em destaque à direita ---- */
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...azul); espaco(1.2);
+  doc.text('REGISTRO DE PONTO', marginX, 58);
+  doc.setTextColor(...claro);
+  /* alinhado à direita "na mão": com espaço entre letras o align:'right' passa da margem */
+  const rotTotal = 'TOTAL DE HORAS';
+  doc.text(rotTotal, direita - doc.getTextWidth(rotTotal) - 1.2*(rotTotal.length-1), 58);
+  espaco(0);
+  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(...tinta);
+  doc.text(nome || 'Registro de ponto', marginX, 84, { maxWidth: pageW - marginX*2 - 150 });
+  doc.setFontSize(24);
+  doc.text(minToHoursLabel(totalMin), direita, 85, { align:'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(...suave);
+  doc.text(periodoLabel, marginX, 103);
+  doc.text(`${nDias} dia${nDias>1?'s':''} trabalhado${nDias>1?'s':''}`, direita, 103, { align:'right' });
+  doc.setDrawColor(...linha); doc.setLineWidth(0.8);
+  doc.line(marginX, 122, direita, 122);
 
   /* ---- Planilha ---- */
   doc.autoTable({
-    startY: 128,
-    head: [['Dia','Entrada','Almoço','Volta','Saída','Horas']],
+    startY: 142,
+    head: [['DIA','ENTRADA','ALMOÇO','VOLTA','SAÍDA','HORAS']],
     body: linhas,
     foot: [['Total','','','','', minToHoursLabel(totalMin)]],
     theme: 'plain',
-    headStyles: { textColor:suave, fontStyle:'normal', fontSize:8.5, halign:'center', cellPadding:{top:4,bottom:8,left:6,right:6} },
-    bodyStyles: { fontSize:10, textColor:tinta, halign:'center', cellPadding:{top:7,bottom:7,left:6,right:6} },
-    footStyles: { fontSize:10, textColor:tinta, fontStyle:'bold', halign:'center', cellPadding:{top:10,bottom:6,left:6,right:6} },
-    columnStyles: { 0:{ halign:'left' }, 5:{ fontStyle:'bold' } },
-    margin: { left:marginX, right:marginX },
-    didDrawCell: (data)=>{
-      if(data.section==='body' || (data.section==='head')){
-        doc.setDrawColor(...linha); doc.setLineWidth(0.5);
-        doc.line(data.cell.x, data.cell.y+data.cell.height, data.cell.x+data.cell.width, data.cell.y+data.cell.height);
-      }
+    headStyles: { textColor:claro, fontStyle:'bold', fontSize:7.5, halign:'center', cellPadding:{top:2,bottom:9,left:6,right:6} },
+    bodyStyles: { fontSize:10, textColor:tinta, halign:'center', cellPadding:{top:8,bottom:8,left:6,right:6} },
+    footStyles: { fontSize:11, textColor:tinta, fontStyle:'bold', halign:'center', cellPadding:{top:12,bottom:6,left:6,right:6} },
+    columnStyles: { 0:{ halign:'left', cellWidth:92 }, 5:{ fontStyle:'bold', halign:'right' } },
+    margin: { left:marginX, right:marginX, bottom:64 },
+    didParseCell: (data)=>{
+      const col = data.column.index;
+      if(col===0 && data.section!=='body') data.cell.styles.halign = 'left';
+      if(col===5) data.cell.styles.halign = 'right';
+      if(data.section==='body' && data.cell.raw==='—') data.cell.styles.textColor = claro;
     },
-    didParseCell: (data)=>{ if(data.section==='head' && data.column.index===0) data.cell.styles.halign='left'; if(data.section==='foot' && data.column.index===0) data.cell.styles.halign='left'; }
+    willDrawCell: (data)=>{ espaco(data.section==='head' ? 0.8 : 0); },
+    didDrawCell: (data)=>{
+      const c = data.cell, base = c.y + c.height;
+      if(data.section==='head'){
+        doc.setDrawColor(...tinta); doc.setLineWidth(0.9);
+        doc.line(c.x, base, c.x + c.width, base);
+      }
+      if(data.section==='body'){
+        /* dia em negrito + dia da semana em cinza, na mesma linha */
+        if(data.column.index===0){
+          const info = infoDias[data.row.index];
+          const y = c.y + c.height/2 + 3.5;
+          doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...tinta);
+          doc.text(info.data, c.x + 6, y);
+          const w = doc.getTextWidth(info.data);
+          doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...claro);
+          doc.text(info.semana, c.x + 6 + w + 7, y);
+        }
+        /* linha fina entre os dias; um pouco mais forte entre uma semana e outra */
+        const prox = infoDias[data.row.index + 1];
+        const fimSemana = prox && prox.novaSemana;
+        doc.setDrawColor(...(fimSemana ? linhaSemana : linha)); doc.setLineWidth(fimSemana ? 0.8 : 0.5);
+        doc.line(c.x, base, c.x + c.width, base);
+      }
+      if(data.section==='foot' && data.column.index===0){
+        doc.setDrawColor(...tinta); doc.setLineWidth(0.9);
+        doc.line(marginX, c.y, direita, c.y);
+      }
+    }
   });
+  espaco(0);
 
-  /* ---- Botão "Copiar para planilha" ----
-     Um PDF não consegue copiar nada sozinho (os leitores bloqueiam), então o botão abre a página
-     copiar.html, que copia os horários com TAB entre as colunas: colando numa célula, cada dia
-     cai numa linha e cada horário na sua coluna. Os horários vão no próprio link, depois do "#". */
-  const urlCopiar = pontoLinkCopiar(dias.map(dia=>{
-    const d = getDia(mKey, dia);
-    return [d.entrada||'', d.almocoSaida||'', d.almocoVolta||'', d.saida||''];
-  }), periodoLabel);
-  let y = doc.lastAutoTable.finalY + 30;
-  if(y + 40 > 800){ doc.addPage(); y = 56; }
-  const bw = 210, bh = 34, bx = marginX;
-  doc.setFillColor(...tinta);
-  doc.roundedRect(bx, y, bw, bh, 9, 9, 'F');
-  doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(255,255,255);
-  doc.text('Copiar para planilha', bx + bw/2, y + 21.5, { align:'center' });
-  doc.link(bx, y, bw, bh, { url: urlCopiar });
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...suave);
-  doc.text('Copia os horários (Entrada, Almoço, Volta, Saída). Na planilha, clique uma vez na célula e cole (Ctrl+V).', bx + bw + 14, y + 20, { maxWidth: pageW - marginX - (bx + bw + 14) });
+  /* ---- Rodapé: quando foi gerado e página ---- */
+  const agora = new Date();
+  const geradoEm = `Gerado em ${String(agora.getDate()).padStart(2,'0')}/${String(agora.getMonth()+1).padStart(2,'0')}/${agora.getFullYear()}`;
+  const nPaginas = doc.getNumberOfPages();
+  for(let p=1; p<=nPaginas; p++){
+    doc.setPage(p);
+    doc.setDrawColor(...linha); doc.setLineWidth(0.5);
+    doc.line(marginX, pageH-46, direita, pageH-46);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...claro);
+    doc.text(geradoEm, marginX, pageH-32);
+    doc.text(`Página ${p} de ${nPaginas}`, direita, pageH-32, { align:'right' });
+  }
 
   const dataExporto = monthLabel(mKey);
   const fileName = `Ponto PJ - ${nome || 'Davi Bequer'} - ${dataExporto}.pdf`;

@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.7">
+<link rel="stylesheet" href="style.css?v=3.8">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.7</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.8</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1169,14 +1169,14 @@
   </div>
 </div>
 
-<!-- MODAL: Seletor de Tom (cromático + relativo menor no duplo toque) -->
+<!-- MODAL: Seletor de Tom (cromático + relativo menor ao tocar e segurar) -->
 <div class="modal-overlay" id="modalLvTom">
   <div class="modal">
     <div class="modal-header">
       <h3>Escolher Tom</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalLvTom')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
-    <div class="lv-hint">Um toque = tom maior. Toque duas vezes seguidas na mesma nota = relativo menor.</div>
+    <div class="lv-hint">Toque = tom maior. Toque e segure = relativo menor (segurar D escolhe Bm). F# e Gb são tons diferentes: cada um usa os próprios nomes.</div>
     <div class="lv-tom-grid" id="lvTomGrid"></div>
   </div>
 </div>
@@ -1492,23 +1492,23 @@
       <h3>Exportar Ponto PJ</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPontoExport')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button>
     </div>
-    <div class="field full">
-      <label>Período</label>
-      <div class="dificuldade-chips" id="pontoExportTipoChips">
-        <button type="button" class="dif-chip active" data-val="mes" onclick="selecionarPontoExportTipo('mes')">Mês inteiro</button>
-        <button type="button" class="dif-chip" data-val="semana" onclick="selecionarPontoExportTipo('semana')">Por semana</button>
-        <button type="button" class="dif-chip" data-val="personalizado" onclick="selecionarPontoExportTipo('personalizado')">Personalizado</button>
+    <div class="pe-bloco">
+      <div class="pe-rotulo">Período</div>
+      <div class="dash-tabs pe-tabs" id="pontoExportTipoChips">
+        <button type="button" class="dash-tab active" data-val="mes" onclick="selecionarPontoExportTipo('mes')">Mês</button>
+        <button type="button" class="dash-tab" data-val="semana" onclick="selecionarPontoExportTipo('semana')">Semana</button>
+        <button type="button" class="dash-tab" data-val="personalizado" onclick="selecionarPontoExportTipo('personalizado')">Escolher dias</button>
       </div>
     </div>
-    <div class="field full" id="pontoExportSemanaField" style="display:none">
-      <label>Qual semana</label>
-      <div class="dificuldade-chips" id="pontoExportSemanaChips"></div>
+    <div class="pe-bloco" id="pontoExportSemanaField" style="display:none">
+      <div class="pe-rotulo">Semana</div>
+      <div class="pe-grade pe-semanas" id="pontoExportSemanaChips"></div>
     </div>
-    <div class="field full" id="pontoExportDiasField" style="display:none">
-      <label style="display:flex;justify-content:space-between;align-items:center">Dias trancados <button type="button" class="link-btn-sm" id="pontoExportDiasTodos" onclick="togglePontoExportTodosDias()">Selecionar todos</button></label>
-      <div class="dificuldade-chips ponto-dias-chips" id="pontoExportDiasChips"></div>
+    <div class="pe-bloco" id="pontoExportDiasField" style="display:none">
+      <div class="pe-rotulo">Dias trancados <button type="button" class="link-btn-sm" id="pontoExportDiasTodos" onclick="togglePontoExportTodosDias()">Selecionar todos</button></div>
+      <div class="pe-grade pe-dias" id="pontoExportDiasChips"></div>
     </div>
-    <div class="caption" style="margin-bottom:12px">O PDF leva só os horários e as horas — nenhum valor em dinheiro — e o botão “Copiar para planilha”, que copia os horários prontos para colar.</div>
+    <div class="pe-resumo" id="pontoExportResumo"></div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalPontoExport')">Cancelar</button>
       <button class="btn btn-block" onclick="gerarPdfPonto()">Gerar PDF</button>
@@ -1518,8 +1518,10 @@
 
 <!-- ABERTURA: logo animada enquanto os dados chegam (evita mostrar R$ 0,00) -->
 <div class="splash" id="splash" aria-label="Carregando">
-  <img src="icon-192.png" alt="" class="splash-logo">
-  <div class="splash-nome">Siloé</div>
+  <div class="splash-conteudo">
+    <img src="icon-192.png" alt="" class="splash-logo">
+    <div class="splash-nome">Siloé</div>
+  </div>
 </div>
 
 <!-- LOGIN: aparece só quando o banco exige login e este aparelho ainda não entrou -->
@@ -1542,18 +1544,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=3.7"></script>
-<script src="core.js?v=3.7"></script>
-<script src="comando.js?v=3.7"></script>
-<script src="layout.js?v=3.7"></script>
-<script src="app.js?v=3.7"></script>
-<script src="panorama.js?v=3.7"></script>
-<script src="planner.js?v=3.7"></script>
-<script src="ponto.js?v=3.7"></script>
-<script src="louvor.js?v=3.7"></script>
-<script src="louvor-extra.js?v=3.7"></script>
-<script src="emprestimo.js?v=3.7"></script>
-<script src="vendas.js?v=3.7"></script>
+<script src="supabase.js?v=3.8"></script>
+<script src="core.js?v=3.8"></script>
+<script src="comando.js?v=3.8"></script>
+<script src="layout.js?v=3.8"></script>
+<script src="app.js?v=3.8"></script>
+<script src="panorama.js?v=3.8"></script>
+<script src="planner.js?v=3.8"></script>
+<script src="ponto.js?v=3.8"></script>
+<script src="louvor.js?v=3.8"></script>
+<script src="louvor-extra.js?v=3.8"></script>
+<script src="emprestimo.js?v=3.8"></script>
+<script src="vendas.js?v=3.8"></script>
 <script>carregar();</script>
 </body>
 </html>

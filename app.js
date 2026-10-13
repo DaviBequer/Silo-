@@ -91,6 +91,15 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.8', itens: [
+    'Abertura com a logo mais longa e bem mais suave',
+    'Louvor: cada tom com seus próprios nomes (F# e Gb são diferentes), na cifra e no campo harmônico',
+    'Louvor: tocar e segurar uma nota escolhe o relativo menor (segurar D escolhe Bm)',
+    'Louvor: Organizar coloca a linha divisória (--) entre os blocos e mantém os "-" (próximo slide) e "---" (próxima coluna)',
+    'Louvor: importa PDF do Cifra Club em duas colunas, com título, artista e tom do cabeçalho e versos inteiros',
+    'Ponto PJ: PDF com novo layout (total de horas no topo, semanas separadas, rodapé) e sem o botão de copiar',
+    'Ponto PJ: janela de Exportar redesenhada, com resumo de dias e horas'
+  ]},
   { versao: 'v3.7', itens: [
     'Abertura com a logo animada enquanto os dados carregam (não mostra mais R$ 0,00)',
     'Login com e-mail e senha (uma vez por aparelho) para proteger os dados, e "Sair deste aparelho" em Dados do App',

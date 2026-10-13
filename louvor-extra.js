@@ -7,7 +7,7 @@ const LVI_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.mi
 const LVI_PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const LVI_TESSERACT = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';
 /* acorde no texto importado (aceita sus/add/maj, números e extensões entre parênteses) */
-const LVI_CHORD_RE = /^([A-G][#b]?)((?:maj|min|dim|aug|sus|add|m|M)?\d*(?:\([^)]*\))?)(?:\/([A-G][#b]?))?$/;
+const LVI_CHORD_RE = /^([A-G](?:##|bb|#|b)?)((?:maj|min|dim|aug|sus|add|m|M)?\d*(?:\([^)]*\))?)(?:\/([A-G](?:##|bb|#|b)?))?$/;
 
 function lviCarregarScript(url, pronto){
   if(pronto()) return Promise.resolve();
@@ -31,22 +31,52 @@ function lviPdfPronto(){
   });
 }
 
+/* ---------- página em duas colunas (ex.: PDF do Cifra Club) ----------
+   Procura um "corredor" vertical vazio no meio da página. Achando, devolve [cabeçalho, coluna esquerda, coluna direita]
+   para ler a esquerda inteira antes da direita. O cabeçalho (acima de onde a coluna da direita começa) pode ocupar a largura toda.
+   y maior = mais para cima (vale para o PDF e para o OCR). */
+function lviSepararColunas(items){
+  if(items.length < 12) return [items];
+  const xMin = Math.min(...items.map(i=>i.x)), xMax = Math.max(...items.map(i=>i.x+i.w)), W = xMax - xMin;
+  let melhor = null;
+  for(let f=0.3; f<=0.7; f+=0.01){
+    const T = xMin + W*f;
+    const dir = items.filter(i=>i.x >= T);
+    if(dir.length < items.length*0.15) continue;
+    const topoDir = Math.max(...dir.map(i=>i.y));
+    const corpo = items.filter(i=>i.y <= topoDir + 2);
+    if(corpo.some(i=>i.x < T && i.x+i.w > T)) continue;          // alguma palavra atravessa: não é corredor
+    const esq = corpo.filter(i=>i.x < T);
+    if(esq.length < corpo.length*0.15) continue;
+    const folga = Math.min(...dir.map(i=>i.x)) - Math.max(...esq.map(i=>i.x+i.w));
+    if(!melhor || folga > melhor.folga) melhor = { T, topoDir, folga };
+  }
+  if(!melhor || melhor.folga < 12) return [items];                 // espaço entre palavras não conta como corredor
+  const cab = items.filter(i=>i.y > melhor.topoDir + 2);
+  const corpo = items.filter(i=>i.y <= melhor.topoDir + 2);
+  return [cab, corpo.filter(i=>i.x < melhor.T), corpo.filter(i=>i.x >= melhor.T)];
+}
+/* agrupa palavras na mesma altura em linhas (tol = quanto a altura pode variar) */
+function lviAgruparLinhas(items, tol, page){
+  items.sort((a,b)=>(b.y-a.y) || (a.x-b.x));
+  const clusters = [];
+  items.forEach(it=>{
+    const last = clusters[clusters.length-1];
+    if(last && Math.abs(last.y-it.y) <= tol) last.items.push(it);
+    else clusters.push({ y:it.y, items:[it], page });
+  });
+  clusters.forEach(c=>{ c.items.sort((a,b)=>a.x-b.x); c.f = Math.max(...c.items.map(i=>i.f||0)); });
+  return clusters;
+}
+
 /* ---------- leitura do PDF com texto ---------- */
 function lviClustersDoPdf(file){
   return lviPdfPronto().then(()=>file.arrayBuffer()).then(buf=>pdfjsLib.getDocument({ data: buf }).promise).then(async pdf=>{
     let out = [];
     for(let p=1; p<=pdf.numPages; p++){
       const tc = await (await pdf.getPage(p)).getTextContent();
-      const items = tc.items.filter(i=>i.str!=='').map(i=>({ s:i.str, x:i.transform[4], y:i.transform[5], w:i.width }));
-      items.sort((a,b)=>(b.y-a.y) || (a.x-b.x));
-      const clusters = [];
-      items.forEach(it=>{
-        const last = clusters[clusters.length-1];
-        if(last && Math.abs(last.y-it.y) <= 3) last.items.push(it);
-        else clusters.push({ y:it.y, items:[it], page:p });
-      });
-      clusters.forEach(c=>c.items.sort((a,b)=>a.x-b.x));
-      out = out.concat(clusters);
+      const items = tc.items.filter(i=>i.str.trim()!=='').map(i=>({ s:i.str, x:i.transform[4], y:i.transform[5], w:i.width, f:Math.hypot(i.transform[0], i.transform[1]) }));
+      lviSepararColunas(items).forEach(grupo=>{ out = out.concat(lviAgruparLinhas(grupo, 3, p)); });
     }
     return out;
   });
@@ -95,21 +125,15 @@ async function lviClustersDoOcr(file, status){
   await lviCarregarScript(LVI_TESSERACT, ()=>typeof Tesseract!=='undefined');
   const worker = await Tesseract.createWorker('por', 1, { logger: m=>{ if(m.status==='recognizing text') status('Lendo a imagem... '+Math.round(m.progress*100)+'%'); } });
   let out = [];
-  const paraItens = data=>lviPalavrasOcr(data).filter(w=>w.text && w.text.trim()).map(w=>({ s:w.text.trim(), x:w.bbox.x0, y:-(w.bbox.y0+w.bbox.y1)/2, w:w.bbox.x1-w.bbox.x0, y0:w.bbox.y0, y1:w.bbox.y1 }));
+  const paraItens = data=>lviPalavrasOcr(data).filter(w=>w.text && w.text.trim()).map(w=>({ s:w.text.trim(), x:w.bbox.x0, y:-(w.bbox.y0+w.bbox.y1)/2, w:w.bbox.x1-w.bbox.x0, y0:w.bbox.y0, y1:w.bbox.y1, f:w.bbox.y1-w.bbox.y0 }));
   for(let idx=0; idx<canvases.length; idx++){
     const cv = canvases[idx];
     const res = await worker.recognize(cv);
     const items = paraItens(res.data);
-    items.sort((a,b)=>(b.y-a.y) || (a.x-b.x));
     const hs = items.map(i=>i.y1-i.y0).sort((a,b)=>a-b);
     const tol = Math.max(8, (hs.length ? hs[Math.floor(hs.length/2)] : 28)*0.5);
     const clusters = [];
-    items.forEach(it=>{
-      const last = clusters[clusters.length-1];
-      if(last && Math.abs(last.y-it.y) <= tol) last.items.push(it);
-      else clusters.push({ y:it.y, items:[it], page:idx+1 });
-    });
-    clusters.forEach(c=>c.items.sort((a,b)=>a.x-b.x));
+    lviSepararColunas(items).forEach(grupo=>clusters.push(...lviAgruparLinhas(grupo, tol, idx+1)));
     /* segunda leitura só nas linhas que parecem de acordes, aceitando apenas caracteres de acorde */
     /* só linhas curtas em que a primeira leitura já achou acordes em pelo menos metade das palavras
        (evita transformar letra com palavras curtas, como "Com todo o meu ser", em acordes) */
@@ -189,11 +213,31 @@ function lviLinhasDosClusters(clusters, tolerante){
   for(let i=1;i<clusters.length;i++) if(clusters[i].page===clusters[i-1].page) gaps.push(clusters[i-1].y-clusters[i].y);
   gaps.sort((a,b)=>a-b);
   const mediana = gaps.length ? gaps[Math.floor(gaps.length/2)] : 30;
-  const pre = []; let prev = null;
+  /* tamanho de letra do corpo: no PDF com texto, as linhas bem maiores no topo são título e artista */
+  const fs = clusters.map(c=>c.f||0).filter(Boolean).sort((a,b)=>a-b);
+  const fCorpo = fs.length ? fs[Math.floor(fs.length/2)] : 0;
+  const pre = []; let prev = null, nGrandes = 0, corpoComecou = false;
   clusters.forEach(c=>{
     const toks = [];
     c.items.forEach(it=>it.s.trim().split(/\s+/).forEach(t=>{ t = tolerante ? lviLimpa(t) : t; if(t) toks.push(t); }));
     if(!toks.length) return;
+    const textoLinha = c.items.map(it=>it.s).join(' ').replace(/\s+/g,' ').trim();
+    /* cabeçalho do Cifra Club e parecidos */
+    const mTom = /^tom\s*:\s*([A-G](?:#|b)?)\s*(m(?![a-z]))?/i.exec(textoLinha);
+    if(mTom){ pre.push({ type:'tom', raiz:mTom[1].charAt(0).toUpperCase()+mTom[1].slice(1), menor:!!mTom[2] }); return; }
+    if(/^(afina[cç][aã]o|composi[cç][aã]o(\s+de)?|capotraste|capo|letra\s+e\s+m[uú]sica)\s*:/i.test(textoLinha)) return;
+    if(!tolerante && !corpoComecou && fCorpo && c.f >= fCorpo*1.3 && nGrandes < 2){
+      pre.push({ type: nGrandes===0 ? 'title' : 'artist', text:textoLinha }); nGrandes++; return;
+    }
+    corpoComecou = true;
+    /* "Intro( A , E , Bm )" ou "Solo: G D": nome do bloco + acordes na mesma linha */
+    const limpos = toks.map(t=>t.replace(/[(),:\[\]]/g,'')).filter(Boolean);
+    if(limpos.length >= 2 && lviRotuloDe(limpos[0]) && limpos.slice(1).every(t=>lviCorrigeAcorde(t)!==null)){
+      pre.push({ type:'label', text: lviRotuloDe(limpos[0]) });
+      pre.push({ type:'chords', chords: limpos.slice(1).map(t=>({ name:lviCorrigeAcorde(t) })) });   // linha só de acordes, não gruda na letra de baixo
+      prev = c;
+      return;
+    }
     const nAc = toks.filter(t=>tolerante ? lviCorrigeAcorde(t)!==null : LVI_CHORD_RE.test(t)).length;
     const curtos = toks.every(t=>t.length<=4);
     const ehAcordes = tolerante ? (nAc>=1 && toks.length<=10 && (nAc/toks.length>=0.7 || (curtos && toks.length-nAc<=1))) : nAc===toks.length;
@@ -216,7 +260,7 @@ function lviLinhasDosClusters(clusters, tolerante){
       pre.push({ type:'lyric', info: lviLetra(c.items) });
     }
   });
-  const out = []; let tituloFeito = false;
+  const out = []; let tituloFeito = pre.some(r=>r.type==='title');
   for(let j=0;j<pre.length;j++){
     const r = pre[j];
     if(r.type==='chordrow'){
@@ -236,22 +280,53 @@ function lviLinhasDosClusters(clusters, tolerante){
       else out.push({ type:'lyric', text:r.info.text, chords:[] });
     } else out.push(r);
   }
+  return lviJuntarLinhasQuebradas(out);
+}
+/* coluna estreita (Cifra Club) quebra o verso no meio: "Preciso fazer muito mais do que" / "tenho feito".
+   Junta quando a linha de cima chega perto da largura da coluna, não termina em . ! ? e a de baixo começa com minúscula.
+   Os acordes da linha de baixo vão junto, na posição certa. */
+function lviJuntarLinhasQuebradas(rows){
+  const letras = rows.filter(r=>r.type==='lyric').map(r=>r.text.length).sort((a,b)=>a-b);
+  if(letras.length < 4) return rows;
+  const largura = letras[Math.floor(letras.length*0.9)];
+  const out = [];
+  rows.forEach(r=>{
+    const a = out[out.length-1];
+    if(a && a.type==='lyric' && r.type==='lyric' && a.text.length >= largura*0.75 && !/[.!?]["”)]?$/.test(a.text) && /^[a-zà-ÿ]/.test(r.text)){
+      const desloc = a.text.length + 1;
+      a.text = a.text + ' ' + r.text;
+      a.chords = (a.chords||[]).concat((r.chords||[]).map(c=>({ name:c.name, idx:c.idx + desloc })));
+      return;
+    }
+    out.push(r);
+  });
   return out;
 }
 
 /* ---------- blocos: nomeia, detecta repetição ("Repete - Refrão") ---------- */
 const LVI_ORD = ['Primeira parte','Segunda parte','Terceira parte','Quarta parte','Quinta parte','Sexta parte','Sétima parte','Oitava parte','Nona parte','Décima parte'];
 function lviAssinatura(s){
-  return JSON.stringify(s.lines.map(l=> l.type==='chords' ? ['c', l.chords.map(c=>c.name)] : ['l', (l.text||'').replace(/\s+$/,''), (l.chords||[]).map(c=>[c.name, c.idx])]));
+  return JSON.stringify(s.lines.map(l=> l.type==='marca' ? ['m', l.text] : l.type==='chords' ? ['c', l.chords.map(c=>c.name)] : ['l', (l.text||'').replace(/\s+$/,''), (l.chords||[]).map(c=>[c.name, c.idx])]));
 }
 function lviMontaBlocos(rows){
   let titulo = '', cur = null, n = 0;
   const secoes = [];
   const abre = nome=>{ cur = { name:nome, lines:[] }; secoes.push(cur); };
+  let artistaCab = '', tomCab = null;
   rows.forEach(r=>{
     if(r.type==='title'){ titulo = r.text; return; }
+    if(r.type==='artist'){ artistaCab = r.text; return; }
+    if(r.type==='tom'){ tomCab = r; return; }
     if(r.type==='label'){ abre(r.text); if(/^repete/i.test(r.text)) cur = null; return; }
     if(r.type==='blank' || r.type==='rule'){ if(cur && cur.lines.length) cur = null; return; }
+    if(r.type==='marca'){
+      /* "---" fecha o bloco e a próxima parte vai para a outra coluna; "-" no meio do bloco fica onde está */
+      if(r.text==='---'){ const alvo = cur || secoes[secoes.length-1]; if(alvo) alvo.colunaDepois = true; cur = null; return; }
+      if(cur && cur.lines.length) cur.lines.push(r);
+      return;
+    }
+    /* bloco instrumental (Intro, Solo...) só com acordes: a letra que vem depois começa um bloco novo */
+    if(r.type==='lyric' && cur && /^(intro|introdu|solo|instrumental|interl)/i.test(cur.name||'') && cur.lines.every(l=>l.type==='chords')) cur = null;
     if(!cur) abre('');
     cur.lines.push(r);
   });
@@ -276,13 +351,21 @@ function lviMontaBlocos(rows){
   const partes = t.split(/\s+-\s+/);
   if(partes.length===2 && !/^\d/.test(partes[0])){ artista = partes[0]; nome = partes[1]; }
   const km = /[-–]\s*([A-G][#b]?)(m?)\s*$/.exec(titulo);
-  return { titulo:nome, artista, secoes, tom: km ? km[1] : null, menor: !!(km && km[2]) };
+  /* cabeçalho com título e artista separados (Cifra Club) vale mais que adivinhar pelo "Artista - Música" */
+  if(artistaCab){ nome = titulo.trim(); artista = artistaCab; }
+  const tom = tomCab ? tomCab.raiz : (km ? km[1] : null);
+  const menor = tomCab ? tomCab.menor : !!(km && km[2]);
+  return { titulo:nome, artista, secoes, tom, menor, temCabecalho: !!artistaCab };
 }
 /* nome do arquivo "Cantor - Música - Tom" */
 function lviNomeDoArquivo(nome){
   if(!nome) return null;
-  const base = nome.replace(/\.[^.]+$/,'').replace(/\s*\(\d+\)\s*$/,'').replace(/_/g,' ').trim();
+  let base = nome.replace(/\.[^.]+$/,'').replace(/\s*\(\d+\)\s*$/,'').replace(/_/g,' ').trim();
+  /* PDF baixado do Cifra Club: "Música - Artista - Cifra Club" */
+  const cifraClub = /\s*[-–]\s*cifra\s*club\s*$/i.test(base);
+  base = base.replace(/\s*[-–]\s*cifra\s*club\s*$/i, '');
   const partes = base.split(/\s+[-–]\s+/).map(p=>p.trim()).filter(Boolean);
+  if(cifraClub && partes.length===2) return { titulo:partes[0], artista:partes[1], tom:null, menor:false };
   let tom = null, menor = false;
   const km = /^([A-G][#b]?)(m?)$/.exec(partes[partes.length-1]||'');
   if(km && partes.length>=2){ tom = km[1]; menor = !!km[2]; partes.pop(); }
@@ -300,14 +383,16 @@ function lviLinhaDeAcordes(chords){
   });
   return s;
 }
-/* blocos → texto do Siloé ([Seção] + acordes em cima da letra) */
+/* blocos → texto do Siloé ([Seção] + acordes em cima da letra).
+   Entre um bloco e outro entra "--" (linha divisória no PDF), ou "---" se ali era para pular para a próxima coluna */
 function lviBlocosParaTexto(secoes){
   const linhas = [];
-  secoes.forEach(s=>{
-    if(linhas.length) linhas.push('');
+  secoes.forEach((s,i)=>{
+    if(i > 0) linhas.push(secoes[i-1].colunaDepois ? '---' : '--');
     if(s.repeatOf){ linhas.push('['+(s.label || ('Repete - '+s.repeatOf.name))+']'); return; }
     linhas.push('['+(s.name||'Parte')+']');
     s.lines.forEach(r=>{
+      if(r.type==='marca'){ linhas.push(r.text); return; }
       if(r.type==='chords'){ linhas.push(r.chords.map(c=>c.name).join('   ')); return; }
       if(r.chords && r.chords.length) linhas.push(lviLinhaDeAcordes(r.chords));
       linhas.push(r.text && r.text.trim() ? r.text : ' ');
@@ -315,11 +400,12 @@ function lviBlocosParaTexto(secoes){
   });
   return linhas.join('\n');
 }
-/* tom importado → formato do Siloé (tom menor guarda o relativo maior + marca de menor) */
+/* tom importado → formato do Siloé (tom menor guarda o relativo maior + marca de menor), com o nome literal do arquivo:
+   Gb continua Gb, Ebm vira Gb menor, D#m vira F# menor. Só D#, G# e A# maiores (tons teóricos) viram Eb, Ab e Bb */
 function lviTomSiloe(raiz, menor){
   if(!raiz) return { tomOriginal:'', tomModoMenor:false };
-  const r = ({ 'D#':'Eb', 'G#':'Ab', 'A#':'Bb', 'Gb':'F#' })[raiz] || raiz;
-  return menor ? { tomOriginal: lvShiftNote(r, 3) || r, tomModoMenor:true } : { tomOriginal: lvShiftNote(r, 0) || r, tomModoMenor:false };
+  if(menor) return { tomOriginal: lvRelativoMaior(raiz), tomModoMenor:true };
+  return { tomOriginal: ({ 'D#':'Eb', 'G#':'Ab', 'A#':'Bb' })[raiz] || raiz, tomModoMenor:false };
 }
 
 /* ---------- importar: arquivo → { titulo, artista, tom, conteudo } ---------- */
@@ -341,9 +427,10 @@ async function lviImportar(file, status){
   const fi = lviNomeDoArquivo(file.name);
   const raiz = (fi && fi.tom) || doc.tom;
   const menor = fi && fi.tom ? fi.menor : doc.menor;
+  /* título/artista: o cabeçalho do PDF (quando tem) é mais confiável que o nome do arquivo */
   return {
-    titulo: (fi && fi.titulo) || doc.titulo || '',
-    artista: (fi && fi.artista) || doc.artista || '',
+    titulo: (doc.temCabecalho && doc.titulo) || (fi && fi.titulo) || doc.titulo || '',
+    artista: (doc.temCabecalho && doc.artista) || (fi && fi.artista) || doc.artista || '',
     tom: lviTomSiloe(raiz, menor),
     conteudo: lviBlocosParaTexto(doc.secoes),
     blocos: doc.secoes.length,
@@ -398,7 +485,10 @@ function lviTextoParaLinhas(conteudo){
   items.forEach(it=>{
     if(it.type==='section'){ rows.push({ type:'label', text:it.label }); return; }
     if(it.type==='blank'){ rows.push({ type:'blank' }); return; }
-    if(it.type==='divider' || it.type==='colbreak'){ rows.push({ type:'rule' }); return; }
+    if(it.type==='divider'){ rows.push({ type:'rule' }); return; }
+    /* "---" (próxima coluna) e "-" (próximo slide) que você colocou continuam no lugar */
+    if(it.type==='colbreak'){ rows.push({ type:'marca', text:'---' }); return; }
+    if(it.type==='slidebreak'){ rows.push({ type:'marca', text:'-' }); return; }
     if(it.type==='pair'){
       const acordes = lvAcordesDaLinha(it.chordLine);
       if(!(it.lyricLine||'').trim()) rows.push({ type:'chords', chords: acordes.map(c=>({ name:c.name })) });
@@ -410,7 +500,7 @@ function lviTextoParaLinhas(conteudo){
 async function lvOrganizarBlocos(){
   const l = getLouvorAtual(); if(!l) return;
   if(!(l.conteudo||'').trim()){ showToast('Cole ou importe a cifra primeiro'); return; }
-  const ok = await iosConfirm('Organizar em blocos? Os trechos sem nome ganham nome (Intro, Primeira parte...) e os blocos iguais viram "Repete". Os marcadores - -- --- saem.');
+  const ok = await iosConfirm('Organizar em blocos? Os trechos sem nome ganham nome (Intro, Primeira parte...), os blocos iguais viram "Repete" e entre os blocos entra a linha divisória (--). Os "-" (próximo slide) e "---" (próxima coluna) ficam.');
   if(!ok) return;
   const doc = lviMontaBlocos(lviTextoParaLinhas(l.conteudo));
   l.conteudo = lviBlocosParaTexto(doc.secoes);

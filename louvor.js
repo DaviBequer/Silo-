@@ -270,15 +270,15 @@ function ensureLouvorConfig(l){
   if(l.status === undefined) l.status = 'producao';
   if(l.dataAgendamento === undefined) l.dataAgendamento = '';
 }
-function lvTomAtual(l){
+/* tom maior do louvor com o nome exato escolhido (Gb continua Gb) */
+function lvTomMaiorAtual(l){
   if(!l.tomOriginal) return '';
-  const rootAtual = lvShiftNote(l.tomOriginal, l.transpose||0) || l.tomOriginal;
-  if(l.tomModoMenor){
-    const idx = LV_CHROMATIC.indexOf(rootAtual);
-    const relIdx = idx===-1 ? null : (idx+9)%12;
-    return (relIdx!==null ? LV_CHROMATIC[relIdx] : rootAtual) + 'm';
-  }
-  return rootAtual;
+  return l.transpose ? (lvShiftNote(l.tomOriginal, l.transpose) || l.tomOriginal) : l.tomOriginal;
+}
+function lvTomAtual(l){
+  const maior = lvTomMaiorAtual(l);
+  if(!maior) return '';
+  return l.tomModoMenor ? lvRelativoMenor(maior) + 'm' : maior;
 }
 function atualizarLvTomBox(){
   const l = getLouvorAtual(); if(!l) return;
@@ -294,19 +294,28 @@ const LV_GRAUS_MAIOR = [
   { grau:'VI', semitom:9, qualidade:'m' },
   { grau:'VII', semitom:11, qualidade:'º' }
 ];
+/* campo menor (relativo): começa no VI grau do maior → i iiº III iv v VI VII */
+const LV_GRAUS_MENOR = [
+  { grau:'I', idx:5, qualidade:'m' },
+  { grau:'II', idx:6, qualidade:'º' },
+  { grau:'III', idx:0, qualidade:'' },
+  { grau:'IV', idx:1, qualidade:'m' },
+  { grau:'V', idx:2, qualidade:'m' },
+  { grau:'VI', idx:3, qualidade:'' },
+  { grau:'VII', idx:4, qualidade:'' }
+];
+/* campo harmônico do tom escolhido, com os nomes literais do tom (e o dominante de cada grau embaixo) */
 function renderLvHarmonicBar(l){
   const el = document.getElementById('lvHarmonicBar');
   if(!el) return;
-  const rootAtual = l.tomOriginal ? (lvShiftNote(l.tomOriginal, l.transpose||0) || l.tomOriginal) : '';
-  if(!rootAtual){ el.innerHTML = ''; return; }
-  const rootIdx = LV_CHROMATIC.indexOf(rootAtual);
-  if(rootIdx===-1){ el.innerHTML = ''; return; }
-  el.innerHTML = LV_GRAUS_MAIOR.map(g=>{
-    const notaIdx = (rootIdx+g.semitom)%12;
-    const nota = LV_CHROMATIC[notaIdx];
+  const esc = lvEscalaDoTom(lvTomMaiorAtual(l));
+  if(!esc){ el.innerHTML = ''; return; }
+  const graus = l.tomModoMenor ? LV_GRAUS_MENOR : LV_GRAUS_MAIOR.map((g,i)=>({ grau:g.grau, idx:i, qualidade:g.qualidade }));
+  el.innerHTML = graus.map(g=>{
+    const nota = esc[g.idx];
     const acorde = nota + g.qualidade;
-    const notaAlt = LV_CHROMATIC[(notaIdx+7)%12];
-    const alt = notaAlt + '7';
+    const li = LV_LETRAS.indexOf(nota[0]), pcDom = (lvPc(nota)+7)%12;
+    const alt = (lvSoletrar(li+4, pcDom) || lvNomeNoTom(pcDom, lvTomMaiorAtual(l))) + '7';
     return `<div class="lv-grau-col">
       <div class="lv-grau-chip"><div class="lv-grau-num">${g.grau}</div><div class="lv-grau-chord">${acorde}</div></div>
       <div class="lv-grau-alt">${alt}</div>
@@ -318,8 +327,7 @@ function renderLvHarmonicBar(l){
 const LV_TOM_GRID = ['C','C#','Db','D','D#','Eb','E','F','F#','Gb','G','G#','Ab','A','A#','Bb','B'];
 function lvNotasEquivalentes(a,b){
   if(!a || !b) return false;
-  let ia = LV_CHROMATIC.indexOf(a); if(ia===-1) ia = LV_FLAT.indexOf(a);
-  let ib = LV_CHROMATIC.indexOf(b); if(ib===-1) ib = LV_FLAT.indexOf(b);
+  const ia = lvPc(a), ib = lvPc(b);
   return ia!==-1 && ia===ib;
 }
 let lvTomPickerModo = 'edit';
@@ -330,48 +338,67 @@ function abrirLvTomPicker(modo){
 }
 function lvNovoTomAtual(){
   if(!window.lvNovoTomOriginal) return '';
-  if(window.lvNovoTomModoMenor){
-    const idx = LV_CHROMATIC.indexOf(window.lvNovoTomOriginal);
-    const relIdx = idx===-1 ? null : (idx+9)%12;
-    return (relIdx!==null ? LV_CHROMATIC[relIdx] : window.lvNovoTomOriginal) + 'm';
-  }
-  return window.lvNovoTomOriginal;
+  return window.lvNovoTomModoMenor ? lvRelativoMenor(window.lvNovoTomOriginal) + 'm' : window.lvNovoTomOriginal;
 }
 function atualizarLvNovoTomBox(){
   const el = document.getElementById('lvNovoTomBoxValor');
   if(el) el.textContent = lvNovoTomAtual() || 'Selecione';
 }
+/* marca exatamente a nota escolhida (F# e Gb são botões diferentes); no menor, mostra o relativo embaixo */
 function renderLvTomGrid(){
-  let atualBase;
+  let maior, menor;
   if(lvTomPickerModo==='novo'){
-    atualBase = lvNovoTomAtual().replace(/m$/,'');
+    maior = window.lvNovoTomOriginal || ''; menor = !!window.lvNovoTomModoMenor;
   }else{
     const l = getLouvorAtual(); if(!l) return;
-    atualBase = lvTomAtual(l).replace(/m$/,'');
+    maior = lvTomMaiorAtual(l); menor = !!l.tomModoMenor;
   }
-  document.getElementById('lvTomGrid').innerHTML = LV_TOM_GRID.map(nota=>{
-    const isActive = lvNotasEquivalentes(nota, atualBase);
-    return `<button type="button" class="lv-tom-grid-btn${isActive?' active':''}" onclick="lvTomGridClick('${nota}')">${nota}</button>`;
+  const grid = document.getElementById('lvTomGrid');
+  grid.innerHTML = LV_TOM_GRID.map(nota=>{
+    const isActive = nota === maior;
+    const sub = isActive && menor ? `<small>${lvRelativoMenor(nota)}m</small>` : '';
+    return `<button type="button" class="lv-tom-grid-btn${isActive?' active':''}${sub?' menor':''}" data-nota="${nota}">${nota}${sub}</button>`;
   }).join('');
+  lvLigarToqueTom(grid);
 }
-let lvTomClickTimer = null;
-function lvTomGridClick(nota){
-  if(lvTomClickTimer){
-    clearTimeout(lvTomClickTimer);
-    lvTomClickTimer = null;
-    lvTomGridEscolher(nota, true);
-  }else{
-    lvTomClickTimer = setTimeout(()=>{
-      lvTomClickTimer = null;
-      lvTomGridEscolher(nota, false);
-    }, 280);
-  }
+/* toque = tom maior; tocar e segurar = relativo menor (segurar D escolhe Bm) */
+const LV_TOM_SEGURAR_MS = 450;
+function lvLigarToqueTom(grid){
+  if(grid._lvToque) return;
+  grid._lvToque = true;
+  let timer = null, btnAtivo = null, segurou = false;
+  const limpa = ()=>{ clearTimeout(timer); timer = null; if(btnAtivo) btnAtivo.classList.remove('segurando'); btnAtivo = null; };
+  grid.addEventListener('pointerdown', e=>{
+    const btn = e.target.closest('.lv-tom-grid-btn'); if(!btn) return;
+    limpa(); segurou = false; btnAtivo = btn;
+    btn.classList.add('segurando');
+    timer = setTimeout(()=>{
+      segurou = true;
+      if(navigator.vibrate) try{ navigator.vibrate(15); }catch(_){}
+      const nota = btn.dataset.nota;
+      limpa();
+      lvTomGridEscolher(nota, true);
+    }, LV_TOM_SEGURAR_MS);
+  });
+  grid.addEventListener('pointerup', e=>{
+    const btn = btnAtivo;
+    const tocou = timer && btn && !segurou;
+    limpa();
+    if(tocou) lvTomGridEscolher(btn.dataset.nota, false);
+  });
+  ['pointercancel','pointerleave'].forEach(ev=>grid.addEventListener(ev, limpa));
+  grid.addEventListener('contextmenu', e=>e.preventDefault());   // segurar no celular não abre o menu
+  grid.addEventListener('click', e=>{   // teclado (Enter/espaço): escolhe o maior
+    const btn = e.target.closest('.lv-tom-grid-btn');
+    if(btn && e.detail === 0) lvTomGridEscolher(btn.dataset.nota, false);
+  });
 }
-function lvTransposeConteudoTexto(conteudo, delta){
-  if(!delta) return conteudo;
+/* reescreve as linhas de acordes: sobe/desce "delta" e usa os nomes do tom de destino */
+function lvTransposeConteudoTexto(conteudo, delta, tom, tomAntes){
+  if(!delta && !tom) return conteudo;
   return (conteudo||'').split('\n').map(line=>{
     const trimmed = line.trim();
-    if(isChordLine(trimmed)) return lvTransposeChordLine(line, delta);
+    if(isChordLine(trimmed)) return lvTransposeChordLine(line, delta, tom, tomAntes);
     return line;
   }).join('\n');
 }
@@ -385,21 +412,15 @@ function lvTomGridEscolher(nota, modoMenor){
   }
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
-  let idxNota = LV_CHROMATIC.indexOf(nota); if(idxNota===-1) idxNota = LV_FLAT.indexOf(nota);
-  let idxOriginal = LV_CHROMATIC.indexOf(l.tomOriginal); if(idxOriginal===-1) idxOriginal = LV_FLAT.indexOf(l.tomOriginal);
-  if(idxOriginal===-1){
-    l.tomOriginal = nota;
-    l.transpose = 0;
-  }else{
-    const delta = ((idxNota - idxOriginal)%12+12)%12;
-    if(delta){
-      l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta);
-      const conteudoEl = document.getElementById('lvConteudo');
-      if(conteudoEl) conteudoEl.value = l.conteudo;
-    }
-    l.tomOriginal = nota;
-    l.transpose = 0;
-  }
+  /* sobe/desce a cifra até o tom novo e escreve tudo com os nomes desse tom
+     (mesmo de F# para Gb, que soa igual, os nomes mudam). Sem tom anterior: só ajusta os nomes. */
+  const pcNota = lvPc(nota), pcAntes = lvPc(lvTomMaiorAtual(l));
+  const delta = (pcAntes===-1 || pcNota===-1) ? 0 : ((pcNota - pcAntes)%12+12)%12;
+  l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, nota, lvTomMaiorAtual(l));
+  const conteudoEl = document.getElementById('lvConteudo');
+  if(conteudoEl) conteudoEl.value = l.conteudo;
+  l.tomOriginal = nota;
+  l.transpose = 0;
   l.tomModoMenor = modoMenor;
   persist();
   atualizarLvTomBox();
@@ -416,10 +437,10 @@ function lvTomGridEscolher(nota, modoMenor){
    ---  (três traços)       -> força quebra de coluna no PDF
 ------------------------------------------------------------------------------ */
 const LV_CHORD_SUFFIXES = ['maj7','majsus4','madd9','madd11','msus2','msus4','mdim7','m7b5','m7M','maj9','maj','min','dim7','dim','aug','sus2','sus4','sus','add9','add11','add2',
-  'm7','m9','m6','m11','m13','m4','7M','9M','2','4','5','6','7','9','11','13','m','M'];
+  'm7','m9','m6','m11','m13','m4','7M','9M','2','4','5','6','7','9','11','13','m','M','º7','°7','º','°'];
 const LV_CHORD_SUFFIX_RE = LV_CHORD_SUFFIXES.sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
 /* aceita também extensões entre parênteses, ex.: E(9), A7(4) */
-const LV_CHORD_RE = new RegExp(`^[A-G](#|b)?(${LV_CHORD_SUFFIX_RE})?(\\([^)]*\\))?(\\/[A-G](#|b)?)?$`);
+const LV_CHORD_RE = new RegExp(`^[A-G](##|bb|#|b)?(${LV_CHORD_SUFFIX_RE})?(\\([^)]*\\))?(\\/[A-G](##|bb|#|b)?)?$`);
 function isChordLine(line){
   const trimmed = line.trim();
   if(!trimmed) return false;
@@ -428,36 +449,106 @@ function isChordLine(line){
 }
 const LV_CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const LV_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+
+/* ---------- Nomes das notas pelo campo harmônico ----------
+   Cada tom tem seus próprios nomes: F# = F# G# A# B C# D# E#, Gb = Gb Ab Bb Cb Db Eb F.
+   Mesmo som, nomes diferentes: a cifra e o campo mostram literalmente os nomes do tom escolhido. */
+const LV_LETRAS = ['C','D','E','F','G','A','B'];
+const LV_LETRA_PC = [0,2,4,5,7,9,11];
+const LV_ESCALA_MAIOR = [0,2,4,5,7,9,11];
+/* nota → altura (0..11); aceita #, b, ## e bb */
+function lvPc(nota){
+  const m = /^([A-G])(##|bb|#|b)?$/.exec(nota||'');
+  if(!m) return -1;
+  const acc = ({ '#':1, '##':2, 'b':-1, 'bb':-2 })[m[2]] || 0;
+  return ((LV_LETRA_PC[LV_LETRAS.indexOf(m[1])] + acc) % 12 + 12) % 12;
+}
+/* escreve a altura usando uma letra fixa (ex.: letra E + altura de F = E#) */
+function lvSoletrar(letraIdx, pc){
+  letraIdx = ((letraIdx % 7) + 7) % 7;
+  let d = ((pc - LV_LETRA_PC[letraIdx]) % 12 + 12) % 12;
+  if(d > 6) d -= 12;
+  const acc = ({ '0':'', '1':'#', '2':'##', '-1':'b', '-2':'bb' })[d];
+  return acc === undefined ? null : LV_LETRAS[letraIdx] + acc;
+}
+/* as 7 notas da escala maior do tom, com os nomes certos */
+function lvEscalaDoTom(tom){
+  const m = /^([A-G])/.exec(tom||''), pc = lvPc(tom);
+  if(!m || pc < 0) return null;
+  const li = LV_LETRAS.indexOf(m[1]);
+  return LV_ESCALA_MAIOR.map((s,i)=>lvSoletrar(li+i, (pc+s) % 12));
+}
+/* notas fora da escala: bemol nos tons com bemol (e em F), sustenido nos outros */
+function lvTomUsaBemol(tom){ return /b/.test(tom||'') || tom === 'F'; }
+function lvNomeNoTom(pc, tom){
+  const esc = lvEscalaDoTom(tom);
+  if(esc){ const n = esc.find(x=>lvPc(x) === pc); if(n) return n; }
+  return (lvTomUsaBemol(tom) ? LV_FLAT : LV_CHROMATIC)[pc];
+}
+/* relativo menor de um tom maior (D → B) e relativo maior de um tom menor (B → D), com os nomes certos */
+function lvRelativoMenor(tomMaior){ const esc = lvEscalaDoTom(tomMaior); return esc ? esc[5] : tomMaior; }
+function lvRelativoMaior(raizMenor){
+  const m = /^([A-G])/.exec(raizMenor||''), pc = lvPc(raizMenor);
+  if(!m || pc < 0) return raizMenor;
+  return lvSoletrar(LV_LETRAS.indexOf(m[1]) + 2, (pc + 3) % 12) || LV_CHROMATIC[(pc + 3) % 12];
+}
+
 function lvShiftNote(note, delta){
-  let idx = LV_CHROMATIC.indexOf(note);
-  if(idx===-1) idx = LV_FLAT.indexOf(note);
+  const idx = lvPc(note);
   if(idx===-1) return null;
   return LV_CHROMATIC[((idx+delta)%12+12)%12];
 }
-function lvTransposeChord(chord, delta){
-  if(!chord || !delta) return chord;
-  const m = chord.match(/^([A-G])(#|b)?/);
+/* nome de uma nota da cifra no tom novo:
+   do campo → nome da escala (Gb: Cb, não B); fora do campo → mantém a função que tinha no tom antigo (bVI de E = C → bVI de D = Bb) */
+function lvNomeTransposto(nota, delta, tom, tomAntes){
+  const pc = lvPc(nota); if(pc < 0) return null;
+  const npc = ((pc+(delta||0))%12+12)%12;
+  if(!tom) return LV_CHROMATIC[npc];
+  const esc = lvEscalaDoTom(tom);
+  const doCampo = esc && esc.find(x=>lvPc(x) === npc);
+  if(doCampo) return doCampo;
+  if(lvPc(tomAntes) >= 0 && esc){
+    const off = LV_LETRAS.indexOf(nota[0]) - LV_LETRAS.indexOf(tomAntes[0]);
+    const s = lvSoletrar(LV_LETRAS.indexOf(tom[0]) + off, npc);
+    if(s && !/##|bb/.test(s)) return s;
+  }
+  return lvNomeNoTom(npc, tom);
+}
+/* sobe/desce o acorde "delta" semitons. Com "tom", escreve com os nomes daquele tom (Gb → Cb, não B) */
+function lvTransposeChord(chord, delta, tom, tomAntes){
+  if(!chord || (!delta && !tom)) return chord;
+  const nomeNovo = nota => lvNomeTransposto(nota, delta, tom, tomAntes);
+  const m = chord.match(/^([A-G])(##|bb|#|b)?/);
   if(!m) return chord;
   const rootFull = m[1] + (m[2]||'');
   let rest = chord.slice(rootFull.length);
-  const newRoot = lvShiftNote(rootFull, delta);
+  const newRoot = nomeNovo(rootFull);
   if(!newRoot) return chord;
   const slashIdx = rest.indexOf('/');
   if(slashIdx !== -1){
     const bassPart = rest.slice(slashIdx+1);
-    const bm = bassPart.match(/^([A-G])(#|b)?/);
+    const bm = bassPart.match(/^([A-G])(##|bb|#|b)?/);
     if(bm){
       const bassFull = bm[1] + (bm[2]||'');
-      const newBass = lvShiftNote(bassFull, delta) || bassFull;
+      const newBass = nomeNovo(bassFull) || bassFull;
       const bassRest = bassPart.slice(bassFull.length);
       return newRoot + rest.slice(0,slashIdx) + '/' + newBass + bassRest;
     }
   }
   return newRoot + rest;
 }
-function lvTransposeChordLine(line, delta){
-  if(!delta) return line;
-  return line.replace(/\S+/g, tok => lvTransposeChord(tok, delta));
+/* mantém cada acorde na mesma coluna (em cima da mesma sílaba) mesmo quando o nome muda de tamanho */
+function lvTransposeChordLine(line, delta, tom, tomAntes){
+  if(!delta && !tom) return line;
+  let out = '';
+  const re = /\S+/g; let m;
+  while((m = re.exec(line))){
+    const novo = lvTransposeChord(m[0], delta, tom, tomAntes);
+    const pos = Math.max(m.index, out.length ? out.length+1 : 0);
+    while(out.length < pos) out += ' ';
+    out += novo;
+  }
+  return out;
 }
 
 /* Faz uma única passada pelo texto bruto e devolve:
@@ -486,7 +577,7 @@ function lvParseContent(conteudo){
     const trimmed = raw.trim();
     if(trimmed === '---'){ flushPendingChord(); items.push({type:'colbreak'}); return; }
     if(trimmed === '--'){ flushPendingChord(); items.push({type:'divider'}); return; }
-    if(trimmed === '-'){ flushPendingChord(); startNewSlide(); return; }
+    if(trimmed === '-'){ flushPendingChord(); items.push({type:'slidebreak'}); startNewSlide(); return; }   // a folha ignora; o Organizar usa para manter o "-"
     const sectionMatch = trimmed.match(/^\[(.+)\]$/);
     if(sectionMatch){
       flushPendingChord();
@@ -655,6 +746,8 @@ function renderLouvorPdfPreview(){
   previewEl.style.zoom = 1;   // mede no tamanho real; o zoom de tela é aplicado no fim
   previewEl.classList.toggle('paisagem', paisagem);
   previewEl.classList.toggle('sans', l.pdfFonte==='sans');
+  /* cifra antiga, sem nenhum "--": mantém a linha automática embaixo de cada bloco, como era antes */
+  previewEl.classList.toggle('linhas-auto', !/^[ \t]*--[ \t]*$/m.test(l.conteudo||''));
   previewEl.classList.toggle('editando', !!window.lvEditandoFolha);
   previewEl.style.padding = l.pdfMargem+'pt';
   previewEl.style.setProperty('--lv-fs', l.pdfTamanhoTexto+'pt');
@@ -811,7 +904,7 @@ function exportarLouvorPdf(){
     }
   });
 
-  const tomRaiz = lvShiftNote(l.tomOriginal, l.transpose||0) || l.tomOriginal || '';
+  const tomRaiz = lvTomAtual(l);
   const nomePartes = [l.artista, l.titulo||'Sem título', tomRaiz].filter(Boolean);
   const nomeArquivo = nomePartes.join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
   doc.save(`${nomeArquivo}.pdf`);

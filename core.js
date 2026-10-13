@@ -401,14 +401,14 @@ async function carregar(){
 }
 /* ===== ABERTURA (logo animada) ===== */
 /* fica pelo menos o tempo da animação de entrada, para não "piscar" quando os dados chegam rápido */
-const SPLASH_MINIMO_MS = 1000;
+const SPLASH_MINIMO_MS = 4200;
 function fecharSplash(imediato){
   const el = document.getElementById('splash');
   const sair = ()=>{
     document.body.classList.remove('carregando');
     if(!el) return;
     el.classList.add('saindo');
-    setTimeout(()=>el.classList.add('oculta'), 500);
+    setTimeout(()=>el.classList.add('oculta'), 1450);
   };
   const falta = SPLASH_MINIMO_MS - performance.now();
   if(imediato || falta <= 0) sair(); else setTimeout(sair, falta);

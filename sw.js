@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v37';
-const APP_VERSION = '3.7';
+const CACHE_NAME = 'siloe-cache-v38';
+const APP_VERSION = '3.8';
 const ARQUIVOS = [
   './index.html',
   `./style.css?v=${APP_VERSION}`,
