@@ -12,8 +12,8 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=4.2">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.1</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.2</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -55,6 +55,7 @@
     <div class="resumo-topo">
       <div class="resumo-mes" id="resumoMesLabel"></div>
       <div class="resumo-links">
+        <button type="button" class="resumo-link" onclick="abrirHistoricoMeses()">Histórico</button>
         <button type="button" class="resumo-link" onclick="abrirBancosModal()">Bancos</button>
         <button type="button" class="resumo-link" onclick="openReservaModal()">Reserva</button>
       </div>
@@ -881,6 +882,29 @@
   </div>
 </div>
 
+<!-- MODAL: histórico de meses (resumo guardado ao concluir cada mês) -->
+<div class="modal-overlay" id="modalHistoricoMeses">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Histórico de meses</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalHistoricoMeses')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="historicoMesesLista"></div>
+  </div>
+</div>
+
+<!-- MODAL: versões anteriores (cópia por hora dos últimos 30 dias, guardada pelo banco) -->
+<div class="modal-overlay" id="modalVersoes">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Versões anteriores</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalVersoes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="versoes-dica">O app guarda uma cópia dos seus dados por hora, dos últimos 30 dias. Restaurar volta tudo para como estava naquele momento.</div>
+    <div id="versoesLista"></div>
+  </div>
+</div>
+
 <!-- MODAL: detalhe do "Vai entrar" / "Falta pagar" do resumo -->
 <div class="modal-overlay" id="modalResumoDetalhe">
   <div class="modal">
@@ -1268,6 +1292,7 @@
       <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
     </div>
     <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="compartilharBackupApp()">Enviar backup (Drive, WhatsApp...)</button>
+    <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="abrirVersoes()">Versões anteriores</button>
     <button class="btn btn-outline btn-block" id="btnSairApp" style="margin-top:8px;display:none;color:var(--danger)" onclick="sairDoApp()">Sair deste aparelho</button>
     <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
   </div>
@@ -1545,18 +1570,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=4.1"></script>
-<script src="core.js?v=4.1"></script>
-<script src="comando.js?v=4.1"></script>
-<script src="layout.js?v=4.1"></script>
-<script src="app.js?v=4.1"></script>
-<script src="panorama.js?v=4.1"></script>
-<script src="planner.js?v=4.1"></script>
-<script src="ponto.js?v=4.1"></script>
-<script src="louvor.js?v=4.1"></script>
-<script src="louvor-extra.js?v=4.1"></script>
-<script src="emprestimo.js?v=4.1"></script>
-<script src="vendas.js?v=4.1"></script>
+<script src="supabase.js?v=4.2"></script>
+<script src="core.js?v=4.2"></script>
+<script src="comando.js?v=4.2"></script>
+<script src="layout.js?v=4.2"></script>
+<script src="app.js?v=4.2"></script>
+<script src="panorama.js?v=4.2"></script>
+<script src="planner.js?v=4.2"></script>
+<script src="ponto.js?v=4.2"></script>
+<script src="louvor.js?v=4.2"></script>
+<script src="louvor-extra.js?v=4.2"></script>
+<script src="emprestimo.js?v=4.2"></script>
+<script src="vendas.js?v=4.2"></script>
 <script>carregar();</script>
 </body>
 </html>

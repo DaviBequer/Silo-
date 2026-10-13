@@ -697,13 +697,31 @@ function confirmarConcluirMes(){
   closeModal('modalConcluirMes');
   concluirMesAtual();
 }
-/* fecha o mês atual do Dashboard (guarda o resumo no histórico) e avança para o próximo */
+/* Resumo completo do mês (Davi, como no Dashboard): tudo que entrou e tudo que saiu, pago ou não.
+   É o que fica guardado no histórico ao concluir o mês (os dados do mês são limpos depois de um tempo). */
+function resumoCompletoDoMes(mKey){
+  const u = 'davi';
+  const salario = rendaBaseForMonth(u, mKey);
+  const extras = (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey)).reduce((s,e)=>s+(Number(e.valor)||0), 0);
+  const contas = { moradia:0, assinatura:0, fixo:0, futuro:0 };
+  gastosDoMes(u, mKey).forEach(g=>{ contas[g.cat] = (contas[g.cat]||0) + g.valor; });
+  const dizimo = dizimoValorCheio(u, mKey);
+  const cartao = incluiNoGeral('cartao', mKey) && typeof faturaCartaoNoMes==='function'
+    ? (state.cartoesTracker||[]).reduce((s,c)=>s+faturaCartaoNoMes(c, mKey), 0) : 0;
+  const emprestimo = incluiNoGeral('emprestimo', mKey) && typeof empVencimento==='function'
+    ? (state.emprestimos||[]).reduce((s,emp)=>{
+        let n = 0; for(let k=1; k<=emp.numParcelas; k++) if(monthKey(empVencimento(emp,k))===mKey) n++;
+        return s + n*(Number(emp.valorParcela)||0);
+      }, 0) : 0;
+  const renda = salario + extras;
+  const gastoTotal = Object.values(contas).reduce((a,b)=>a+b, 0) + dizimo + cartao + emprestimo;
+  return { v:2, renda, salario, extras, contas, dizimo, cartao, emprestimo, gastoTotal, sobra: renda - gastoTotal, fechadoEm: Date.now() };
+}
+/* fecha o mês atual do Dashboard (guarda o resumo completo no histórico) e avança para o próximo */
 function concluirMesAtual(){
   const mesQueFecha = mesFinanceiroAtual();
-  const renda = incomeForMonth('davi', mesQueFecha) + incomeForMonth('cris', mesQueFecha);
-  const gastoTotal = expensesForMonth('davi', mesQueFecha) + expensesForMonth('cris', mesQueFecha);
   if(!state.historicoMeses) state.historicoMeses = {};
-  state.historicoMeses[mesQueFecha] = { renda, gastoTotal, sobra: renda-gastoTotal, fechadoEm: Date.now() };
+  state.historicoMeses[mesQueFecha] = resumoCompletoDoMes(mesQueFecha);
 
   mesAtualRef = addMonths(mesAtualRef, 1);
   state.mesAtual = mesAtualRef;

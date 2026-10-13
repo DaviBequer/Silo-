@@ -91,6 +91,14 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.2', itens: [
+    'Funciona sem internet: o app fica guardado no aparelho e, sem conexão, mostra os dados da última vez para consulta',
+    'Histórico de meses: botão "Histórico" no resumo, com entrou, saiu, sobra e gastos por categoria de cada mês',
+    'Versões anteriores em Dados do App: restaurar os dados de uma hora atrás, de ontem, etc.',
+    '"Sair deste aparelho" apaga a cópia dos dados que fica no aparelho',
+    'Computador: Contas do mês e outras telas abrem ao lado da barra lateral',
+    'App mais leve: código e estilos sem uso removidos'
+  ]},
   { versao: 'v4.1', itens: [
     'Vendas: toque em "Clientes ativos" para ver cada cliente e editar ou excluir',
     'Vendas → Configurar: comissões num layout compacto, com os planos em forma de tabela'
@@ -901,4 +909,46 @@ function calEscolher(iso){
   inp.dispatchEvent(new Event('input', { bubbles:true }));
   inp.dispatchEvent(new Event('change', { bubbles:true }));
   fecharCalendario();
+}
+
+/* ================= FUNCIONAR SEM INTERNET =================
+   Liga o sw.js: guarda o app e as bibliotecas no aparelho. Na prévia (localhost) fica desligado,
+   para as mudanças em andamento sempre aparecerem na hora. */
+if('serviceWorker' in navigator && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
+}
+
+/* ================= VERSÕES ANTERIORES =================
+   Lista as cópias que o banco guarda (uma por hora, 30 dias) e restaura a escolhida. */
+async function abrirVersoes(){
+  const el = document.getElementById('versoesLista');
+  el.innerHTML = '<div class="gm-vazio">Carregando…</div>';
+  closeModal('modalImportExport');
+  document.getElementById('modalVersoes').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  const r = await window.SiloSupabase.listarVersoes();
+  if(!r.ok){ el.innerHTML = `<div class="gm-vazio">Não consegui buscar as versões${r.erro?' ('+escBanco(r.erro)+')':''}.</div>`; return; }
+  if(!r.lista.length){ el.innerHTML = '<div class="gm-vazio">Nenhuma versão guardada ainda. A primeira aparece uma hora depois da próxima alteração.</div>'; return; }
+  /* agrupado por dia: "Hoje", "Ontem", "12 de outubro" */
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const nomeDia = d=>{ const x = new Date(d); x.setHours(0,0,0,0); const dif = Math.round((hoje - x)/86400000);
+    return dif===0 ? 'Hoje' : dif===1 ? 'Ontem' : `${x.getDate()} de ${MES_NOMES_LONGOS[x.getMonth()].toLowerCase()}`; };
+  const grupos = {};
+  r.lista.forEach(v=>{ const k = nomeDia(v.salvo_em); (grupos[k] = grupos[k] || []).push(v); });
+  el.innerHTML = Object.entries(grupos).map(([dia, vs])=>`<div class="gm-grupo"><div class="gm-grupo-topo"><span>${dia}</span><span>${vs.length} cópia${vs.length===1?'':'s'}</span></div>${vs.map(v=>{
+    const d = new Date(v.salvo_em);
+    return `<div class="gm-linha"><span class="gm-inicial">${CAL_ICONE}</span><div class="gm-info"><div class="gm-nome">${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</div></div><button type="button" class="btn btn-sm btn-outline" onclick="restaurarVersao(${v.id}, '${d.toISOString()}')">Restaurar</button></div>`;
+  }).join('')}</div>`).join('');
+}
+async function restaurarVersao(id, quando){
+  const d = new Date(quando);
+  const ok = await iosConfirm(`Restaurar os dados para como estavam em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}? O que você mudou depois disso sai (a versão de agora também fica guardada no histórico).`);
+  if(!ok) return;
+  const r = await window.SiloSupabase.lerVersao(id);
+  if(!r.ok || !r.data || !r.data.users){ showToast('Não consegui ler essa versão'); return; }
+  state = r.data;
+  const gravou = await persistAgora();
+  if(!gravou){ showToast('Não consegui restaurar (sem conexão?)'); return; }
+  showToast('Versão restaurada');
+  setTimeout(()=>location.reload(), 600);
 }

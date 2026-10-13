@@ -1003,3 +1003,36 @@ function gastosBrutosMes(user, mKey){
   (state.users[user].cartoes||[]).forEach(c=>{ t += Number((c.gastos||{})[mKey]) || 0; });
   return t;
 }
+
+/* ================= HISTÓRICO DE MESES =================
+   Mês atual (em andamento, calculado agora) + cada mês concluído (resumo guardado ao tocar em ✓ Concluir mês).
+   Toque num mês para ver para onde foi o dinheiro. */
+const HIST_ROTULOS = [['moradia','Moradia'],['assinatura','Assinaturas'],['fixo','Fixos'],['futuro','Contas futuras'],['dizimo','Dízimo'],['cartao','Cartão'],['emprestimo','Empréstimo']];
+function abrirHistoricoMeses(){
+  const atual = mesFinanceiroAtual();
+  const fechados = Object.entries(state.historicoMeses||{}).filter(([m])=>m!==atual).sort((a,b)=>b[0].localeCompare(a[0]));
+  const meses = [[atual, Object.assign(resumoCompletoDoMes(atual), { andamento:true })], ...fechados];
+  const maior = Math.max(1, ...meses.map(([,r])=>Math.max(r.renda||0, r.gastoTotal||0)));
+  const linhaMes = ([m, r], i)=>{
+    const sobra = (r.renda||0) - (r.gastoTotal||0);
+    const anterior = meses[i+1] ? (meses[i+1][1].renda||0) - (meses[i+1][1].gastoTotal||0) : null;
+    const comp = anterior===null ? '' : `<span class="hm-comp ${sobra>=anterior?'pos':'neg'}">${sobra>=anterior?'▲':'▼'} ${fmtMoney(Math.abs(sobra-anterior))}</span>`;
+    const detalhe = r.v===2 ? HIST_ROTULOS.map(([k, nome])=>{
+      const v = k in (r.contas||{}) ? r.contas[k] : (r[k]||0);
+      return v > 0.004 ? `<div class="hm-cat"><span>${nome}</span><div class="hm-cat-barra"><div style="width:${Math.round(v/Math.max(1,r.gastoTotal)*100)}%"></div></div><b>${fmtMoney(v)}</b></div>` : '';
+    }).join('') + `<div class="hm-cat hm-cat-renda"><span>Salário + extras</span><div></div><b>${fmtMoney(r.salario||0)} + ${fmtMoney(r.extras||0)}</b></div>`
+      : '<div class="gm-vazio">Mês fechado antes do resumo detalhado.</div>';
+    return `<details class="hm-mes"${i===0?' open':''}>
+      <summary>
+        <div class="hm-topo"><span class="hm-nome">${monthLabelLong(m)}${r.andamento?' <small>em andamento</small>':''}</span><span class="hm-sobra ${sobra>=0?'pos':'neg'}">${fmtMoneySigned(sobra)}</span></div>
+        <div class="hm-barras"><div class="hm-barra entra" style="width:${Math.round((r.renda||0)/maior*100)}%"></div><div class="hm-barra sai" style="width:${Math.round((r.gastoTotal||0)/maior*100)}%"></div></div>
+        <div class="hm-legenda"><span>Entrou <b>${fmtMoney(r.renda||0)}</b></span><span>Saiu <b>${fmtMoney(r.gastoTotal||0)}</b></span>${comp}</div>
+      </summary>
+      <div class="hm-detalhe">${detalhe}</div>
+    </details>`;
+  };
+  document.getElementById('historicoMesesLista').innerHTML = meses.map(linhaMes).join('')
+    + (fechados.length ? '' : '<div class="hm-dica">Os meses aparecem aqui quando você toca em ✓ (Concluir mês) no topo. O resumo fica guardado mesmo depois que os dados do mês são limpos.</div>');
+  document.getElementById('modalHistoricoMeses').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}

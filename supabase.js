@@ -47,6 +47,24 @@
     async sair(){
       if (client) { try { await client.auth.signOut(); } catch (e) {} }
     },
+    /* ===== VERSÕES ANTERIORES (tabela app_state_historico: uma cópia por hora, 30 dias) ===== */
+    async listarVersoes(){
+      if (!client) return { ok:false };
+      try {
+        const { data, error } = await client.from('app_state_historico')
+          .select('id, salvo_em').eq('user_id', USER_ID).order('salvo_em', { ascending:false }).limit(200);
+        if (error) throw error;
+        return { ok:true, lista: data || [] };
+      } catch (e) { return { ok:false, erro: String((e && e.message) || e).slice(0,120) }; }
+    },
+    async lerVersao(id){
+      if (!client) return { ok:false };
+      try {
+        const { data, error } = await client.from('app_state_historico').select('data').eq('id', id).maybeSingle();
+        if (error) throw error;
+        return { ok: !!data, data: data ? data.data : null };
+      } catch (e) { return { ok:false, erro: String((e && e.message) || e).slice(0,120) }; }
+    },
     // Retorna { ok:true, data } (data = null se ainda não existe) ou { ok:false, error }
     async loadState(){
       if (!client) return { ok:false, error:new Error('Supabase não configurado') };

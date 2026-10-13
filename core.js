@@ -29,14 +29,9 @@ function novoEstado(){
     cartoesTracker:[],
     comprasTracker:[],
     metas:[],
-    tarefas:[],
-    tarefaCategorias:[],
     louvores:[],
-    semanaOffset:0,
-    semanaAgenda:{},
     ponto:{ valorHora:0, padraoHoras:8, days:{} },
     configFonte:'system',
-    layoutPrefs:{}
   };
 }
 const FONTES_APP = {
@@ -46,6 +41,13 @@ const FONTES_APP = {
   nunito:"'Nunito',sans-serif"
 };
 function aplicarFonteApp(){
+  /* Poppins só é baixada se for a escolhida (as outras já vêm com o app) */
+  if(state.configFonte === 'poppins' && !document.getElementById('fontePoppins')){
+    const l = document.createElement('link');
+    l.id = 'fontePoppins'; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap';
+    document.head.appendChild(l);
+  }
   const fonte = FONTES_APP[state.configFonte] || FONTES_APP.system;
   document.documentElement.style.setProperty('--font-body', fonte);
   document.querySelectorAll('.fonte-chip').forEach(el=>el.classList.remove('active'));
@@ -81,6 +83,22 @@ function espelharLocal(){
 }
 function marcarLocalSincronizado(){
   try{ localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false })); }catch(e){}
+}
+/* cópia em dia dos dados no aparelho: é o que aparece (só leitura) quando não há internet */
+function guardarCopiaLocal(){
+  try{
+    localStorage.setItem(LOCAL_COPIA_KEY, JSON.stringify(state));
+    localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false }));
+  }catch(e){}
+}
+function lerCopiaLocalQualquer(){
+  try{
+    const st = JSON.parse(localStorage.getItem(LOCAL_COPIA_KEY) || 'null');
+    return (st && typeof st === 'object' && st.users) ? st : null;
+  }catch(e){ return null; }
+}
+function apagarCopiaLocal(){
+  try{ localStorage.removeItem(LOCAL_COPIA_KEY); localStorage.removeItem(LOCAL_META_KEY); }catch(e){}
 }
 function lerCopiaLocalPendente(){
   try{
@@ -238,7 +256,7 @@ async function persistAgora(){
       ok = await tentarSalvarNoBanco();
       if(!ok){ salvarPendente = true; break; }
     } while(salvarPendente);
-    if(ok){ marcarLocalSincronizado(); atualizarStatusSalvo('salvo'); }
+    if(ok){ guardarCopiaLocal(); atualizarStatusSalvo('salvo'); }
     else { atualizarStatusSalvo('erro'); }
     return ok;
   })();
@@ -247,7 +265,7 @@ async function persistAgora(){
   return r;
 }
 /* tenta de novo sozinho: ao voltar a internet e a cada 30 s enquanto houver algo pendente */
-window.addEventListener('online', ()=>{ if(salvarPendente) persistAgora(); });
+window.addEventListener('online', ()=>{ if(!remoteReady){ carregarTentativas = 0; carregar(); } else if(salvarPendente) persistAgora(); });
 setInterval(()=>{ if(salvarPendente && remoteReady && !salvandoPromise && !persistTimer) persistAgora(); }, 30000);
 document.addEventListener('visibilitychange', async ()=>{
   if(document.hidden){ if(persistTimer || salvarPendente) persistAgora(); return; }
@@ -326,21 +344,15 @@ async function carregar(){
       if(!state.pontoFechado) state.pontoFechado = {};
       if(!state.credoVistaCategoriasCustom) state.credoVistaCategoriasCustom = [];
       if(!state.louvores) state.louvores = [];
-      if(state.semanaOffset === undefined) state.semanaOffset = 0;
-      if(!state.semanaAgenda) state.semanaAgenda = {};
-      if(!state.tarefas) state.tarefas = [];
-      if(!state.tarefaCategorias) state.tarefaCategorias = [];
-      (state.tarefas||[]).forEach(t=>{ if(t.tempoGasto===undefined) t.tempoGasto=0; if(t.timerStart===undefined) t.timerStart=null; });
       // migração: garantir campos novos
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; if(!c.assinaturas) c.assinaturas=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
       /* restos de recursos que saíram do app (receitas, mercado, estoque...): só ocupavam espaço no banco */
-      ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','configTema','metaPJ'].forEach(k=>{
+      ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','configTema','metaPJ','tarefas','tarefaCategorias','semanaAgenda','semanaOffset','layoutPrefs','layoutV3'].forEach(k=>{
         if(k in state){ delete state[k]; precisaSalvar = true; }
       });
       if(!state.configFonte) state.configFonte = 'system';
-      if(!state.layoutPrefs) state.layoutPrefs = {};
       mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso ? 1 : 0;
       if(state.mesAtual){
         mesAtualRef = state.mesAtual;
@@ -358,7 +370,6 @@ async function carregar(){
         precisaSalvar = true;
       }
       mesPontoRef = state.mesPonto;
-      if(!state.layoutV3){ state.layoutPrefs = {}; state.layoutV3 = true; precisaSalvar = true; }   // v3.0: telas reorganizadas, zera posições salvas
       /* migração: o antigo botão "Calcular só pelo saldo em conta" vira "recebi" do salário e dos extras do mês */
       ['davi','cris'].forEach(u=>{
         if(!state.users[u].usarSaldoComoBase) return;
@@ -382,11 +393,21 @@ async function carregar(){
     }
     remoteReady = true;
     atualizarStatusSalvo('salvo');
+    if(!precisaSalvar) guardarCopiaLocal();   // com algo pendente, a cópia é atualizada depois de gravar
   }catch(e){
     console.error('[LOAD] Erro ao carregar estado:', e);
-    state = novoEstado();
     remoteReady = false;   // não grava nada até conseguir ler a nuvem
-    atualizarStatusSalvo('offline', (window.SiloSupabase&&window.SiloSupabase.lastError)||(e&&e.message)||'erro desconhecido');
+    /* sem internet: mostra os dados da última vez (só leitura) em vez da tela vazia */
+    const copia = lerCopiaLocalQualquer();
+    if(copia){
+      state = Object.assign(novoEstado(), copia);
+      if(state.mesAtual) mesAtualRef = state.mesAtual;
+      if(state.mesPonto) mesPontoRef = state.mesPonto;
+      atualizarStatusSalvo('offline', 'sem internet — mostrando os dados da última vez, só para consulta');
+    } else {
+      state = novoEstado();
+      atualizarStatusSalvo('offline', (window.SiloSupabase&&window.SiloSupabase.lastError)||(e&&e.message)||'erro desconhecido');
+    }
     if(carregarTentativas++ < 5) setTimeout(carregar, 8000);
   }
   limparDadosAntigos();
@@ -395,7 +416,6 @@ async function carregar(){
   renderAll();
   fecharSplash();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
-  if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility('planner');
   await finalizarMigracaoLegado(precisaSalvar, legado);
   compactarImagensDoEstado();
 }
@@ -441,8 +461,12 @@ async function entrarNoApp(){
   carregar();
 }
 async function sairDoApp(){
-  if(salvarPendente || persistTimer){ await persistAgora(); }
+  if(salvarPendente || persistTimer){
+    const ok = await persistAgora();
+    if(!ok && !(await iosConfirm('Há alterações que ainda não chegaram ao banco (sem conexão?). Sair mesmo assim? Elas serão perdidas.'))) return;
+  }
   await window.SiloSupabase.sair();
+  apagarCopiaLocal();   // a cópia dos dados que fica no aparelho sai junto
   location.reload();
 }
 // Migração única do localStorage -> Supabase (pode ser apagada quando todos os aparelhos já tiverem migrado)
@@ -718,8 +742,6 @@ function switchAba(aba){
   if(aba==='planner'){ renderPlanner(); renderPanorama(); }
   if(aba==='louvor') renderLouvor();
   if(aba==='vendas' && typeof renderVendas==='function') renderVendas();
-  if(typeof atualizarLvNavBar==='function') atualizarLvNavBar();
-  if(typeof updateLayoutBtnVisibility==='function') updateLayoutBtnVisibility(aba);
 }
 function switchUser(user){
   state.currentUser = user;

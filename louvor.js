@@ -1,19 +1,3 @@
-function lvContextoAtivo(){
-  const abaLouvorAtiva = document.getElementById('aba-louvor')?.classList.contains('active');
-  const detalheAtivo = document.getElementById('pageLouvorDetalhe')?.classList.contains('active');
-  const formAtivo = document.getElementById('pageLouvorForm')?.classList.contains('active');
-  return abaLouvorAtiva || detalheAtivo || formAtivo;
-}
-function atualizarLvNavBar(){
-  const bar = document.getElementById('lvNavBar');
-  if(!bar) return;
-  const ativo = lvContextoAtivo();
-  bar.classList.toggle('show', ativo);
-  document.body.classList.toggle('lv-nav-active', ativo);
-  const naBiblioteca = document.getElementById('aba-louvor')?.classList.contains('active');
-  document.getElementById('lvNavBiblioteca')?.classList.toggle('active', !!naBiblioteca);
-  document.getElementById('lvNavEstudio')?.classList.toggle('active', !naBiblioteca && ativo);
-}
 
 /* ================= LOUVOR ================= */
 const LOUVOR_CATEGORIAS = ['Louvor','Harpa Cristã','Corinhos'];
@@ -112,12 +96,10 @@ function openLouvorForm(){
   atualizarLvNovoTomBox();
   document.getElementById('pageLouvorForm').classList.add('active');
   window.scrollTo(0,0);
-  atualizarLvNavBar();
 }
 function closeLouvorForm(){
   document.getElementById('pageLouvorForm').classList.remove('active');
   document.body.style.overflow = '';
-  atualizarLvNavBar();
 }
 function renderLvNovoCategoriaChips(){
   document.getElementById('lvNovoCategoriaChips').innerHTML = LOUVOR_CATEGORIAS.map(c=>
@@ -172,7 +154,6 @@ function abrirLouvorDetalhe(id){
   lvAtualizarEditor();
   if(typeof lvAtualizarBtnOrganizar==='function') lvAtualizarBtnOrganizar();
   window.scrollTo(0,0);
-  atualizarLvNavBar();
 }
 function renderLvStatusBtn(){
   const l = getLouvorAtual(); if(!l) return;
@@ -191,7 +172,6 @@ function closeLouvorDetalhe(){
   document.getElementById('pageLouvorDetalhe').classList.remove('active');
   louvorAtualId = null;
   renderLouvor();
-  atualizarLvNavBar();
 }
 function renderLvCategoriaChips(){
   const l = getLouvorAtual(); if(!l) return;
