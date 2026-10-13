@@ -1870,3 +1870,39 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
   .cal-pop.aberto{transform:none}
   .cal-dia{font-size:15px}
 }
+
+/* ===== VENDAS: lista de clientes ativos ===== */
+.rd-sub{font-size:12.5px;color:var(--text-faint);margin-top:2px}
+.vd-cli-acoes{display:flex;gap:2px;flex-shrink:0}
+.vd-cli-acoes .btn-icon-sm{width:34px;height:34px;border-radius:10px;color:var(--text-dim)}
+.vd-cli-acoes .btn-icon-sm:hover{background:var(--card-2);color:var(--text)}
+.vd-cli-acoes .vd-cli-del:hover{background:var(--danger-tint);color:var(--danger)}
+
+/* ===== VENDAS → Configurar → Comissões: compacto, sem caixa dentro de caixa ===== */
+.vc-pcts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.vc-pct-campo label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:6px}
+.vc-pct input{width:100%;box-sizing:border-box;min-height:46px;padding:11px 34px 11px 14px;border:1.5px solid transparent;border-radius:12px;background:var(--card-2);font:inherit;font-size:16px;font-weight:600;color:var(--text);outline:none}
+.vc-pct input:focus{border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
+/* tabela de planos: cabeçalho único + uma linha por plano */
+.vc-planos{border-top:1px solid var(--line)}
+.vc-planos-cab,.vc-plano{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+.vc-planos-cab{padding:12px 0 6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint)}
+.vc-plano{padding:8px 0 12px;border-bottom:1px solid var(--line)}
+.vc-plano:last-child{border-bottom:none}
+.vc-plano-nome{display:flex;align-items:center;gap:8px;min-width:0}
+.vc-plano .vc-nome{font-size:15px;padding:8px 0}
+.vc-plano .input-money input{width:100%;box-sizing:border-box;min-height:44px;padding:10px 10px 10px 38px!important;border:1.5px solid transparent;border-radius:12px;background:var(--card-2);font:inherit;font-size:15px;font-weight:600;color:var(--text);outline:none;font-variant-numeric:tabular-nums}
+.vc-plano .input-money input:focus{border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
+.vc-plano .input-money::before{left:12px;font-size:12px}
+/* o que você recebe: uma linha de texto, valores em verde */
+.vc-plano .vc-recebe{grid-column:1/-1;background:none;padding:2px 0 0;margin:0;border-radius:0;font-size:12.5px;line-height:1.45;color:var(--text-dim);display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px}
+.vc-plano .vc-recebe b{color:var(--success);font-weight:700}
+.vc-plano .vc-12m{color:var(--text-faint)}
+.vc-plano .vc-12m b{color:var(--text);font-weight:700}
+.vc-vazio{color:var(--text-faint)}
+@media(max-width:480px){
+  .vc-planos-cab{grid-template-columns:1fr 1fr}
+  .vc-planos-cab span:first-child{display:none}
+  .vc-plano{grid-template-columns:1fr 1fr}
+  .vc-plano-nome{grid-column:1/-1}
+}

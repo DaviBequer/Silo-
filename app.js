@@ -91,6 +91,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.1', itens: [
+    'Vendas: toque em "Clientes ativos" para ver cada cliente e editar ou excluir',
+    'Vendas → Configurar: comissões num layout compacto, com os planos em forma de tabela'
+  ]},
   { versao: 'v4.0', itens: [
     'Computador: barra de abas na lateral esquerda, unida ao cabeçalho (logo em cima de "Finanças")',
     'Menu com nomes e ícones novos: Finanças, Ponto, Vendas e Louvor',

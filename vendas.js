@@ -139,7 +139,7 @@ function renderVendas(){
     <div class="ponto-horas-sub"><span>${fmtMoney(vendasSetupNoMes(mAtual))}</span> de setup + <span>${fmtMoney(vendasRecNoMes(mAtual))}</span> de recorrência</div>
     <div class="resumo-stats">
       <div class="resumo-stat"><div class="resumo-stat-lbl">Recorrência/mês</div><div class="resumo-stat-val pos">${fmtMoney(recAcumulada)}</div></div>
-      <div class="resumo-stat"><div class="resumo-stat-lbl">Clientes ativos</div><div class="resumo-stat-val">${ativos.length}</div></div>
+      <button type="button" class="resumo-stat resumo-stat-btn" onclick="abrirClientesAtivos()"><div class="resumo-stat-lbl">Clientes ativos <span class="resumo-stat-seta">›</span></div><div class="resumo-stat-val">${ativos.length}</div></button>
       <div class="resumo-stat"><div class="resumo-stat-lbl">Saldo devedor</div><div class="resumo-stat-val vd-devedor${divida.tem?' neg':''}">${divida.tem?fmtMoney(divida.saldo):'—'}${divida.tem && divida.parcelas ? `<span class="vd-parcelas" title="${divida.parcelas} parcela${divida.parcelas===1?'':'s'} a pagar" aria-label="${divida.parcelas} parcela${divida.parcelas===1?'':'s'} a pagar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>${divida.parcelas}x</span>` : ''}</div></div>
     </div>
     ${metaMes===null
@@ -211,6 +211,7 @@ function renderVendas(){
 /* ---------- venda: cadastro / edição ---------- */
 let vendaEditandoId = null, vendaModeloSel = 'A', vendaStatusSel = 'ativo';
 function abrirFormVenda(id){
+  vdVoltarParaClientes = false;
   const vd = garantirVendas();
   const v = id ? vd.lista.find(x=>x.id===id) : null;
   vendaEditandoId = v ? v.id : null;
@@ -282,6 +283,7 @@ function salvarVenda(){
   closeModal('modalVenda');
   renderVendas();
   showToast('Venda salva');
+  vdAtualizarListaClientes();
 }
 async function excluirVenda(id){
   const vd = garantirVendas();
@@ -292,6 +294,42 @@ async function excluirVenda(id){
   vd.lista = vd.lista.filter(x=>x.id!==id);
   persist();
   renderVendas();
+  vdAtualizarListaClientes();
+}
+
+/* ---------- Clientes ativos: lista com editar e excluir (toque no número do resumo) ---------- */
+let vdVoltarParaClientes = false;   // depois de editar um cliente, a lista abre de novo
+function abrirClientesAtivos(){
+  const mAtual = mesFinanceiroAtual();
+  const ativos = garantirVendas().lista.filter(v=>vendaAtivaNoMes(v, mAtual)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  const rec = ativos.reduce((s,v)=>s+vendaComRec(v), 0);
+  document.getElementById('resumoDetalheTopo').innerHTML = `<div class="rd-rotulo">Clientes ativos · ${monthLabelLong(mAtual)}</div><div class="rd-total">${ativos.length} cliente${ativos.length===1?'':'s'}</div><div class="rd-sub">${fmtMoney(rec)}/mês de recorrência</div>`;
+  document.getElementById('resumoDetalheLista').innerHTML = ativos.length ? `<div class="gm-grupo">${ativos.map(v=>{
+    const mod = v.modelo==='P' ? 'Personalizado' : (vendasModelo(v.modelo)?.nome || v.modelo || '');
+    return `<div class="gm-linha vd-cli">
+      <span class="gm-inicial">${escVendas((v.cliente||'?').charAt(0).toUpperCase())}</span>
+      <div class="gm-info"><div class="gm-nome">${escVendas(v.cliente||'Cliente')}</div><div class="gm-sub">${escVendas(mod)} · desde ${fmtDataBR(v.data)} · ${fmtMoney(vendaComRec(v))}/mês</div></div>
+      <div class="vd-cli-acoes">
+        <button type="button" class="btn-icon-sm" title="Editar" aria-label="Editar ${escVendas(v.cliente||'cliente')}" onclick="editarClienteAtivo('${v.id}')">${VENDAS_ICON_EDIT}</button>
+        <button type="button" class="btn-icon-sm vd-cli-del" title="Excluir" aria-label="Excluir ${escVendas(v.cliente||'cliente')}" onclick="excluirVenda('${v.id}')">${VENDAS_ICON_DEL}</button>
+      </div>
+    </div>`;
+  }).join('')}</div>` : '<div class="gm-vazio">Nenhum cliente ativo neste mês. Toque em "Nova venda" para registrar.</div>';
+  document.getElementById('modalResumoDetalhe').dataset.modo = 'clientes';
+  document.getElementById('modalResumoDetalhe').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function editarClienteAtivo(id){
+  closeModal('modalResumoDetalhe');
+  abrirFormVenda(id);
+  vdVoltarParaClientes = true;   // depois do abrirFormVenda (que zera a marca)
+}
+/* depois de salvar/excluir: se a lista de clientes estava aberta (ou veio da edição), atualiza/reabre */
+function vdAtualizarListaClientes(){
+  const modal = document.getElementById('modalResumoDetalhe');
+  const listaAberta = modal && modal.classList.contains('active') && modal.dataset.modo === 'clientes';
+  const formAberto = document.getElementById('modalVenda')?.classList.contains('active');
+  if(listaAberta || (vdVoltarParaClientes && !formAberto)){ vdVoltarParaClientes = false; abrirClientesAtivos(); }
 }
 
 /* ---------- configuração ---------- */
@@ -335,8 +373,8 @@ function vcAtualizar(){
     const g = ganho(m);
     const el = document.getElementById('vcRecebe'+m.id);
     if(el) el.innerHTML = (m.setup>0 || m.mensal>0)
-      ? `Você recebe <b>${fmtMoney(g.setup)}</b> no mês da venda + <b>${fmtMoney(g.rec)}/mês</b> a partir do mês seguinte <span>· em 12 meses: ${fmtMoney(g.setup + g.rec*11)}</span>`
-      : 'Preencha o setup e a mensalidade para ver quanto você recebe.';
+      ? `<span>Você recebe <b>${fmtMoney(g.setup)}</b> na venda + <b>${fmtMoney(g.rec)}/mês</b> depois</span><span class="vc-12m">12 meses: <b>${fmtMoney(g.setup + g.rec*11)}</b></span>`
+      : '<span class="vc-vazio">Preencha o setup e a mensalidade</span>';
     const nm = document.getElementById('vcSimNome'+m.id); if(nm) nm.textContent = m.nome;
   });
   /* simulação */

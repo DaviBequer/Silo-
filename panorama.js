@@ -113,6 +113,7 @@ function abrirDetalheResumo(tipo){
   }
   document.getElementById('resumoDetalheTopo').innerHTML = `<div class="rd-rotulo">${titulo} · ${monthLabelLong(mKey)}</div><div class="rd-total ${cor}">${fmtMoney(total)}</div>`;
   document.getElementById('resumoDetalheLista').innerHTML = html || `<div class="gm-vazio">${tipo==='entra'?'Nada para entrar neste mês.':'Nada para pagar neste mês. ✓'}</div>`;
+  document.getElementById('modalResumoDetalhe').dataset.modo = 'resumo';
   document.getElementById('modalResumoDetalhe').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
