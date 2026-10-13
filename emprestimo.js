@@ -145,8 +145,8 @@ function escapeHtmlEmp(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;'
 let empEditandoId = null;
 let empLogoAtual = null;
 function renderEmpLogoPreview(){
-  document.getElementById('empLogoPreview').innerHTML = empLogoAtual ? `<img src="${empLogoAtual}" alt="">` : '<span>sem logo</span>';
-  document.getElementById('empLogoRemover').style.display = empLogoAtual ? '' : 'none';
+  /* a própria logo é o botão (tocar coloca, troca ou remove) */
+  document.getElementById('empLogoPreview').innerHTML = empLogoAtual ? `<img src="${empLogoAtual}" alt="">` : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>';
 }
 function onEmpLogoSelected(event){
   const file = event.target.files[0];

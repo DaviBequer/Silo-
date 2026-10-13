@@ -22,10 +22,19 @@ function vendasCfg(){ return garantirVendas().config; }
 function vendasModelo(id){ return vendasCfg().modelos.find(m=>m.id===id) || null; }
 
 /* ---------- comissões ---------- */
-function vendaMes(v){ return String(v.data||'').slice(0,7); }
+/* O app trabalha um mês à frente do calendário (o Dashboard mostra o mês seguinte ao de hoje).
+   A data da venda é a do calendário; aqui ela vira o mês do app, para a venda de hoje cair no mês "atual" da tela. */
+function vendasMesDoApp(dataISO){
+  const m = String(dataISO||'').slice(0,7);
+  if(!/^\d{4}-\d{2}$/.test(m)) return '';
+  const r = todayKey(), f = mesFinanceiroAtual();
+  const desloc = (Number(f.slice(0,4))-Number(r.slice(0,4)))*12 + (Number(f.slice(5,7))-Number(r.slice(5,7)));
+  return addMonths(m, desloc);
+}
+function vendaMes(v){ return vendasMesDoApp(v.data); }
 function vendaComSetup(v){ return (Number(v.setup)||0) * (Number(vendasCfg().pctSetup)||0) / 100; }
 function vendaComRec(v){ return (Number(v.mensal)||0) * (Number(vendasCfg().pctRec)||0) / 100; }
-function vendaMesCancel(v){ return (v.status==='cancelado' && v.canceladoEm) ? String(v.canceladoEm).slice(0,7) : null; }
+function vendaMesCancel(v){ return (v.status==='cancelado' && v.canceladoEm) ? vendasMesDoApp(v.canceladoEm) : null; }
 function vendaAtivaNoMes(v, mKey){
   if(!vendaMes(v) || mKey < vendaMes(v)) return false;
   const c = vendaMesCancel(v);
@@ -47,6 +56,16 @@ function vendasSobraBase(mKey){
 }
 function vendasMeses(){ const out = [], ini = mesFinanceiroAtual(); for(let i=0;i<12;i++) out.push(addMonths(ini, i)); return out; }
 function vendasMeta(mKey){ const v = garantirVendas().metas[mKey]; return (v===undefined || v===null || v==='') ? null : Number(v); }
+/* Quanto as comissões precisam render no mês para bater a meta.
+   A sobra das contas NÃO conta para a meta:
+   - contas já sobram → a meta inteira tem que vir das vendas (sobra 800, meta 1.500 → vender 1.500 em comissões);
+   - contas faltam   → as vendas cobrem a falta e ainda sobram a meta (falta 536,64, meta 1.500 → 2.036,64). */
+function vendasAlvoComissao(mKey, base){
+  const meta = vendasMeta(mKey);
+  if(meta === null) return null;
+  if(base === undefined) base = vendasSobraBase(mKey);
+  return meta + Math.max(0, -base);
+}
 
 /* Quantas vendas de um modelo faltam em cada mês. Vai mês a mês: as vendas "necessárias" de um mês
    já geram recorrência nos meses seguintes e diminuem a necessidade deles. */
@@ -56,9 +75,9 @@ function vendasNecessarias(modelo, meses){
   const cRec = (Number(modelo.mensal)||0) * (Number(cfg.pctRec)||0) / 100;
   const extra = {}, out = {};
   meses.forEach((m, i)=>{
-    const meta = vendasMeta(m);
-    if(meta === null){ out[m] = null; return; }
-    const falta = meta - (vendasSobraBase(m) + vendasComissaoNoMes(m) + (extra[m]||0));
+    const alvo = vendasAlvoComissao(m);
+    if(alvo === null){ out[m] = null; return; }
+    const falta = alvo - (vendasComissaoNoMes(m) + (extra[m]||0));
     let n = 0;
     if(falta > 0.005) n = cSetup > 0 ? Math.ceil(falta / cSetup) : Infinity;
     out[m] = n;
@@ -78,7 +97,7 @@ function vendasSaldoDevedor(){
 }
 function vendasAmortizar(valor){
   const emp = vendasEmprestimoAtivo();
-  if(!emp){ showToast('Cadastre o empréstimo na aba Dashboard → Empréstimo'); return; }
+  if(!emp){ showToast('Cadastre o empréstimo na aba Finanças → Empréstimo'); return; }
   abrirAmortizarEmp(emp.id, Math.round(valor*100)/100);
 }
 
@@ -100,12 +119,16 @@ function renderVendas(){
   const recAcumulada = ativos.reduce((s,v)=>s+vendaComRec(v), 0);
   const comMes = vendasComissaoNoMes(mAtual);
   const metaMes = vendasMeta(mAtual);
-  const projMes = vendasSobraBase(mAtual) + comMes;
+  const baseMes = vendasSobraBase(mAtual);
+  const alvoMes = vendasAlvoComissao(mAtual, baseMes);
   const divida = vendasSaldoDevedor();
 
-  /* resumo */
-  const faltaMes = metaMes===null ? null : metaMes - projMes;
-  const pctMes = (metaMes && metaMes>0) ? Math.max(0, Math.min(100, Math.round(projMes/metaMes*100))) : 0;
+  /* resumo: meta = quanto as comissões precisam render (a sobra das contas não entra) */
+  const faltaMes = alvoMes===null ? null : alvoMes - comMes;
+  const pctMes = (alvoMes && alvoMes>0) ? Math.max(0, Math.min(100, Math.round(comMes/alvoMes*100))) : 0;
+  const explicaMes = metaMes===null ? '' : (baseMes < 0
+    ? `Meta ${fmtMoney(metaMes)} + cobrir a falta de ${fmtMoney(-baseMes)} = <b>${fmtMoney(alvoMes)}</b> em vendas`
+    : `Meta <b>${fmtMoney(metaMes)}</b> em vendas · as contas já sobram ${fmtMoney(baseMes)}`);
   let html = `<div class="card resumo-card">
     <div class="resumo-topo">
       <div class="resumo-mes">Vendas · ${monthLabelLong(mAtual)}</div>
@@ -117,29 +140,31 @@ function renderVendas(){
     <div class="resumo-stats">
       <div class="resumo-stat"><div class="resumo-stat-lbl">Recorrência/mês</div><div class="resumo-stat-val pos">${fmtMoney(recAcumulada)}</div></div>
       <div class="resumo-stat"><div class="resumo-stat-lbl">Clientes ativos</div><div class="resumo-stat-val">${ativos.length}</div></div>
-      <div class="resumo-stat"><div class="resumo-stat-lbl">Saldo devedor</div><div class="resumo-stat-val${divida.tem?' neg':''}">${divida.tem?fmtMoney(divida.saldo):'—'}</div></div>
+      <div class="resumo-stat"><div class="resumo-stat-lbl">Saldo devedor</div><div class="resumo-stat-val vd-devedor${divida.tem?' neg':''}">${divida.tem?fmtMoney(divida.saldo):'—'}${divida.tem && divida.parcelas ? `<span class="vd-parcelas" title="${divida.parcelas} parcela${divida.parcelas===1?'':'s'} a pagar" aria-label="${divida.parcelas} parcela${divida.parcelas===1?'':'s'} a pagar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>${divida.parcelas}x</span>` : ''}</div></div>
     </div>
     ${metaMes===null
       ? `<div class="vd-meta-linha"><span>Sem meta para ${monthLabel(mAtual)}</span><button type="button" class="modal-link" onclick="abrirMetaVendas('${mAtual}')">Definir meta</button></div>`
-      : `<div class="vd-meta-linha"><span>Meta ${fmtMoney(metaMes)} · projetado ${fmtMoney(projMes)}</span><b class="${faltaMes>0?'neg':'pos'}">${faltaMes>0?'falta '+fmtMoney(faltaMes):'✓ bateu'}</b></div>
-         <div class="vd-bar${faltaMes>0?' falta':''}"><div style="width:${pctMes}%"></div></div>`}
+      : `<div class="vd-meta-linha"><span>${explicaMes}</span><b class="${faltaMes>0.005?'neg':'pos'}">${faltaMes>0.005?'falta '+fmtMoney(faltaMes):'✓ bateu'}</b></div>
+         <div class="vd-bar${faltaMes>0.005?' falta':''}"><div style="width:${pctMes}%"></div></div>`}
     <div class="resumo-rodape">
-      <div class="resumo-inclui">${divida.tem?`<span class="vd-info-chip">${divida.parcelas} parcela${divida.parcelas===1?'':'s'} a pagar</span>`:''}</div>
-      <button type="button" class="resumo-btn" onclick="abrirFormVenda()"><span class="resumo-btn-ico">+</span><span>Nova venda</span></button>
+      <button type="button" class="resumo-btn" style="margin-left:auto" onclick="abrirFormVenda()"><span class="resumo-btn-ico">+</span><span>Nova venda</span></button>
     </div>
   </div>`;
 
   /* metas mês a mês */
   html += `<div class="card"><div class="card-title"><div class="left">Metas de sobra</div></div>
-    <div class="vd-legenda">Sobra do Fluxo (empréstimo dentro, cartão fora) + comissões = projetada</div>
+    <div class="vd-legenda">Meta = quanto as vendas precisam render. Se as contas já sobram, a meta inteira vem das vendas; se faltam, as vendas cobrem a falta e ainda sobram a meta.</div>
     ${meses.map(m=>{
       const base = vendasSobraBase(m), set = vendasSetupNoMes(m), rec = vendasRecNoMes(m);
-      const proj = base + set + rec, meta = vendasMeta(m);
-      const dif = meta===null ? null : proj - meta;
-      const pct = (meta && meta>0) ? Math.max(0, Math.min(100, Math.round(proj/meta*100))) : (dif!==null && dif>=0 ? 100 : 0);
+      const com = set + rec, proj = base + com, meta = vendasMeta(m);
+      const alvo = vendasAlvoComissao(m, base);
+      const dif = alvo===null ? null : com - alvo;   // < 0: falta vender; > 0: passou da meta
+      const pct = (alvo && alvo>0) ? Math.max(0, Math.min(100, Math.round(com/alvo*100))) : (dif!==null && dif>=0 ? 100 : 0);
       const nA = necA[m], nB = necB[m];
+      /* quantas vendas faltam: dois blocos lado a lado, um por plano */
+      const blocoPlano = (n, nome)=>`<div class="vd-precisa-op"><b>${isFinite(n)?n:'—'}</b><span>venda${n===1?'':'s'}<small>${escVendas(nome)}</small></span></div>`;
       const precisa = (dif!==null && dif < -0.005)
-        ? `<div class="vd-precisa">Faltam <b>${isFinite(nA)?nA:'—'}</b> venda${nA===1?'':'s'} do ${escVendas(mA.nome)} <span>ou</span> <b>${isFinite(nB)?nB:'—'}</b> do ${escVendas(mB.nome)}</div>` : '';
+        ? `<div class="vd-precisa"><div class="vd-precisa-tit">Para bater a meta</div><div class="vd-precisa-ops">${blocoPlano(nA, mA.nome)}<div class="vd-precisa-ou">ou</div>${blocoPlano(nB, mB.nome)}</div></div>` : '';
       const amortizar = (dif!==null && dif > 0.005 && divida.tem && divida.parcelas)
         ? `<button type="button" class="vd-amortizar" onclick="vendasAmortizar(${Math.min(dif, divida.saldo).toFixed(2)})">Amortizar ${fmtMoney(Math.min(dif, divida.saldo))} do excedente ›</button>` : '';
       return `<div class="vd-mes${m===mAtual?' atual':''}">
@@ -152,8 +177,8 @@ function renderVendas(){
           <span>+ comissões <b>${fmtMoney(set+rec)}</b>${rec>0.004?` <small>(${fmtMoney(rec)} recorrente)</small>`:''}</span>
           <span>= <b class="${proj<0?'neg':''}">${fmtMoneySigned(proj)}</b></span>
         </div>
-        ${meta===null ? '' : `<div class="vd-bar${dif<0?' falta':''}"><div style="width:${pct}%"></div></div>
-        <div class="vd-status ${dif<0?'neg':'pos'}">${dif<0?'Falta '+fmtMoney(-dif):'Passou '+fmtMoney(dif)}</div>`}
+        ${meta===null ? '' : `<div class="vd-bar${dif<-0.005?' falta':''}"><div style="width:${pct}%"></div></div>
+        <div class="vd-status ${dif<-0.005?'neg':'pos'}">${dif<-0.005?'Falta vender '+fmtMoney(-dif)+(base<0?` <small>(${fmtMoney(-base)} da falta + ${fmtMoney(meta)} da meta)</small>`:''):'✓ Bateu'+(dif>0.005?' · passou '+fmtMoney(dif):'')}</div>`}
         ${precisa}${amortizar}
       </div>`;
     }).join('')}
@@ -168,7 +193,7 @@ function renderVendas(){
       return `<div class="vd-venda${cancel?' cancelada':''}">
         <div class="vd-venda-info">
           <div class="vd-venda-nome">${escVendas(v.cliente||'Cliente')}</div>
-          <div class="vd-venda-sub">${fmtDataBR(v.data)} · ${escVendas(mod)} · ${cancel?'cancelado'+(v.canceladoEm?' em '+monthLabel(String(v.canceladoEm).slice(0,7)):''):'ativo'}</div>
+          <div class="vd-venda-sub">${fmtDataBR(v.data)} · ${escVendas(mod)} · ${cancel?'cancelado'+(v.canceladoEm?' em '+fmtDataBR(v.canceladoEm):''):'ativo'}</div>
           <div class="vd-venda-sub">Setup ${fmtMoney(v.setup)} → <b>${fmtMoney(vendaComSetup(v))}</b> · Mensal ${fmtMoney(v.mensal)} → <b>${fmtMoney(vendaComRec(v))}/mês</b></div>
         </div>
         <div class="vd-venda-acoes">
@@ -240,6 +265,12 @@ function salvarVenda(){
     status: vendaStatusSel,
     canceladoEm: vendaStatusSel==='cancelado' ? (document.getElementById('vendaCancelData').value || empHojeISO()) : null
   };
+  if(!dados.cliente){
+    const el = document.getElementById('vendaCliente');
+    el.classList.add('campo-erro'); el.focus();
+    el.addEventListener('input', ()=>el.classList.remove('campo-erro'), { once:true });
+    showToast('Informe o nome do cliente'); return;
+  }
   if(!dados.data){ showToast('Informe a data da venda'); return; }
   if(!(dados.setup>0) && !(dados.mensal>0)){ showToast('Informe o setup ou a mensalidade'); return; }
   if(vendaEditandoId){
@@ -328,7 +359,9 @@ function vcAtualizar(){
       const atual = vendasSobraBase(m) + vendasComissaoNoMes(m);
       const extra = (m===mesVenda ? setupTotal : 0) + (m>mesVenda ? recTotal : 0);
       const comSim = atual + extra, meta = vendasMeta(m);
-      const st = meta===null ? '' : (comSim >= meta ? `<span class="pos">✓ bate a meta de ${fmtMoney(meta)}</span>` : `<span class="neg">falta ${fmtMoney(meta-comSim)} p/ meta</span>`);
+      /* mesma regra da meta: só as comissões contam (a sobra das contas não entra) */
+      const alvo = vendasAlvoComissao(m), comissoes = vendasComissaoNoMes(m) + extra;
+      const st = alvo===null ? '' : (comissoes >= alvo - 0.005 ? `<span class="pos">✓ bate a meta de ${fmtMoney(meta)}</span>` : `<span class="neg">falta ${fmtMoney(alvo-comissoes)} p/ meta</span>`);
       return `<div class="vc-sim-mes"><div class="vc-sim-mes-nome">${monthLabel(m)}</div>
         <div class="vc-sim-mes-val"><small>${fmtMoneySigned(atual)} →</small> <b class="${comSim<0?'neg':''}">${fmtMoneySigned(comSim)}</b></div>
         <div class="vc-sim-mes-st">${st}</div></div>`;

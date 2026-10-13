@@ -1408,7 +1408,6 @@ body.lay-dragging-active{cursor:grabbing}
 .vd-bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0 2px}
 .vd-bar div{height:100%;border-radius:99px;background:var(--success);transition:width .3s var(--ease)}
 .vd-bar.falta div{background:var(--danger)}
-.vd-info-chip{display:inline-flex;align-items:center;background:var(--card-2);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--text-dim)}
 .vd-legenda{font-size:12px;color:var(--text-faint);margin:-12px 0 6px}
 .vd-mes{padding:14px 0;border-top:1px solid var(--line)}
 .vd-mes:first-of-type{border-top:none}
@@ -1421,9 +1420,16 @@ body.lay-dragging-active{cursor:grabbing}
 .vd-conta b{color:var(--text);font-weight:700}
 .vd-conta small{color:var(--text-faint)}
 .vd-status{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
-.vd-precisa{margin-top:6px;font-size:13px;color:var(--text)}
-.vd-precisa b{font-size:15px}
-.vd-precisa span{color:var(--text-faint)}
+.vd-status small{font-weight:500;color:var(--text-faint)}
+/* "Para bater a meta": um bloco por plano, lado a lado */
+.vd-precisa{margin-top:12px}
+.vd-precisa-tit{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px}
+.vd-precisa-ops{display:flex;align-items:stretch;gap:10px}
+.vd-precisa-op{flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--card-2);min-width:0}
+.vd-precisa-op b{font-size:24px;font-weight:800;line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
+.vd-precisa-op span{display:flex;flex-direction:column;font-size:12.5px;font-weight:600;color:var(--text-dim);line-height:1.25;min-width:0}
+.vd-precisa-op small{font-size:11.5px;font-weight:500;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vd-precisa-ou{align-self:center;font-size:12px;font-weight:600;color:var(--text-faint)}
 .vd-amortizar{margin-top:8px;border:none;background:var(--gold-tint);color:var(--gold-dim);border-radius:10px;padding:8px 12px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
 .vd-venda{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
 .card-title + .vd-venda{border-top:none}
@@ -1668,3 +1674,199 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 .banco-linha input::placeholder{color:var(--text-faint);font-weight:400}
 .banco-linha input:focus{border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
 .banco-linha .input-money input{padding-left:40px!important;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Vendas: parcelas do empréstimo como selo ao lado do saldo devedor */
+.vd-devedor{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vd-parcelas{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:var(--danger-tint);color:var(--danger);font-size:11.5px;font-weight:700;letter-spacing:0;font-variant-numeric:tabular-nums;cursor:default}
+
+/* ===== GASTOS DO MÊS (Fluxo Mensal → Gastos) ===== */
+.gm-grupo{margin-bottom:14px}
+.gm-grupo-topo{display:flex;justify-content:space-between;padding:0 0 6px;border-bottom:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}
+.gm-linha{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.gm-linha:last-child{border-bottom:none}
+.gm-linha .conta-logo,.gm-inicial{width:32px;height:32px;border-radius:9px;flex-shrink:0;object-fit:cover}
+.gm-inicial{display:flex;align-items:center;justify-content:center;background:var(--card-2);font-size:13px;font-weight:700;color:var(--text-dim)}
+.gm-info{flex:1;min-width:0}
+.gm-nome{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm-sub{font-size:12px;color:var(--text-faint)}
+.gm-valor{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.gm-linha.pago{opacity:.55}
+.gm-linha.pago .gm-valor{text-decoration:line-through;font-weight:600}
+.gm-linha.pago .gm-sub{color:var(--success);font-weight:600}
+.gm-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--text-dim)}
+.gm-total b{color:var(--text);font-size:15px}
+.gm-total .neg{color:var(--danger);font-weight:700}
+.gm-total .pos{color:var(--success);font-weight:700}
+.gm-vazio{padding:16px 0;font-size:13px;color:var(--text-faint)}
+/* campo obrigatório vazio */
+.field input.campo-erro{border-color:var(--danger)!important;box-shadow:0 0 0 4px var(--danger-tint)!important}
+.field label .obrig{color:var(--danger);margin-left:2px}
+
+/* ===== Seletores do topo (Geral/Cartão/Empréstimo e Davi/Cris): no computador, cada um centralizado na sua coluna ===== */
+@media(min-width:1024px){
+  .dash-switches{display:grid;grid-template-columns:1fr 1fr;column-gap:var(--s4)}
+  .dash-switches .dash-tabs,.dash-switches .user-tabs{justify-self:center}
+}
+
+/* ===== Resumo: "Vai entrar" e "Falta pagar" clicáveis ===== */
+.resumo-stat-btn{display:block;width:100%;text-align:left;font:inherit;color:inherit;border-top:none;border-right:none;border-bottom:none;cursor:pointer;transition:opacity var(--dur) var(--ease)}
+.resumo-stat-btn:first-child{border-left:none}
+.resumo-stat-btn:hover .resumo-stat-val{opacity:.8}
+.resumo-stat-seta{display:inline-block;margin-left:2px;font-size:13px;line-height:1;color:var(--text-faint);transition:transform var(--dur) var(--ease)}
+.resumo-stat-btn:hover .resumo-stat-seta{transform:translateX(2px)}
+/* janela de detalhe: total grande no topo */
+.rd-header{align-items:flex-start}
+.rd-rotulo{font-size:12px;font-weight:600;color:var(--text-faint)}
+.rd-total{font-size:28px;font-weight:800;letter-spacing:-.6px;font-variant-numeric:tabular-nums;margin-top:2px}
+.rd-total.pos{color:var(--success)}
+.rd-total.neg{color:var(--danger)}
+.gm-inicial.pos{background:var(--success-tint);color:var(--success);font-size:12px}
+
+/* ===== COMPUTADOR: barra de abas na lateral esquerda (no celular/tablet continua embaixo) ===== */
+:root{--sidebar-w:92px}
+@media(min-width:1024px){
+  body{padding-bottom:0}
+  .bottom-nav{top:var(--header-h,73px);bottom:0;left:0;right:auto;width:var(--sidebar-w);flex-direction:column;justify-content:flex-start;align-items:stretch;gap:4px;padding:16px 10px;border-top:none;border-right:1px solid var(--line);background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .nav-item{flex:0 0 auto;min-width:0;width:100%;padding:12px 4px 10px;gap:5px;border-radius:14px;font-size:11px;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+  .nav-item svg{width:22px;height:22px}
+  .nav-item:hover{background:var(--card);color:var(--text-dim)}
+  .nav-item.active{background:var(--gold-tint);color:var(--gold-dim)}
+  /* conteúdo começa depois da barra */
+  .aba{margin-left:var(--sidebar-w)}
+  #aba-planner.active,#aba-ponto.active,#aba-vendas.active{width:auto}
+  /* Louvor (estúdio): lista e música ocupam a altura toda, sem a faixa da barra de baixo */
+  #aba-louvor.active{left:var(--sidebar-w);bottom:0;top:var(--header-h,73px)}
+  #pageLouvorDetalhe{left:calc(var(--sidebar-w) + 380px) !important;bottom:0 !important;top:var(--header-h,73px) !important;border-left:1px solid var(--line)}
+}
+@media(min-width:1024px) and (max-width:1099px){
+  /* abaixo de 1100px o Louvor abre a música por cima de tudo, como no celular */
+  #pageLouvorDetalhe{left:0 !important;top:0 !important;border-left:none}
+}
+/* botão redondo flutuante: sombra neutra (a roxa sobrava aparecendo embaixo) */
+.receita-salvar-fab{box-shadow:0 8px 22px rgba(15,23,42,.22)}
+
+/* ===== LOUVOR: editor estilo Word ===== */
+/* folha de papel que cresce com o texto (sem rolagem interna); só a página rola */
+.lv-page-sheet{aspect-ratio:auto;overflow:visible;min-height:min(1000px,calc(100vh - 220px));padding:44px 56px 56px;border-radius:4px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 12px 32px rgba(15,23,42,.08)}
+@media(max-width:600px){.lv-page-sheet{padding:24px 18px 32px}}
+.lv-editor-wrap{position:relative;flex:1;margin-top:6px}
+/* texto e camada de cores: mesmas medidas para ficarem exatamente alinhados */
+.lv-editor-realce,.lv-editor-wrap .lv-editor-textarea{font-family:'Courier New',ui-monospace,monospace;font-size:14.5px;line-height:1.75;letter-spacing:0;padding:0;margin:0;border:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;tab-size:4;box-sizing:border-box}
+.lv-editor-realce{position:absolute;inset:0;pointer-events:none;color:var(--text)}
+.lv-editor-wrap .lv-editor-textarea{position:relative;z-index:1;display:block;width:100%;min-height:420px;overflow:hidden;resize:none;background:transparent;color:transparent;caret-color:var(--text);-webkit-text-fill-color:transparent}
+.lv-editor-wrap .lv-editor-textarea::placeholder{color:var(--text-faint);-webkit-text-fill-color:var(--text-faint)}
+.lv-editor-wrap .lv-editor-textarea::selection{background:rgba(37,99,235,.22)}
+/* cores, iguais às da folha final */
+.rl-acorde{color:#e8711a}
+.rl-bloco{color:var(--gold-dim);background:var(--gold-tint);border-radius:4px}
+.rl-marca{color:var(--text-faint);background:var(--card-2);border-radius:4px}
+/* música aberta em tela cheia: a página de trás não rola (evita a segunda barra de rolagem) */
+@media(max-width:1099px){ body:has(#pageLouvorDetalhe.active){overflow:hidden} }
+
+/* ===== COMPUTADOR: cabeçalho unido à barra lateral — a logo fica na coluna da barra, em cima de "Finanças" ===== */
+@media(min-width:1024px){
+  .header{padding-left:0;padding-right:32px}
+  /* a linha da barra lateral sobe pelo cabeçalho: uma coluna só, do topo ao fim */
+  .header::after{content:'';position:absolute;left:var(--sidebar-w);top:0;bottom:0;width:1px;background:var(--line);pointer-events:none}
+  .header-brand{gap:0}
+  .header-logo{width:48px;height:48px;border-radius:14px;margin:0 calc((var(--sidebar-w) - 48px)/2)}
+  .header-logo img{border-radius:14px!important}
+  /* "Siloé v3.9" alinhado com a borda dos cartões */
+  .header-brand > div:not(.header-logo){margin-left:32px}
+  .header-title{font-size:16px}
+  .bottom-nav{padding-top:14px}
+}
+
+/* ===== LOUVOR: Importar e Organizar ao lado do Tom ===== */
+.lv-topo-acoes{display:flex;align-items:center;gap:6px}
+.lv-icone-btn{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text-dim);cursor:pointer;transition:background var(--dur) var(--ease),color var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.lv-icone-btn:hover{background:var(--card-2);color:var(--text)}
+/* já organizado: azul; tocar de novo desfaz */
+.lv-icone-btn.ativo{background:var(--gold);border-color:var(--gold);color:#fff}
+.lv-icone-btn.ativo:hover{background:var(--gold-dim);color:#fff}
+
+/* ===== JANELAS DE CONTAS: logo que é o próprio botão ===== */
+.logo-toque{position:relative;flex-shrink:0;padding:0;border:none;background:none;border-radius:18px;cursor:pointer;transition:transform var(--dur) var(--ease)}
+.logo-toque:hover{transform:scale(1.03)}
+.logo-toque:focus-visible{outline:none;box-shadow:0 0 0 4px var(--gold-tint)}
+.logo-toque .conta-logo-grande{width:64px;height:64px;border-radius:18px;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.logo-toque .emp-logo-prev{width:64px;height:64px;border-radius:18px;color:var(--text-faint)}
+.logo-toque-badge{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid var(--card)}
+.logo-toque-dica{font-size:12px;color:var(--text-faint);line-height:1.35}
+.logo-menu{position:absolute;z-index:30;min-width:180px;padding:5px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.16);animation:fadeIn .15s var(--ease)}
+.logo-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:none;background:none;border-radius:10px;font:inherit;font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;text-align:left}
+.logo-menu button:hover{background:var(--card-2)}
+.logo-menu button.perigo{color:var(--danger)}
+/* Gasto: logo ao lado do nome, como um cartão de contato */
+.conta-topo{position:relative;display:flex;align-items:flex-start;gap:16px;margin-bottom:18px}
+.conta-topo .logo-toque{margin-top:22px}
+.conta-topo-campos{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.conta-topo-campos .field{margin:0}
+.conta-desc-breve{width:100%;box-sizing:border-box;min-height:40px;padding:9px 14px;border:1.5px solid transparent;border-radius:12px;background:var(--card-2);font:inherit;font-size:13px;color:var(--text);outline:none}
+.conta-desc-breve::placeholder{color:var(--text-faint)}
+.conta-desc-breve:focus{border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
+/* campos agrupados: Valor | Dia | A partir de; depois Tipo | Essencial */
+@media(min-width:600px){
+  #modalGasto .form-grid{grid-template-columns:repeat(6,1fr)}
+  #modalGasto .form-grid > .field{grid-column:span 2}
+  #modalGasto .form-grid > .field.full{grid-column:1/-1}
+  #modalGasto .form-grid > .field.meio{grid-column:span 3}
+}
+/* Tipo e Essencial como seletor segmentado */
+.seg-chips{background:var(--card-2);padding:3px;border-radius:12px;gap:2px;flex-wrap:nowrap}
+.seg-chips .dif-chip{flex:1;min-width:0;background:transparent;border:none;border-radius:9px;padding:9px 8px}
+.seg-chips .dif-chip.active{background:var(--primary);color:#fff}
+#gastoMediaHint{font-size:12px}
+
+/* ===== Rodapé das janelas (Cancelar/Salvar): fixo embaixo, sem campos aparecendo por baixo ===== */
+.modal .modal-actions{position:sticky;bottom:calc(-24px - var(--safe));margin-bottom:calc(-24px - var(--safe));padding:14px 0 calc(24px + var(--safe));background:var(--card);box-shadow:0 -1px 0 var(--line);z-index:5}
+
+/* ===== SLIDES: prévia igual ao arquivo (.pptx) — Arial, mesmo fundo e mesma escala do slide real ===== */
+.lv-slide-preview{container-type:inline-size;background:#020617;padding:5% 0;font-family:Arial,Helvetica,sans-serif}
+/* margem lateral do texto = a do slide (0,6" de 13,33") — fica no texto para a escala usar a largura toda da prévia */
+.lv-slide-preview > div{box-sizing:border-box;width:100%;padding:0 4.5cqw}
+.lv-slide-preview .lv-slide-title,.lv-slide-preview .lv-slide-lyric,.lv-slide-preview .lv-slide-artist{font-family:Arial,Helvetica,sans-serif;letter-spacing:normal}
+.lv-slide-preview .lv-slide-title{font-weight:700}
+.lv-slide-preview .lv-slide-lyric{font-weight:700}
+.lv-slide-preview .lv-slide-artist{color:#b3b3b3;margin-top:.4em}
+
+/* ===== CALENDÁRIO PREMIUM ===== */
+.data-nativa{display:none!important}
+/* campo: igual aos outros campos do app, com o ícone à direita */
+.data-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:48px;padding:12px 14px;border:1.5px solid transparent;border-radius:12px;background:var(--card-2);font:inherit;font-size:15px;font-weight:500;color:var(--text);text-align:left;cursor:pointer;transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.data-btn svg{flex-shrink:0;color:var(--gold-dim)}
+.data-btn:hover{background:var(--card);border-color:var(--line)}
+.data-btn:focus-visible{outline:none;border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
+.data-btn .data-vazia{color:var(--text-faint);font-weight:400}
+.data-btn:disabled{opacity:.5;cursor:default}
+/* versão pequena (agendamento do louvor, ao lado do tom) */
+.data-btn-compacto{width:auto;min-height:0;padding:6px 10px;gap:6px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--card)}
+.data-btn-compacto svg{width:13px;height:13px}
+/* calendário */
+.cal-fundo{position:fixed;inset:0;z-index:2990;background:rgba(15,23,42,0);transition:background .2s var(--ease)}
+.cal-pop{position:fixed;z-index:3000;width:308px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 50px rgba(15,23,42,.18);opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .16s var(--ease),transform .16s var(--ease)}
+.cal-pop.aberto{opacity:1;transform:none}
+.cal-topo{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-titulo{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.cal-titulo span{color:var(--text-faint);font-weight:600}
+.cal-nav{width:34px;height:34px;border:none;border-radius:10px;background:var(--card-2);color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-nav:hover{background:var(--line);color:var(--text)}
+.cal-semana,.cal-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-semana{margin-bottom:4px}
+.cal-semana span{text-align:center;font-size:11px;font-weight:700;color:var(--text-faint);padding:4px 0}
+.cal-dia{aspect-ratio:1;border:none;border-radius:50%;background:none;font:inherit;font-size:13.5px;font-weight:500;color:var(--text);cursor:pointer;font-variant-numeric:tabular-nums;transition:background var(--dur) var(--ease)}
+.cal-dia:hover{background:var(--card-2)}
+.cal-dia.hoje{color:var(--gold-dim);font-weight:700;box-shadow:inset 0 0 0 1.5px var(--gold)}
+.cal-dia.sel{background:var(--primary);color:#fff;font-weight:700;box-shadow:none}
+.cal-dia:disabled{color:var(--line);cursor:default;background:none}
+.cal-rodape{display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.cal-link{border:none;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;padding:6px 8px;border-radius:8px}
+.cal-link:hover{background:var(--card-2)}
+.cal-link.forte{color:var(--gold-dim)}
+/* celular: folha que sobe de baixo */
+@media(max-width:599px){
+  .cal-fundo.aberto{background:rgba(15,23,42,.35)}
+  .cal-pop{left:0;right:0;bottom:0;width:auto;border-radius:24px 24px 0 0;padding:20px 20px calc(20px + var(--safe));transform:translateY(100%);border:none}
+  .cal-pop.aberto{transform:none}
+  .cal-dia{font-size:15px}
+}

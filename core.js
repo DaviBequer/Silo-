@@ -401,7 +401,7 @@ async function carregar(){
 }
 /* ===== ABERTURA (logo animada) ===== */
 /* fica pelo menos o tempo da animação de entrada, para não "piscar" quando os dados chegam rápido */
-const SPLASH_MINIMO_MS = 4200;
+const SPLASH_MINIMO_MS = 2600;   // + 1,4 s da saída suave = abertura de 4 s
 function fecharSplash(imediato){
   const el = document.getElementById('splash');
   const sair = ()=>{
@@ -926,6 +926,29 @@ function restanteConta(paidKey, valor){
   const pago = (state.pagamentosParciais||{})[paidKey] || 0;
   return Math.max(valor - pago, 0);
 }
+/* cada gasto (Moradia, Assinaturas, Fixos, Contas futuras) que vale no mês, com quanto falta pagar.
+   Mesma regra de expensesForMonth: é a lista que soma na linha "Gastos" do Fluxo Mensal */
+function gastosDoMes(user, mKey){
+  const ex = state.users[user].expenses, out = [];
+  ['moradia','assinatura','fixo'].forEach(cat=>{
+    ex[cat].forEach(item=>{
+      if(item.arquivado) return;
+      if(item.mesInicio && mKey < item.mesInicio) return;
+      const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id, valor = Number(item.valor)||0;
+      const pago = !!state.paid[paidKey];
+      out.push({ cat, desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
+    });
+  });
+  ex.futuro.forEach(item=>{
+    const valor = futuroValorNoMes(item, mKey);
+    if(valor<=0) return;
+    const paidKey = mKey+'_'+user+'_futuro_'+item.id;
+    const pago = !!state.paid[paidKey];
+    out.push({ cat:'futuro', desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
+  });
+  return out;
+}
+function gastosRestantesNoMes(user, mKey){ return gastosDoMes(user, mKey).reduce((s,g)=>s+g.restante, 0); }
 function expensesForMonth(user, mKey){
   const ex = state.users[user].expenses;
   let total = 0;

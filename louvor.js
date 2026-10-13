@@ -169,6 +169,8 @@ function abrirLouvorDetalhe(id){
   renderLvStatusBtn();
   switchLouvorSubtab('edicao');
   document.getElementById('pageLouvorDetalhe').classList.add('active');
+  lvAtualizarEditor();
+  if(typeof lvAtualizarBtnOrganizar==='function') lvAtualizarBtnOrganizar();
   window.scrollTo(0,0);
   atualizarLvNavBar();
 }
@@ -203,11 +205,31 @@ function selecionarLvCategoria(c){
   renderLvCategoriaChips();
   persist();
 }
+/* ===== Editor estilo Word =====
+   O texto fica num textarea transparente; por trás, uma camada igualzinha pinta cada linha
+   (acordes em laranja, [blocos] em azul, marcadores - -- --- em cinza). A caixa cresce com o texto:
+   sem barras de rolagem internas, só a página rola. */
+function lvAtualizarEditor(){
+  const ta = document.getElementById('lvConteudo'), realce = document.getElementById('lvConteudoRealce');
+  if(!ta || !realce) return;
+  realce.innerHTML = ta.value.split('\n').map(linha=>{
+    const t = linha.trim(), esc = lvEsc(linha) || '';
+    if(/^\[.+\]$/.test(t)) return `<span class="rl-bloco">${esc}</span>`;
+    if(/^-{1,3}$/.test(t)) return `<span class="rl-marca">${esc}</span>`;
+    if(t && isChordLine(t)) return `<span class="rl-acorde">${esc}</span>`;
+    return esc;
+  }).join('\n') + '\n';   // linha extra: a camada acompanha o cursor numa linha nova vazia
+  if(!ta.offsetParent) return;   // painel escondido: mede quando voltar para a Edição
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+window.addEventListener('resize', ()=>{ if(document.getElementById('pageLouvorDetalhe')?.classList.contains('active')) lvAtualizarEditor(); });
 function salvarLouvorCampo(){
   const l = getLouvorAtual(); if(!l) return;
   l.titulo = document.getElementById('lvTitulo').value;
   l.artista = document.getElementById('lvArtista').value;
   l.conteudo = document.getElementById('lvConteudo').value;
+  lvAtualizarEditor();
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
   renderLouvorLista();
   persist();
@@ -232,7 +254,7 @@ function switchLouvorSubtab(tab){
   document.querySelectorAll('.lv-panel').forEach(el=>el.classList.remove('active'));
   const conteudo = document.getElementById('louvorDetalheConteudo');
   if(conteudo) conteudo.scrollTop = 0;
-  if(tab==='edicao') document.getElementById('lvPanelEdicao').classList.add('active');
+  if(tab==='edicao'){ document.getElementById('lvPanelEdicao').classList.add('active'); lvAtualizarEditor(); }
   if(tab==='pdf'){
     document.getElementById('lvPanelPdf').classList.add('active');
     renderLouvorPdfPreview();
@@ -418,7 +440,7 @@ function lvTomGridEscolher(nota, modoMenor){
   const delta = (pcAntes===-1 || pcNota===-1) ? 0 : ((pcNota - pcAntes)%12+12)%12;
   l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, nota, lvTomMaiorAtual(l));
   const conteudoEl = document.getElementById('lvConteudo');
-  if(conteudoEl) conteudoEl.value = l.conteudo;
+  if(conteudoEl){ conteudoEl.value = l.conteudo; lvAtualizarEditor(); }
   l.tomOriginal = nota;
   l.transpose = 0;
   l.tomModoMenor = modoMenor;
@@ -958,15 +980,17 @@ function renderLouvorSlidePreview(){
   if(lvSlideIndex < 0) lvSlideIndex = 0;
   document.getElementById('lvSlideCounter').textContent = `${lvSlideIndex+1} / ${total}`;
   const el = document.getElementById('lvSlidePreview');
-  const espacamentoStyle = `letter-spacing:${l.slideEspacamento}px`;
+  /* prévia na mesma escala do slide de verdade (13,33" = 960pt de largura): N pt = N/960 da largura da prévia */
+  const pt = n => `calc(${n} / 960 * 100cqw)`;
+  const espacamentoStyle = `letter-spacing:${pt(l.slideEspacamento)}`;
   if(lvSlideIndex === 0){
     el.style.alignItems = 'center';
-    el.innerHTML = `<div class="lv-slide-title" style="font-size:${l.slideTituloTamanho/10}vw;text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${l.titulo||'Sem título'}</div><div class="lv-slide-artist" style="text-align:center">${l.artista||''}</div>`;
+    el.innerHTML = `<div class="lv-slide-title" style="font-size:${pt(l.slideTituloTamanho)};text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lvEsc(l.titulo||'Sem título')}</div><div class="lv-slide-artist" style="font-size:${pt(LV_SLIDE_ARTISTA_PT)};text-align:center">${lvEsc(l.artista||'')}</div>`;
   }else{
     const s = slides[lvSlideIndex-1];
     const lyricText = s.lines.join('\n');
     el.style.alignItems = 'center';
-    el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${l.slideTextoTamanho/10}vw;text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lyricText.replace(/\n/g,'<br>')}</div>`;
+    el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${pt(l.slideTextoTamanho)};text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lvEsc(lyricText).replace(/\n/g,'<br>')}</div>`;
   }
 }
 function lvSlideNav(delta){
@@ -976,6 +1000,10 @@ function lvSlideNav(delta){
   lvSlideIndex = Math.max(0, Math.min(total-1, lvSlideIndex + delta));
   renderLouvorSlidePreview();
 }
+/* slide: mesmo visual na prévia e no arquivo .pptx */
+const LV_SLIDE_FONTE = 'Arial';
+const LV_SLIDE_FUNDO = '#020617';
+const LV_SLIDE_ARTISTA_PT = 22;
 /* gerador de slides (~470 KB) só é baixado quando for usado */
 const LV_PPTXGEN = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
 async function exportarLouvorSlides(){
@@ -993,19 +1021,20 @@ async function exportarLouvorSlides(){
   const pres = new PptxCtor();
   pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
   pres.layout = 'WIDE';
-  const graphiteHex = '25292E';
+  /* igual à prévia: mesmo fundo, Arial e exatamente o tamanho configurado (sem reduzir) */
+  const fundo = LV_SLIDE_FUNDO.replace('#','');
 
   const capa = pres.addSlide();
-  capa.background = { color: graphiteHex };
-  capa.addText(l.titulo||'Sem título', { x:0.5,y:2.6,w:12.3,h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'FFFFFF', align:'center', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
-  capa.addText(l.artista||'', { x:0.5,y:4.0,w:12.3,h:0.8, fontSize:22, color:'CCCCCC', align:'center' });
+  capa.background = { color: fundo };
+  capa.addText(l.titulo||'Sem título', { x:0.6,y:2.4,w:12.1,h:1.6, fontFace:LV_SLIDE_FONTE, fontSize:l.slideTituloTamanho, bold:true, color:'FFFFFF', align:'center', valign:'bottom', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
+  capa.addText(l.artista||'', { x:0.6,y:4.05,w:12.1,h:0.8, fontFace:LV_SLIDE_FONTE, fontSize:LV_SLIDE_ARTISTA_PT, color:'B3B3B3', align:'center', valign:'top' });
 
   const { slides } = lvParseContent(l.conteudo);
   slides.forEach(s=>{
     const slide = pres.addSlide();
-    slide.background = { color: graphiteHex };
+    slide.background = { color: fundo };
     const lyricText = s.lines.join('\n');
-    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontSize:l.slideTextoTamanho*0.85, bold:true, color:'FFFFFF', align:'center', valign:'middle', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
+    slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontFace:LV_SLIDE_FONTE, fontSize:l.slideTextoTamanho, bold:true, color:'FFFFFF', align:'center', valign:'middle', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
   });
 
   const nomePartesSlides = [l.artista, l.titulo||'Sem título'].filter(Boolean);

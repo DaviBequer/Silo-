@@ -204,6 +204,19 @@ function lviLinhaCurta(c){
   return toks.every(t=>t.length<=4 && !/^[-–—─_=~]+$/.test(t));
 }
 const LVI_ROTULOS = /^(intro|introdu[cç][aã]o|refr[aã]o|pr[eé][-\s]?refr[aã]o|coro|ponte|solo|final|interl[uú]dio|instrumental|tag|(primeira|segunda|terceira|quarta|quinta|sexta|s[eé]tima|oitava|nona|d[eé]cima)\s+parte|parte\s*\d+|estrofe\s*\d*|verso\s*\d*|repete\b.*)$/i;
+/* linhas que não são da música: créditos, ficha técnica, site, número de página...
+   ("Composição de: Fulano", "Letra: ...", "Gravadora: ...", "cifraclub.com.br", "Página 1 de 2") */
+const LVI_INFO_CAMPO = /^(afina[cç][aã]o|composi[cç][aã]o(\s+de)?|compositor(a|es)?|autor(a|es)?|letra(\s+e\s+m[uú]sica)?|m[uú]sica(\s+e\s+letra)?|vers[aã]o(\s+de)?|int[eé]rprete|cantor(a)?|ministra[cç][aã]o|gravadora|selo|[aá]lbum|cd|produ[cç][aã]o|produtor|arranjo|arranjador|capotraste|capo|tom|bpm|andamento|ritmo|cifra(\s+por)?|cifrad[ao]\s+por|enviad[ao]\s+por|colabora[cç][aã]o|revis[aã]o|revisad[ao]\s+por|transcri[cç][aã]o|editora|direitos|copyright|ano)\s*:/i;
+function lviEhInfoNaoLetra(texto){
+  const t = String(texto||'').trim();
+  if(!t) return false;
+  if(LVI_INFO_CAMPO.test(t)) return true;
+  if(/^composi[cç][aã]o\s+de\s+\S/i.test(t)) return true;                       // "Composição de Fulano" sem dois-pontos
+  if(/^(©|\(c\)|todos os direitos)/i.test(t)) return true;
+  if(/(https?:\/\/|www\.|\.com(\.br)?\b|cifraclub|cifras\.com|letras\.mus|ultimate-guitar)/i.test(t)) return true;
+  if(/^p[aá]g(ina)?\.?\s*\d+(\s*(de|\/)\s*\d+)?$/i.test(t) || /^\d+\s*\/\s*\d+$/.test(t)) return true;
+  return false;
+}
 function lviRotuloDe(text){
   const t = (text||'').replace(/^[\s\-–—─_=\[\](){}:.]+|[\s\-–—─_=\[\](){}:.]+$/g, '');
   return t && LVI_ROTULOS.test(t) ? t : null;
@@ -225,7 +238,7 @@ function lviLinhasDosClusters(clusters, tolerante){
     /* cabeçalho do Cifra Club e parecidos */
     const mTom = /^tom\s*:\s*([A-G](?:#|b)?)\s*(m(?![a-z]))?/i.exec(textoLinha);
     if(mTom){ pre.push({ type:'tom', raiz:mTom[1].charAt(0).toUpperCase()+mTom[1].slice(1), menor:!!mTom[2] }); return; }
-    if(/^(afina[cç][aã]o|composi[cç][aã]o(\s+de)?|capotraste|capo|letra\s+e\s+m[uú]sica)\s*:/i.test(textoLinha)) return;
+    if(lviEhInfoNaoLetra(textoLinha)) return;
     if(!tolerante && !corpoComecou && fCorpo && c.f >= fCorpo*1.3 && nGrandes < 2){
       pre.push({ type: nGrandes===0 ? 'title' : 'artist', text:textoLinha }); nGrandes++; return;
     }
@@ -387,6 +400,8 @@ function lviLinhaDeAcordes(chords){
    Entre um bloco e outro entra "--" (linha divisória no PDF), ou "---" se ali era para pular para a próxima coluna */
 function lviBlocosParaTexto(secoes){
   const linhas = [];
+  /* bloco que ficou vazio (só tinha créditos, por exemplo) sai; "[Repete - ...]" escrito à mão fica */
+  secoes = secoes.filter(s=>s.repeatOf || s.lines.length || /^repete/i.test(s.name||''));
   secoes.forEach((s,i)=>{
     if(i > 0) linhas.push(secoes[i-1].colunaDepois ? '---' : '--');
     if(s.repeatOf){ linhas.push('['+(s.label || ('Repete - '+s.repeatOf.name))+']'); return; }
@@ -467,6 +482,7 @@ async function lvImportarNoAtual(ev){
   try{
     const r = await lviImportar(file, t=>lviStatus('lvEdicaoImportStatus', t));
     l.conteudo = r.conteudo;
+    delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;   // texto novo: o desfazer anterior não vale mais
     if(!(l.titulo||'').trim() && r.titulo) l.titulo = r.titulo;
     if(!(l.artista||'').trim() && r.artista) l.artista = r.artista;
     if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; }
@@ -490,6 +506,7 @@ function lviTextoParaLinhas(conteudo){
     if(it.type==='colbreak'){ rows.push({ type:'marca', text:'---' }); return; }
     if(it.type==='slidebreak'){ rows.push({ type:'marca', text:'-' }); return; }
     if(it.type==='pair'){
+      if(!(it.chordLine||'').trim() && lviEhInfoNaoLetra(it.lyricLine)) return;   // créditos/site: não é da música
       const acordes = lvAcordesDaLinha(it.chordLine);
       if(!(it.lyricLine||'').trim()) rows.push({ type:'chords', chords: acordes.map(c=>({ name:c.name })) });
       else rows.push({ type:'lyric', text: it.lyricLine.replace(/\s+$/,''), chords: acordes.map(c=>({ name:c.name, idx: Math.min(c.idx, it.lyricLine.length) })) });
@@ -497,15 +514,40 @@ function lviTextoParaLinhas(conteudo){
   });
   return rows;
 }
+/* Organizar é liga/desliga: guarda o texto de antes; tocando de novo, desfaz e volta a ele */
+function lvOrganizado(l){ return typeof l.conteudoAntesOrganizar === 'string'; }
+function lvAtualizarBtnOrganizar(){
+  const l = getLouvorAtual(), btn = document.getElementById('lvBtnOrganizar');
+  if(!l || !btn) return;
+  const on = lvOrganizado(l);
+  btn.classList.toggle('ativo', on);
+  btn.title = on ? 'Organizado — toque para desfazer' : 'Organizar blocos';
+  btn.setAttribute('aria-pressed', on);
+}
 async function lvOrganizarBlocos(){
   const l = getLouvorAtual(); if(!l) return;
+  if(lvOrganizado(l)){
+    const mexeuDepois = l.conteudo !== l.conteudoOrganizado;
+    const ok = await iosConfirm('Desfazer a organização? A cifra volta a ser como era antes de organizar.' + (mexeuDepois ? ' As mudanças que você fez depois de organizar também saem.' : ''));
+    if(!ok) return;
+    l.conteudo = l.conteudoAntesOrganizar;
+    delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;
+    persist();
+    document.getElementById('lvConteudo').value = l.conteudo;
+    lvAtualizarEditor(); lvAtualizarBtnOrganizar();
+    showToast('Organização desfeita');
+    return;
+  }
   if(!(l.conteudo||'').trim()){ showToast('Cole ou importe a cifra primeiro'); return; }
-  const ok = await iosConfirm('Organizar em blocos? Os trechos sem nome ganham nome (Intro, Primeira parte...), os blocos iguais viram "Repete" e entre os blocos entra a linha divisória (--). Os "-" (próximo slide) e "---" (próxima coluna) ficam.');
+  const ok = await iosConfirm('Organizar em blocos? Os trechos sem nome ganham nome (Intro, Primeira parte...), os blocos iguais viram "Repete", entre os blocos entra a linha divisória (--) e créditos (composição, site...) saem. Os "-" e "---" ficam. Dá para desfazer tocando de novo.');
   if(!ok) return;
+  const antes = l.conteudo;
   const doc = lviMontaBlocos(lviTextoParaLinhas(l.conteudo));
   l.conteudo = lviBlocosParaTexto(doc.secoes);
+  l.conteudoAntesOrganizar = antes; l.conteudoOrganizado = l.conteudo;
   persist();
   document.getElementById('lvConteudo').value = l.conteudo;
+  lvAtualizarEditor(); lvAtualizarBtnOrganizar();
   const reps = doc.secoes.filter(s=>s.repeatOf).length;
   showToast(`${doc.secoes.length} blocos${reps?` · ${reps} repetido${reps>1?'s':''} virou "Repete"`:''}`);
 }
@@ -581,7 +623,7 @@ function lvSincronizarFolha(e){
   }
   l.conteudo = linhas.join('\n');
   persist();
-  const ta = document.getElementById('lvConteudo'); if(ta) ta.value = l.conteudo;
+  const ta = document.getElementById('lvConteudo'); if(ta){ ta.value = l.conteudo; lvAtualizarEditor(); }
   /* se mudou a quantidade de linhas, redesenha (os números das linhas mudam) */
   if(reorganizou || alvo.classList.contains('lv-sheet-section')) setTimeout(renderLouvorPdfPreview, 0);
 }

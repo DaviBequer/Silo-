@@ -62,6 +62,61 @@ function renderResumoMes(){
   document.getElementById('resumoContasAbertas').textContent = abertas ? abertas+' em aberto ›' : 'tudo pago ›';
 }
 
+/* ===== Detalhe do "Vai entrar" e do "Falta pagar" (toque nos números do resumo) =====
+   As listas somam exatamente o número mostrado no resumo. */
+function rdLinha(o){
+  const ico = o.logoUrl ? `<img src="${o.logoUrl}" class="conta-logo" alt="">` : `<span class="gm-inicial${o.icoClasse?' '+o.icoClasse:''}">${o.ico || escBanco((o.nome||'?').charAt(0).toUpperCase())}</span>`;
+  return `<div class="gm-linha${o.feito?' pago':''}">${ico}<div class="gm-info"><div class="gm-nome">${escBanco(o.nome)}</div>${o.sub?`<div class="gm-sub">${o.sub}</div>`:''}</div><div class="gm-valor">${fmtMoney(o.valor)}</div></div>`;
+}
+function rdGrupo(nome, linhas){
+  const ativas = linhas.filter(l=>!l.feito), sub = ativas.reduce((s,l)=>s+l.valor, 0);
+  if(!linhas.length) return '';
+  return `<div class="gm-grupo"><div class="gm-grupo-topo"><span>${nome}</span><span>${fmtMoney(sub)}</span></div>${linhas.map(rdLinha).join('')}</div>`;
+}
+function abrirDetalheResumo(tipo){
+  const u = userDash(), mKey = mesFinanceiroAtual();
+  let html = '', total = 0, titulo = '', cor = '';
+  if(tipo === 'entra'){
+    titulo = 'Vai entrar'; cor = 'pos';
+    const recebido = salarioRecebidoNoMes(u, mKey), base = rendaBaseForMonth(u, mKey);
+    const salario = [{ nome: u==='davi' ? 'Salário' : 'Renda', ico:'R$', icoClasse:'pos',
+      sub: recebido ? '✓ recebido · já está no saldo' : (u==='davi' ? 'Ponto PJ de '+monthLabelLong(addMonths(mKey,-1)) : ''), valor: base, feito: recebido }];
+    const extras = (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey)).map(e=>{
+      const rec = extraRecebidoNoMes(e, mKey);
+      return { nome: e.desc || 'Extra', ico:'+', icoClasse:'pos', sub: rec ? '✓ recebido · já está no saldo' : (e.dia ? 'dia '+e.dia : ''), valor: Number(e.valor)||0, feito: rec };
+    });
+    html = rdGrupo('Renda', salario) + rdGrupo('Extras', extras);
+    total = incomeForMonth(u, mKey) - (state.users[u].saldoAtual || 0);
+  } else {
+    titulo = 'Falta pagar'; cor = 'neg';
+    const contas = gastosDoMes(u, mKey).filter(g=>g.restante > 0.004).sort((a,b)=>b.restante-a.restante).map(g=>({
+      nome: g.desc, logoUrl: g.logoUrl, valor: g.restante,
+      sub: g.restante < g.valor - 0.004 ? `pago em parte · total ${fmtMoney(g.valor)}` : (g.dia ? 'dia '+g.dia : '')
+    }));
+    html += rdGrupo('Contas', contas);
+    const diz = dizimoForMonth(u, mKey);
+    if(diz > 0.004) html += rdGrupo('Dízimo', [{ nome:'Dízimo', ico:'♡', sub:'10% do salário', valor: diz }]);
+    if(u === 'davi'){
+      if(incluiNoGeral('cartao', mKey)){
+        const cartoes = (state.cartoesTracker||[]).map(c=>({ nome: c.nome || 'Cartão', logoUrl: c.logoUrl, sub: c.vencimento ? 'fatura · vence dia '+c.vencimento : 'fatura', valor: faturaRestanteNoMes(c, mKey) })).filter(c=>c.valor > 0.004);
+        html += rdGrupo('Cartão', cartoes);
+      }
+      if(incluiNoGeral('emprestimo', mKey)){
+        const emps = (state.emprestimos||[]).map(emp=>{
+          const n = empPendentes(emp).filter(k=>monthKey(empVencimento(emp,k))===mKey).length;
+          return { nome: emp.nome || 'Empréstimo', logoUrl: emp.logoUrl, sub: n>1 ? n+' parcelas' : 'parcela do mês', valor: n*(Number(emp.valorParcela)||0) };
+        }).filter(e=>e.valor > 0.004);
+        html += rdGrupo('Empréstimo', emps);
+      }
+    }
+    total = expensesForMonth(u, mKey);
+  }
+  document.getElementById('resumoDetalheTopo').innerHTML = `<div class="rd-rotulo">${titulo} · ${monthLabelLong(mKey)}</div><div class="rd-total ${cor}">${fmtMoney(total)}</div>`;
+  document.getElementById('resumoDetalheLista').innerHTML = html || `<div class="gm-vazio">${tipo==='entra'?'Nada para entrar neste mês.':'Nada para pagar neste mês. ✓'}</div>`;
+  document.getElementById('modalResumoDetalhe').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
 let simuladorMetas = [];
 let simuladorAumentoRendaPercent = 0;
 

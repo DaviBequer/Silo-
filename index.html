@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.9">
+<link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.9</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.0</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -64,8 +64,8 @@
     <button type="button" class="saldo-bancos" id="saldoBancosInfo" style="display:none" onclick="abrirBancosModal()"></button>
     <div class="reserva-badge" id="reservaBadge" style="display:none" onclick="openReservaModal()"></div>
     <div class="resumo-stats">
-      <div class="resumo-stat"><div class="resumo-stat-lbl">Vai entrar</div><div class="resumo-stat-val pos" id="resumoEntra">—</div></div>
-      <div class="resumo-stat"><div class="resumo-stat-lbl">Falta pagar</div><div class="resumo-stat-val neg" id="resumoSai">—</div></div>
+      <button type="button" class="resumo-stat resumo-stat-btn" onclick="abrirDetalheResumo('entra')"><div class="resumo-stat-lbl">Vai entrar <span class="resumo-stat-seta">›</span></div><div class="resumo-stat-val pos" id="resumoEntra">—</div></button>
+      <button type="button" class="resumo-stat resumo-stat-btn" onclick="abrirDetalheResumo('sai')"><div class="resumo-stat-lbl">Falta pagar <span class="resumo-stat-seta">›</span></div><div class="resumo-stat-val neg" id="resumoSai">—</div></button>
       <div class="resumo-stat"><div class="resumo-stat-lbl">Sobra prevista</div><div class="resumo-stat-val" id="resumoSobra">—</div></div>
     </div>
     <div class="resumo-rodape">
@@ -242,10 +242,10 @@
 </div>
 
 <nav class="bottom-nav">
-  <button class="nav-item active" onclick="switchAba('planner')" data-aba="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></button>
-  <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span>Ponto PJ</span></button>
-  <button class="nav-item" onclick="switchAba('vendas')" data-aba="vendas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Vendas</span></button>
-  <button class="nav-item" onclick="switchAba('louvor')" data-aba="louvor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Louvor</span></button>
+  <button class="nav-item active" onclick="switchAba('planner')" data-aba="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg><span>Finanças</span></button>
+  <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6l4 2"/><path d="M22 12a10 10 0 1 0-11 9.95"/><path d="m16 19 2 2 4-4"/></svg><span>Ponto</span></button>
+  <button class="nav-item" onclick="switchAba('vendas')" data-aba="vendas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><span>Vendas</span></button>
+  <button class="nav-item" onclick="switchAba('louvor')" data-aba="louvor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="18" r="3.5"/><path d="M11.5 18V3l7 3.5"/></svg><span>Louvor</span></button>
 </nav>
 
 
@@ -294,34 +294,24 @@
       <h3 id="modalGastoTitle">Adicionar Gasto</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalGasto')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div id="gastoLogoPreview"></div>
-      <div style="flex:1;display:flex;gap:6px">
-        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Logo<input type="file" accept="image/*" style="display:none" onchange="onGastoLogoSelected(event)"></label>
-        <button type="button" class="btn btn-sm btn-outline" onclick="removerGastoLogo()">Remover</button>
+    <!-- topo: a logo é o próprio botão (toque para colocar, trocar ou remover) + nome da conta -->
+    <div class="conta-topo">
+      <button type="button" class="logo-toque" data-input="gastoLogoFile" data-remover="removerGastoLogo" onclick="tocarLogo(this)" aria-label="Logo da conta"><div id="gastoLogoPreview"></div><span class="logo-toque-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span></button>
+      <input type="file" id="gastoLogoFile" accept="image/*" style="display:none" onchange="onGastoLogoSelected(event)">
+      <div class="conta-topo-campos">
+        <div class="field full">
+          <label>Descrição</label>
+          <input type="text" id="gastoDesc" placeholder="Ex: Aluguel" oninput="renderGastoLogoPreview()">
+        </div>
+        <input type="text" id="gastoDescricaoBreve" class="conta-desc-breve" placeholder="Descrição breve (opcional) — ex: conta de luz da casa">
       </div>
     </div>
     <div class="form-grid">
-      <div class="field full">
-        <label>Descrição</label>
-        <input type="text" id="gastoDesc" placeholder="Ex: Aluguel">
-      </div>
-      <div class="field full">
-        <label>Descrição breve (opcional)</label>
-        <input type="text" id="gastoDescricaoBreve" placeholder="Ex: conta de luz da casa" style="font-size:12px">
-      </div>
+
       <div class="field" id="gastoValorWrap">
         <label>Valor</label>
         <div class="input-money"><input type="text" id="gastoValor" placeholder="0,00" inputmode="numeric" oninput="maskMoneyInput(this)"></div>
         <div id="gastoMediaHint" style="display:none"></div>
-      </div>
-      <div class="field full" id="gastoTipoWrap">
-        <label>Tipo</label>
-        <div class="dificuldade-chips" id="gastoTipoChips"></div>
-      </div>
-      <div class="field full" id="gastoEssencialWrap">
-        <label>Essencial?</label>
-        <div class="dificuldade-chips" id="gastoEssencialChips"></div>
       </div>
       <div class="field" id="gastoDiaWrap">
         <label>Dia Vencimento</label>
@@ -341,6 +331,14 @@
           </div>
         </div>
         <input type="hidden" id="gastoMesInicioSimples">
+      </div>
+      <div class="field meio" id="gastoTipoWrap">
+        <label>Tipo</label>
+        <div class="dificuldade-chips seg-chips" id="gastoTipoChips"></div>
+      </div>
+      <div class="field meio" id="gastoEssencialWrap">
+        <label>Essencial?</label>
+        <div class="dificuldade-chips seg-chips" id="gastoEssencialChips"></div>
       </div>
 
       <!-- campos exclusivos de Contas Futuras -->
@@ -401,11 +399,9 @@
     <div class="field-row-desktop">
     <input type="hidden" id="cartaoCardId">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px" class="full-desktop">
-      <div id="cartaoCardLogoPreview"></div>
-      <div style="flex:1;display:flex;gap:6px">
-        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Ícone<input type="file" accept="image/*" style="display:none" onchange="onCartaoCardLogoSelected(event)"></label>
-        <button type="button" class="btn btn-sm btn-outline" onclick="removerCartaoCardLogo()">Remover</button>
-      </div>
+      <button type="button" class="logo-toque" data-input="cartaoCardLogoFile" data-remover="removerCartaoCardLogo" onclick="tocarLogo(this)" aria-label="Ícone do cartão"><div id="cartaoCardLogoPreview"></div><span class="logo-toque-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span></button>
+      <input type="file" id="cartaoCardLogoFile" accept="image/*" style="display:none" onchange="onCartaoCardLogoSelected(event)">
+      <div class="logo-toque-dica">Toque na imagem para colocar ou trocar o ícone</div>
     </div>
     <div class="field full full-desktop">
       <label>Nome do Cartão</label>
@@ -439,11 +435,9 @@
     </div>
     <input type="hidden" id="compraTrackerId">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div id="compraTrackerLogoPreview"></div>
-      <div style="flex:1;display:flex;gap:6px">
-        <label class="btn btn-sm btn-outline" style="cursor:pointer;flex:1;text-align:center">Logo<input type="file" accept="image/*" style="display:none" onchange="onCompraTrackerLogoSelected(event)"></label>
-        <button type="button" class="btn btn-sm btn-outline" onclick="removerCompraTrackerLogo()">Remover</button>
-      </div>
+      <button type="button" class="logo-toque" data-input="compraTrackerLogoFile" data-remover="removerCompraTrackerLogo" onclick="tocarLogo(this)" aria-label="Logo da compra"><div id="compraTrackerLogoPreview"></div><span class="logo-toque-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span></button>
+      <input type="file" id="compraTrackerLogoFile" accept="image/*" style="display:none" onchange="onCompraTrackerLogoSelected(event)">
+      <div class="logo-toque-dica">Toque na imagem para colocar ou trocar a logo</div>
     </div>
     <div class="field full">
       <label>Nome da Compra</label>
@@ -639,7 +633,7 @@
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalVenda')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div class="field full">
-      <label>Cliente</label>
+      <label>Cliente<span class="obrig">*</span></label>
       <input type="text" id="vendaCliente" placeholder="Nome do cliente">
     </div>
     <div class="field full">
@@ -774,9 +768,9 @@
     <div class="field full">
       <label>Logo do banco (opcional — a cor dela pinta o card)</label>
       <div class="emp-logo-linha">
-        <div id="empLogoPreview" class="emp-logo-prev"></div>
-        <label class="btn btn-sm btn-outline" style="cursor:pointer">Escolher imagem<input type="file" accept="image/*" style="display:none" onchange="onEmpLogoSelected(event)"></label>
-        <button type="button" class="btn btn-sm btn-outline" id="empLogoRemover" onclick="removerEmpLogo()">Remover</button>
+        <button type="button" class="logo-toque" data-input="empLogoFile" data-remover="removerEmpLogo" onclick="tocarLogo(this)" aria-label="Logo do empréstimo"><div id="empLogoPreview" class="emp-logo-prev"></div><span class="logo-toque-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span></button>
+        <input type="file" id="empLogoFile" accept="image/*" style="display:none" onchange="onEmpLogoSelected(event)">
+        <div class="logo-toque-dica">Toque na imagem para colocar ou trocar a logo</div>
       </div>
     </div>
     <div class="field full">
@@ -885,6 +879,29 @@
       <button class="btn btn-outline btn-block" onclick="closeModal('modalEmpAmortizar')">Cancelar</button>
       <button class="btn btn-block" onclick="confirmarAmortizacaoEmp()">Confirmar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL: detalhe do "Vai entrar" / "Falta pagar" do resumo -->
+<div class="modal-overlay" id="modalResumoDetalhe">
+  <div class="modal">
+    <div class="modal-header rd-header">
+      <div id="resumoDetalheTopo"></div>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalResumoDetalhe')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="resumoDetalheLista"></div>
+  </div>
+</div>
+
+<!-- MODAL: gastos do mês (linha "Gastos" do Fluxo Mensal) -->
+<div class="modal-overlay" id="modalGastosMes">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="gastosMesTitulo">Gastos</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalGastosMes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div id="gastosMesLista"></div>
+    <div class="gm-total" id="gastosMesTotal"></div>
   </div>
 </div>
 
@@ -999,21 +1016,24 @@
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
             <button type="button" class="lv-status-btn" id="lvStatusBtn" onclick="toggleLouvorStatus()"></button>
-            <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker('edit')">
-              <span class="lv-tom-box-lbl">TOM</span>
-              <span id="lvTomBoxValor">—</span>
-            </button>
+            <!-- Importar e Organizar ao lado do Tom -->
+            <div class="lv-topo-acoes">
+              <label class="lv-icone-btn" title="Importar PDF ou foto" aria-label="Importar PDF ou foto"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></label>
+              <button type="button" class="lv-icone-btn" id="lvBtnOrganizar" title="Organizar blocos" aria-label="Organizar blocos" aria-pressed="false" onclick="lvOrganizarBlocos()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/></svg></button>
+              <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker('edit')">
+                <span class="lv-tom-box-lbl">TOM</span>
+                <span id="lvTomBoxValor">—</span>
+              </button>
+            </div>
             <input type="date" id="lvDataAgendamento" class="lv-data-agendamento" onchange="salvarLouvorData(this.value)">
           </div>
         </div>
-        <div class="lv-barra">
-          <div class="lv-barra-grupo">
-            <label class="lv-barra-btn"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Importar<span class="lv-so-largo">&nbsp;PDF ou foto</span></label>
-            <button type="button" class="lv-barra-btn" onclick="lvOrganizarBlocos()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/></svg>Organizar blocos</button>
-          </div>
-        </div>
         <div class="lv-import-status" id="lvEdicaoImportStatus"></div>
-        <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
+        <!-- editor estilo Word: a folha cresce com o texto; por trás, uma camada pinta acordes, blocos e marcadores -->
+        <div class="lv-editor-wrap">
+          <div class="lv-editor-realce" id="lvConteudoRealce" aria-hidden="true"></div>
+          <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" spellcheck="false" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
+        </div>
       </div>
     </div>
 
@@ -1526,18 +1546,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=3.9"></script>
-<script src="core.js?v=3.9"></script>
-<script src="comando.js?v=3.9"></script>
-<script src="layout.js?v=3.9"></script>
-<script src="app.js?v=3.9"></script>
-<script src="panorama.js?v=3.9"></script>
-<script src="planner.js?v=3.9"></script>
-<script src="ponto.js?v=3.9"></script>
-<script src="louvor.js?v=3.9"></script>
-<script src="louvor-extra.js?v=3.9"></script>
-<script src="emprestimo.js?v=3.9"></script>
-<script src="vendas.js?v=3.9"></script>
+<script src="supabase.js?v=4.0"></script>
+<script src="core.js?v=4.0"></script>
+<script src="comando.js?v=4.0"></script>
+<script src="layout.js?v=4.0"></script>
+<script src="app.js?v=4.0"></script>
+<script src="panorama.js?v=4.0"></script>
+<script src="planner.js?v=4.0"></script>
+<script src="ponto.js?v=4.0"></script>
+<script src="louvor.js?v=4.0"></script>
+<script src="louvor-extra.js?v=4.0"></script>
+<script src="emprestimo.js?v=4.0"></script>
+<script src="vendas.js?v=4.0"></script>
 <script>carregar();</script>
 </body>
 </html>

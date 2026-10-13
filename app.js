@@ -91,6 +91,18 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.0', itens: [
+    'Computador: barra de abas na lateral esquerda, unida ao cabeçalho (logo em cima de "Finanças")',
+    'Menu com nomes e ícones novos: Finanças, Ponto, Vendas e Louvor',
+    'Calendário novo e mais bonito em todos os campos de data',
+    'Resumo: toque em "Vai entrar" e "Falta pagar" para ver cada valor separado',
+    'Fluxo Mensal: linha "Gastos" com o total do mês; toque para ver cada conta',
+    'Janelas de contas reorganizadas; a logo é o próprio botão (colocar, trocar ou remover)',
+    'Vendas: meta conta só as vendas, setup soma no mês certo, cliente obrigatório e parcelas do empréstimo ao lado do saldo devedor',
+    'Louvor: editor estilo Word sem barras de rolagem, Importar e Organizar ao lado do tom (Organizar pode ser desfeito) e créditos saem ao importar',
+    'Louvor: slides em Arial, com o arquivo igual à prévia (mesmo tamanho e fundo)',
+    'Abertura com a logo em 4 segundos'
+  ]},
   { versao: 'v3.9', itens: [
     'Saldo por banco: anote quanto tem em cada banco e a soma vai para o Saldo em conta (digitar direto continua valendo)',
     'Todos os campos de número abrem o teclado numérico no celular; a hora extra do Ponto aceita só números (130 vira 1:30)',
@@ -751,3 +763,138 @@ function ajustarAlturaMenuInferior(){
 ajustarAlturaMenuInferior();
 window.addEventListener('load', ajustarAlturaMenuInferior);
 window.addEventListener('resize', ajustarAlturaMenuInferior);
+
+/* ================= LOGO QUE É O PRÓPRIO BOTÃO =================
+   Sem logo: tocar abre os arquivos. Com logo: aparece "Trocar imagem" e "Remover".
+   Uso: <button class="logo-toque" data-input="idDoInputFile" data-remover="nomeDaFuncaoRemover" onclick="tocarLogo(this)"> */
+function tocarLogo(btn){
+  const input = document.getElementById(btn.dataset.input);
+  const temLogo = !!btn.querySelector('img');
+  fecharMenuLogo();
+  if(!temLogo){ if(input) input.click(); return; }
+  const menu = document.createElement('div');
+  menu.className = 'logo-menu'; menu.id = 'logoMenu';
+  menu.innerHTML = `<button type="button" data-acao="trocar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>Trocar imagem</button>
+    <button type="button" data-acao="remover" class="perigo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>Remover</button>`;
+  menu.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    e.stopPropagation();
+    if(b.dataset.acao==='trocar' && input) input.click();
+    if(b.dataset.acao==='remover' && typeof window[btn.dataset.remover]==='function') window[btn.dataset.remover]();
+    fecharMenuLogo();
+  });
+  const pai = btn.parentElement;
+  if(getComputedStyle(pai).position === 'static') pai.style.position = 'relative';
+  btn.insertAdjacentElement('afterend', menu);
+  menu.style.left = btn.offsetLeft + 'px';
+  menu.style.top = (btn.offsetTop + btn.offsetHeight + 8) + 'px';
+  setTimeout(()=>document.addEventListener('click', fecharMenuLogo, { once:true }), 0);
+}
+function fecharMenuLogo(){ document.getElementById('logoMenu')?.remove(); }
+
+/* ================= CALENDÁRIO PREMIUM (todos os campos de data) =================
+   O <input type="date"> continua lá (escondido): o código lê e grava .value como sempre.
+   No lugar dele aparece um botão com a data por extenso; tocando, abre o calendário do app
+   (folha no celular, cartão logo abaixo do campo no computador). */
+const CAL_SEMANA = ['D','S','T','Q','Q','S','S'];
+const CAL_ICONE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>';
+const _valorInput = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+function calISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function calParse(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; }
+function calTextoBotao(iso){
+  const d = calParse(iso); if(!d) return '';
+  return `${String(d.getDate()).padStart(2,'0')} de ${MES_NOMES[d.getMonth()].toLowerCase()}. de ${d.getFullYear()}`;
+}
+function melhorarCampoData(inp){
+  if(inp.dataset.premium) return;
+  inp.dataset.premium = '1';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'data-btn' + (inp.classList.contains('lv-data-agendamento') ? ' data-btn-compacto' : '');
+  inp.classList.add('data-nativa');
+  inp.after(btn);
+  const sync = ()=>{
+    const v = _valorInput.get.call(inp);
+    btn.innerHTML = `<span class="${v?'':'data-vazia'}">${v ? calTextoBotao(v) : (btn.classList.contains('data-btn-compacto') ? 'Agendar' : 'Escolher data')}</span>${CAL_ICONE}`;
+    btn.setAttribute('aria-label', v ? 'Data: '+calTextoBotao(v) : 'Escolher data');
+    btn.disabled = inp.disabled;
+  };
+  /* quando o código grava input.value, o botão acompanha */
+  Object.defineProperty(inp, 'value', { configurable:true, get(){ return _valorInput.get.call(this); }, set(v){ _valorInput.set.call(this, v); sync(); } });
+  btn.addEventListener('click', e=>{ e.stopPropagation(); abrirCalendario(inp, btn); });
+  sync();
+}
+function melhorarCamposData(raiz){ (raiz||document).querySelectorAll('input[type="date"]:not([data-premium])').forEach(melhorarCampoData); }
+melhorarCamposData();
+new MutationObserver(()=>{ if(document.querySelector('input[type="date"]:not([data-premium])')) melhorarCamposData(); }).observe(document.body, { childList:true, subtree:true });
+
+let calEstado = null;
+function abrirCalendario(inp, btn){
+  fecharCalendario();
+  const atual = calParse(inp.value) || new Date();
+  calEstado = { inp, btn, ano: atual.getFullYear(), mes: atual.getMonth() };
+  const fundo = document.createElement('div');
+  fundo.id = 'calFundo'; fundo.className = 'cal-fundo';
+  fundo.addEventListener('click', fecharCalendario);
+  const pop = document.createElement('div');
+  pop.id = 'calPop'; pop.className = 'cal-pop';
+  pop.addEventListener('click', e=>e.stopPropagation());
+  document.body.append(fundo, pop);
+  renderCalendario();
+  /* computador: cartão logo abaixo (ou acima) do campo; celular: folha embaixo (CSS) */
+  if(innerWidth >= 600){
+    const r = btn.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
+    const top = (r.bottom + 8 + h > innerHeight - 8) ? Math.max(8, r.top - 8 - h) : r.bottom + 8;
+    pop.style.top = top + 'px';
+    pop.style.left = Math.min(Math.max(8, r.left), innerWidth - w - 8) + 'px';
+  }
+  requestAnimationFrame(()=>{ fundo.classList.add('aberto'); pop.classList.add('aberto'); });
+  document.addEventListener('keydown', calTeclas);
+}
+function fecharCalendario(){
+  document.getElementById('calPop')?.remove();
+  document.getElementById('calFundo')?.remove();
+  document.removeEventListener('keydown', calTeclas);
+  calEstado = null;
+}
+function calTeclas(e){ if(e.key === 'Escape'){ e.preventDefault(); fecharCalendario(); } }
+function calMudarMes(delta){
+  if(!calEstado) return;
+  const d = new Date(calEstado.ano, calEstado.mes + delta, 1);
+  calEstado.ano = d.getFullYear(); calEstado.mes = d.getMonth();
+  renderCalendario();
+}
+function renderCalendario(){
+  const pop = document.getElementById('calPop'); if(!pop || !calEstado) return;
+  const { inp, ano, mes } = calEstado;
+  const sel = inp.value, hoje = calISO(new Date());
+  const min = inp.min || '', max = inp.max || '';
+  const primeiro = new Date(ano, mes, 1).getDay(), nDias = new Date(ano, mes+1, 0).getDate();
+  let dias = '';
+  for(let i=0; i<primeiro; i++) dias += '<span></span>';
+  for(let d=1; d<=nDias; d++){
+    const iso = calISO(new Date(ano, mes, d));
+    const fora = (min && iso < min) || (max && iso > max);
+    dias += `<button type="button" class="cal-dia${iso===sel?' sel':''}${iso===hoje?' hoje':''}" ${fora?'disabled':''} onclick="calEscolher('${iso}')">${d}</button>`;
+  }
+  pop.innerHTML = `
+    <div class="cal-topo">
+      <button type="button" class="cal-nav" aria-label="Mês anterior" onclick="calMudarMes(-1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="cal-titulo">${MES_NOMES_LONGOS[mes]} <span>${ano}</span></div>
+      <button type="button" class="cal-nav" aria-label="Próximo mês" onclick="calMudarMes(1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="cal-semana">${CAL_SEMANA.map(s=>`<span>${s}</span>`).join('')}</div>
+    <div class="cal-dias">${dias}</div>
+    <div class="cal-rodape">
+      <button type="button" class="cal-link" onclick="calEscolher('')">Limpar</button>
+      <button type="button" class="cal-link forte" onclick="calEscolher('${hoje}')">Hoje</button>
+    </div>`;
+}
+function calEscolher(iso){
+  if(!calEstado) return;
+  const inp = calEstado.inp;
+  inp.value = iso;
+  inp.dispatchEvent(new Event('input', { bubbles:true }));
+  inp.dispatchEvent(new Event('change', { bubbles:true }));
+  fecharCalendario();
+}
