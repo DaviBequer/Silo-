@@ -90,6 +90,13 @@ function tempoTapEnd(e, dia, campo){
 function tempoTapCancel(){
   if(tempoPressTimer){ clearTimeout(tempoPressTimer); tempoPressTimer = null; }
 }
+/* hora extra: digita só números (teclado numérico não tem ":") e vira H:MM — "130" → 1:30, "45" → 0:45 */
+function maskHoraInput(el){
+  const dig = el.value.replace(/\D/g,'').slice(-4);
+  if(!dig){ el.value = ''; return; }
+  const p = dig.padStart(3,'0');
+  el.value = String(parseInt(p.slice(0,-2),10)) + ':' + p.slice(-2);
+}
 function setExtra(dia, valStr){
   const mKey = pontoMonthKeyAtual();
   const d = getDia(mKey, dia);
@@ -197,7 +204,7 @@ function renderPonto(){
           <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap ${statusClasse('saida')}" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
         </div>
         <div class="ponto-extra-row">
-          <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" value="${extraVal}" placeholder="00:00" onchange="setExtra(${dia}, this.value)" ${travado?'disabled':''}></div>
+          <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" inputmode="numeric" value="${extraVal}" placeholder="0:00" oninput="maskHoraInput(this)" onchange="setExtra(${dia}, this.value)" ${travado?'disabled':''}></div>
         </div>
       </div>`;
     });

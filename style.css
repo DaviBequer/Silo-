@@ -1470,6 +1470,7 @@ body.lay-dragging-active{cursor:grabbing}
 .lv-ferr-btn:hover{background:var(--line)}
 .lv-ferr-btn.primario{background:var(--primary);color:#fff}
 .lv-ferr-btn.ativo{background:var(--gold);color:#fff}
+.lv-btn-pdf{width:38px;height:38px;padding:0}
 .lv-importar{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:8px;border-radius:14px;background:var(--gold-tint);color:var(--gold-dim);cursor:pointer}
 .lv-importar-ico{width:36px;height:36px;border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .lv-importar-txt{display:flex;flex-direction:column;text-transform:none;letter-spacing:0}
@@ -1481,12 +1482,6 @@ body.lay-dragging-active{cursor:grabbing}
 /* slides com acordes */
 .lv-slides-acordes{margin:4px 0 8px}
 .lv-slides-acordes small{display:block;font-size:12px;font-weight:400;color:var(--text-faint)}
-.lv-slide-preview.com-acordes{background:#fff !important;color:#1d1d1f;align-items:flex-start !important;justify-content:flex-start !important;flex-direction:column;padding:4%;box-shadow:inset 0 0 0 1px var(--line)}
-.lv-slide-preview.com-acordes .lv-slide-title{color:#1d1d1f;width:100%;text-align:center;margin-top:auto}
-.lv-slide-preview.com-acordes .lv-slide-artist{color:#8a8a90;width:100%;text-align:center;margin-bottom:auto}
-.lv-slide-label{font-size:clamp(9px,1.4vw,13px);font-weight:700;letter-spacing:.14em;color:#6c6f7a;text-transform:uppercase;margin-bottom:2%}
-.lv-slide-cifra{font-family:ui-monospace,Consolas,monospace;font-size:clamp(10px,2.1vw,22px);line-height:1.3;white-space:pre}
-.lv-slide-cifra .c{color:#ef7d22;font-weight:700}
 /* impressão: só a folha, A4, sem cabeçalho/rodapé do navegador */
 #lvPrintArea{display:none}
 @media print{
@@ -1632,3 +1627,44 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 .pe-resumo{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-top:1px solid var(--line);padding-top:14px;margin-bottom:16px;font-size:13px;color:var(--text-dim)}
 .pe-resumo b{font-size:16px;font-weight:800;color:var(--text)}
 #modalPontoExport .modal-actions .btn:disabled{opacity:.4;cursor:default}
+
+/* ===== LOUVOR: barra do topo de cada aba (Edição, Visualizar, Slides) e cartão de configurações ===== */
+.lv-barra{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:10px 0 12px}
+.lv-barra-grupo{display:flex;gap:8px;flex-wrap:wrap}
+.lv-barra-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);font:inherit;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.lv-barra-btn:hover{background:var(--card-2)}
+.lv-barra-btn svg{flex-shrink:0;color:var(--text-dim)}
+.lv-barra-btn .accordion-chevron{transition:transform .2s var(--ease)}
+.lv-barra-btn.primario{background:var(--primary);border-color:var(--primary);color:#fff}
+.lv-barra-btn.primario svg{color:#fff}
+.lv-barra-btn.lv-btn-pdf{width:38px;padding:0}
+/* cartão: linhas com o nome à esquerda e o controle à direita; 2 colunas no computador */
+.lv-config{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:0 16px;margin:0 0 14px;overflow:hidden}
+.lv-config-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));column-gap:28px;margin-top:-1px}
+.lv-ajuste{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:54px;border-top:1px solid var(--line);font-size:13px;font-weight:500;color:var(--text-dim)}
+.lv-seg{margin:0;flex-shrink:0;background:var(--card-2);border:none;padding:3px}
+.lv-seg .dash-tab{flex:0 0 auto;min-width:44px;padding:6px 11px;font-size:12px}
+.lv-stepper{display:inline-flex;align-items:center;flex-shrink:0;background:var(--card-2);border-radius:999px;padding:3px}
+.lv-stepper button{width:30px;height:30px;border:none;border-radius:50%;background:transparent;font:inherit;font-size:16px;font-weight:600;color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lv-stepper button:hover{background:var(--card);color:var(--text)}
+.lv-stepper b{min-width:48px;text-align:center;font-size:13px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+@media (max-width:420px){.lv-barra-btn{padding:0 11px;font-size:12.5px}.lv-so-largo{display:none}}
+
+/* ===== SALDO POR BANCO ===== */
+.resumo-links{display:flex;gap:6px}
+/* linha embaixo do saldo: "Nubank R$ 1.200,00 · Inter R$ 300,00" */
+.saldo-bancos{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin:8px 0 0;padding:0;border:none;background:none;font:inherit;text-align:left;cursor:pointer;min-width:0}
+.saldo-bancos-lista{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text-faint);min-width:0}
+.saldo-bancos-lista b{font-weight:600;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.saldo-bancos-aviso{flex-shrink:0;font-size:11.5px;font-weight:600;color:var(--warning);background:var(--warning-tint);padding:3px 9px;border-radius:999px}
+/* janela: uma linha por banco (nome, valor, remover) */
+.bancos-lista{display:flex;flex-direction:column}
+.banco-linha{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 30px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.banco-linha input{width:100%;box-sizing:border-box}
+.banco-del{color:var(--text-faint)}
+.banco-del:hover{color:var(--danger)}
+.bancos-add{display:inline-flex;align-items:center;gap:7px;margin:12px 0 16px;padding:6px 0;border:none;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--gold-dim);cursor:pointer}
+.banco-linha input{min-height:46px;padding:11px 12px;border:1.5px solid transparent;border-radius:12px;background:var(--card-2);font-family:inherit;font-size:16px;font-weight:500;color:var(--text);outline:none;transition:all var(--dur) var(--ease)}
+.banco-linha input::placeholder{color:var(--text-faint);font-weight:400}
+.banco-linha input:focus{border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
+.banco-linha .input-money input{padding-left:40px!important;text-align:right;font-variant-numeric:tabular-nums}

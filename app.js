@@ -91,6 +91,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v3.9', itens: [
+    'Saldo por banco: anote quanto tem em cada banco e a soma vai para o Saldo em conta (digitar direto continua valendo)',
+    'Todos os campos de número abrem o teclado numérico no celular; a hora extra do Ponto aceita só números (130 vira 1:30)',
+    'Louvor: Edição, Visualizar e Slides com barra no topo e configurações num cartão compacto; PDF virou ícone no canto',
+    'Louvor: slides só com a letra e saiu o botão "Editar na folha"'
+  ]},
   { versao: 'v3.8', itens: [
     'Abertura com a logo mais longa e bem mais suave',
     'Louvor: cada tom com seus próprios nomes (F# e Gb são diferentes), na cifra e no campo harmônico',

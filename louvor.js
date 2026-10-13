@@ -951,24 +951,13 @@ function renderLouvorSlidePreview(){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
   renderLouvorSlideConfigPainel();
-  const comAcordes = !!l.slidesComAcordes;
-  const chk = document.getElementById('lvSlidesComAcordes'); if(chk) chk.checked = comAcordes;
-  const { slides } = comAcordes ? { slides: lvSlidesComAcordesDados(l) } : lvParseContent(l.conteudo);
+  /* slides só com a letra (os acordes ficam no PDF) */
+  const { slides } = lvParseContent(l.conteudo);
   const total = slides.length + 1;
   if(lvSlideIndex >= total) lvSlideIndex = total-1;
   if(lvSlideIndex < 0) lvSlideIndex = 0;
   document.getElementById('lvSlideCounter').textContent = `${lvSlideIndex+1} / ${total}`;
   const el = document.getElementById('lvSlidePreview');
-  el.classList.toggle('com-acordes', comAcordes);
-  if(comAcordes){
-    if(lvSlideIndex === 0){
-      el.innerHTML = `<div class="lv-slide-title">${lvEsc(l.titulo||'Sem título')}</div><div class="lv-slide-artist">${lvEsc([l.artista, lvTomAtual(l)?'Tom: '+lvTomAtual(l):''].filter(Boolean).join('  ·  '))}</div>`;
-    } else {
-      const s = slides[lvSlideIndex-1];
-      el.innerHTML = `${s.label?`<div class="lv-slide-label">${lvEsc(s.label)}</div>`:''}<div class="lv-slide-cifra">${s.pares.map(p=>(p.acordes.trim()?`<div class="c">${lvEsc(p.acordes)}</div>`:'')+(p.letra.trim()?`<div class="t">${lvEsc(p.letra)}</div>`:'')).join('')}</div>`;
-    }
-    return;
-  }
   const espacamentoStyle = `letter-spacing:${l.slideEspacamento}px`;
   if(lvSlideIndex === 0){
     el.style.alignItems = 'center';
@@ -982,7 +971,7 @@ function renderLouvorSlidePreview(){
 }
 function lvSlideNav(delta){
   const l = getLouvorAtual(); if(!l) return;
-  const slides = l.slidesComAcordes ? lvSlidesComAcordesDados(l) : lvParseContent(l.conteudo).slides;
+  const slides = lvParseContent(l.conteudo).slides;
   const total = slides.length + 1;
   lvSlideIndex = Math.max(0, Math.min(total-1, lvSlideIndex + delta));
   renderLouvorSlidePreview();
@@ -1001,7 +990,6 @@ async function exportarLouvorSlides(){
     showToast('Não foi possível carregar o gerador de slides.');
     return;
   }
-  if(l.slidesComAcordes) return lvExportarSlidesComAcordes(l, PptxCtor);
   const pres = new PptxCtor();
   pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
   pres.layout = 'WIDE';

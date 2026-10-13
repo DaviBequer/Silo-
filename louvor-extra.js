@@ -510,13 +510,9 @@ async function lvOrganizarBlocos(){
   showToast(`${doc.secoes.length} blocos${reps?` · ${reps} repetido${reps>1?'s':''} virou "Repete"`:''}`);
 }
 
-/* ---------- edição direto na folha (aba Visualizar) ---------- */
+/* ---------- edição direto na folha (aba Visualizar) ----------
+   O botão "Editar na folha" saiu (a aba Edição já faz isso); o modo fica sempre desligado. */
 window.lvEditandoFolha = false;
-function lvAlternarEdicaoFolha(){
-  window.lvEditandoFolha = !window.lvEditandoFolha;
-  renderLouvorPdfPreview();
-  showToast(window.lvEditandoFolha ? 'Toque na letra, nos acordes, no título ou nos blocos para corrigir' : 'Edição na folha travada');
-}
 function lvAplicarEdicaoFolha(){
   const el = document.getElementById('lvPdfPreview'); if(!el) return;
   const on = !!window.lvEditandoFolha;
@@ -619,63 +615,4 @@ function imprimirLouvorPdf(){
   };
   window.addEventListener('afterprint', fim);
   setTimeout(()=>window.print(), 50);
-}
-
-/* ---------- slides com acordes (fundo branco, acordes em laranja em cima da letra) ---------- */
-function setLvSlidesComAcordes(v){
-  const l = getLouvorAtual(); if(!l) return;
-  l.slidesComAcordes = !!v;
-  persist();
-  lvSlideIndex = 0;
-  renderLouvorSlidePreview();
-}
-/* blocos com os pares acorde+letra; "Repete" traz o bloco original inteiro; até 4 linhas por slide */
-function lvSlidesComAcordesDados(l){
-  const delta = l.transpose || 0;
-  const { items } = lvParseContent(l.conteudo);
-  const blocos = []; let cur = null;
-  items.forEach(it=>{
-    if(it.type==='section'){ cur = { label:it.label, pares:[] }; blocos.push(cur); return; }
-    if(it.type==='pair'){
-      if(!cur){ cur = { label:'', pares:[] }; blocos.push(cur); }
-      cur.pares.push({ acordes: lvTransposeChordLine(it.chordLine||'', delta), letra: it.lyricLine||'' });
-    }
-  });
-  const slides = [];
-  blocos.forEach((b, i)=>{
-    let pares = b.pares, label = b.label;
-    const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(b.label||'');
-    if(rep && !pares.length){
-      const orig = blocos.slice(0, i).find(o=>(o.label||'').trim().toLowerCase()===rep[1].trim().toLowerCase());
-      if(orig){ pares = orig.pares; label = orig.label; }
-    }
-    for(let k=0; k<pares.length; k+=4) slides.push({ label, pares: pares.slice(k, k+4) });
-  });
-  return slides;
-}
-function lvExportarSlidesComAcordes(l, PptxCtor){
-  const pres = new PptxCtor();
-  pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
-  pres.layout = 'WIDE';
-  const capa = pres.addSlide();
-  capa.background = { color:'FFFFFF' };
-  capa.addText(l.titulo||'Sem título', { x:0.5, y:2.5, w:12.3, h:1.4, fontSize:l.slideTituloTamanho*0.85, bold:true, color:'1D1D1F', align:'center' });
-  const tom = lvTomAtual(l);
-  capa.addText([l.artista, tom ? 'Tom: '+tom : ''].filter(Boolean).join('   ·   ') || ' ', { x:0.5, y:3.9, w:12.3, h:0.8, fontSize:22, color:'8A8A90', align:'center' });
-  lvSlidesComAcordesDados(l).forEach(s=>{
-    const runs = [];
-    s.pares.forEach(p=>{
-      if(p.acordes.trim()) runs.push({ text:p.acordes, color:'EF7D22', bold:true });
-      if(p.letra.trim()) runs.push({ text:p.letra, color:'1D1D1F', bold:false });
-    });
-    if(!runs.length) return;
-    const maior = Math.max(...runs.map(r=>r.text.length), 1);
-    const fs = Math.floor(Math.min(30, 12.3*72/(maior*0.62), 6.2*72/(runs.length*1.25)));
-    const sl = pres.addSlide();
-    sl.background = { color:'FFFFFF' };
-    if(s.label) sl.addText(s.label.toUpperCase(), { x:0.5, y:0.2, w:12.3, h:0.45, fontSize:13, bold:true, color:'6C6F7A', charSpacing:2 });
-    sl.addText(runs.map((r,i)=>({ text:r.text || ' ', options:{ color:r.color, bold:r.bold, breakLine: i<runs.length-1 } })), { x:0.6, y:0.8, w:12.1, h:6.3, fontSize:fs, fontFace:'Consolas', align:'left', valign:'top' });
-  });
-  const nome = [l.artista, l.titulo||'Sem título', tom].filter(Boolean).join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
-  pres.writeFile({ fileName: nome + ' (com acordes).pptx' });
 }

@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.8">
+<link rel="stylesheet" href="style.css?v=3.9">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.8</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v3.9</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -54,10 +54,14 @@
   <div class="card dg resumo-card" id="cardResumo" data-span="12">
     <div class="resumo-topo">
       <div class="resumo-mes" id="resumoMesLabel"></div>
-      <button type="button" class="resumo-link" onclick="openReservaModal()">Reserva</button>
+      <div class="resumo-links">
+        <button type="button" class="resumo-link" onclick="abrirBancosModal()">Bancos</button>
+        <button type="button" class="resumo-link" onclick="openReservaModal()">Reserva</button>
+      </div>
     </div>
     <div class="resumo-label">Saldo em conta</div>
     <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
+    <button type="button" class="saldo-bancos" id="saldoBancosInfo" style="display:none" onclick="abrirBancosModal()"></button>
     <div class="reserva-badge" id="reservaBadge" style="display:none" onclick="openReservaModal()"></div>
     <div class="resumo-stats">
       <div class="resumo-stat"><div class="resumo-stat-lbl">Vai entrar</div><div class="resumo-stat-val pos" id="resumoEntra">—</div></div>
@@ -321,7 +325,7 @@
       </div>
       <div class="field" id="gastoDiaWrap">
         <label>Dia Vencimento</label>
-        <input type="number" id="gastoDia" placeholder="10" min="1" max="31">
+        <input type="number" inputmode="numeric" id="gastoDia" placeholder="10" min="1" max="31">
       </div>
       <div class="field" id="gastoMesInicioSimplesWrap">
         <label>A partir de</label>
@@ -363,7 +367,7 @@
       </div>
       <div class="field" id="gastoParcelasWrap" style="display:none">
         <label>Parcelas</label>
-        <input type="number" id="gastoParcelas" min="1" value="1" oninput="onGastoParcelasChange()">
+        <input type="number" inputmode="numeric" id="gastoParcelas" min="1" value="1" oninput="onGastoParcelasChange()">
       </div>
       <div class="field full" id="gastoReplicarWrap" style="display:none">
         <label class="checkbox-field">
@@ -409,11 +413,11 @@
     </div>
     <div class="field">
       <label>Dia de Fechamento</label>
-      <input type="number" id="cartaoCardFechamento" min="1" max="31" placeholder="Ex: 20">
+      <input type="number" inputmode="numeric" id="cartaoCardFechamento" min="1" max="31" placeholder="Ex: 20">
     </div>
     <div class="field">
       <label>Dia de Vencimento</label>
-      <input type="number" id="cartaoCardVencimento" min="1" max="31" placeholder="Ex: 27">
+      <input type="number" inputmode="numeric" id="cartaoCardVencimento" min="1" max="31" placeholder="Ex: 27">
     </div>
     <div class="field full full-desktop">
       <label>Limite</label>
@@ -459,7 +463,7 @@
     </div>
     <div class="field">
       <label>Parcelas</label>
-      <input type="number" id="compraTrackerParcelas" min="1" value="1">
+      <input type="number" inputmode="numeric" id="compraTrackerParcelas" min="1" value="1">
     </div>
     <div class="field full">
       <label>Mês da 1ª parcela</label>
@@ -884,6 +888,26 @@
   </div>
 </div>
 
+<!-- MODAL: saldo por banco (a soma vira o "Saldo em conta") -->
+<div class="modal-overlay" id="modalBancos">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Saldo por banco</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalBancos')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="bancos-lista" id="bancosLista"></div>
+    <button type="button" class="bancos-add" onclick="adicionarBancoLinha(true)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Adicionar banco
+    </button>
+    <div class="pe-resumo" id="bancosTotal"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalBancos')">Cancelar</button>
+      <button class="btn btn-block" onclick="salvarBancos()">Usar no saldo</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalReserva">
   <div class="modal">
     <div class="modal-header">
@@ -982,9 +1006,11 @@
             <input type="date" id="lvDataAgendamento" class="lv-data-agendamento" onchange="salvarLouvorData(this.value)">
           </div>
         </div>
-        <div class="lv-ferramentas">
-          <label class="lv-ferr-btn"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)">Importar PDF ou foto</label>
-          <button type="button" class="lv-ferr-btn" onclick="lvOrganizarBlocos()">Organizar blocos</button>
+        <div class="lv-barra">
+          <div class="lv-barra-grupo">
+            <label class="lv-barra-btn"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Importar<span class="lv-so-largo">&nbsp;PDF ou foto</span></label>
+            <button type="button" class="lv-barra-btn" onclick="lvOrganizarBlocos()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/></svg>Organizar blocos</button>
+          </div>
         </div>
         <div class="lv-import-status" id="lvEdicaoImportStatus"></div>
         <textarea id="lvConteudo" class="lv-editor-textarea" rows="16" placeholder="[Primeira Parte]&#10;E&#10;Tenho uma palavra pra você..." oninput="salvarLouvorCampo()"></textarea>
@@ -993,77 +1019,52 @@
 
     <!-- PAINEL: PDF -->
     <div class="lv-panel" id="lvPanelPdf">
-      <button type="button" class="accordion-toggle" onclick="toggleAccordion('lvPdfConfigBody')">
-        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
-        <svg id="lvPdfConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <div class="accordion-body lv-config-grid" id="lvPdfConfigBody" style="display:none">
-        <div class="field full">
-          <label>Colunas</label>
-          <div class="dificuldade-chips">
-            <button type="button" class="dif-chip" id="lvColunaAuto" onclick="setLouvorColunas('auto')">Automático</button>
-            <button type="button" class="dif-chip" id="lvColuna1" onclick="setLouvorColunas(1)">1 coluna</button>
-            <button type="button" class="dif-chip" id="lvColuna2" onclick="setLouvorColunas(2)">2 colunas</button>
-          </div>
-        </div>
-        <div class="field full">
-          <label>Fonte da letra</label>
-          <div class="dificuldade-chips">
-            <button type="button" class="dif-chip" id="lvFonteMono" onclick="setLvPdfFonte('mono')">Monoespaçada</button>
-            <button type="button" class="dif-chip" id="lvFonteSans" onclick="setLvPdfFonte('sans')">Normal</button>
-          </div>
-        </div>
-        <div class="field full">
-          <label>Orientação</label>
-          <div class="dificuldade-chips">
-            <button type="button" class="dif-chip" id="lvOrientRetrato" onclick="setLvPdfOrientacao('retrato')">Retrato</button>
-            <button type="button" class="dif-chip" id="lvOrientPaisagem" onclick="setLvPdfOrientacao('paisagem')">Paisagem</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Tamanho do texto</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(-1)">−</button>
-            <span id="lvPdfTextoLabel">11pt</span>
-            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTexto(1)">+</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Tamanho do título</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(-1)">−</button>
-            <span id="lvPdfTituloLabel">17pt</span>
-            <button class="btn-icon-sm" onclick="ajustarLvPdfTamanhoTitulo(1)">+</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Altura da linha</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(-0.1)">−</button>
-            <span id="lvPdfAlturaLinhaLabel">1.5</span>
-            <button class="btn-icon-sm" onclick="ajustarLvPdfAlturaLinha(0.1)">+</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Espaçamento de letras</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(-0.2)">−</button>
-            <span id="lvPdfEspacamentoLabel">0</span>
-            <button class="btn-icon-sm" onclick="ajustarLvPdfEspacamento(0.2)">+</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Margem da folha</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvPdfMargem(-4)">−</button>
-            <span id="lvPdfMargemLabel">40pt</span>
-            <button class="btn-icon-sm" onclick="ajustarLvPdfMargem(4)">+</button>
-          </div>
-        </div>
+      <!-- barra: Configurações à esquerda, PDF à direita -->
+      <div class="lv-barra">
+        <button type="button" class="lv-barra-btn" onclick="toggleAccordion('lvPdfConfigBody')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>
+          Configurações
+          <svg id="lvPdfConfigBodyChevron" class="accordion-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button type="button" class="lv-barra-btn primario lv-btn-pdf" onclick="imprimirLouvorPdf()" title="Imprimir / Salvar PDF" aria-label="Imprimir ou salvar PDF"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><text x="12" y="18.2" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="6.6" font-weight="800" fill="currentColor" stroke="none" letter-spacing=".2">PDF</text></svg></button>
       </div>
-      <div class="lv-ferramentas">
-        <button type="button" class="lv-ferr-btn" id="lvBtnEditarFolha" onclick="lvAlternarEdicaoFolha()">Editar na folha</button>
-        <button type="button" class="lv-ferr-btn primario" onclick="imprimirLouvorPdf()">Imprimir / Salvar PDF</button>
+      <div class="accordion-body lv-config" id="lvPdfConfigBody" style="display:none">
+        <div class="lv-config-grade">
+          <div class="lv-ajuste"><span>Colunas</span>
+            <div class="dash-tabs lv-seg">
+              <button type="button" class="dash-tab" id="lvColunaAuto" onclick="setLouvorColunas('auto')">Auto</button>
+              <button type="button" class="dash-tab" id="lvColuna1" onclick="setLouvorColunas(1)">1</button>
+              <button type="button" class="dash-tab" id="lvColuna2" onclick="setLouvorColunas(2)">2</button>
+            </div>
+          </div>
+          <div class="lv-ajuste"><span>Fonte da letra</span>
+            <div class="dash-tabs lv-seg">
+              <button type="button" class="dash-tab" id="lvFonteMono" onclick="setLvPdfFonte('mono')">Mono</button>
+              <button type="button" class="dash-tab" id="lvFonteSans" onclick="setLvPdfFonte('sans')">Normal</button>
+            </div>
+          </div>
+          <div class="lv-ajuste"><span>Orientação</span>
+            <div class="dash-tabs lv-seg">
+              <button type="button" class="dash-tab" id="lvOrientRetrato" onclick="setLvPdfOrientacao('retrato')">Retrato</button>
+              <button type="button" class="dash-tab" id="lvOrientPaisagem" onclick="setLvPdfOrientacao('paisagem')">Paisagem</button>
+            </div>
+          </div>
+          <div class="lv-ajuste"><span>Tamanho do texto</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvPdfTamanhoTexto(-1)">−</button><b id="lvPdfTextoLabel">11pt</b><button type="button" aria-label="Aumentar" onclick="ajustarLvPdfTamanhoTexto(1)">+</button></div>
+          </div>
+          <div class="lv-ajuste"><span>Tamanho do título</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvPdfTamanhoTitulo(-1)">−</button><b id="lvPdfTituloLabel">17pt</b><button type="button" aria-label="Aumentar" onclick="ajustarLvPdfTamanhoTitulo(1)">+</button></div>
+          </div>
+          <div class="lv-ajuste"><span>Altura da linha</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvPdfAlturaLinha(-0.1)">−</button><b id="lvPdfAlturaLinhaLabel">1.5</b><button type="button" aria-label="Aumentar" onclick="ajustarLvPdfAlturaLinha(0.1)">+</button></div>
+          </div>
+          <div class="lv-ajuste"><span>Espaçamento de letras</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvPdfEspacamento(-0.2)">−</button><b id="lvPdfEspacamentoLabel">0</b><button type="button" aria-label="Aumentar" onclick="ajustarLvPdfEspacamento(0.2)">+</button></div>
+          </div>
+          <div class="lv-ajuste"><span>Margem da folha</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvPdfMargem(-4)">−</button><b id="lvPdfMargemLabel">40pt</b><button type="button" aria-label="Aumentar" onclick="ajustarLvPdfMargem(4)">+</button></div>
+          </div>
+        </div>
       </div>
       <div class="lv-pdf-wrap"><div class="lv-pdf-preview" id="lvPdfPreview"></div></div>
       <button class="receita-salvar-fab" onclick="exportarLouvorPdf()" title="Baixar PDF" aria-label="Baixar PDF">
@@ -1073,48 +1074,29 @@
 
     <!-- PAINEL: SLIDES -->
     <div class="lv-panel" id="lvPanelSlides">
-      <button type="button" class="accordion-toggle" onclick="toggleAccordion('lvSlideConfigBody')">
-        <span class="accordion-toggle-label"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configurações</span>
-        <svg id="lvSlideConfigBodyChevron" class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <div class="accordion-body lv-config-grid" id="lvSlideConfigBody" style="display:none">
-        <div class="field">
-          <label>Tamanho do título</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(-2)">−</button>
-            <span id="lvSlideTituloTamanhoLabel">44pt</span>
-            <button class="btn-icon-sm" onclick="ajustarLvSlideTituloTamanho(2)">+</button>
+      <!-- barra: Configurações (slides só com a letra) -->
+      <div class="lv-barra">
+        <button type="button" class="lv-barra-btn" onclick="toggleAccordion('lvSlideConfigBody')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>
+          Configurações
+          <svg id="lvSlideConfigBodyChevron" class="accordion-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>      </div>
+      <div class="accordion-body lv-config" id="lvSlideConfigBody" style="display:none">
+        <div class="lv-config-grade">
+          <div class="lv-ajuste"><span>Tamanho do título</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvSlideTituloTamanho(-2)">−</button><b id="lvSlideTituloTamanhoLabel">44pt</b><button type="button" aria-label="Aumentar" onclick="ajustarLvSlideTituloTamanho(2)">+</button></div>
           </div>
-        </div>
-        <div class="field">
-          <label>Tamanho do texto</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(-2)">−</button>
-            <span id="lvSlideTextoTamanhoLabel">32pt</span>
-            <button class="btn-icon-sm" onclick="ajustarLvSlideTextoTamanho(2)">+</button>
+          <div class="lv-ajuste"><span>Tamanho do texto</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvSlideTextoTamanho(-2)">−</button><b id="lvSlideTextoTamanhoLabel">32pt</b><button type="button" aria-label="Aumentar" onclick="ajustarLvSlideTextoTamanho(2)">+</button></div>
           </div>
-        </div>
-        <div class="field">
-          <label>Altura da linha no slide</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(-0.1)">−</button>
-            <span id="lvSlideAlturaLinhaLabel">1.4</span>
-            <button class="btn-icon-sm" onclick="ajustarLvSlideAlturaLinha(0.1)">+</button>
+          <div class="lv-ajuste"><span>Altura da linha</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvSlideAlturaLinha(-0.1)">−</button><b id="lvSlideAlturaLinhaLabel">1.4</b><button type="button" aria-label="Aumentar" onclick="ajustarLvSlideAlturaLinha(0.1)">+</button></div>
           </div>
-        </div>
-        <div class="field">
-          <label>Espaçamento de letras</label>
-          <div class="lv-transpose">
-            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(-0.1)">−</button>
-            <span id="lvSlideEspacamentoLabel">0</span>
-            <button class="btn-icon-sm" onclick="ajustarLvSlideEspacamento(0.1)">+</button>
+          <div class="lv-ajuste"><span>Espaçamento de letras</span>
+            <div class="lv-stepper"><button type="button" aria-label="Diminuir" onclick="ajustarLvSlideEspacamento(-0.1)">−</button><b id="lvSlideEspacamentoLabel">0</b><button type="button" aria-label="Aumentar" onclick="ajustarLvSlideEspacamento(0.1)">+</button></div>
           </div>
         </div>
       </div>
-      <label class="checkbox-field lv-slides-acordes">
-        <input type="checkbox" id="lvSlidesComAcordes" onchange="setLvSlidesComAcordes(this.checked)">
-        <span>Com acordes <small>fundo branco, acordes em cima da letra (para os músicos)</small></span>
-      </label>
       <div class="lv-slides-nav">
         <button class="btn-icon-sm" onclick="lvSlideNav(-1)">◀</button>
         <span id="lvSlideCounter">1 / 1</span>
@@ -1342,7 +1324,7 @@
       </div>
       <div class="field full">
         <label>Dia do mês que costuma cair (opcional)</label>
-        <input type="number" id="extraItemDia" min="1" max="31" placeholder="Ex: 15">
+        <input type="number" inputmode="numeric" id="extraItemDia" min="1" max="31" placeholder="Ex: 15">
       </div>
       <div class="field full" id="extraAjudaDaviField" style="display:none">
         <label class="checkbox-field"><input type="checkbox" id="extraItemAjudaDavi"> Vai ajudar o Davi (conta na Meta pra sair do PJ)</label>
@@ -1413,7 +1395,7 @@
           </div>
           <div class="field" style="margin-bottom:0">
             <label>Parcelas</label>
-            <input type="number" id="simMetaParcelas" min="1" value="1">
+            <input type="number" inputmode="numeric" id="simMetaParcelas" min="1" value="1">
           </div>
         </div>
         <div class="field full">
@@ -1442,7 +1424,7 @@
     <div class="simulador-painel">
       <h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Simular aumento de renda</h4>
       <div style="display:flex;align-items:center;gap:10px">
-        <input type="number" id="simAumentoRendaPct" value="0" min="0" max="200" style="width:80px" oninput="onSimAumentoRendaChange(this.value)">
+        <input type="number" inputmode="decimal" id="simAumentoRendaPct" value="0" min="0" max="200" style="width:80px" oninput="onSimAumentoRendaChange(this.value)">
         <span style="font-size:13px;color:var(--text-dim)">% a mais de renda, só nesta simulação (não altera seus dados)</span>
       </div>
     </div>
@@ -1544,18 +1526,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=3.8"></script>
-<script src="core.js?v=3.8"></script>
-<script src="comando.js?v=3.8"></script>
-<script src="layout.js?v=3.8"></script>
-<script src="app.js?v=3.8"></script>
-<script src="panorama.js?v=3.8"></script>
-<script src="planner.js?v=3.8"></script>
-<script src="ponto.js?v=3.8"></script>
-<script src="louvor.js?v=3.8"></script>
-<script src="louvor-extra.js?v=3.8"></script>
-<script src="emprestimo.js?v=3.8"></script>
-<script src="vendas.js?v=3.8"></script>
+<script src="supabase.js?v=3.9"></script>
+<script src="core.js?v=3.9"></script>
+<script src="comando.js?v=3.9"></script>
+<script src="layout.js?v=3.9"></script>
+<script src="app.js?v=3.9"></script>
+<script src="panorama.js?v=3.9"></script>
+<script src="planner.js?v=3.9"></script>
+<script src="ponto.js?v=3.9"></script>
+<script src="louvor.js?v=3.9"></script>
+<script src="louvor-extra.js?v=3.9"></script>
+<script src="emprestimo.js?v=3.9"></script>
+<script src="vendas.js?v=3.9"></script>
 <script>carregar();</script>
 </body>
 </html>

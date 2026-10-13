@@ -115,6 +115,7 @@ function renderTarefasModal(){
 function renderPlanner(){
   const u = state.currentUser;
   document.getElementById('saldoAtualInput').value = state.users[u].saldoAtual ? state.users[u].saldoAtual.toFixed(2).replace('.',',') : '';
+  renderSaldoBancos();
   const hdr = document.querySelector('.header');
   if(hdr) document.documentElement.style.setProperty('--header-h', hdr.offsetHeight+'px');
 
@@ -203,9 +204,71 @@ function setIncome(user, mKey, valStr){
 function setSaldoAtual(valStr){
   const v = parseMoney(valStr);
   state.users[state.currentUser].saldoAtual = v;
+  renderSaldoBancos();
   renderRendaTable();
   renderPanorama();
   persist();
+}
+/* ===== SALDO POR BANCO =====
+   Opcional: você anota quanto tem em cada banco e a soma vira o "Saldo em conta".
+   O campo do saldo continua aceitando digitar direto; se ficar diferente da soma, a linha dos bancos avisa. */
+function escBanco(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function bancosDoUsuario(){ const us = state.users[state.currentUser]; if(!us.bancos) us.bancos = []; return us.bancos; }
+function totalBancos(lista){ return Math.round(lista.reduce((s,b)=>s + (Number(b.valor)||0), 0)*100)/100; }
+function abrirBancosModal(){
+  const el = document.getElementById('bancosLista');
+  el.innerHTML = '';
+  const lista = bancosDoUsuario();
+  if(lista.length) lista.forEach(b=>adicionarBancoLinha(false, b));
+  else adicionarBancoLinha(false);
+  atualizarTotalBancos();
+  document.getElementById('modalBancos').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function adicionarBancoLinha(focar, b){
+  const el = document.getElementById('bancosLista');
+  const linha = document.createElement('div');
+  linha.className = 'banco-linha';
+  const valor = b && b.valor ? Number(b.valor).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '';
+  linha.innerHTML = `<input type="text" class="banco-nome" placeholder="Banco" value="${escBanco(b ? b.nome : '')}" autocomplete="off">
+    <div class="input-money banco-valor"><input type="text" inputmode="numeric" placeholder="0,00" value="${valor}" oninput="maskMoneyInput(this);atualizarTotalBancos()"></div>
+    <button type="button" class="btn-icon-sm banco-del" aria-label="Remover banco" onclick="this.closest('.banco-linha').remove();atualizarTotalBancos()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>`;
+  el.appendChild(linha);
+  if(focar) linha.querySelector('.banco-nome').focus();
+}
+function lerBancosDaJanela(){
+  return [...document.querySelectorAll('#bancosLista .banco-linha')].map(l=>({
+    nome: l.querySelector('.banco-nome').value.trim(),
+    valor: parseMoney(l.querySelector('.banco-valor input').value)
+  })).filter(b=>b.nome || b.valor);
+}
+function atualizarTotalBancos(){
+  const lista = lerBancosDaJanela();
+  document.getElementById('bancosTotal').innerHTML = `<span>Total em ${lista.length} banco${lista.length===1?'':'s'}</span><b>${fmtMoney(totalBancos(lista))}</b>`;
+}
+function salvarBancos(){
+  const lista = lerBancosDaJanela().map((b,i)=>({ id: 'bc'+Date.now().toString(36)+i, nome: b.nome || 'Banco', valor: b.valor }));
+  const us = state.users[state.currentUser];
+  us.bancos = lista;
+  if(lista.length) us.saldoAtual = totalBancos(lista);
+  closeModal('modalBancos');
+  renderPlanner();
+  renderPanorama();
+  persist();
+  showToast(lista.length ? 'Saldo em conta: '+fmtMoney(us.saldoAtual) : 'Bancos removidos');
+}
+/* linha embaixo do saldo: cada banco com o valor; avisa se o saldo digitado não bate com a soma */
+function renderSaldoBancos(){
+  const el = document.getElementById('saldoBancosInfo'); if(!el) return;
+  const us = state.users[state.currentUser];
+  const lista = us.bancos || [];
+  if(!lista.length){ el.style.display = 'none'; return; }
+  const total = totalBancos(lista);
+  const difere = Math.abs(total - (us.saldoAtual||0)) > 0.004;
+  el.style.display = 'flex';
+  el.classList.toggle('difere', difere);
+  el.innerHTML = `<span class="saldo-bancos-lista">${lista.map(b=>`<span>${escBanco(b.nome)} <b>${fmtMoney(b.valor)}</b></span>`).join('')}</span>`
+    + (difere ? `<span class="saldo-bancos-aviso">Soma ${fmtMoney(total)}</span>` : '');
 }
 function openReservaModal(){
   document.getElementById('reservaValorInput').value = state.reserva ? state.reserva.toFixed(2).replace('.',',') : '';
