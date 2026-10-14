@@ -30,6 +30,7 @@ function novoEstado(){
     comprasTracker:[],
     metas:[],
     louvores:[],
+    louvorRoteiro:[],
     ponto:{ valorHora:0, padraoHoras:8, days:{} },
     configFonte:'system',
   };
@@ -344,6 +345,7 @@ async function carregar(){
       if(!state.pontoFechado) state.pontoFechado = {};
       if(!state.credoVistaCategoriasCustom) state.credoVistaCategoriasCustom = [];
       if(!state.louvores) state.louvores = [];
+      if(!state.louvorRoteiro) state.louvorRoteiro = [];
       // migração: garantir campos novos
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; if(!c.assinaturas) c.assinaturas=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });

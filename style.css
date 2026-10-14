@@ -577,7 +577,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .lv-lista{display:flex;flex-direction:column;gap:var(--s2);padding:0 var(--s3) 100px}
 .lv-card{display:flex;align-items:center;gap:var(--s3);background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--s3);cursor:pointer;transition:all var(--dur) var(--ease)}
 .lv-card:active{border-color:var(--primary)}
-.lv-card-icon{width:40px;height:40px;border-radius:12px;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .lv-card-info{flex:1;min-width:0}
 .lv-card-titulo{font-size:13.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lv-card-meta{font-size:11px;color:var(--text-faint);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -585,7 +584,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .lv-card-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
 .lv-card-data,.lv-card-status{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:20px;white-space:nowrap}
 .lv-card-data{color:var(--primary);background:var(--primary-tint)}
-.lv-card-data.vazia{color:var(--text-faint);background:transparent;border:1px dashed var(--line)}
 .lv-card-status{border:1px solid var(--warning);background:var(--warning-tint);color:var(--warning)}
 .lv-card-status.finalizada{border-color:var(--success);background:var(--success-tint);color:var(--success)}
 
@@ -1815,3 +1813,53 @@ body{background:var(--bg);color:var(--text);font-size:14px;font-weight:400}
 .modal-actions{border-top:none}
 .resumo-card #saldoAtualInput{padding-left:40px!important}
 .resumo-card .input-money::before{top:22px}
+/* Editorial — Vendas, Ponto e Empréstimo: um número grande em serifa, sem caixas nem pílulas cheias */
+.ponto-valor-grande{font-family:var(--font-display);font-size:52px;font-weight:400;letter-spacing:-1px;line-height:1.05;margin-top:2px}
+.ponto-horas-sub{font-size:12.5px;margin-top:6px}
+.ponto-horas-sub span{font-weight:600}
+.vd-parcelas{background:none;padding:0;color:var(--text-faint);font-size:12px;font-weight:500}
+.vd-meta-linha{font-size:12.5px;margin-top:var(--s4)}
+.vd-bar{height:3px;margin:10px 0 2px}
+.vd-bar div{background:var(--gold)}
+.vd-legenda{font-size:12.5px;color:var(--text-dim);line-height:1.45;margin:-6px 0 4px}
+.vd-mes{padding:18px 0}
+.vd-mes-nome{font-size:15px;font-weight:600}
+.vd-mes-nome small{font-size:12.5px;font-weight:500;color:var(--gold);text-transform:none;margin-left:2px}
+.vd-meta-btn{background:none;padding:2px 0;border-radius:0;font-size:12.5px;font-weight:500;color:var(--text-dim);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+.vd-meta-btn b{color:var(--text);font-weight:600}
+.vd-meta-btn:hover{background:none;color:var(--text);text-decoration-color:var(--text)}
+.vd-conta{margin-top:8px}
+.vd-conta b{font-weight:600}
+.vd-status{font-weight:600}
+.vd-precisa{margin-top:14px}
+.vd-precisa-tit{font-size:12.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-dim);margin-bottom:4px}
+.vd-precisa-ops{gap:0}
+.vd-precisa-op{background:none;border-radius:0;padding:0;gap:10px}
+.vd-precisa-op b{font-family:var(--font-display);font-size:40px;font-weight:400;line-height:1}
+.vd-precisa-op span{font-weight:500;color:var(--text)}
+.vd-precisa-ou{padding:0 14px;font-weight:500}
+.vd-amortizar{background:none;padding:6px 0 0;border-radius:0;color:var(--gold);font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.vd-venda{padding:14px 0}
+.vd-venda-nome{font-weight:500}
+.vd-venda-sub{color:var(--text-dim)}
+.vd-venda-sub b{font-weight:600}
+.resumo-stats{align-items:start}
+.resumo-stat-btn{align-self:start;display:block}
+.vd-meta-linha>b{white-space:nowrap}
+/* Louvor — Roteiro (checklist dos louvores a criar) */
+.lv-roteiro-toggle{margin:-8px 0 0;padding:12px 0;border-top:none}
+.lv-roteiro{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 16px 12px;margin-bottom:var(--s3)}
+.lv-rot-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.lv-rot-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--text-faint);background:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.lv-rot-check:hover{border-color:var(--gold)}
+.lv-rot-item.feito .lv-rot-check{background:var(--gold);border-color:var(--gold)}
+.lv-rot-info{flex:1;min-width:0}
+.lv-rot-item.feito .lv-rot-info{cursor:pointer}
+.lv-rot-titulo{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv-rot-item.feito .lv-rot-titulo{color:var(--text-faint);text-decoration:line-through}
+.lv-rot-meta{font-size:12px;color:var(--text-dim);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv-rot-vazio{font-size:13px;color:var(--text-faint);padding:14px 0;border-bottom:1px solid var(--line)}
+.lv-rot-novo{display:flex;gap:8px;padding-top:12px}
+.lv-rot-novo input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);padding:0 12px;font:inherit;font-size:16px;color:var(--text)}
+.lv-rot-novo input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
+.lv-rot-add{width:40px;height:40px;border-radius:var(--radius-sm);border:none;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}

@@ -147,13 +147,13 @@ function renderVendas(){
       : `<div class="vd-meta-linha"><span>${explicaMes}</span><b class="${faltaMes>0.005?'neg':'pos'}">${faltaMes>0.005?'falta '+fmtMoney(faltaMes):'✓ bateu'}</b></div>
          <div class="vd-bar${faltaMes>0.005?' falta':''}"><div style="width:${pctMes}%"></div></div>`}
     <div class="resumo-rodape">
-      <button type="button" class="resumo-btn" style="margin-left:auto" onclick="abrirFormVenda()"><span class="resumo-btn-ico">+</span><span>Nova venda</span></button>
+      <button type="button" class="resumo-btn" style="flex:1" onclick="abrirFormVenda()"><span class="resumo-btn-ico">+</span><span>Nova venda</span></button>
     </div>
   </div>`;
 
   /* metas mês a mês */
   html += `<div class="card"><div class="card-title"><div class="left">Metas de sobra</div></div>
-    <div class="vd-legenda">Meta = quanto as vendas precisam render. Se as contas já sobram, a meta inteira vem das vendas; se faltam, as vendas cobrem a falta e ainda sobram a meta.</div>
+    <div class="vd-legenda">Quanto as vendas precisam render. Se as contas já sobram, a meta inteira vem das vendas; se faltam, as vendas cobrem a falta e ainda a meta.</div>
     ${meses.map(m=>{
       const base = vendasSobraBase(m), set = vendasSetupNoMes(m), rec = vendasRecNoMes(m);
       const com = set + rec, proj = base + com, meta = vendasMeta(m);
@@ -169,8 +169,8 @@ function renderVendas(){
         ? `<button type="button" class="vd-amortizar" onclick="vendasAmortizar(${Math.min(dif, divida.saldo).toFixed(2)})">Amortizar ${fmtMoney(Math.min(dif, divida.saldo))} do excedente ›</button>` : '';
       return `<div class="vd-mes${m===mAtual?' atual':''}">
         <div class="vd-mes-topo">
-          <div class="vd-mes-nome">${monthLabel(m)}${m===mAtual?' <small>atual</small>':''}</div>
-          <button type="button" class="vd-meta-btn" onclick="abrirMetaVendas('${m}')">${meta===null?'+ meta':'Meta '+fmtMoney(meta)}</button>
+          <div class="vd-mes-nome">${monthLabel(m)}${m===mAtual?' <small>· atual</small>':''}</div>
+          <button type="button" class="vd-meta-btn" onclick="abrirMetaVendas('${m}')">${meta===null?'Definir meta':'Meta <b>'+fmtMoney(meta)+'</b>'}</button>
         </div>
         <div class="vd-conta">
           <span>Sobra <b class="${base<0?'neg':''}">${fmtMoneySigned(base)}</b></span>

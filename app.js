@@ -91,6 +91,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.5', itens: [
+    'Louvor: Roteiro — lista de louvores a criar; ao marcar, abre o Novo Louvor já com nome e cantor (ou abre o louvor se já existir)',
+    'Louvor: cartões sem o ícone e sem "Sem data"',
+    'Vendas no visual Editorial: comissão em letra serifada, metas sem caixas e botão Nova venda inteiro'
+  ]},
   { versao: 'v4.4', itens: [
     'Novo visual Editorial: fundo cor de papel, tinta escura e verde-floresta, saldo em letra serifada grande, cards com borda fina em vez de sombra e abas mais limpas',
     'Fontes fixas Geist + Instrument Serif (a opção de trocar fonte saiu)'
