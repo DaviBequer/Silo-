@@ -75,18 +75,23 @@ let tratandoConflito = false;
 const LOCAL_COPIA_KEY = 'siloe-copia-local-v1';
 const LOCAL_META_KEY = 'siloe-copia-local-meta-v1';
 
+/* aba de teste (?teste): não grava no banco NEM na cópia local (que é compartilhada com a aba de verdade) */
+const MODO_TESTE_LOCAL = /[?&]teste\b/.test(location.search);
 /* --- cópia local: se o banco falhar, a alteração não se perde ao atualizar a página --- */
 function espelharLocal(){
+  if(MODO_TESTE_LOCAL) return;
   try{
     localStorage.setItem(LOCAL_COPIA_KEY, JSON.stringify(state));
     localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: true }));
   }catch(e){ /* sem espaço ou bloqueado: segue sem cópia local */ }
 }
 function marcarLocalSincronizado(){
+  if(MODO_TESTE_LOCAL) return;
   try{ localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false })); }catch(e){}
 }
 /* cópia em dia dos dados no aparelho: é o que aparece (só leitura) quando não há internet */
 function guardarCopiaLocal(){
+  if(MODO_TESTE_LOCAL) return;
   try{
     localStorage.setItem(LOCAL_COPIA_KEY, JSON.stringify(state));
     localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false }));
@@ -99,6 +104,7 @@ function lerCopiaLocalQualquer(){
   }catch(e){ return null; }
 }
 function apagarCopiaLocal(){
+  if(MODO_TESTE_LOCAL) return;
   try{ localStorage.removeItem(LOCAL_COPIA_KEY); localStorage.removeItem(LOCAL_META_KEY); }catch(e){}
 }
 function lerCopiaLocalPendente(){
@@ -268,8 +274,17 @@ async function persistAgora(){
 /* tenta de novo sozinho: ao voltar a internet e a cada 30 s enquanto houver algo pendente */
 window.addEventListener('online', ()=>{ if(!remoteReady){ carregarTentativas = 0; carregar(); } else if(salvarPendente) persistAgora(); });
 setInterval(()=>{ if(salvarPendente && remoteReady && !salvandoPromise && !persistTimer) persistAgora(); }, 30000);
+/* abriu sem internet (mostrando a cópia local): quando a conexão voltar ou o app voltar à tela, tenta carregar de novo */
+function tentarNuvemDeNovo(){
+  if(remoteReady || document.hidden) return;
+  if(document.getElementById('loginTela')?.classList.contains('show')) return;
+  carregarTentativas = 0;
+  carregar();
+}
+window.addEventListener('online', tentarNuvemDeNovo);
 document.addEventListener('visibilitychange', async ()=>{
   if(document.hidden){ if(persistTimer || salvarPendente) persistAgora(); return; }
+  if(!remoteReady){ tentarNuvemDeNovo(); return; }
   /* voltou pro app: se outro aparelho salvou algo novo e aqui não há nada pendente, recarrega */
   if(remoteReady && !salvarPendente && !persistTimer && !salvandoPromise && window.SiloSupabase){
     const r = await window.SiloSupabase.checarAtualizacao();
@@ -278,12 +293,25 @@ document.addEventListener('visibilitychange', async ()=>{
 });
 window.addEventListener('pagehide', ()=>{ if(persistTimer || salvarPendente) persistAgora(); });
 
+/* uma carga por vez (as novas tentativas podem vir do relógio, da volta da internet ou da volta ao app) */
+let carregandoAgora = false;
 async function carregar(){
+  if(carregandoAgora) return;
+  carregandoAgora = true;
+  try{ await carregarDaNuvem(); }
+  finally{ carregandoAgora = false; }
+}
+async function carregarDaNuvem(){
   let legado = { state:null, mesAtual:null, logo:null };
   let precisaSalvar = false;
   try{
     let saved = null;
     if(!window.SiloSupabase || !window.SiloSupabase.enabled) throw new Error('Supabase não configurado');
+    /* aparelho já conectado: rede ruim não derruba o login (cai na cópia local e tenta de novo) */
+    const sessao = await window.SiloSupabase.garantirSessao();
+    if(sessao === 'sem-sessao'){ mostrarLogin(); return; }
+    if(sessao === 'sem-rede') throw new Error('sem conexão para confirmar o login');
+    window.SiloSupabase.pedirArmazenamentoPermanente();
     const r = await window.SiloSupabase.loadState();
     if(!r.ok) throw r.error;
     saved = r.data;
@@ -412,6 +440,7 @@ async function carregar(){
     }
     if(carregarTentativas++ < 5) setTimeout(carregar, 8000);
   }
+  state.currentUser = usuarioDoAparelho();   // o banco pode ter "cris" salvo por outro aparelho
   limparDadosAntigos();
   aplicarFonteApp();
   if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
@@ -446,6 +475,19 @@ function mostrarLogin(){
   document.getElementById('loginTela')?.classList.add('show');
   setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
 }
+/* olho da senha: mostra/esconde (sem argumento alterna; false volta a esconder) */
+const OLHO_ABERTO = '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+const OLHO_FECHADO = '<path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.16 3.19"/><path d="M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m2 2 20 20"/>';
+function alternarVerSenha(mostrar){
+  const inp = document.getElementById('loginSenha'), btn = document.getElementById('loginOlho');
+  if(!inp || !btn) return;
+  const ver = mostrar === undefined ? inp.type === 'password' : !!mostrar;
+  inp.type = ver ? 'text' : 'password';
+  btn.querySelector('svg').innerHTML = ver ? OLHO_FECHADO : OLHO_ABERTO;
+  btn.setAttribute('aria-label', ver ? 'Esconder senha' : 'Mostrar senha');
+  btn.title = ver ? 'Esconder senha' : 'Mostrar senha';
+  if(mostrar === undefined) inp.focus();
+}
 async function entrarNoApp(){
   const email = document.getElementById('loginEmail').value.trim();
   const senha = document.getElementById('loginSenha').value;
@@ -457,6 +499,7 @@ async function entrarNoApp(){
   btn.disabled = false; btn.textContent = 'Entrar';
   if(!r.ok){ erro.textContent = r.erro; return; }
   document.getElementById('loginSenha').value = '';
+  alternarVerSenha(false);
   document.getElementById('loginTela').classList.remove('show');
   mostrarSplash();
   carregarTentativas = 0;
@@ -469,6 +512,15 @@ async function sairDoApp(){
   }
   await window.SiloSupabase.sair();
   apagarCopiaLocal();   // a cópia dos dados que fica no aparelho sai junto
+  location.reload();
+}
+/* celular perdido/trocado: desconecta todos os aparelhos (este também) */
+async function sairDeTodosAparelhos(){
+  if(!(await iosConfirm('Desconectar TODOS os aparelhos? Cada um (inclusive este) vai pedir e-mail e senha de novo.'))) return;
+  if(salvarPendente || persistTimer) await persistAgora();
+  const ok = await window.SiloSupabase.sairDeTodos();
+  if(!ok){ showToast('Sem conexão — tente de novo'); return; }
+  apagarCopiaLocal();
   location.reload();
 }
 // Migração única do localStorage -> Supabase (pode ser apagada quando todos os aparelhos já tiverem migrado)
@@ -745,11 +797,19 @@ function switchAba(aba){
   if(aba==='louvor') renderLouvor();
   if(aba==='vendas' && typeof renderVendas==='function') renderVendas();
 }
+/* Davi/Cris é escolha de cada aparelho (fica no aparelho, não no banco): escolher Cris num celular não muda os outros */
+const CHAVE_USUARIO = 'siloe-usuario';
+function usuarioDoAparelho(){
+  try{ const u = localStorage.getItem(CHAVE_USUARIO); return u === 'cris' ? 'cris' : 'davi'; }catch(e){ return 'davi'; }
+}
+function marcarAbasUsuario(){
+  const u = state.currentUser === 'cris' ? 'cris' : 'davi';
+  document.getElementById('tabDavi')?.classList.toggle('active', u==='davi');
+  document.getElementById('tabCris')?.classList.toggle('active', u==='cris');
+}
 function switchUser(user){
   state.currentUser = user;
-  document.getElementById('tabDavi').classList.toggle('active', user==='davi');
-  document.getElementById('tabCris').classList.toggle('active', user==='cris');
-  persist();
+  try{ localStorage.setItem(CHAVE_USUARIO, user); }catch(e){}
   renderAll();
 }
 

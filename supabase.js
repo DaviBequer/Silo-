@@ -33,6 +33,27 @@
       try { const { data } = await client.auth.getSession(); return !!(data && data.session); }
       catch (e) { return false; }
     },
+    /* Aparelho conectado para sempre: o login fica guardado e só é pedido de novo se o banco recusar a sessão
+       (saiu de todos os aparelhos, senha trocada...). Falha de rede NÃO pede login: mostra a cópia local e tenta de novo.
+       Retorna 'ok' | 'sem-sessao' | 'sem-rede'. */
+    async garantirSessao(){
+      if (!client) return 'sem-sessao';
+      let guardada = false;
+      try { const s = JSON.parse(localStorage.getItem('siloe-auth') || 'null'); guardada = !!(s && s.refresh_token); } catch (e) {}
+      try { const { data } = await client.auth.getSession(); if (data && data.session) return 'ok'; } catch (e) {}
+      if (!guardada) return 'sem-sessao';
+      try {
+        const { data, error } = await client.auth.refreshSession();
+        if (!error && data && data.session) return 'ok';
+        const st = error && error.status;
+        if (st === 400 || st === 401 || st === 403 || /refresh.?token|invalid|not.?found/i.test(String(error && error.message))) return 'sem-sessao';
+        return 'sem-rede';
+      } catch (e) { return 'sem-rede'; }
+    },
+    /* pede ao navegador para não apagar os dados deste site (login e cópia local) quando faltar espaço */
+    pedirArmazenamentoPermanente(){
+      try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{}); } catch (e) {}
+    },
     async entrar(email, senha){
       if (!client) return { ok:false, erro:'Supabase não configurado' };
       try {
@@ -46,6 +67,11 @@
     },
     async sair(){
       if (client) { try { await client.auth.signOut(); } catch (e) {} }
+    },
+    /* desconecta TODOS os aparelhos (ex.: celular perdido); cada um vai pedir login de novo */
+    async sairDeTodos(){
+      if (!client) return false;
+      try { const { error } = await client.auth.signOut({ scope:'global' }); return !error; } catch (e) { return false; }
     },
     /* ===== VERSÕES ANTERIORES (tabela app_state_historico: uma cópia por hora, 30 dias) ===== */
     async listarVersoes(){

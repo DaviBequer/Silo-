@@ -1366,6 +1366,24 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 .login-sub{font-size:13px;color:var(--text-dim);margin-bottom:8px}
 .login-input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card-2);font-size:16px;font-family:inherit;color:var(--text);outline:none}
 .login-input:focus{border-color:var(--gold)}
+.ia-config{margin:0 0 var(--s3);padding:var(--s3) 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.ia-topo{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.ia-titulo{font-size:14px;font-weight:600;color:var(--text)}
+.ia-status{font-size:12px;font-weight:500;color:var(--text-faint)}
+.ia-status.ligada{color:var(--success)}
+.ia-desc{font-size:12.5px;color:var(--text-dim);line-height:1.45;margin-bottom:10px}
+.ia-desc a{color:var(--gold);font-weight:600}
+.ia-linha{display:flex;gap:8px}
+.ia-linha input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);padding:0 12px;font:inherit;font-size:16px;color:var(--text)}
+.ia-linha input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
+.ia-linha .btn{min-height:40px;height:40px;flex-shrink:0}
+.ia-remover{margin-top:8px;border:none;background:none;padding:0;font:inherit;font-size:12.5px;font-weight:500;color:var(--danger);cursor:pointer}
+.aparelho-conectado{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
+.aparelho-nota{font-size:12.5px;color:var(--text-dim);line-height:1.45;margin-bottom:10px}
+.login-senha{position:relative}
+.login-senha .login-input{padding-right:48px}
+.login-olho{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:38px;height:38px;border:none;background:none;border-radius:50%;color:var(--text-faint);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.login-olho:hover{color:var(--text);background:var(--primary-tint)}
 .login-erro{min-height:16px;font-size:12.5px;color:var(--danger)}
 
 /* ===== EXPORTAR PONTO PJ ===== */
@@ -1391,6 +1409,10 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 .lv-barra-btn:hover{background:var(--card-2)}
 .lv-barra-btn svg{flex-shrink:0;color:var(--text-dim)}
 .lv-barra-btn .accordion-chevron{transition:transform .2s var(--ease)}
+.lv-barra-dir{display:flex;align-items:center;gap:8px}
+.lv-tela-cheia-sair{display:none}
+.lv-pdf-wrap.lv-tela-cheia{position:fixed;inset:0;z-index:2500;margin:0;overflow:auto;-webkit-overflow-scrolling:touch;background:#e9e6e0;padding:calc(16px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
+.lv-tela-cheia .lv-tela-cheia-sair{display:flex;position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));right:calc(20px + env(safe-area-inset-right));z-index:1;width:52px;height:52px;border:none;border-radius:50%;background:rgba(28,25,23,.78);color:#fff;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .lv-barra-btn.primario{background:var(--primary);border-color:var(--primary);color:#fff}
 .lv-barra-btn.primario svg{color:#fff}
 .lv-barra-btn.lv-btn-pdf{width:38px;padding:0}
@@ -1398,8 +1420,9 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 .lv-config{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:0 16px;margin:0 0 14px;overflow:hidden}
 .lv-config-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));column-gap:28px;margin-top:-1px}
 .lv-ajuste{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:54px;border-top:1px solid var(--line);font-size:13px;font-weight:500;color:var(--text-dim)}
-.lv-seg{margin:0;flex-shrink:0;background:var(--card-2);border:none;padding:3px}
-.lv-seg .dash-tab{flex:0 0 auto;min-width:44px;padding:6px 11px;font-size:12px}
+/* seletores dos ajustes (dash-tabs.lv-seg); os pedaços da letra na prévia também se chamam .lv-seg e não podem herdar isto */
+.dash-tabs.lv-seg{margin:0;flex-shrink:0}
+.dash-tabs.lv-seg .dash-tab{flex:0 0 auto;min-width:44px;padding:6px 11px;font-size:12px}
 .lv-stepper{display:inline-flex;align-items:center;flex-shrink:0;background:var(--card-2);border-radius:999px;padding:3px}
 .lv-stepper button{width:30px;height:30px;border:none;border-radius:50%;background:transparent;font:inherit;font-size:16px;font-weight:600;color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .lv-stepper button:hover{background:var(--card);color:var(--text)}
@@ -1847,8 +1870,13 @@ body{background:var(--bg);color:var(--text);font-size:14px;font-weight:400}
 .resumo-stat-btn{align-self:start;display:block}
 .vd-meta-linha>b{white-space:nowrap}
 /* Louvor — Roteiro (checklist dos louvores a criar) */
-.lv-roteiro-toggle{margin:-8px 0 0;padding:12px 0;border-top:none}
-.lv-roteiro{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 16px 12px;margin-bottom:var(--s3)}
+.lv-roteiro{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:0 16px;margin:-8px 0 var(--s3)}
+.lv-rot-head{width:100%;display:flex;align-items:center;gap:10px;padding:14px 0;border:none;background:none;font:inherit;color:var(--text);cursor:pointer;text-align:left}
+.lv-rot-nome{font-size:14px;font-weight:600}
+.lv-rot-conta{flex:1;font-size:12.5px;color:var(--text-dim)}
+.lv-rot-seta{width:16px;height:16px;color:var(--text-dim);transform:rotate(-90deg);transition:transform .2s var(--ease)}
+.lv-roteiro.aberto .lv-rot-seta{transform:none}
+.lv-roteiro.aberto .lv-rot-corpo{border-top:1px solid var(--line);padding-bottom:12px}
 .lv-rot-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 .lv-rot-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--text-faint);background:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
 .lv-rot-check:hover{border-color:var(--gold)}
@@ -1863,3 +1891,5 @@ body{background:var(--bg);color:var(--text);font-size:14px;font-weight:400}
 .lv-rot-novo input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);padding:0 12px;font:inherit;font-size:16px;color:var(--text)}
 .lv-rot-novo input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
 .lv-rot-add{width:40px;height:40px;border-radius:var(--radius-sm);border:none;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.lv-icone-btn.carregando{opacity:.45;pointer-events:none;animation:lvPulsar 1s ease-in-out infinite alternate}
+@keyframes lvPulsar{to{opacity:.85}}

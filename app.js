@@ -66,6 +66,7 @@ document.addEventListener('keydown', e=>{
 
 /* ========== RENDERIZAÇÃO ========== */
 function renderAll(){
+  marcarAbasUsuario();   // botões Davi/Cris sempre iguais aos dados mostrados
   renderPanorama();
   renderPlanner();
   renderPonto();
@@ -91,6 +92,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.6', itens: [
+    'Louvor: Importar e Organizar com IA (chave grátis do Google em Dados do App) — lê qualquer PDF ou foto e já monta partes, acordes e "Repete"',
+    'Louvor: botão de tela cheia no Visualizar; letra sem fundo na prévia; Roteiro abre e fecha; filtro Atual em ordem de data',
+    'Aparelho fica conectado: internet ruim não pede mais senha; novo "Sair de todos" em Dados do App',
+    'Davi/Cris: cada aparelho guarda a sua escolha (não abre mais com os dados da Cris por engano)',
+    'Login com olho para mostrar a senha'
+  ]},
   { versao: 'v4.5', itens: [
     'Louvor: Roteiro — lista de louvores a criar; ao marcar, abre o Novo Louvor já com nome e cantor (ou abre o louvor se já existir)',
     'Louvor: cartões sem o ícone e sem "Sem data"',
@@ -535,7 +543,33 @@ function abrirImportExportModal(){
   document.getElementById('storagePercent').textContent = storage.percentual + '%';
   
   document.getElementById('storageUsed').textContent = usedMB + ' MB';
-  
+  atualizarStatusIA();
+}
+
+/* ===== Chave da IA (Google Gemini) para o Importar/Organizar do Louvor =====
+   Fica nos dados protegidos pelo login (não vai no backup exportado). */
+function atualizarStatusIA(){
+  const tem = !!String(state.iaGoogleChave||'').trim();
+  const st = document.getElementById('iaStatus'), inp = document.getElementById('iaChaveInput');
+  if(st){ st.textContent = tem ? 'Ligada' : 'Desligada'; st.classList.toggle('ligada', tem); }
+  if(inp) inp.placeholder = tem ? 'Chave salva ✓' : 'Cole a chave aqui';
+  const rem = document.getElementById('iaRemover'); if(rem) rem.style.display = tem ? '' : 'none';
+}
+function salvarChaveIA(){
+  const inp = document.getElementById('iaChaveInput');
+  const v = (inp.value||'').trim();
+  if(!v){ inp.focus(); return; }
+  state.iaGoogleChave = v;
+  inp.value = '';
+  persist();
+  atualizarStatusIA();
+  showToast('Chave salva — o Importar agora usa a IA');
+}
+async function removerChaveIA(){
+  if(!(await iosConfirm('Remover a chave? O Importar volta a usar a leitura simples.'))) return;
+  state.iaGoogleChave = '';
+  persist();
+  atualizarStatusIA();
 }
 
 /* ================= IMPORTAR / EXPORTAR TODOS OS DADOS ================= */
@@ -547,7 +581,7 @@ function montarBackupApp(){
     exportadoEm: new Date().toISOString(),
     mesAtual: mesAtualRef,
     mesPonto: mesPontoRef,
-    state: state
+    state: Object.assign({}, state, { iaGoogleChave: undefined })   // a chave da IA não vai junto no backup
   };
 }
 async function compartilharBackupApp(){
@@ -606,6 +640,7 @@ function onImportFileSelected(event){
       if(!ok) return;
       const novo = Object.assign(novoEstado(), backup.state);
       if(backup.mesAtual) novo.mesAtual = backup.mesAtual;
+      if(state.iaGoogleChave) novo.iaGoogleChave = state.iaGoogleChave;   // o backup não traz a chave: mantém a atual
       state = novo;
       persistAgora().then(salvou=>{
         if(salvou) location.reload();
@@ -686,7 +721,7 @@ function onBuscaGlobalInput(v){
 }
 function irParaBuscaConta(user, cat, id){
   closeModal('modalBuscaGlobal');
-  state.currentUser = user;
+  if(state.currentUser !== user) switchUser(user);
   switchAba('planner');
   setTimeout(()=>editGasto(cat, id), 200);
 }

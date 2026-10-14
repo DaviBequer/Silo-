@@ -30,17 +30,20 @@ let lvRoteiroAberto = (()=>{ try{ return localStorage.getItem('siloe-lv-roteiro'
 let lvRoteiroPendenteId = null;
 function lvRoteiroLista(){ if(!state.louvorRoteiro) state.louvorRoteiro = []; return state.louvorRoteiro; }
 function lvMesmoNome(a, b){ return String(a||'').trim().toLowerCase() === String(b||'').trim().toLowerCase(); }
+/* cabeçalho abre/fecha (sem argumento alterna) */
 function toggleLvRoteiro(v){
-  lvRoteiroAberto = !!v;
-  try{ localStorage.setItem('siloe-lv-roteiro', v?'1':'0'); }catch(e){}
+  lvRoteiroAberto = v === undefined ? !lvRoteiroAberto : !!v;
+  try{ localStorage.setItem('siloe-lv-roteiro', lvRoteiroAberto?'1':'0'); }catch(e){}
   renderLvRoteiro();
 }
 function renderLvRoteiro(){
-  const el = document.getElementById('lvRoteiro'), chk = document.getElementById('lvRoteiroToggle');
-  if(!el) return;
-  if(chk) chk.checked = lvRoteiroAberto;
-  el.style.display = lvRoteiroAberto ? '' : 'none';
-  if(!lvRoteiroAberto) return;
+  const el = document.getElementById('lvRoteiro'), corpo = document.getElementById('lvRotCorpo');
+  if(!el || !corpo) return;
+  const aFazer = lvRoteiroLista().filter(i=>!i.feito).length;
+  document.getElementById('lvRotConta').textContent = aFazer ? `${aFazer} a criar` : '';
+  el.classList.toggle('aberto', lvRoteiroAberto);
+  document.getElementById('lvRotHead')?.setAttribute('aria-expanded', lvRoteiroAberto ? 'true' : 'false');
+  if(!lvRoteiroAberto){ corpo.innerHTML = ''; return; }
   const itens = lvRoteiroLista().slice().sort((a,b)=> (a.feito?1:0)-(b.feito?1:0) || (a.criadoEm||0)-(b.criadoEm||0));
   const linhas = itens.map(it=>{
     const lv = it.louvorId && state.louvores.find(l=>l.id===it.louvorId);
@@ -54,7 +57,7 @@ function renderLvRoteiro(){
       <button type="button" class="btn-icon-sm" onclick="excluirLvRoteiro('${it.id}')" title="Remover" aria-label="Remover"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>`;
   }).join('');
-  el.innerHTML = `${linhas || '<div class="lv-rot-vazio">Nenhum louvor no roteiro ainda</div>'}
+  corpo.innerHTML = `${linhas || '<div class="lv-rot-vazio">Nenhum louvor no roteiro ainda</div>'}
     <form class="lv-rot-novo" onsubmit="event.preventDefault();adicionarLvRoteiro()">
       <input type="text" id="lvRotTitulo" placeholder="Música" autocomplete="off">
       <input type="text" id="lvRotArtista" placeholder="Cantor" autocomplete="off">
@@ -133,7 +136,16 @@ function renderLouvorLista(){
       (l.artista||'').toLowerCase().includes(louvorSearchTerm)
     );
   }
-  items.sort((a,b)=> (a.titulo||'').localeCompare(b.titulo||''));
+  const porNome = (a,b)=> (a.titulo||'').localeCompare(b.titulo||'');
+  /* Atual: por data (a mais próxima primeiro); sem data vão para o fim, por nome. Nas categorias: por nome */
+  if(louvorFiltroAtivo === 'Atual'){
+    items.sort((a,b)=>{
+      const da = a.dataAgendamento || '', db = b.dataAgendamento || '';
+      if(da && db && da !== db) return da < db ? -1 : 1;
+      if(!da !== !db) return da ? -1 : 1;
+      return porNome(a,b);
+    });
+  } else items.sort(porNome);
   if(items.length===0){
     el.innerHTML = `<div class="empty-state"><div class="title">Nenhum louvor encontrado</div><div class="desc">Toque no + para adicionar</div></div>`;
     return;
@@ -252,6 +264,7 @@ function toggleLouvorStatus(){
   renderLvStatusBtn();
 }
 function closeLouvorDetalhe(){
+  if(document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);
   document.getElementById('pageLouvorDetalhe').classList.remove('active');
   louvorAtualId = null;
   renderLouvor();
@@ -869,10 +882,33 @@ function lvAjustarZoomFolha(){
   const el = document.getElementById('lvPdfPreview');
   if(!el || !el.parentElement) return;
   el.style.zoom = 1;
-  const disp = el.parentElement.clientWidth;
+  const pai = el.parentElement, cs = getComputedStyle(pai);
+  const disp = pai.clientWidth - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
   const w = el.offsetWidth;
-  if(w && disp && w > disp) el.style.zoom = (disp / w).toFixed(3);
+  if(!w || !disp) return;
+  if(pai.classList.contains('lv-tela-cheia')) el.style.zoom = Math.min(disp / w, 2).toFixed(3);   // tela cheia: ocupa a largura (até 2x)
+  else if(w > disp) el.style.zoom = (disp / w).toFixed(3);
 }
+/* Tela cheia da folha: ocupa a tela toda (e usa a tela cheia do navegador quando ele deixa) */
+function lvTelaCheia(ligar){
+  const wrap = document.getElementById('lvPdfWrap');
+  if(!wrap) return;
+  wrap.classList.toggle('lv-tela-cheia', !!ligar);
+  document.body.style.overflow = ligar ? 'hidden' : '';
+  try{
+    if(ligar && wrap.requestFullscreen && !document.fullscreenElement) wrap.requestFullscreen().catch(()=>{});
+    if(!ligar && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  }catch(e){}
+  if(ligar) wrap.scrollTop = 0;
+  lvAjustarZoomFolha();
+}
+/* saiu da tela cheia do navegador (Esc, gesto de voltar): sai do modo também */
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement && document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);
+});
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);
+});
 window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelPdf')?.classList.contains('active')) lvAjustarZoomFolha(); });
 function exportarLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;

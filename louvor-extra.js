@@ -423,8 +423,167 @@ function lviTomSiloe(raiz, menor){
   return { tomOriginal: ({ 'D#':'Eb', 'G#':'Ab', 'A#':'Bb' })[raiz] || raiz, tomModoMenor:false };
 }
 
+/* ---------- Importar/Organizar com IA (Google Gemini, plano grátis) ----------
+   Com a chave salva em Dados do App, o PDF/foto (ou o texto) vai para a IA, que devolve título, artista, tom e as
+   partes com os acordes no formato "[D]Lou[Bm]vai". O app monta no formato do Siloé ([Parte], acordes em cima, --).
+   Sem chave, sem internet ou se a IA falhar: volta para a leitura simples de antes. Trocar de modelo: LVI_IA_MODELO. */
+const LVI_IA_MODELO = 'gemini-3.8-flash';
+const LVI_IA_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+function lviChaveIA(){ return String((typeof state!=='undefined' && state && state.iaGoogleChave) || '').trim(); }
+const LVI_IA_REGRAS = `Você organiza cifras de louvor (músicas cristãs em português) para um app de igreja.
+Leia a cifra recebida e devolva o JSON pedido, seguindo estas regras:
+
+LETRA
+- Copie a letra exatamente como está: não invente, não complete, não troque palavras, não traduza.
+- Corrija só erros de leitura óbvios: acorde grudado no meio da palavra (ex.: "particiCpar" é a palavra "participar" com o acorde C), letras ou espaços trocados por causa de colunas, verso quebrado em duas linhas por falta de espaço.
+
+ACORDES (formato ChordPro)
+- Cada linha vai com o acorde entre colchetes logo antes da sílaba onde ele é tocado. Ex.: "[D]Louvai a Je[Bm]sus, amoroso".
+- Linha só de acordes (intro, solo, passagem, final): só os acordes entre colchetes separados por espaço. Ex.: "[A] [A7] [D] [E]".
+- Mantenha os acordes como estão escritos (C#m7, E/G#, A4, Bb...). Não transponha.
+
+PARTES
+- Nomes em português, só a primeira letra maiúscula em cada palavra: Intro, Primeira Parte, Segunda Parte, Terceira Parte, Quarta Parte..., Pré-Refrão, Refrão, Ponte, Solo, Final.
+- Se o arquivo já nomeia as partes, use esses nomes (ajustando para o padrão acima).
+- Se não nomeia: a estrofe que volta igual várias vezes é o Refrão; as estrofes diferentes são Primeira Parte, Segunda Parte, e assim por diante, na ordem.
+- Quando uma parte volta igual (mesma letra) depois da primeira vez, não escreva a letra de novo: crie uma parte com "repete" = nome da parte repetida e "linhas" vazio. Se o arquivo indica "2x", "3x", ponha em "vezes".
+- Se a primeira vez da parte já está marcada para cantar 2x, mantenha a letra uma vez e não crie repetição.
+
+O QUE IGNORAR
+- Cabeçalho (título, artista, "Tom: X"), créditos, compositor, nome do site, links, número de página, data/hora de impressão, afinação, tablatura, "Cifra Club", rodapés.
+
+DADOS DA MÚSICA
+- titulo: só o nome da música.
+- artista: cantor, banda ou ministério. Hino da Harpa Cristã: "Harpa Cristã - <número do hino>" e categoria "Harpa Cristã".
+- categoria: "Corinhos" quando são corinhos (vários cânticos curtos juntos ou o arquivo diz Corinhos); senão "Louvor".
+- tom: o tom indicado no arquivo (ex.: D, Bb, F#m). Se não houver, deduza pelo primeiro e último acorde.
+
+Se receber uma cifra já em texto com linhas contendo só "-" ou "---", mantenha essas linhas no mesmo lugar dentro das linhas da parte.`;
+const LVI_IA_ESQUEMA = {
+  type:'object',
+  properties:{
+    titulo:{ type:'string', description:'Nome da música, sem artista e sem tom' },
+    artista:{ type:'string', description:'Cantor, banda ou ministério. Hino da Harpa Cristã: "Harpa Cristã - <número>". Vazio se não houver.' },
+    categoria:{ type:'string', enum:['Louvor','Harpa Cristã','Corinhos'] },
+    tom:{ type:'string', description:'Tom como escrito no arquivo, ex.: D, Bb, F#m. Vazio se não souber.' },
+    secoes:{ type:'array', items:{ type:'object', properties:{
+      nome:{ type:'string', description:'Nome da parte, ex.: Primeira Parte, Refrão' },
+      repete:{ type:'string', description:'Nome da parte anterior que esta parte só repete. Vazio quando a parte tem letra própria.' },
+      vezes:{ type:'integer', description:'Quantas vezes (2 para 2x). 1 quando não indicado.' },
+      linhas:{ type:'array', items:{ type:'string' }, description:'Linhas da parte em ChordPro. Vazio quando "repete" está preenchido.' }
+    }, required:['nome','repete','vezes','linhas'] } }
+  },
+  required:['titulo','artista','categoria','tom','secoes']
+};
+function lviArquivoBase64(file){
+  return new Promise((ok, erro)=>{
+    const fr = new FileReader();
+    fr.onload = ()=> ok(String(fr.result).split(',')[1] || '');
+    fr.onerror = ()=> erro(new Error('não consegui ler o arquivo'));
+    fr.readAsDataURL(file);
+  });
+}
+function lviTipoImagem(f){
+  if(f.type) return f.type;
+  const ext = String(f.name||'').split('.').pop().toLowerCase();
+  return ({ jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', heic:'image/heic', heif:'image/heif' })[ext] || 'image/jpeg';
+}
+/* texto gerado, nos formatos de resposta que o Google usa */
+function lviTextoDaRespostaIA(c){
+  if(!c) return '';
+  if(typeof c.output_text === 'string') return c.output_text;
+  for(const p of (c.steps || c.outputs || [])){
+    if(p && Array.isArray(p.content)){ const t = p.content.filter(x=>x && x.type==='text').map(x=>x.text||'').join(''); if(t) return t; }
+    if(p && p.type==='text' && p.text) return p.text;
+  }
+  const cand = c.candidates && c.candidates[0];
+  if(cand && cand.content && cand.content.parts) return cand.content.parts.map(x=>x.text||'').join('');
+  return '';
+}
+async function lviPerguntarIA(partes){
+  const chave = lviChaveIA();
+  if(!chave) throw new Error('sem chave');
+  const ctrl = new AbortController(), t = setTimeout(()=>ctrl.abort(), 120000);
+  let res, corpo;
+  try{
+    res = await fetch(LVI_IA_URL, {
+      method:'POST', signal: ctrl.signal,
+      headers:{ 'Content-Type':'application/json', 'x-goog-api-key': chave },
+      body: JSON.stringify({ model: LVI_IA_MODELO, input: partes, response_format:{ type:'text', mime_type:'application/json', schema: LVI_IA_ESQUEMA } })
+    });
+    corpo = await res.json().catch(()=>null);
+  }catch(e){ throw new Error(e && e.name==='AbortError' ? 'a IA demorou demais' : 'sem conexão com a IA'); }
+  finally{ clearTimeout(t); }
+  const erro = (Array.isArray(corpo) ? corpo[0] : corpo || {}).error || (corpo && corpo.status==='failed' && (corpo.errors||[])[0]);
+  if(!res.ok || erro){
+    const msg = String((erro && erro.message) || res.status);
+    if(res.status === 429 || /quota|exhaust|rate/i.test(msg)) throw new Error('limite grátis do Google atingido, tente daqui a pouco');
+    if(/api.?key/i.test(msg)) throw new Error('a chave do Google não foi aceita (confira em Dados do App)');
+    throw new Error('a IA respondeu com erro: ' + msg.slice(0,90));
+  }
+  const texto = lviTextoDaRespostaIA(corpo);
+  if(!texto) throw new Error('a IA não devolveu nada');
+  try{ return JSON.parse(texto); }catch(e){ throw new Error('a resposta da IA veio incompleta'); }
+}
+/* "[D]Louvai a Je[Bm]sus" → { type:'lyric', text, chords:[{name, idx}] } (idx = coluna da sílaba) */
+function lviLinhaChordPro(s){
+  s = String(s||'').replace(/\s+$/,'');
+  if(/^-{1,3}$/.test(s.trim())) return { type:'marca', text: s.trim() };   // "-" e "---" do usuário
+  let texto = '', ult = 0, m;
+  const chords = [], re = /\[([^\]]+)\]/g;
+  while((m = re.exec(s))){ texto += s.slice(ult, m.index); chords.push({ name: m[1].trim(), idx: texto.length }); ult = re.lastIndex; }
+  texto += s.slice(ult);
+  if(!texto.trim()) return chords.length ? { type:'chords', chords: chords.map(c=>({ name:c.name })) } : { type:'lyric', text:'', chords:[] };
+  return { type:'lyric', text: texto, chords };
+}
+/* JSON da IA → mesmo formato de resultado do lviImportar */
+function lviMontarDaIA(j, fi){
+  let secoes = (j && j.secoes || []).map(s=>{
+    const rep = String(s.repete||'').trim();
+    if(rep){ const v = Math.max(1, Number(s.vezes)||1); return { repeatOf:{ name: rep }, label: 'Repete - ' + rep + (v > 1 ? ' ' + v + 'x' : ''), lines:[] }; }
+    const lines = (s.linhas||[]).filter(x=>String(x).trim() !== '--').map(lviLinhaChordPro);
+    while(lines.length && lines[lines.length-1].type==='lyric' && !lines[lines.length-1].text.trim()) lines.pop();   // linhas vazias no fim da parte
+    return { name: String(s.nome||'Parte').trim(), lines };
+  });
+  secoes = secoes.filter(s=>s.repeatOf || s.lines.some(r=>r.type!=='lyric' || r.text.trim()));
+  if(!secoes.some(s=>!s.repeatOf)) throw new Error('a IA não encontrou a letra');
+  const km = /^([A-G][#b]?)(m?)/.exec(String(j.tom||'').trim());
+  const raiz = (fi && fi.tom) || (km && km[1]) || null;
+  const menor = fi && fi.tom ? fi.menor : !!(km && km[2]);
+  const cat = ['Louvor','Harpa Cristã','Corinhos'].includes(j.categoria) ? j.categoria : '';
+  return {
+    titulo: String(j.titulo||'').trim() || (fi && fi.titulo) || '',
+    artista: String(j.artista||'').trim() || (fi && fi.artista) || '',
+    categoria: cat,
+    tom: lviTomSiloe(raiz, menor),
+    conteudo: lviBlocosParaTexto(secoes),
+    blocos: secoes.length,
+    usouIA: true
+  };
+}
+async function lviImportarComIA(file, status){
+  status('Lendo com IA… (alguns segundos)');
+  const b64 = await lviArquivoBase64(file);
+  const arquivo = lviEhImagem(file)
+    ? { type:'image', data: b64, mime_type: lviTipoImagem(file) }
+    : { type:'document', data: b64, mime_type: 'application/pdf' };
+  const j = await lviPerguntarIA([ arquivo, { type:'text', text: LVI_IA_REGRAS + '\n\nNome do arquivo: ' + (file.name||'') } ]);
+  return lviMontarDaIA(j, lviNomeDoArquivo(file.name||''));
+}
+
 /* ---------- importar: arquivo → { titulo, artista, tom, conteudo } ---------- */
 async function lviImportar(file, status){
+  /* com a chave da IA: tenta primeiro pela IA; se falhar, segue para a leitura simples (e avisa o motivo) */
+  let avisoIA = '';
+  if(lviChaveIA()){
+    try{ return await lviImportarComIA(file, status); }
+    catch(e){ avisoIA = (e && e.message) || 'erro'; status('IA indisponível (' + avisoIA + ') — usando a leitura simples…'); }
+  }
+  const r = await lviImportarSimples(file, status);
+  r.avisoIA = avisoIA;
+  return r;
+}
+async function lviImportarSimples(file, status){
   let rows = [];
   if(!lviEhImagem(file)){
     status('Lendo o PDF...');
@@ -468,8 +627,9 @@ async function lvImportarNoNovo(ev){
     if(r.titulo) document.getElementById('lvNovoTitulo').value = r.titulo;
     if(r.artista) document.getElementById('lvNovoArtista').value = r.artista;
     if(r.tom.tomOriginal){ window.lvNovoTomOriginal = r.tom.tomOriginal; window.lvNovoTomModoMenor = r.tom.tomModoMenor; atualizarLvNovoTomBox(); }
+    if(r.categoria){ window.lvNovoCategoriaSelecionada = r.categoria; renderLvNovoCategoriaChips(); }
     window.lvNovoConteudo = r.conteudo;
-    lviStatus('lvNovoImportStatus', `✓ Cifra importada (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' por leitura de imagem — confira os acordes depois':''}. Toque em "Criar e Abrir".`);
+    lviStatus('lvNovoImportStatus', `✓ Cifra ${r.usouIA?'lida com IA':'importada'} (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' por leitura de imagem — confira os acordes depois':''}. Toque em "Criar e Abrir".${r.avisoIA?' (IA indisponível: '+r.avisoIA+')':''}`);
   }catch(e){
     lviStatus('lvNovoImportStatus', 'Não consegui ler: '+(e && e.message ? e.message : e)+'. Você pode colar a cifra como texto depois.', true);
   }
@@ -488,7 +648,7 @@ async function lvImportarNoAtual(ev){
     if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; }
     persist();
     abrirLouvorDetalhe(l.id);
-    lviStatus('lvEdicaoImportStatus', `✓ Importado (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' — lido da imagem, confira os acordes':''}.`);
+    lviStatus('lvEdicaoImportStatus', `✓ ${r.usouIA?'Lido com IA':'Importado'} (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' — lido da imagem, confira os acordes':''}.${r.avisoIA?' (IA indisponível: '+r.avisoIA+')':''}`);
   }catch(e){
     lviStatus('lvEdicaoImportStatus', 'Não consegui ler: '+(e && e.message ? e.message : e), true);
   }
@@ -539,17 +699,37 @@ async function lvOrganizarBlocos(){
     return;
   }
   if(!(l.conteudo||'').trim()){ showToast('Cole ou importe a cifra primeiro'); return; }
-  const ok = await iosConfirm('Organizar em blocos? Os trechos sem nome ganham nome (Intro, Primeira parte...), os blocos iguais viram "Repete", entre os blocos entra a linha divisória (--) e créditos (composição, site...) saem. Os "-" e "---" ficam. Dá para desfazer tocando de novo.');
+  const comIA = !!lviChaveIA();
+  const ok = await iosConfirm(comIA
+    ? 'Organizar com IA? Ela dá nome às partes (Primeira Parte, Refrão...), junta os acordes à sílaba certa, troca o que se repete por "Repete" e tira créditos e rodapés. A letra não muda. Dá para desfazer tocando de novo.'
+    : 'Organizar em blocos? Os trechos sem nome ganham nome (Intro, Primeira parte...), os blocos iguais viram "Repete", entre os blocos entra a linha divisória (--) e créditos (composição, site...) saem. Os "-" e "---" ficam. Dá para desfazer tocando de novo.');
   if(!ok) return;
   const antes = l.conteudo;
-  const doc = lviMontaBlocos(lviTextoParaLinhas(l.conteudo));
-  l.conteudo = lviBlocosParaTexto(doc.secoes);
+  let novo = null, blocos = 0, reps = 0, aviso = '';
+  if(comIA){
+    const btn = document.getElementById('lvBtnOrganizar'); btn?.classList.add('carregando');
+    showToast('Organizando com IA…');
+    try{
+      const j = await lviPerguntarIA([{ type:'text', text: LVI_IA_REGRAS + '\n\nA cifra abaixo já está em texto (acordes na linha de cima da letra; partes entre colchetes). Organize:\n\n' + antes }]);
+      const r = lviMontarDaIA(j, null);
+      novo = r.conteudo; blocos = r.blocos; reps = (novo.match(/^\[Repete/gm) || []).length;
+    }catch(e){ aviso = (e && e.message) || 'erro'; }
+    btn?.classList.remove('carregando');
+    if(getLouvorAtual() !== l || l.conteudo !== antes) return;   // saiu da música ou mexeu no texto enquanto a IA trabalhava
+  }
+  if(novo === null){
+    const doc = lviMontaBlocos(lviTextoParaLinhas(antes));
+    novo = lviBlocosParaTexto(doc.secoes);
+    blocos = doc.secoes.length; reps = doc.secoes.filter(s=>s.repeatOf).length;
+  }
+  l.conteudo = novo;
   l.conteudoAntesOrganizar = antes; l.conteudoOrganizado = l.conteudo;
   persist();
   document.getElementById('lvConteudo').value = l.conteudo;
   lvAtualizarEditor(); lvAtualizarBtnOrganizar();
-  const reps = doc.secoes.filter(s=>s.repeatOf).length;
-  showToast(`${doc.secoes.length} blocos${reps?` · ${reps} repetido${reps>1?'s':''} virou "Repete"`:''}`);
+  showToast(aviso
+    ? `IA indisponível (${aviso}) — organizado pelo modo simples`
+    : `${comIA?'Organizado com IA · ':''}${blocos} blocos${reps?` · ${reps} "Repete"`:''}`);
 }
 
 /* ---------- edição direto na folha (aba Visualizar) ----------
