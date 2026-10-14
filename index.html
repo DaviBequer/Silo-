@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-<meta name="theme-color" content="#F4F6F9">
+<meta name="theme-color" content="#F5F2EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Siloé">
@@ -12,8 +12,8 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.3">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=4.4">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.3</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.4</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1266,15 +1266,6 @@
       <div id="changelogList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto"></div>
     </div>
     <div style="margin-bottom:var(--s3)">
-      <button class="btn btn-outline btn-block" onclick="toggleFontePopup()">Fonte</button>
-      <div class="fonte-popup" id="fontePopup">
-        <button class="fonte-chip" id="fonteChipSystem" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" onclick="setAppFonte('system')">Padrão do celular</button>
-        <button class="fonte-chip" id="fonteChipInter" style="font-family:'Inter',sans-serif" onclick="setAppFonte('inter')">Inter</button>
-        <button class="fonte-chip" id="fonteChipPoppins" style="font-family:'Poppins',sans-serif" onclick="setAppFonte('poppins')">Poppins</button>
-        <button class="fonte-chip" id="fonteChipNunito" style="font-family:'Nunito',sans-serif" onclick="setAppFonte('nunito')">Nunito</button>
-      </div>
-    </div>
-    <div style="margin-bottom:var(--s3)">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;display:flex;justify-content:space-between">
         <span>Armazenamento usado</span>
         <span id="storagePercent">0%</span>
@@ -1570,18 +1561,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=4.3"></script>
-<script src="core.js?v=4.3"></script>
-<script src="comando.js?v=4.3"></script>
-<script src="layout.js?v=4.3"></script>
-<script src="app.js?v=4.3"></script>
-<script src="panorama.js?v=4.3"></script>
-<script src="planner.js?v=4.3"></script>
-<script src="ponto.js?v=4.3"></script>
-<script src="louvor.js?v=4.3"></script>
-<script src="louvor-extra.js?v=4.3"></script>
-<script src="emprestimo.js?v=4.3"></script>
-<script src="vendas.js?v=4.3"></script>
+<script src="supabase.js?v=4.4"></script>
+<script src="core.js?v=4.4"></script>
+<script src="comando.js?v=4.4"></script>
+<script src="layout.js?v=4.4"></script>
+<script src="app.js?v=4.4"></script>
+<script src="panorama.js?v=4.4"></script>
+<script src="planner.js?v=4.4"></script>
+<script src="ponto.js?v=4.4"></script>
+<script src="louvor.js?v=4.4"></script>
+<script src="louvor-extra.js?v=4.4"></script>
+<script src="emprestimo.js?v=4.4"></script>
+<script src="vendas.js?v=4.4"></script>
 <script>carregar();</script>
 </body>
 </html>

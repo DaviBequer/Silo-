@@ -48,8 +48,8 @@ function aplicarFonteApp(){
     l.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap';
     document.head.appendChild(l);
   }
-  const fonte = FONTES_APP[state.configFonte] || FONTES_APP.system;
-  document.documentElement.style.setProperty('--font-body', fonte);
+  /* v4.4: a fonte agora é fixa (Geist), definida no style.css */
+  document.documentElement.style.removeProperty('--font-body');
   document.querySelectorAll('.fonte-chip').forEach(el=>el.classList.remove('active'));
   const ativo = document.getElementById('fonteChip'+(state.configFonte||'system').charAt(0).toUpperCase()+(state.configFonte||'system').slice(1));
   ativo?.classList.add('active');

@@ -91,6 +91,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.4', itens: [
+    'Novo visual Editorial: fundo cor de papel, tinta escura e verde-floresta, saldo em letra serifada grande, cards com borda fina em vez de sombra e abas mais limpas',
+    'Fontes fixas Geist + Instrument Serif (a opção de trocar fonte saiu)'
+  ]},
   { versao: 'v4.3', itens: [
     'Louvor: no filtro "Atual", cada louvor mostra a data marcada (ou "Sem data") e se está Em Produção ou Finalizado'
   ]},
