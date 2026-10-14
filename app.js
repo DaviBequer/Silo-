@@ -91,6 +91,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.3', itens: [
+    'Louvor: no filtro "Atual", cada louvor mostra a data marcada (ou "Sem data") e se está Em Produção ou Finalizado'
+  ]},
   { versao: 'v4.2', itens: [
     'Funciona sem internet: o app fica guardado no aparelho e, sem conexão, mostra os dados da última vez para consulta',
     'Histórico de meses: botão "Histórico" no resumo, com entrou, saiu, sobra e gastos por categoria de cada mês',
