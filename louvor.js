@@ -71,11 +71,21 @@ function renderLouvorLista(){
   el.innerHTML = items.map(l=>{
     ensureLouvorConfig(l);
     const tomAtual = lvTomAtual(l);
+    let badges = '';
+    if(louvorFiltroAtivo === 'Atual'){
+      const finalizada = l.status === 'finalizada';
+      const dataTxt = l.dataAgendamento ? l.dataAgendamento.split('-').reverse().join('/') : 'Sem data';
+      badges = `<div class="lv-card-badges">
+        <span class="lv-card-data${l.dataAgendamento?'':' vazia'}">${dataTxt}</span>
+        <span class="lv-card-status${finalizada?' finalizada':''}">${finalizada?'Finalizado':'Em Produção'}</span>
+      </div>`;
+    }
     return `<div class="lv-card" onclick="abrirLouvorDetalhe('${l.id}')">
       <div class="lv-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
       <div class="lv-card-info">
         <div class="lv-card-titulo">${l.titulo||'Sem título'}</div>
         <div class="lv-card-meta">${l.artista||'Artista desconhecido'} · ${l.categoria||'Louvor'}</div>
+        ${badges}
       </div>
       ${tomAtual?`<div class="lv-card-tom">${tomAtual}</div>`:''}
     </div>`;
