@@ -161,6 +161,10 @@ function atualizarStatusSalvo(estado, detalhe){
 
 function persist(){
   if(!remoteReady){ atualizarStatusSalvo('offline'); return; }   // evita sobrescrever a nuvem com estado vazio
+  /* resumo que o serviço de notificações lê (só se alguém ativou as notificações) */
+  if((state.pushInscricoes||[]).length && typeof calcularAvisosVendas==='function'){
+    try{ state.avisos = { vendas: calcularAvisosVendas(), t: Date.now() }; }catch(e){}
+  }
   salvarPendente = true;
   espelharLocal();
   clearTimeout(persistTimer);
@@ -446,6 +450,7 @@ async function carregarDaNuvem(){
   if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
   renderAll();
   fecharSplash();
+  if(typeof abrirAbaDoAviso==='function') abrirAbaDoAviso();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   await finalizarMigracaoLegado(precisaSalvar, legado);
   compactarImagensDoEstado();
@@ -457,6 +462,7 @@ function fecharSplash(imediato){
   const el = document.getElementById('splash');
   const sair = ()=>{
     document.body.classList.remove('carregando');
+    document.getElementById('metaCorTema')?.setAttribute('content', '#F5F2EC');   // barra de status volta à cor do app
     if(!el) return;
     el.classList.add('saindo');
     setTimeout(()=>el.classList.add('oculta'), 1450);
@@ -466,6 +472,7 @@ function fecharSplash(imediato){
 }
 function mostrarSplash(){
   document.body.classList.add('carregando');
+  document.getElementById('metaCorTema')?.setAttribute('content', '#000000');
   const el = document.getElementById('splash');
   if(el) el.classList.remove('saindo', 'oculta');
 }

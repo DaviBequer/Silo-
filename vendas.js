@@ -86,6 +86,21 @@ function vendasNecessarias(modelo, meses){
   return out;
 }
 
+/* Resumo para a notificação das 18h (o serviço "avisos" do Supabase só lê isto; é recalculado a cada gravação):
+   quanto falta vender no mês do app e quantas vendas de cada plano cobrem. */
+function calcularAvisosVendas(){
+  const m = mesFinanceiroAtual();
+  const alvo = vendasAlvoComissao(m);
+  if(alvo === null) return null;
+  const [mA, mB] = vendasCfg().modelos || [];
+  const n = mod => { if(!mod) return null; const v = vendasNecessarias(mod, [m])[m]; return isFinite(v) ? v : null; };
+  return {
+    mes: m, mesNome: MES_NOMES_LONGOS[keyToDate(m).getMonth()].toLowerCase(),
+    falta: Math.max(0, Math.round((alvo - vendasComissaoNoMes(m)) * 100) / 100),
+    nA: n(mA), nB: n(mB), nomeA: mA ? mA.nome : '', nomeB: mB ? mB.nome : ''
+  };
+}
+
 /* ---------- empréstimo (lê o cadastrado na aba Empréstimo) ---------- */
 function vendasEmprestimoAtivo(){
   return (state.emprestimos||[]).find(e=>typeof empPendentes==='function' && empPendentes(e).length) || null;

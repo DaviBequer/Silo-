@@ -1320,17 +1320,31 @@ body{padding-bottom:calc(84px + var(--safe))}
 
 /* ===== ABERTURA: logo entra, "respira" enquanto carrega e sai com zoom revelando o app ===== */
 body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
-.splash{position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity 1.4s cubic-bezier(.4,0,.2,1),visibility 0s linear 1.4s}
-.splash-conteudo{display:flex;flex-direction:column;align-items:center;gap:16px;transition:transform 1.4s cubic-bezier(.4,0,.2,1),filter 1.4s cubic-bezier(.4,0,.2,1)}
-.splash-logo{width:88px;height:88px;border-radius:22px;object-fit:cover;box-shadow:0 12px 34px rgba(15,23,42,.16);animation:splashEntra 1.8s cubic-bezier(.16,1,.3,1) both,splashRespira 4s ease-in-out 1.8s infinite}
-.splash-nome{font-size:18px;font-weight:800;letter-spacing:-.01em;color:var(--text);animation:splashNome 1.6s cubic-bezier(.16,1,.3,1) .7s both}
+/* preta, igual à primeira tela do Android (manifest background_color #000): o cordeiro surge do desfoque com brilho
+   verde pulsando, o nome entra letra por letra, a linha fina corre enquanto carrega; na saída tudo cresce e desfoca */
+.splash{position:fixed;inset:0;z-index:2000;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity 1.4s cubic-bezier(.4,0,.2,1),visibility 0s linear 1.4s}
+.splash-brilho{position:absolute;left:50%;top:44%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;background:radial-gradient(circle,rgba(47,93,70,.55) 0,rgba(47,93,70,.18) 34%,rgba(47,93,70,0) 66%);opacity:0;animation:splashBrilhoEntra 1.6s ease-out .2s forwards,splashBrilhoPulsa 3.2s ease-in-out 1.8s infinite alternate;pointer-events:none}
+.splash-conteudo{position:relative;display:flex;flex-direction:column;align-items:center;transition:transform 1.4s cubic-bezier(.4,0,.2,1),filter 1.4s cubic-bezier(.4,0,.2,1)}
+.splash-logo{width:120px;height:120px;animation:splashEntra 1.5s cubic-bezier(.16,1,.3,1) both,splashLuz 3.2s ease-in-out 1.5s infinite alternate}
+.splash-nome{margin-top:18px;font-family:'Instrument Serif',Georgia,serif;font-size:44px;line-height:1;letter-spacing:.5px;color:#f5f2ec;display:flex}
+.splash-nome span{display:inline-block;opacity:0;animation:splashLetra .9s cubic-bezier(.16,1,.3,1) both}
+.splash-nome span:nth-child(1){animation-delay:.55s}
+.splash-nome span:nth-child(2){animation-delay:.63s}
+.splash-nome span:nth-child(3){animation-delay:.71s}
+.splash-nome span:nth-child(4){animation-delay:.79s}
+.splash-nome span:nth-child(5){animation-delay:.87s}
+.splash-linha{margin-top:22px;width:96px;height:2px;border-radius:2px;background:rgba(245,242,236,.10);overflow:hidden;opacity:0;animation:splashLetra .8s ease-out 1.1s both}
+.splash-linha i{display:block;width:40%;height:100%;border-radius:2px;background:linear-gradient(90deg,rgba(111,191,150,0),rgba(111,191,150,.95),rgba(111,191,150,0));animation:splashCorre 1.3s ease-in-out 1.2s infinite}
 .splash.saindo{opacity:0;visibility:hidden;pointer-events:none}
-.splash.saindo .splash-conteudo{transform:scale(1.06);filter:blur(6px)}
+.splash.saindo .splash-conteudo{transform:scale(1.12);filter:blur(10px)}
 .splash.oculta{display:none}
-@keyframes splashEntra{from{opacity:0;transform:scale(.9);filter:blur(8px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
-@keyframes splashRespira{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
-@keyframes splashNome{from{opacity:0;transform:translateY(6px);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
-@media (prefers-reduced-motion:reduce){.splash-logo,.splash-nome{animation:none}.splash-conteudo{transition:none}}
+@keyframes splashEntra{from{opacity:0;transform:scale(.82);filter:blur(14px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
+@keyframes splashLuz{from{filter:drop-shadow(0 0 0 rgba(111,191,150,0))}to{filter:drop-shadow(0 0 18px rgba(111,191,150,.55))}}
+@keyframes splashLetra{from{opacity:0;transform:translateY(10px);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes splashBrilhoEntra{to{opacity:1}}
+@keyframes splashBrilhoPulsa{from{transform:scale(.92)}to{transform:scale(1.08)}}
+@keyframes splashCorre{from{transform:translateX(-110%)}to{transform:translateX(260%)}}
+@media (prefers-reduced-motion:reduce){.splash-logo,.splash-nome span,.splash-linha,.splash-linha i,.splash-brilho{animation:none;opacity:1}.splash-conteudo{transition:none}}
 
 /* ===== LOGIN ===== */
 .login-tela{display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);align-items:center;justify-content:center;padding:16px}
@@ -1924,10 +1938,3 @@ body{background:var(--bg);color:var(--text);font-size:14px;font-weight:400}
 .cmd-sab{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text)}
 .cmd-sab:last-child{border-bottom:none;padding-bottom:0}
 .cmd-sab-data{font-size:11.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}
-/* Comando · Google Agenda */
-.cmd-google-btn{margin-top:2px}
-.cmd-google-rodape{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--text-faint)}
-.cmd-evento{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-.cmd-evento-hora{width:52px;flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--text-dim);font-variant-numeric:tabular-nums}
-.cmd-evento-titulo{flex:1;min-width:0;font-size:14px;color:var(--text)}
-.cmd-card-conta.erro{color:var(--danger)}

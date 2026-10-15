@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-<meta name="theme-color" content="#F5F2EC">
+<meta name="theme-color" content="#000000" id="metaCorTema">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Siloé">
@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.7">
+<link rel="stylesheet" href="style.css?v=4.8">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.7</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.8</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1265,6 +1265,11 @@
       </div>
     </div>
     <div class="ia-config">
+      <div class="ia-topo"><span class="ia-titulo">Notificações</span><span class="ia-status" id="avisosStatus">Desligadas</span></div>
+      <div class="ia-desc">Aviso para bater o ponto (5 min depois de cada horário, se ainda não marcou) e, às 18h, quanto falta vender para a meta.</div>
+      <button type="button" class="btn btn-outline btn-block" id="avisosBtn" onclick="ativarAvisos()">Ativar notificações</button>
+    </div>
+    <div class="ia-config" style="border-top:none;padding-top:0">
       <div class="ia-topo"><span class="ia-titulo">Importar cifras com IA</span><span class="ia-status" id="iaStatus">Desligada</span></div>
       <div class="ia-desc">Com uma chave grátis do Google, o Importar e o Organizar do Louvor leem qualquer PDF ou foto e já montam as partes. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Criar chave grátis</a></div>
       <div class="ia-linha">
@@ -1534,9 +1539,11 @@
 
 <!-- ABERTURA: logo animada enquanto os dados chegam (evita mostrar R$ 0,00) -->
 <div class="splash" id="splash" aria-label="Carregando">
+  <div class="splash-brilho"></div>
   <div class="splash-conteudo">
-    <img src="icon-192.png" alt="" class="splash-logo">
-    <div class="splash-nome">Siloé</div>
+    <img src="splash-cordeiro.png" alt="" class="splash-logo">
+    <div class="splash-nome" aria-label="Siloé"><span>S</span><span>i</span><span>l</span><span>o</span><span>é</span></div>
+    <div class="splash-linha"><i></i></div>
   </div>
 </div>
 
@@ -1563,18 +1570,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=4.7"></script>
-<script src="core.js?v=4.7"></script>
-<script src="comando.js?v=4.7"></script>
-<script src="layout.js?v=4.7"></script>
-<script src="app.js?v=4.7"></script>
-<script src="panorama.js?v=4.7"></script>
-<script src="planner.js?v=4.7"></script>
-<script src="ponto.js?v=4.7"></script>
-<script src="louvor.js?v=4.7"></script>
-<script src="louvor-extra.js?v=4.7"></script>
-<script src="emprestimo.js?v=4.7"></script>
-<script src="vendas.js?v=4.7"></script>
+<script src="supabase.js?v=4.8"></script>
+<script src="core.js?v=4.8"></script>
+<script src="comando.js?v=4.8"></script>
+<script src="layout.js?v=4.8"></script>
+<script src="app.js?v=4.8"></script>
+<script src="panorama.js?v=4.8"></script>
+<script src="planner.js?v=4.8"></script>
+<script src="ponto.js?v=4.8"></script>
+<script src="louvor.js?v=4.8"></script>
+<script src="louvor-extra.js?v=4.8"></script>
+<script src="emprestimo.js?v=4.8"></script>
+<script src="vendas.js?v=4.8"></script>
 <script>carregar();</script>
 </body>
 </html>

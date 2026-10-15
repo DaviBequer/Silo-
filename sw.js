@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v48';
-const APP_VERSION = '4.7';
+const CACHE_NAME = 'siloe-cache-v49';
+const APP_VERSION = '4.8';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -19,7 +19,8 @@ const ARQUIVOS = [
   `./vendas.js?v=${APP_VERSION}`,
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './splash-cordeiro.png'
 ];
 /* bibliotecas de fora que o app precisa para abrir (banco e PDF do ponto) */
 const EXTERNOS = [
@@ -74,5 +75,31 @@ self.addEventListener('fetch', (event) => {
       if (g) return g;
       throw e;
     }
+  })());
+});
+
+/* Notificações (mandadas pelo serviço "avisos" do Supabase): { titulo, corpo, url, tag } */
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { corpo: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(d.titulo || 'Siloé', {
+    body: d.corpo || '',
+    icon: './icon-192.png',
+    badge: './splash-cordeiro.png',   // ícone pequeno da barra: cordeiro branco
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    data: { url: d.url || './' }
+  }));
+});
+/* tocou na notificação: abre o app (ou traz para a frente) já na aba certa */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || './', self.registration.scope).href;
+  const aba = (url.split('#')[1] || '');
+  event.waitUntil((async () => {
+    const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const j = janelas.find(c => c.url.startsWith(self.registration.scope));
+    if (j) { if (aba) j.postMessage({ abrirAba: aba }); return j.focus(); }
+    return self.clients.openWindow(url);
   })());
 });

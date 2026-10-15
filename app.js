@@ -92,6 +92,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.8', itens: [
+    'Notificações no celular: aviso para bater o ponto e, às 18h, quanto falta vender (Dados do App → Ativar notificações)',
+    'Abertura nova com efeitos (fundo preto, brilho e nome letra por letra) e ícone sem borda branca',
+    'Comando sem a ligação com o Google (lista apagada da conta)'
+  ]},
   { versao: 'v4.7', itens: [
     'Comando com visual novo: dias seguidos em destaque, semana em bolinhas, ordens com progresso e ditado por voz',
     'Comando ligado ao Google: ordens viram tarefas no Google Agenda/Tarefas (feito lá ou aqui vale nos dois) e a agenda de hoje aparece no app',
@@ -552,7 +557,66 @@ function abrirImportExportModal(){
   
   document.getElementById('storageUsed').textContent = usedMB + ' MB';
   atualizarStatusIA();
+  atualizarStatusAvisos();
 }
+
+/* ===== NOTIFICAÇÕES (ponto e vendas) =====
+   O serviço "avisos" do Supabase (pasta .claude/supabase-avisos) manda as notificações nos horários; aqui o aparelho
+   só se inscreve. A inscrição fica em state.pushInscricoes (uma por aparelho). Só funciona no app publicado (no localhost
+   o service worker fica desligado). */
+const AVISOS_CHAVE_PUBLICA = 'BDTT66dSw6A5e4hdJwX7IQAs4B3sEMIUvhtNCL8qiC9J4E6D_IB8M_r-iB9uHEJJVqA9HambwXwLB18NRWx-MU4';
+function avisosSuportado(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function avisosChaveBytes(){
+  const b = atob(AVISOS_CHAVE_PUBLICA.replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(b, c=>c.charCodeAt(0));
+}
+async function avisosInscricaoAtual(){
+  try{ const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; }catch(e){ return null; }
+}
+async function atualizarStatusAvisos(){
+  const st = document.getElementById('avisosStatus'), btn = document.getElementById('avisosBtn');
+  if(!st || !btn) return;
+  if(!avisosSuportado()){ st.textContent = 'Indisponível aqui'; btn.style.display = 'none'; return; }
+  const sub = await avisosInscricaoAtual();
+  const ligado = !!sub && Notification.permission === 'granted' && (state.pushInscricoes||[]).some(p=>p.endpoint === sub.endpoint);
+  st.textContent = ligado ? 'Ligadas neste aparelho' : Notification.permission === 'denied' ? 'Bloqueadas no navegador' : 'Desligadas';
+  st.classList.toggle('ligada', ligado);
+  btn.style.display = '';
+  btn.textContent = ligado ? 'Desligar neste aparelho' : 'Ativar notificações';
+  btn.onclick = ligado ? desligarAvisos : ativarAvisos;
+}
+async function ativarAvisos(){
+  if(!avisosSuportado()){ showToast('Este navegador não recebe notificações'); return; }
+  const reg = await navigator.serviceWorker.getRegistration();
+  if(!reg){ showToast('Abra pelo app instalado (no endereço publicado) para ativar'); return; }
+  const perm = await Notification.requestPermission();
+  if(perm !== 'granted'){ showToast(perm === 'denied' ? 'Notificações bloqueadas — libere nas configurações do celular' : 'Permissão não concedida'); atualizarStatusAvisos(); return; }
+  try{
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: avisosChaveBytes() });
+    const j = sub.toJSON();
+    const lista = (state.pushInscricoes || []).filter(p=>p.endpoint !== j.endpoint);
+    lista.push({ id: 'p' + j.endpoint.slice(-20).replace(/[^\w]/g,''), endpoint: j.endpoint, keys: j.keys, aparelho: /Android/i.test(navigator.userAgent) ? 'Android' : /iPhone|iPad/i.test(navigator.userAgent) ? 'iPhone' : 'Computador', criadoEm: Date.now() });
+    state.pushInscricoes = lista;
+    persist();
+    reg.showNotification('Siloé', { body: 'Notificações ligadas: ponto e vendas.', icon: './icon-192.png', badge: './splash-cordeiro.png' });
+  }catch(e){ showToast('Não consegui ativar: ' + ((e && e.message) || e)); }
+  atualizarStatusAvisos();
+}
+async function desligarAvisos(){
+  const sub = await avisosInscricaoAtual();
+  if(sub){ state.pushInscricoes = (state.pushInscricoes || []).filter(p=>p.endpoint !== sub.endpoint); try{ await sub.unsubscribe(); }catch(e){} persist(); }
+  showToast('Notificações desligadas neste aparelho');
+  atualizarStatusAvisos();
+}
+/* tocou numa notificação: abre na aba dela (#ponto, #vendas) */
+function abrirAbaDoAviso(aba){
+  aba = aba || (location.hash || '').slice(1);
+  if(['ponto','vendas','planner','louvor'].includes(aba)){
+    switchAba(aba);
+    if(location.hash) history.replaceState(null, '', location.pathname + location.search);
+  }
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e=>{ if(e.data && e.data.abrirAba) abrirAbaDoAviso(e.data.abrirAba); });
 
 /* ===== Chave da IA (Google Gemini) para o Importar/Organizar do Louvor =====
    Fica nos dados protegidos pelo login (não vai no backup exportado). */
