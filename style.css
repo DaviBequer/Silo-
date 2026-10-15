@@ -712,31 +712,6 @@ body{padding-bottom:calc(84px + var(--safe))}
 .section.collapsed>div:not(.section-head){display:none}
 
 /* ===== COMANDO ===== */
-.cmd-hero{position:relative;background:var(--primary);color:#fff;border-radius:var(--radius-md);padding:32px 24px;text-align:center;margin-bottom:var(--s4);overflow:hidden}
-.cmd-ribbon{position:absolute;top:14px;right:-30px;background:var(--gold);color:var(--primary);font-size:9px;font-weight:800;letter-spacing:1.2px;padding:3px 34px;transform:rotate(35deg);text-transform:uppercase}
-.cmd-streak-num{font-size:56px;font-weight:800;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
-.cmd-streak-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.62);margin-top:6px;font-weight:600}
-.cmd-record{font-size:11px;color:rgba(255,255,255,.4);margin-top:14px}
-.cmd-ruptura{background:var(--danger-tint);color:var(--danger);font-size:12.5px;font-weight:600;padding:12px 14px;border-radius:12px;margin-bottom:var(--s3);border:1px solid rgba(178,59,48,.25)}
-.cmd-section-title{font-size:11px;font-weight:800;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
-.cmd-ordens-list{margin-bottom:8px}
-.cmd-ordem{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
-.cmd-ordem:last-child{border-bottom:none}
-.cmd-checkbox{width:23px;height:23px;border-radius:7px;border:2px solid var(--line);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:all var(--dur) var(--ease)}
-.cmd-checkbox.checked{background:var(--gold);border-color:var(--gold)}
-.cmd-ordem-texto{flex:1;font-size:13.5px;font-weight:500;cursor:text}
-.cmd-ordem.done .cmd-ordem-texto{text-decoration:line-through;color:var(--text-faint)}
-.cmd-ordem-del{background:none;border:none;color:var(--text-faint);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
-.cmd-add-ordem{background:none;border:none;color:var(--gold-dim);font-size:12.5px;font-weight:700;cursor:pointer;padding:10px 0;text-align:left}
-.cmd-close-btn:disabled{opacity:.4;cursor:not-allowed}
-.cmd-juramento-input{width:100%;min-height:96px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card-2);color:var(--text);font-size:13.5px;font-family:inherit;resize:vertical}
-.cmd-juramento-signed{position:relative;background:var(--card-2);border:1px solid var(--line);border-radius:14px;padding:20px}
-.cmd-stamp{position:absolute;top:14px;right:16px;font-size:9.5px;font-weight:800;letter-spacing:1px;color:var(--gold-dim);border:1.5px solid var(--gold);border-radius:6px;padding:2px 8px;transform:rotate(-6deg)}
-.cmd-juramento-texto{font-size:14px;line-height:1.6;color:var(--text);padding-right:70px;font-style:italic}
-.cmd-sabotagem-item{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px}
-.cmd-sabotagem-item:last-child{border-bottom:none}
-.cmd-sabotagem-data{font-size:10px;color:var(--text-faint);font-weight:700;text-transform:uppercase}
-.cmd-sabotagem-vazio{font-size:12.5px;color:var(--text-faint);padding:8px 0}
 
 /* ===== Mercado v2.59: Casa (estoque) ===== */
 @keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
@@ -1686,10 +1661,6 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
   .fullpage:not(#pageLouvorDetalhe) .fullpage-header{padding-left:32px;padding-right:32px}
   .fullpage:not(#pageLouvorDetalhe) .fullpage-content{max-width:none;padding-left:32px;padding-right:32px}
 }
-/* versões anteriores */
-.versoes-dica{font-size:12.5px;color:var(--text-dim);margin:-4px 0 14px;line-height:1.45}
-#versoesLista .gm-inicial svg{width:15px;height:15px}
-#versoesLista .gm-linha .btn{flex-shrink:0}
 
 /* ===== HISTÓRICO DE MESES ===== */
 .hm-mes{border-top:1px solid var(--line)}
@@ -1893,3 +1864,70 @@ body{background:var(--bg);color:var(--text);font-size:14px;font-weight:400}
 .lv-rot-add{width:40px;height:40px;border-radius:var(--radius-sm);border:none;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .lv-icone-btn.carregando{opacity:.45;pointer-events:none;animation:lvPulsar 1s ease-in-out infinite alternate}
 @keyframes lvPulsar{to{opacity:.85}}
+/* Finanças: a setinha de abrir/fechar fica colada no nome da seção; o + continua na direita */
+.section-head .section-toggle{margin:0 auto 0 6px}
+/* Fluxo Mensal: as chavinhas de Cartão e Empréstimo alinhadas na mesma coluna (direita do rótulo) */
+.money-table .geral-extra-lbl{display:flex;justify-content:space-between;width:100%}
+/* janelas: no computador/tablet abrem como cartão no meio da tela, com os 4 cantos arredondados (no celular continuam folha) */
+@media(min-width:640px){ .modal{border-radius:var(--radius)} }
+/* ===== COMANDO (visual Editorial): número grande em serifa, semana em bolinhas, cartões com linhas finas ===== */
+#comandoConteudo{width:100%;max-width:1100px;margin:0 auto;box-sizing:border-box}
+.cmd-topo{padding:8px 4px 24px}
+.cmd-rotulo{font-size:12.5px;font-weight:500;color:var(--text-dim)}
+.cmd-numero{font-family:var(--font-display);font-size:64px;line-height:1.02;letter-spacing:-1px;color:var(--text);display:flex;align-items:baseline;gap:12px;margin-top:2px}
+.cmd-numero span{font-family:var(--font-body);font-size:15px;letter-spacing:0;color:var(--text-dim);font-weight:500}
+.cmd-sub{font-size:12.5px;color:var(--text-faint);margin-top:4px}
+.cmd-semana{display:flex;gap:14px;margin-top:18px}
+.cmd-dia{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text-faint)}
+.cmd-dia i{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--line);box-sizing:border-box}
+.cmd-dia.feito i{background:var(--gold);border-color:var(--gold)}
+.cmd-dia.hoje span{color:var(--text);font-weight:600}
+.cmd-dia.hoje i{box-shadow:0 0 0 3px var(--gold-tint)}
+.cmd-ruptura{margin-top:16px;font-size:12.5px;font-weight:500;color:var(--danger)}
+.cmd-grade{display:grid;gap:var(--s3)}
+.cmd-coluna{display:grid;gap:var(--s3);align-content:start}
+@media(min-width:1024px){ .cmd-grade{grid-template-columns:1.25fr 1fr;align-items:start} }
+.cmd-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:16px 18px 18px}
+.cmd-card-topo{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.cmd-card-titulo{font-size:14px;font-weight:600;color:var(--text)}
+.cmd-card-conta{font-size:12.5px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.cmd-barra{height:3px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:4px}
+.cmd-barra div{height:100%;background:var(--gold);border-radius:99px;transition:width .3s var(--ease)}
+.cmd-ordens{margin-bottom:10px}
+.cmd-ordem{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.cmd-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--text-faint);background:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.cmd-check:hover{border-color:var(--gold)}
+.cmd-ordem.feita .cmd-check{background:var(--gold);border-color:var(--gold)}
+.cmd-ordem-texto{flex:1;min-width:0;font-size:14px;font-weight:500;color:var(--text);cursor:text;line-height:1.35}
+.cmd-ordem.feita .cmd-ordem-texto{color:var(--text-faint);text-decoration:line-through}
+.cmd-ordem-del{color:var(--text-faint);flex-shrink:0}
+.cmd-vazio{font-size:13px;color:var(--text-faint);padding:14px 0;border-bottom:1px solid var(--line)}
+.cmd-campo{flex:1;width:0;min-width:0;height:42px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);padding:0 12px;font:inherit;font-size:16px;color:var(--text);box-sizing:border-box}
+.cmd-campo:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
+.cmd-editando{height:36px;font-size:14px}
+.cmd-nova{display:flex;gap:8px;margin:12px 0}
+.cmd-btn-icone{width:42px;height:42px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--card);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.cmd-btn-icone.escuro{background:var(--primary);border-color:var(--primary);color:#fff}
+.cmd-btn-icone.ouvindo{background:var(--danger);border-color:var(--danger);color:#fff;animation:cmdOuvindo 1s ease-in-out infinite alternate}
+@keyframes cmdOuvindo{to{box-shadow:0 0 0 6px var(--danger-tint)}}
+.cmd-fechar{width:100%;min-height:48px;border-radius:var(--radius-sm);border:1px dashed var(--line);background:none;font:inherit;font-size:13.5px;font-weight:500;color:var(--text-faint);display:flex;align-items:center;justify-content:center;gap:8px}
+.cmd-fechar.btn{border:none;font-weight:600;color:#fff}
+.cmd-fechar.fechado{border:1px solid var(--success);color:var(--success);background:var(--success-tint);font-weight:600}
+.cmd-desc{font-size:12.5px;color:var(--text-dim);line-height:1.45;margin:-4px 0 10px}
+.cmd-juramento-input{display:block;width:100%;height:auto;min-height:96px;padding:12px;resize:vertical;line-height:1.5}
+.cmd-juramento{margin:4px 0 0;font-family:var(--font-display);font-size:21px;line-height:1.35;color:var(--text);quotes:"“" "”"}
+.cmd-juramento::before{content:open-quote}
+.cmd-juramento::after{content:close-quote}
+.cmd-juramento-rodape{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--success);font-weight:500}
+.cmd-link{border:none;background:none;padding:0;font:inherit;font-size:12.5px;font-weight:500;color:var(--text-dim);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px;cursor:pointer}
+.cmd-sabs{border-top:1px solid var(--line)}
+.cmd-sab{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text)}
+.cmd-sab:last-child{border-bottom:none;padding-bottom:0}
+.cmd-sab-data{font-size:11.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}
+/* Comando · Google Agenda */
+.cmd-google-btn{margin-top:2px}
+.cmd-google-rodape{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--text-faint)}
+.cmd-evento{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cmd-evento-hora{width:52px;flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.cmd-evento-titulo{flex:1;min-width:0;font-size:14px;color:var(--text)}
+.cmd-card-conta.erro{color:var(--danger)}

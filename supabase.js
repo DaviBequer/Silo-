@@ -38,17 +38,25 @@
        Retorna 'ok' | 'sem-sessao' | 'sem-rede'. */
     async garantirSessao(){
       if (!client) return 'sem-sessao';
-      let guardada = false;
-      try { const s = JSON.parse(localStorage.getItem('siloe-auth') || 'null'); guardada = !!(s && s.refresh_token); } catch (e) {}
+      const tokenGuardado = () => { try { const s = JSON.parse(localStorage.getItem('siloe-auth') || 'null'); return (s && s.refresh_token) || ''; } catch (e) { return ''; } };
+      const esperar = ms => new Promise(r => setTimeout(r, ms));
       try { const { data } = await client.auth.getSession(); if (data && data.session) return 'ok'; } catch (e) {}
-      if (!guardada) return 'sem-sessao';
-      try {
-        const { data, error } = await client.auth.refreshSession();
-        if (!error && data && data.session) return 'ok';
-        const st = error && error.status;
-        if (st === 400 || st === 401 || st === 403 || /refresh.?token|invalid|not.?found/i.test(String(error && error.message))) return 'sem-sessao';
-        return 'sem-rede';
-      } catch (e) { return 'sem-rede'; }
+      /* o acesso de 1 h venceu e a renovação automática falhou (rede, ou outra aba renovando ao mesmo tempo):
+         tenta renovar com o token guardado; só desiste se o BANCO recusar e ninguém tiver renovado nesse meio tempo */
+      for (let tentativa = 0; tentativa < 3; tentativa++) {
+        const tok = tokenGuardado();
+        if (!tok) return 'sem-sessao';
+        let recusado = false;
+        try {
+          const { data, error } = await client.auth.refreshSession({ refresh_token: tok });
+          if (!error && data && data.session) return 'ok';
+          recusado = !!(error && error.name === 'AuthApiError' && [400, 401, 403].includes(error.status));
+        } catch (e) {}
+        await esperar(1500);
+        try { const { data } = await client.auth.getSession(); if (data && data.session) return 'ok'; } catch (e) {}
+        if (recusado && tokenGuardado() === tok) return 'sem-sessao';   // recusado de verdade (ex.: "Sair de todos")
+      }
+      return 'sem-rede';
     },
     /* pede ao navegador para não apagar os dados deste site (login e cópia local) quando faltar espaço */
     pedirArmazenamentoPermanente(){
@@ -72,24 +80,6 @@
     async sairDeTodos(){
       if (!client) return false;
       try { const { error } = await client.auth.signOut({ scope:'global' }); return !error; } catch (e) { return false; }
-    },
-    /* ===== VERSÕES ANTERIORES (tabela app_state_historico: uma cópia por hora, 30 dias) ===== */
-    async listarVersoes(){
-      if (!client) return { ok:false };
-      try {
-        const { data, error } = await client.from('app_state_historico')
-          .select('id, salvo_em').eq('user_id', USER_ID).order('salvo_em', { ascending:false }).limit(200);
-        if (error) throw error;
-        return { ok:true, lista: data || [] };
-      } catch (e) { return { ok:false, erro: String((e && e.message) || e).slice(0,120) }; }
-    },
-    async lerVersao(id){
-      if (!client) return { ok:false };
-      try {
-        const { data, error } = await client.from('app_state_historico').select('data').eq('id', id).maybeSingle();
-        if (error) throw error;
-        return { ok: !!data, data: data ? data.data : null };
-      } catch (e) { return { ok:false, erro: String((e && e.message) || e).slice(0,120) }; }
     },
     // Retorna { ok:true, data } (data = null se ainda não existe) ou { ok:false, error }
     async loadState(){

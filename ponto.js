@@ -675,28 +675,7 @@ function gerarPdfPonto(){
   closeModal('modalPontoExport');
 }
 
-/* ================= CONCLUIR MÊS ================= */
-function openConcluirMesModal(){
-  const mesContasAtual = mesFinanceiroAtual();
-  const mesContasProximo = addMonths(mesContasAtual, 1);
-
-  document.getElementById('concluirMesInfo').innerHTML =
-    `<div class="mc-field"><label>Contas (Dashboard)</label>${monthLabel(mesContasAtual)} → ${monthLabel(mesContasProximo)}</div>`;
-
-  const abertas = contasEmAbertoNoMes(mesContasAtual);
-  const avisoEl = document.getElementById('concluirMesAviso');
-  if(abertas > 0){
-    avisoEl.style.display = 'block';
-    avisoEl.innerHTML = bannerGeo('negativo','alerta',`${abertas} conta${abertas>1?'s':''} em aberto`,`Em ${monthLabel(mesContasAtual)}. Você pode concluir mesmo assim.`);
-  } else {
-    avisoEl.style.display = 'none';
-  }
-  document.getElementById('modalConcluirMes').classList.add('active');
-}
-function confirmarConcluirMes(){
-  closeModal('modalConcluirMes');
-  concluirMesAtual();
-}
+/* ================= CONCLUIR MÊS (pelo "Finalizar" de Contas do mês) ================= */
 /* Resumo completo do mês (Davi, como no Dashboard): tudo que entrou e tudo que saiu, pago ou não.
    É o que fica guardado no histórico ao concluir o mês (os dados do mês são limpos depois de um tempo). */
 function resumoCompletoDoMes(mKey){

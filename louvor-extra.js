@@ -428,6 +428,7 @@ function lviTomSiloe(raiz, menor){
    partes com os acordes no formato "[D]Lou[Bm]vai". O app monta no formato do Siloé ([Parte], acordes em cima, --).
    Sem chave, sem internet ou se a IA falhar: volta para a leitura simples de antes. Trocar de modelo: LVI_IA_MODELO. */
 const LVI_IA_MODELO = 'gemini-3.8-flash';
+const LVI_IA_MODELOS_RESERVA = ['gemini-3.6-flash'];   // grátis também: usado quando o principal está "com muita procura"
 const LVI_IA_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 function lviChaveIA(){ return String((typeof state!=='undefined' && state && state.iaGoogleChave) || '').trim(); }
 const LVI_IA_REGRAS = `Você organiza cifras de louvor (músicas cristãs em português) para um app de igreja.
@@ -435,7 +436,13 @@ Leia a cifra recebida e devolva o JSON pedido, seguindo estas regras:
 
 LETRA
 - Copie a letra exatamente como está: não invente, não complete, não troque palavras, não traduza.
-- Corrija só erros de leitura óbvios: acorde grudado no meio da palavra (ex.: "particiCpar" é a palavra "participar" com o acorde C), letras ou espaços trocados por causa de colunas, verso quebrado em duas linhas por falta de espaço.
+- Corrija só erros de leitura óbvios: acorde grudado no meio da palavra (ex.: "particiCpar" é a palavra "participar" com o acorde C), letras ou espaços trocados por causa de colunas.
+- Um verso = uma linha. Muitos PDFs quebram o verso no meio, logo antes de um acorde. Junte de volta numa linha só, com o acorde no lugar:
+  PDF:  "A Preciso fazer muito mais do que" / "E tenho feito"
+  Certo: "[A]Preciso fazer muito mais do que [E]tenho feito"
+  PDF:  "Bm D Preciso falar desta paz que" / "A trago em meu peito"
+  Certo: "[Bm]Preciso [D]falar desta paz que [A]trago em meu peito"
+  Uma linha só fica curta quando o verso é curto de verdade (rima, pausa da melodia).
 
 ACORDES (formato ChordPro)
 - Cada linha vai com o acorde entre colchetes logo antes da sílaba onde ele é tocado. Ex.: "[D]Louvai a Je[Bm]sus, amoroso".
@@ -500,7 +507,25 @@ function lviTextoDaRespostaIA(c){
   if(cand && cand.content && cand.content.parts) return cand.content.parts.map(x=>x.text||'').join('');
   return '';
 }
-async function lviPerguntarIA(partes){
+/* Google "com muita procura" (comum no plano grátis): tenta de novo e depois com o modelo reserva */
+async function lviPerguntarIA(partes, status){
+  const tentativas = [LVI_IA_MODELO, LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA];
+  let limite = false;
+  for(let i = 0; i < tentativas.length; i++){
+    if(i > 0){
+      if(status) status('Google ocupado, tentando de novo…');
+      await new Promise(r=>setTimeout(r, 2500 * i));
+    }
+    try{ return await lviPerguntarIAUmaVez(partes, tentativas[i]); }
+    catch(e){
+      const reserva = tentativas[i] !== LVI_IA_MODELO;
+      if(!e.passageiro && !reserva) throw e;   // chave errada, resposta estranha...: não adianta insistir
+      if(!reserva) limite = limite || !!e.limite;
+    }
+  }
+  throw new Error(limite ? 'limite grátis do Google atingido, tente daqui a pouco' : 'o Google está com muita procura agora, tente daqui a pouco');
+}
+async function lviPerguntarIAUmaVez(partes, modelo){
   const chave = lviChaveIA();
   if(!chave) throw new Error('sem chave');
   const ctrl = new AbortController(), t = setTimeout(()=>ctrl.abort(), 120000);
@@ -509,7 +534,7 @@ async function lviPerguntarIA(partes){
     res = await fetch(LVI_IA_URL, {
       method:'POST', signal: ctrl.signal,
       headers:{ 'Content-Type':'application/json', 'x-goog-api-key': chave },
-      body: JSON.stringify({ model: LVI_IA_MODELO, input: partes, response_format:{ type:'text', mime_type:'application/json', schema: LVI_IA_ESQUEMA } })
+      body: JSON.stringify({ model: modelo, input: partes, response_format:{ type:'text', mime_type:'application/json', schema: LVI_IA_ESQUEMA } })
     });
     corpo = await res.json().catch(()=>null);
   }catch(e){ throw new Error(e && e.name==='AbortError' ? 'a IA demorou demais' : 'sem conexão com a IA'); }
@@ -517,9 +542,12 @@ async function lviPerguntarIA(partes){
   const erro = (Array.isArray(corpo) ? corpo[0] : corpo || {}).error || (corpo && corpo.status==='failed' && (corpo.errors||[])[0]);
   if(!res.ok || erro){
     const msg = String((erro && erro.message) || res.status);
-    if(res.status === 429 || /quota|exhaust|rate/i.test(msg)) throw new Error('limite grátis do Google atingido, tente daqui a pouco');
     if(/api.?key/i.test(msg)) throw new Error('a chave do Google não foi aceita (confira em Dados do App)');
-    throw new Error('a IA respondeu com erro: ' + msg.slice(0,90));
+    const e = new Error('a IA respondeu com erro: ' + msg.slice(0,90));
+    /* 429 = limite do plano grátis (por minuto passa sozinho); 5xx/"high demand" = Google ocupado */
+    e.limite = res.status === 429 || /quota|exhaust|rate.?limit/i.test(msg);
+    e.passageiro = e.limite || res.status >= 500 || /demand|overload|unavailable|try again|temporar/i.test(msg);
+    throw e;
   }
   const texto = lviTextoDaRespostaIA(corpo);
   if(!texto) throw new Error('a IA não devolveu nada');
@@ -567,7 +595,7 @@ async function lviImportarComIA(file, status){
   const arquivo = lviEhImagem(file)
     ? { type:'image', data: b64, mime_type: lviTipoImagem(file) }
     : { type:'document', data: b64, mime_type: 'application/pdf' };
-  const j = await lviPerguntarIA([ arquivo, { type:'text', text: LVI_IA_REGRAS + '\n\nNome do arquivo: ' + (file.name||'') } ]);
+  const j = await lviPerguntarIA([ arquivo, { type:'text', text: LVI_IA_REGRAS + '\n\nNome do arquivo: ' + (file.name||'') } ], status);
   return lviMontarDaIA(j, lviNomeDoArquivo(file.name||''));
 }
 

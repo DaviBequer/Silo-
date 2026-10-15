@@ -92,6 +92,14 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.7', itens: [
+    'Comando com visual novo: dias seguidos em destaque, semana em bolinhas, ordens com progresso e ditado por voz',
+    'Comando ligado ao Google: ordens viram tarefas no Google Agenda/Tarefas (feito lá ou aqui vale nos dois) e a agenda de hoje aparece no app',
+    'Finanças: seções sempre fechadas ao abrir, setinha ao lado do nome; chavinhas do Fluxo Mensal alinhadas',
+    'Louvor: a IA tenta de novo sozinha quando o Google está ocupado e junta versos quebrados',
+    'Janelas com cantos iguais no computador; saíram o ✓ do topo, "Enviar backup" e "Versões anteriores"',
+    'Login: não pede mais senha quando o acesso vence com duas abas abertas'
+  ]},
   { versao: 'v4.6', itens: [
     'Louvor: Importar e Organizar com IA (chave grátis do Google em Dados do App) — lê qualquer PDF ou foto e já monta partes, acordes e "Repete"',
     'Louvor: botão de tela cheia no Visualizar; letra sem fundo na prévia; Roteiro abre e fecha; filtro Atual em ordem de data',
@@ -584,21 +592,6 @@ function montarBackupApp(){
     state: Object.assign({}, state, { iaGoogleChave: undefined })   // a chave da IA não vai junto no backup
   };
 }
-async function compartilharBackupApp(){
-  const nome = `siloe-backup-${new Date().toISOString().slice(0,10)}.json`;
-  const blob = new Blob([JSON.stringify(montarBackupApp(), null, 2)], { type: 'application/json' });
-  try{
-    const arquivo = new File([blob], nome, { type: 'application/json' });
-    if(navigator.canShare && navigator.canShare({ files:[arquivo] })){
-      await navigator.share({ files:[arquivo], title: 'Backup Siloé' });
-      closeModal('modalImportExport');
-      return;
-    }
-  }catch(err){
-    if(err && err.name==='AbortError') return;
-  }
-  exportarDadosApp();
-}
 function exportarDadosApp(){
   const backup = montarBackupApp();
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -965,37 +958,3 @@ if('serviceWorker' in navigator && !/^(localhost|127\.0\.0\.1)$/.test(location.h
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
 }
 
-/* ================= VERSÕES ANTERIORES =================
-   Lista as cópias que o banco guarda (uma por hora, 30 dias) e restaura a escolhida. */
-async function abrirVersoes(){
-  const el = document.getElementById('versoesLista');
-  el.innerHTML = '<div class="gm-vazio">Carregando…</div>';
-  closeModal('modalImportExport');
-  document.getElementById('modalVersoes').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  const r = await window.SiloSupabase.listarVersoes();
-  if(!r.ok){ el.innerHTML = `<div class="gm-vazio">Não consegui buscar as versões${r.erro?' ('+escBanco(r.erro)+')':''}.</div>`; return; }
-  if(!r.lista.length){ el.innerHTML = '<div class="gm-vazio">Nenhuma versão guardada ainda. A primeira aparece uma hora depois da próxima alteração.</div>'; return; }
-  /* agrupado por dia: "Hoje", "Ontem", "12 de outubro" */
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const nomeDia = d=>{ const x = new Date(d); x.setHours(0,0,0,0); const dif = Math.round((hoje - x)/86400000);
-    return dif===0 ? 'Hoje' : dif===1 ? 'Ontem' : `${x.getDate()} de ${MES_NOMES_LONGOS[x.getMonth()].toLowerCase()}`; };
-  const grupos = {};
-  r.lista.forEach(v=>{ const k = nomeDia(v.salvo_em); (grupos[k] = grupos[k] || []).push(v); });
-  el.innerHTML = Object.entries(grupos).map(([dia, vs])=>`<div class="gm-grupo"><div class="gm-grupo-topo"><span>${dia}</span><span>${vs.length} cópia${vs.length===1?'':'s'}</span></div>${vs.map(v=>{
-    const d = new Date(v.salvo_em);
-    return `<div class="gm-linha"><span class="gm-inicial">${CAL_ICONE}</span><div class="gm-info"><div class="gm-nome">${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</div></div><button type="button" class="btn btn-sm btn-outline" onclick="restaurarVersao(${v.id}, '${d.toISOString()}')">Restaurar</button></div>`;
-  }).join('')}</div>`).join('');
-}
-async function restaurarVersao(id, quando){
-  const d = new Date(quando);
-  const ok = await iosConfirm(`Restaurar os dados para como estavam em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}? O que você mudou depois disso sai (a versão de agora também fica guardada no histórico).`);
-  if(!ok) return;
-  const r = await window.SiloSupabase.lerVersao(id);
-  if(!r.ok || !r.data || !r.data.users){ showToast('Não consegui ler essa versão'); return; }
-  state = r.data;
-  const gravou = await persistAgora();
-  if(!gravou){ showToast('Não consegui restaurar (sem conexão?)'); return; }
-  showToast('Versão restaurada');
-  setTimeout(()=>location.reload(), 600);
-}

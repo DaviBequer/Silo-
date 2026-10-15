@@ -1005,7 +1005,7 @@ function gastosBrutosMes(user, mKey){
 }
 
 /* ================= HISTÓRICO DE MESES =================
-   Mês atual (em andamento, calculado agora) + cada mês concluído (resumo guardado ao tocar em ✓ Concluir mês).
+   Mês atual (em andamento, calculado agora) + cada mês concluído (resumo guardado ao tocar em Finalizar, em Contas do mês).
    Toque num mês para ver para onde foi o dinheiro. */
 const HIST_ROTULOS = [['moradia','Moradia'],['assinatura','Assinaturas'],['fixo','Fixos'],['futuro','Contas futuras'],['dizimo','Dízimo'],['cartao','Cartão'],['emprestimo','Empréstimo']];
 function abrirHistoricoMeses(){
@@ -1032,7 +1032,7 @@ function abrirHistoricoMeses(){
     </details>`;
   };
   document.getElementById('historicoMesesLista').innerHTML = meses.map(linhaMes).join('')
-    + (fechados.length ? '' : '<div class="hm-dica">Os meses aparecem aqui quando você toca em ✓ (Concluir mês) no topo. O resumo fica guardado mesmo depois que os dados do mês são limpos.</div>');
+    + (fechados.length ? '' : '<div class="hm-dica">Os meses aparecem aqui quando você toca em Finalizar, em Contas do mês. O resumo fica guardado mesmo depois que os dados do mês são limpos.</div>');
   document.getElementById('modalHistoricoMeses').classList.add('active');
   document.body.style.overflow = 'hidden';
 }

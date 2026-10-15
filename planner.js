@@ -282,7 +282,7 @@ function desarquivarGasto(cat, id){
 }
 function toggleSecaoGasto(cat){
   const atual = secoesGastoColapsadas[cat];
-  const colapsadaAgora = atual===undefined ? (state.users[state.currentUser].expenses[cat].filter(i=>!i.arquivado).length===0) : atual;
+  const colapsadaAgora = atual===undefined ? true : atual;   // começa sempre fechada
   secoesGastoColapsadas[cat] = !colapsadaAgora;
   renderGastoGrid(cat);
 }
@@ -323,7 +323,7 @@ function renderGastoGrid(cat){
   const arquivados = todos.filter(i=>i.arquivado);
   const secao = document.getElementById('secao-'+cat);
   if(secao){
-    const colapsada = secoesGastoColapsadas[cat]!==undefined ? secoesGastoColapsadas[cat] : items.length===0;
+    const colapsada = secoesGastoColapsadas[cat]!==undefined ? secoesGastoColapsadas[cat] : true;   // ao abrir o app, todas fechadas
     secao.classList.toggle('collapsed', colapsada);
   }
   const grid = document.getElementById('grid-'+cat);
