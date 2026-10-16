@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5.5">
+<link rel="stylesheet" href="style.css?v=5.6">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v5.5</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v5.6</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1366,6 +1366,19 @@
       <button class="btn" onclick="exportarDadosApp()">Exportar</button>
       <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
     </div>
+    <div class="ia-config fundo-config">
+      <div class="ia-topo"><span class="ia-titulo">Imagem de fundo</span><span class="ia-status" id="fundoStatus">Sem imagem</span></div>
+      <div class="ia-desc">Uma foto sua atrás do app. Ela fica clarinha para o texto continuar fácil de ler.</div>
+      <div class="dash-tabs fundo-forca" id="fundoForca" style="display:none">
+        <button type="button" class="dash-tab" data-forca="suave" onclick="setForcaFundo('suave')">Suave</button>
+        <button type="button" class="dash-tab" data-forca="medio" onclick="setForcaFundo('medio')">Médio</button>
+        <button type="button" class="dash-tab" data-forca="forte" onclick="setForcaFundo('forte')">Forte</button>
+      </div>
+      <div class="fundo-acoes">
+        <label class="btn btn-sm">Escolher imagem<input type="file" accept="image/*" style="display:none" onchange="escolherFundoApp(event)"></label>
+        <button type="button" class="ia-remover" id="fundoRemover" style="display:none" onclick="removerFundoApp()">Remover</button>
+      </div>
+    </div>
     <div class="ia-config pin-config" id="pinConfig" style="display:none">
       <div class="ia-topo"><span class="ia-titulo">Entrar com PIN</span><span class="ia-status" id="pinStatus">Desligado</span></div>
       <div class="ia-desc">Em vez de e-mail e senha, entra com 6 números. O PIN passa a ser a senha da sua conta.</div>
@@ -1686,19 +1699,19 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=5.5"></script>
-<script src="core.js?v=5.5"></script>
-<script src="comando.js?v=5.5"></script>
-<script src="layout.js?v=5.5"></script>
-<script src="app.js?v=5.5"></script>
-<script src="panorama.js?v=5.5"></script>
-<script src="planner.js?v=5.5"></script>
-<script src="ponto.js?v=5.5"></script>
-<script src="louvor.js?v=5.5"></script>
-<script src="louvor-extra.js?v=5.5"></script>
-<script src="louvor-medley.js?v=5.5"></script>
-<script src="emprestimo.js?v=5.5"></script>
-<script src="vendas.js?v=5.5"></script>
+<script src="supabase.js?v=5.6"></script>
+<script src="core.js?v=5.6"></script>
+<script src="comando.js?v=5.6"></script>
+<script src="layout.js?v=5.6"></script>
+<script src="app.js?v=5.6"></script>
+<script src="panorama.js?v=5.6"></script>
+<script src="planner.js?v=5.6"></script>
+<script src="ponto.js?v=5.6"></script>
+<script src="louvor.js?v=5.6"></script>
+<script src="louvor-extra.js?v=5.6"></script>
+<script src="louvor-medley.js?v=5.6"></script>
+<script src="emprestimo.js?v=5.6"></script>
+<script src="vendas.js?v=5.6"></script>
 <script>carregar();</script>
 </body>
 </html>

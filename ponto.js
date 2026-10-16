@@ -39,6 +39,7 @@ function toggleDiaConcluido(dia){
   const mKey = pontoMonthKeyAtual();
   const d = getDia(mKey, dia);
   d.concluido = !d.concluido;
+  delete pontoDiaAberto[mKey+'-'+dia];   // trancou: fecha sozinho; reabriu: abre
   renderPonto();
   persist();
   if(navigator.vibrate) navigator.vibrate(10);
@@ -134,9 +135,26 @@ function dayTotalMinutes(d){
 }
 
 let pontoSemanaColapsada = {}; // chave mKey+'-w'+índice -> true/false (em memória, não precisa persistir)
-function toggleSemanaPonto(chave){
-  pontoSemanaColapsada[chave] = !pontoSemanaColapsada[chave];
+function toggleSemanaPonto(chave, aberta){
+  pontoSemanaColapsada[chave] = !!aberta;   // inverte o que está na tela
   renderPonto();
+}
+/* cada dia também abre/fecha: o que você tocar fica como você deixou (até sair do app) */
+let pontoDiaAberto = {};   // mKey+'-'+dia -> true/false
+function toggleDiaPonto(ev, chave, aberto){
+  if(ev && ev.target.closest('button')) return;   // os botões do dia não abrem/fecham
+  pontoDiaAberto[chave] = !aberto;
+  renderPonto();
+}
+/* fechado: dia trancado, dia que ainda não chegou e fim de semana sem horas. Aberto: hoje e dias que passaram sem trancar */
+function pontoDiaPrecisaAtencao(d, dateObj, hoje, isHoje, isWeekend){
+  if(d.concluido) return false;
+  if(isHoje) return true;
+  const zero = new Date(hoje); zero.setHours(0,0,0,0);
+  if(dateObj > zero) return false;
+  if(isWeekend && dayTotalMinutes(d) === 0) return false;
+  if(['entrada','almocoSaida','almocoVolta','saida'].every(c=>d[c] === null)) return false;   // "não trabalhei" (folga, feriado)
+  return true;
 }
 
 function renderPonto(){
@@ -167,10 +185,7 @@ function renderPonto(){
       const dt = keyToDate(mKey); dt.setDate(dia);
       return dt.getFullYear()===hoje.getFullYear() && dt.getMonth()===hoje.getMonth() && dt.getDate()===hoje.getDate();
     });
-    const ultimoDiaSemana = keyToDate(mKey); ultimoDiaSemana.setDate(diasDaSemana[diasDaSemana.length-1]);
-    const semanaPassou = ultimoDiaSemana < hoje && !semanaTemHoje;
-    if(!(chave in pontoSemanaColapsada)) pontoSemanaColapsada[chave] = semanaPassou;
-    const colapsada = pontoSemanaColapsada[chave];
+    let semanaAtencao = false;
     const primeiroDia = diasDaSemana[0], ultimoDia = diasDaSemana[diasDaSemana.length-1];
 
     let diasHtml = '';
@@ -182,15 +197,19 @@ function renderPonto(){
       const total = dayTotalMinutes(d);
       const extraVal = d.extra ? String(Math.floor(d.extra/60)).padStart(2,'0')+':'+String(d.extra%60).padStart(2,'0') : '';
       const travado = !!d.concluido;
+      const chaveDia = mKey+'-'+dia;
+      const atencao = pontoDiaPrecisaAtencao(d, dateObj, hoje, isHoje, isWeekend);
+      if(atencao) semanaAtencao = true;
+      const diaAberto = chaveDia in pontoDiaAberto ? pontoDiaAberto[chaveDia] : atencao;
       const tapAttrs = (campo)=> travado ? '' : `onpointerdown="tempoTapStart(event,${dia},'${campo}')" onpointerup="tempoTapEnd(event,${dia},'${campo}')" onpointercancel="tempoTapCancel()" onpointerleave="tempoTapCancel()" oncontextmenu="return false"`;
       const statusClasse = (campo)=>{
         if(d.confirmado && d.confirmado[campo]) return 'ph-confirmado';
         if(isHoje && d[campo] && nowMin > timeToMin(d[campo])) return 'ph-atrasado';
         return '';
       };
-      diasHtml += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''}" id="pontoDia-${dia}">
-        <div class="pd-head">
-          <div class="pd-data">${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
+      diasHtml += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''} ${diaAberto?'':'fechado'}" id="pontoDia-${dia}">
+        <div class="pd-head" onclick="toggleDiaPonto(event,'${chaveDia}',${diaAberto})">
+          <div class="pd-data"><svg class="pd-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
           <div style="display:flex;align-items:center;gap:8px">
             <div class="pd-total ${total===0?'zero':''}">${minToHoursLabel(total)}</div>
             <button class="btn-icon-sm ${travado?'concluido-ativo':''}" onclick="toggleDiaConcluido(${dia})" title="${travado?'Reabrir dia':'Marcar como concluído'}">${travado?ICON_CHECK:ICON_UNLOCK}</button>
@@ -209,8 +228,9 @@ function renderPonto(){
       </div>`;
     });
 
+    const colapsada = chave in pontoSemanaColapsada ? !pontoSemanaColapsada[chave] : !semanaAtencao;
     rows += `<div class="ponto-semana-grupo ${colapsada?'colapsada':''}">
-      <div class="ponto-semana-head" onclick="toggleSemanaPonto('${chave}')">
+      <div class="ponto-semana-head" onclick="toggleSemanaPonto('${chave}', ${colapsada})">
         <span>Semana ${wIdx+1} <small>${String(primeiroDia).padStart(2,'0')}–${String(ultimoDia).padStart(2,'0')}</small></span>
         <button type="button" class="section-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
       </div>
@@ -390,7 +410,8 @@ function pontoPendenteEditar(dia){
   closeModal('modalPontoPendentes');
   let w = 0;
   for(let d=2; d<=dia; d++){ const dt = keyToDate(mKey); dt.setDate(d); if(dt.getDay()===0) w++; }
-  pontoSemanaColapsada[mKey+'-w'+w] = false;
+  pontoSemanaColapsada[mKey+'-w'+w] = true;   // abre a semana
+  pontoDiaAberto[mKey+'-'+dia] = true;
   renderPonto();
   setTimeout(()=>{ document.getElementById('pontoDia-'+dia)?.scrollIntoView({ behavior:'smooth', block:'center' }); }, 80);
 }

@@ -1475,10 +1475,19 @@ function vozOuvir(){
   const r = new SR();
   r.lang = 'pt-BR'; r.interimResults = true; r.maxAlternatives = 1;
   let falou = false;
-  r.onresult = e=>{ let t = ''; for(const res of e.results) t += res[0].transcript; inp.value = t.trim(); falou = true; };
+  r.onresult = e=>{ let t = ''; for(const res of e.results) t += res[0].transcript; inp.value = t.trim(); falou = true; if(typeof jarvisTexto==='function') jarvisTexto(inp.value); };
   r.onerror = e=>{ if(e.error === 'not-allowed' || e.error === 'service-not-allowed') dica.textContent = 'Permita o microfone para falar (ou escreva abaixo).'; };
-  r.onend = ()=>{ vozRec = null; mic.classList.remove('ouvindo'); if(falou && inp.value.trim()) vozEntender(); };
-  try{ r.start(); vozRec = r; mic.classList.add('ouvindo'); dica.textContent = 'Ouvindo… fale a compra, a conta paga ou o que recebeu.'; }
+  r.onend = async ()=>{
+    vozRec = null; mic.classList.remove('ouvindo');
+    if(falou && inp.value.trim()){
+      if(typeof jarvisPensando==='function') jarvisPensando('ENTENDENDO');
+      try{ await vozEntender(); }finally{ if(typeof jarvisFechar==='function') jarvisFechar(); }
+    } else if(typeof jarvisFechar==='function') jarvisFechar();
+  };
+  try{
+    r.start(); vozRec = r; mic.classList.add('ouvindo'); dica.textContent = 'Ouvindo… fale a compra, a conta paga ou o que recebeu.';
+    if(typeof jarvisAbrir==='function') jarvisAbrir({ titulo: 'Fale a compra, a conta paga ou o que recebeu', aoParar: ()=>{ try{ r.stop(); }catch(_){ jarvisFechar(); } } });
+  }
   catch(e){ dica.textContent = 'Não consegui ligar o microfone: escreva abaixo.'; }
 }
 /* contas do mês ainda abertas (para "paguei a ...") */

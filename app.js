@@ -93,6 +93,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.6', itens: [
+    'Microfones no estilo Jarvis: anel brilhante girando, barras que reagem à fala e o texto aparecendo na hora',
+    'Imagem de fundo: escolha uma foto em Dados do App (Suave, Médio ou Forte)',
+    'Mais animações: onda ao tocar nos botões, abas e telas entrando deslizando, ícone da barra pulando',
+    'Ponto: cada dia abre e fecha (fechados: trancados, futuros e folgas); Valor da hora alinhado',
+    'Sino: o aviso só conta como lido quando você toca nele'
+  ]},
   { versao: 'v5.5', itens: [
     'Entrar com PIN: crie um PIN de 6 números em Dados do App e, quando o app pedir para entrar, é só digitar o PIN (ele passa a ser a senha da conta)'
   ]},
@@ -573,6 +580,7 @@ function abrirImportExportModal(){
     const pc = document.getElementById('pinConfig'); if(pc) pc.style.display = s ? '' : 'none';
     if(typeof atualizarStatusPin==='function') atualizarStatusPin();
   });
+  if(typeof atualizarStatusFundo==='function') atualizarStatusFundo();
 
   const storage = calcularStorageUsage();
   
@@ -1206,7 +1214,7 @@ function sinoAvisos(){
     const v = typeof calcularAvisosVendas === 'function' ? calcularAvisosVendas() : null;
     if(v && v.falta > 0.005){
       const planos = [v.nA ? `${v.nA} do ${v.nomeA}` : '', v.nB ? `${v.nB} do ${v.nomeB}` : ''].filter(Boolean).join(' ou ');
-      out.push({ id:'vendas-'+hojeTxt, tipo:'vendas', titulo:'Vendas do mês', corpo:`Faltam ${fmtMoney(v.falta)} para a meta de ${v.mesNome}${planos ? ' — ' + planos : ''}.`, quando:'hoje', ir:{ aba:'vendas' } });
+      out.push({ id:'vendas-'+v.mes+'-'+Math.round(v.falta*100), tipo:'vendas', titulo:'Vendas do mês', corpo:`Faltam ${fmtMoney(v.falta)} para a meta de ${v.mesNome}${planos ? ' — ' + planos : ''}.`, quando:'hoje', ir:{ aba:'vendas' } });
     }
   }catch(e){}
   return out;
@@ -1242,12 +1250,12 @@ function abrirSino(){
   sinoAtuais = sinoAvisos();
   sinoRenderLista();
   document.getElementById('modalSino').classList.add('active');
-  /* abriu: tudo que está na lista conta como visto (o sino para de balançar) */
-  sinoGuardarVistos([...new Set([...sinoVistos(), ...sinoAtuais.map(a=>a.id)])]);
-  atualizarSino(true);   // a lista aberta continua mostrando o que era novo
+  /* só abrir não conta como lido: o aviso continua novo até tocar nele ou a situação mudar */
 }
 function sinoIr(i){
   const a = sinoAtuais[i]; if(!a) return;
+  sinoGuardarVistos([...new Set([...sinoVistos(), a.id])]);   // tocou: este conta como lido
+  atualizarSino(true);
   closeModal('modalSino');
   if(a.ir.aba === 'ponto'){
     if(state.pontoOffset){ state.pontoOffset = 0; }
@@ -1379,3 +1387,158 @@ function abrirCriarPin(){
   pinTecladoAtivo = pinModal;
   document.getElementById('modalPin').classList.add('active');
 }
+
+/* ========== FUNDO COM IMAGEM (Dados do App) ==========
+   state.fundoApp = { img: dataURL (reduzida), forca: 'suave' | 'medio' | 'forte' }.
+   A imagem fica atrás de tudo, com um véu da cor do papel por cima para o texto continuar legível. */
+const FUNDO_VEU = { suave: .9, medio: .78, forte: .6 };
+function aplicarFundoApp(){
+  const f = state && state.fundoApp;
+  let el = document.getElementById('fundoApp');
+  if(!f || !f.img){ document.documentElement.classList.remove('tem-fundo'); if(el) el.remove(); atualizarStatusFundo(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'fundoApp'; el.setAttribute('aria-hidden', 'true'); document.body.prepend(el); }
+  el.style.backgroundImage = `url("${f.img}")`;
+  el.style.setProperty('--veu', FUNDO_VEU[f.forca] || FUNDO_VEU.medio);
+  document.documentElement.classList.add('tem-fundo');
+  atualizarStatusFundo();
+}
+function atualizarStatusFundo(){
+  const st = document.getElementById('fundoStatus'), rem = document.getElementById('fundoRemover'), forca = document.getElementById('fundoForca');
+  if(!st) return;
+  const f = state && state.fundoApp, tem = !!(f && f.img);
+  st.textContent = tem ? 'Ligado' : 'Sem imagem';
+  st.classList.toggle('ligada', tem);
+  if(rem) rem.style.display = tem ? '' : 'none';
+  if(forca){
+    forca.style.display = tem ? '' : 'none';
+    forca.querySelectorAll('[data-forca]').forEach(b=>b.classList.toggle('active', tem && (f.forca || 'medio') === b.dataset.forca));
+  }
+}
+function escolherFundoApp(ev){
+  const file = ev.target.files && ev.target.files[0]; ev.target.value = '';
+  if(!file) return;
+  const leitor = new FileReader();
+  leitor.onload = async ()=>{
+    const img = await comprimirImagemDataUrl(String(leitor.result), 1600, 0.72);
+    state.fundoApp = { img, forca: (state.fundoApp && state.fundoApp.forca) || 'medio' };
+    persist();
+    aplicarFundoApp();
+    showToast('Fundo aplicado');
+  };
+  leitor.readAsDataURL(file);
+}
+function setForcaFundo(forca){
+  if(!state.fundoApp) return;
+  state.fundoApp.forca = forca;
+  persist(); aplicarFundoApp();
+}
+function removerFundoApp(){
+  delete state.fundoApp;
+  persist(); aplicarFundoApp();
+  showToast('Fundo removido');
+}
+
+/* ========== JARVIS: tela do microfone enquanto ouve ==========
+   Anel tipo "reator" girando, barras em volta que reagem à fala e o texto aparecendo embaixo.
+   jarvisAbrir({ titulo, aoParar }) · jarvisTexto(t) · jarvisPensando(t) · jarvisFechar() */
+let jarvisEstado = null;
+function jarvisAbrir(op){
+  op = op || {};
+  jarvisFechar(true);
+  const el = document.createElement('div');
+  el.className = 'jarvis';
+  el.innerHTML = `
+    <div class="jv-fundo"></div>
+    <div class="jv-centro">
+      <canvas class="jv-canvas" width="560" height="560"></canvas>
+      <svg class="jv-aneis" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="jv-a1" cx="100" cy="100" r="92"/>
+        <circle class="jv-a2" cx="100" cy="100" r="80"/>
+        <circle class="jv-a3" cx="100" cy="100" r="68"/>
+        <circle class="jv-a4" cx="100" cy="100" r="56"/>
+        <g class="jv-marcas">${Array.from({ length: 36 }, (_, i)=>`<line x1="100" y1="4" x2="100" y2="${i % 3 ? 9 : 13}" transform="rotate(${i*10} 100 100)"/>`).join('')}</g>
+      </svg>
+      <button type="button" class="jv-nucleo" aria-label="Parar de ouvir"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg></button>
+    </div>
+    <div class="jv-status"><span class="jv-ponto"></span><span class="jv-status-txt">OUVINDO</span></div>
+    <div class="jv-titulo">${op.titulo || 'Pode falar'}</div>
+    <div class="jv-texto"></div>
+    <button type="button" class="jv-fechar">Toque no centro para terminar</button>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('aberto'));
+  const est = { el, nivel: .15, alvo: .15, t: 0, raf: 0, aoParar: op.aoParar, pensando: false };
+  jarvisEstado = est;
+  const parar = ()=>{ if(est.aoParar) est.aoParar(); else jarvisFechar(); };
+  el.querySelector('.jv-nucleo').onclick = parar;
+  el.querySelector('.jv-fechar').onclick = parar;
+  el.querySelector('.jv-fundo').onclick = parar;
+  if(navigator.vibrate) try{ navigator.vibrate(12); }catch(_){}
+  /* barras em volta do anel: sobem com a fala (cada texto novo dá um "pulso") */
+  const cv = el.querySelector('.jv-canvas'), ctx = cv.getContext('2d');
+  const N = 72, R = 168;
+  const desenha = ()=>{
+    est.t += 1;
+    est.alvo = Math.max(.12, est.alvo * .965);
+    est.nivel += (est.alvo - est.nivel) * .18;
+    ctx.clearRect(0, 0, 560, 560);
+    ctx.save(); ctx.translate(280, 280);
+    for(let i = 0; i < N; i++){
+      const ang = (i / N) * Math.PI * 2 + est.t * .004;
+      const onda = Math.sin(i * .55 + est.t * .09) * .5 + Math.sin(i * 1.7 - est.t * .05) * .35 + .9;
+      const tam = 8 + est.nivel * 62 * onda * (est.pensando ? .45 : 1);
+      ctx.rotate(Math.PI * 2 / N);
+      const g = ctx.createLinearGradient(0, -R, 0, -R - tam);
+      g.addColorStop(0, 'rgba(120,230,255,.95)'); g.addColorStop(1, 'rgba(120,230,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(-2, -R - tam, 4, tam);
+    }
+    ctx.restore();
+    est.raf = requestAnimationFrame(desenha);
+  };
+  desenha();
+  return est;
+}
+function jarvisTexto(t){
+  const est = jarvisEstado; if(!est) return;
+  const el = est.el.querySelector('.jv-texto');
+  if(el.textContent !== t){ el.textContent = t; est.alvo = Math.min(1, est.alvo + .55); }
+}
+function jarvisPensando(t){
+  const est = jarvisEstado; if(!est) return;
+  est.pensando = true;
+  est.el.classList.add('pensando');
+  est.el.querySelector('.jv-status-txt').textContent = t || 'PROCESSANDO';
+  est.el.querySelector('.jv-fechar').textContent = '';
+}
+function jarvisFechar(agora){
+  const est = jarvisEstado; if(!est) return;
+  jarvisEstado = null;
+  cancelAnimationFrame(est.raf);
+  if(agora){ est.el.remove(); return; }
+  est.el.classList.remove('aberto');
+  est.el.classList.add('saindo');
+  setTimeout(()=>est.el.remove(), 380);
+}
+
+/* ========== MAIS ANIMAÇÕES ==========
+   Onda ao tocar nos botões (de onde o dedo tocou) e a barra de baixo com o ícone "pulando" ao trocar de aba. */
+const ONDA_ALVOS = '.btn, .resumo-btn, .dif-chip, .lv-card, .lm-parte, .sino-item, .lv-barra-btn, .section-add, .lvn-medley, .lvn-importar, .pin-tecla, .gm-linha, .ponto-semana-head';
+document.addEventListener('pointerdown', e=>{
+  if(!efeitosLigados) return;
+  const alvo = e.target.closest(ONDA_ALVOS);
+  if(!alvo || alvo.disabled) return;
+  const r = alvo.getBoundingClientRect();
+  const tam = Math.max(r.width, r.height) * 2.2;
+  const onda = document.createElement('span');
+  onda.className = 'efeito-onda';
+  onda.style.cssText = `width:${tam}px;height:${tam}px;left:${e.clientX - r.left - tam/2}px;top:${e.clientY - r.top - tam/2}px`;
+  if(getComputedStyle(alvo).position === 'static') alvo.classList.add('onda-pos');
+  alvo.classList.add('onda-recorte');
+  alvo.appendChild(onda);
+  setTimeout(()=>{ onda.remove(); if(!alvo.querySelector('.efeito-onda')) alvo.classList.remove('onda-recorte', 'onda-pos'); }, 650);
+}, { passive: true });
+document.addEventListener('click', e=>{
+  const nav = e.target.closest('.nav-item');
+  if(!nav || !efeitosLigados) return;
+  nav.classList.remove('nav-pulo'); void nav.offsetWidth; nav.classList.add('nav-pulo');
+});

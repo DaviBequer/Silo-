@@ -163,14 +163,19 @@ function cmdDitar(inputId, btn){
   r.lang = 'pt-BR'; r.interimResults = true; r.maxAlternatives = 1; r.continuous = false;
   const base = inp.value.trim() ? inp.value.trim() + ' ' : '';
   let falou = false;
-  r.onresult = e=>{ let t = ''; for(const res of e.results) t += res[0].transcript; inp.value = base + t.trim(); falou = true; };
+  r.onresult = e=>{ let t = ''; for(const res of e.results) t += res[0].transcript; inp.value = base + t.trim(); falou = true; if(typeof jarvisTexto==='function') jarvisTexto(t.trim()); };
   r.onerror = e=>{ if(e.error === 'not-allowed' || e.error === 'service-not-allowed') showToast('Permita o uso do microfone para ditar'); };
   r.onend = ()=>{
     cmdReconhecendo = null;
     btn.classList.remove('ouvindo');
+    if(typeof jarvisFechar==='function') jarvisFechar();
     if(falou && inputId === 'cmdNovaOrdem' && inp.value.trim()) adicionarOrdemComando();
   };
-  try{ r.start(); cmdReconhecendo = r; btn.classList.add('ouvindo'); showToast('Pode falar…'); }
+  try{
+    r.start(); cmdReconhecendo = r; btn.classList.add('ouvindo');
+    if(typeof jarvisAbrir==='function') jarvisAbrir({ titulo: inputId === 'cmdNovaOrdem' ? 'Fale a ordem do dia' : 'Fale o que te sabota', aoParar: ()=>{ try{ r.stop(); }catch(_){ jarvisFechar(); } } });
+    else showToast('Pode falar…');
+  }
   catch(e){ showToast('Não consegui ligar o microfone'); }
 }
 

@@ -2175,3 +2175,78 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 .pin-tecla.apagar{background:none;border-color:transparent;color:var(--text-dim)}
 .pin-modal{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:4px 0 10px}
 .pin-config .btn{align-self:flex-start;margin-top:4px}
+/* Ponto: valor da hora — "R$" dentro do campo e campo perto do nome */
+#aba-ponto .ponto-rodape .ponto-valor-hora{justify-content:flex-start;flex:0 1 auto;gap:12px}
+#aba-ponto .ponto-valor-hora .input-money::before{left:10px;top:50%;transform:translateY(-50%);font-family:var(--font-body);font-size:12.5px;font-weight:500}
+#aba-ponto .ponto-valor-hora .input-money input{padding-left:34px!important}
+/* Ponto: cada dia abre/fecha (fechado = só a linha do dia) */
+.ponto-dia-row .pd-head{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ponto-dia-row .pd-data{display:flex;align-items:center;gap:2px}
+.pd-seta{width:14px;height:14px;margin-right:4px;color:var(--text-faint);transform:rotate(90deg);transition:transform var(--dur) var(--ease);flex-shrink:0}
+.ponto-dia-row.fechado .pd-seta{transform:none}
+.ponto-dia-row.fechado .ponto-horarios-grid,.ponto-dia-row.fechado .ponto-extra-row{display:none}
+.ponto-dia-row.fechado .pd-head{margin-bottom:0}
+/* ===== FUNDO COM IMAGEM ===== */
+#fundoApp{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;pointer-events:none;animation:fundoEntra .8s var(--ease) both}
+#fundoApp::after{content:"";position:absolute;inset:0;background:var(--bg);opacity:var(--veu,.78)}
+html.tem-fundo{background:var(--bg)}
+html.tem-fundo body{background-color:transparent}
+html.tem-fundo .header,html.tem-fundo .bottom-nav{background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+@keyframes fundoEntra{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+.fundo-forca{margin:10px 0 4px}
+.fundo-acoes{display:flex;align-items:center;gap:12px;margin-top:8px}
+.fundo-acoes .btn{cursor:pointer}
+
+/* ===== JARVIS (microfone) ===== */
+.jarvis{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 20px calc(24px + var(--safe));color:#bff4ff;font-family:var(--font-body);opacity:0;transition:opacity .35s var(--ease)}
+.jarvis.aberto{opacity:1}
+.jarvis.saindo{opacity:0}
+.jv-fundo{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,rgba(8,47,73,.94),rgba(2,6,23,.97) 62%);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.jv-fundo::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(125,211,252,.05) 0 1px,transparent 1px 4px);pointer-events:none}
+.jv-centro{position:relative;width:min(78vw,300px);aspect-ratio:1;transform:scale(.7);transition:transform .55s cubic-bezier(.2,1.2,.3,1)}
+.jarvis.aberto .jv-centro{transform:scale(1)}
+.jv-canvas{position:absolute;inset:-12%;width:124%;height:124%;filter:drop-shadow(0 0 10px rgba(56,189,248,.6))}
+.jv-aneis{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 6px rgba(56,189,248,.7))}
+.jv-aneis circle{fill:none;stroke:#67e8f9;transform-origin:100px 100px}
+.jv-a1{stroke-width:1;stroke-dasharray:3 6;opacity:.7;animation:jvGira 22s linear infinite}
+.jv-a2{stroke-width:3;stroke-dasharray:60 22 8 22;opacity:.9;animation:jvGira 9s linear infinite reverse}
+.jv-a3{stroke-width:1.2;stroke-dasharray:120 40;opacity:.6;animation:jvGira 5s linear infinite}
+.jv-a4{stroke-width:6;stroke-dasharray:2 4;opacity:.45;animation:jvGira 14s linear infinite reverse}
+.jv-marcas{stroke:#a5f3fc;stroke-width:1;opacity:.55;transform-origin:100px 100px;animation:jvGira 40s linear infinite}
+.jarvis.pensando .jv-a2{animation-duration:1.4s}
+.jarvis.pensando .jv-a3{animation-duration:.9s}
+.jv-nucleo{position:absolute;left:50%;top:50%;width:34%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px solid rgba(165,243,252,.85);background:radial-gradient(circle,#e0faff 0,#67e8f9 28%,#0891b2 62%,rgba(8,47,73,.9) 100%);color:#03222e;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 24px rgba(56,189,248,.8),0 0 70px rgba(56,189,248,.45),inset 0 0 18px rgba(255,255,255,.6);animation:jvNucleo 1.6s ease-in-out infinite alternate}
+.jarvis.pensando .jv-nucleo{animation-duration:.5s}
+.jv-status{position:relative;display:flex;align-items:center;gap:8px;font:600 11px/1 ui-monospace,'Courier New',monospace;letter-spacing:.32em;color:#67e8f9}
+.jv-ponto{width:7px;height:7px;border-radius:50%;background:#22d3ee;box-shadow:0 0 10px #22d3ee;animation:jvPisca 1s steps(2) infinite}
+.jv-titulo{position:relative;font-size:14px;color:rgba(191,244,255,.7);text-align:center;max-width:320px}
+.jv-texto{position:relative;min-height:56px;max-width:420px;text-align:center;font-size:20px;line-height:1.35;font-weight:500;color:#ecfeff;text-shadow:0 0 14px rgba(56,189,248,.55)}
+.jv-texto:not(:empty){animation:lviEntra .3s var(--ease)}
+.jv-fechar{position:relative;border:none;background:none;color:rgba(191,244,255,.5);font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer;padding:8px}
+@keyframes jvGira{to{transform:rotate(360deg)}}
+@keyframes jvNucleo{from{box-shadow:0 0 18px rgba(56,189,248,.7),0 0 50px rgba(56,189,248,.35),inset 0 0 14px rgba(255,255,255,.5)}to{box-shadow:0 0 32px rgba(56,189,248,1),0 0 100px rgba(56,189,248,.6),inset 0 0 22px rgba(255,255,255,.75)}}
+@keyframes jvPisca{50%{opacity:.2}}
+
+/* ===== MAIS ANIMAÇÕES ===== */
+.onda-pos{position:relative}
+.onda-recorte{overflow:hidden}
+.efeito-onda{position:absolute;border-radius:50%;background:currentColor;opacity:.16;transform:scale(0);pointer-events:none;animation:efeitoOnda .6s var(--ease) forwards}
+@keyframes efeitoOnda{to{transform:scale(1);opacity:0}}
+.nav-item.nav-pulo svg{animation:navPulo .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes navPulo{0%{transform:scale(1)}40%{transform:scale(1.22) translateY(-3px)}100%{transform:scale(1)}}
+.aba.active{animation:abaEntra .42s cubic-bezier(.2,.8,.2,1) both}
+@keyframes abaEntra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fullpage.active{animation:fpEntra .36s cubic-bezier(.2,.8,.2,1) both}
+@keyframes fpEntra{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+@media(max-width:639px){.modal-overlay.active .modal{animation:modalMola .42s cubic-bezier(.2,1.15,.35,1)}}
+@keyframes modalMola{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-overlay.active{animation:veuEntra .25s var(--ease)}
+@keyframes veuEntra{from{opacity:0}to{opacity:1}}
+@media(hover:hover){
+  .card,.lv-card,.cmd-card{transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+  .lv-card:hover,.cmd-card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(28,25,23,.04),0 18px 36px -16px rgba(28,25,23,.2)}
+}
+@media (prefers-reduced-motion:reduce){
+  #fundoApp,.aba.active,.fullpage.active,.modal-overlay.active,.modal-overlay.active .modal,.nav-item.nav-pulo svg{animation:none}
+  .jv-aneis circle,.jv-marcas,.jv-nucleo,.jv-ponto{animation:none}
+}

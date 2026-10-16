@@ -449,6 +449,7 @@ async function carregarDaNuvem(){
   limparDadosAntigos();
   aplicarFonteApp();
   if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
+  if(typeof aplicarFundoApp==='function') aplicarFundoApp();
   renderAll();
   fecharSplash();
   if(typeof abrirAbaDoAviso==='function') abrirAbaDoAviso();
@@ -714,6 +715,7 @@ async function compactarImagensDoEstado(){
   await persistAgora();
   if(alteradas>0){
     if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
+    if(typeof aplicarFundoApp==='function') aplicarFundoApp();
     renderAll();
     if(typeof showToast==='function') showToast('Imagens otimizadas ('+alteradas+')');
   }
