@@ -1959,3 +1959,37 @@ body{background:var(--bg);color:var(--text);font-size:14px;font-weight:400}
 .voz-resumo>div{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-dim)}
 .voz-resumo b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
 .voz-resumo .voz-aviso{color:var(--danger);font-weight:500}
+
+/* ===================== EFEITOS: textura de papel, sombras em camadas, animações sutis ===================== */
+/* papel granulado bem leve só no fundo (os cartões continuam limpos) */
+body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .11 0 0 0 0 .10 0 0 0 0 .09 0 0 0 .055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-attachment:fixed}
+/* sombras em camadas, como papel sobre a mesa (a borda fina continua) */
+.card,.section,.cmd-card,.lv-card,.lv-roteiro,.resumo-btn,.lv-pdf-preview{box-shadow:0 1px 1px rgba(28,25,23,.03),0 2px 6px rgba(28,25,23,.035),0 12px 28px -14px rgba(28,25,23,.12)}
+.resumo-card{box-shadow:none}
+.card,.section,.cmd-card,.lv-card{transition:box-shadow .25s var(--ease),transform .25s var(--ease)}
+@media (hover:hover){
+  .lv-card:hover,.cmd-card:hover,.section:hover{box-shadow:0 1px 1px rgba(28,25,23,.03),0 4px 10px rgba(28,25,23,.05),0 18px 36px -16px rgba(28,25,23,.18);transform:translateY(-1px)}
+}
+.modal{box-shadow:0 -1px 0 rgba(28,25,23,.04),0 -18px 50px -20px rgba(28,25,23,.28)}
+@media(min-width:640px){ .modal{box-shadow:0 2px 6px rgba(28,25,23,.06),0 30px 70px -24px rgba(28,25,23,.35)} }
+/* toque: os botões afundam um pouco */
+.btn,.dash-tab,.user-tab,.nav-item,.header-btn,.resumo-link,.resumo-btn,.dif-chip,.btn-icon-sm,.cmd-btn-icone,.cmd-check,.lv-rot-check,.voz-btn,.voz-mic,.section-add,.lv-barra-btn,.filter-chip,.lv-card{transition:transform .12s var(--ease),background-color .2s var(--ease),color .2s var(--ease),box-shadow .25s var(--ease)}
+.btn:active,.dash-tab:active,.user-tab:active,.nav-item:active,.header-btn:active,.resumo-link:active,.resumo-btn:active,.dif-chip:active,.btn-icon-sm:active,.cmd-btn-icone:active,.cmd-check:active,.lv-rot-check:active,.voz-btn:active,.voz-mic:active,.section-add:active,.lv-barra-btn:active,.filter-chip:active{transform:scale(.96)}
+.lv-card:active{transform:scale(.99)}
+/* cartões entrando um depois do outro */
+.efeito-entra{animation:efeitoEntra .55s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i,0) * 45ms)}
+@keyframes efeitoEntra{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+/* "feito": anel que abre + ✓ no ponto do toque */
+.efeito-feito{position:fixed;z-index:3000;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;pointer-events:none;animation:efeitoFeito .6s cubic-bezier(.16,1,.3,1) forwards}
+.efeito-feito::before{content:'';position:absolute;inset:0;border-radius:50%;background:var(--gold);opacity:.9;animation:efeitoAnel .6s ease-out forwards}
+.efeito-feito svg{position:relative;stroke-dasharray:24;stroke-dashoffset:24;animation:efeitoRisco .35s ease-out .05s forwards}
+@keyframes efeitoFeito{0%{transform:scale(.4);opacity:1}55%{transform:scale(1);opacity:1}100%{transform:scale(1.05) translateY(-10px);opacity:0}}
+@keyframes efeitoAnel{0%{box-shadow:0 0 0 0 var(--gold-tint)}100%{box-shadow:0 0 0 18px rgba(47,93,70,0)}}
+@keyframes efeitoRisco{to{stroke-dashoffset:0}}
+/* abas: a tela entra suave ao trocar */
+.aba.active{animation:efeitoAba .3s ease-out}
+@keyframes efeitoAba{from{opacity:.4}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  .efeito-entra,.efeito-feito,.efeito-feito::before,.efeito-feito svg,.aba.active{animation:none!important}
+  .lv-card:hover,.cmd-card:hover,.section:hover{transform:none}
+}

@@ -92,6 +92,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.0', itens: [
+    'Efeitos: cartões entram um após o outro, valores contam até o número certo e marcar algo como feito mostra um ✓ com vibração',
+    'Textura de papel no fundo, sombras suaves nos cartões e botões que afundam ao tocar (desliga com "reduzir movimento")'
+  ]},
   { versao: 'v4.9', itens: [
     'Microfone ao lado do Saldo em conta: fale uma compra, conta paga ou o que recebeu e o saldo do banco é atualizado (confirma antes)',
     'Louvor: acordes no lugar certo ao importar com IA (a posição vem do próprio PDF)',
@@ -1026,4 +1030,77 @@ function calEscolher(iso){
 if('serviceWorker' in navigator && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
 }
+
+/* ================= EFEITOS (sutis; desligam com "reduzir movimento" do aparelho) =================
+   1. cartões entram um após o outro ao trocar de aba / abrir o app
+   2. números de dinheiro contam até o valor
+   3. "feito": anel + ✓ no ponto do toque e vibração curta ao marcar conta paga, batida, ordem etc. */
+const efeitosLigados = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+function efeitoEntradaCartoes(raiz){
+  if(!efeitosLigados || !raiz) return;
+  const itens = [...raiz.querySelectorAll('.card, .section, .lv-card, .cmd-card, .lv-roteiro, .cmd-topo')]
+    .filter(el=>el.offsetParent !== null && !el.parentElement.closest('.card, .section, .cmd-card'))
+    .slice(0, 14);
+  itens.forEach((el, i)=>{
+    el.classList.remove('efeito-entra');
+    void el.offsetWidth;
+    el.style.setProperty('--i', i);
+    el.classList.add('efeito-entra');
+    setTimeout(()=>el.classList.remove('efeito-entra'), 700 + i*45);
+  });
+}
+function efeitoContarNumeros(raiz){
+  if(!efeitosLigados || !raiz) return;
+  raiz.querySelectorAll('.resumo-stat-val, .ponto-valor-grande, .cp-total-valor').forEach(el=>{
+    if(el.childNodes.length !== 1 || el.firstChild.nodeType !== 3) return;   // só texto puro (não mexe em quem tem ícone dentro)
+    const alvoTxt = el.textContent, m = alvoTxt.match(/^(-?)R\$\s?([\d.]+,\d{2})$/);
+    if(!m) return;
+    const alvo = Number(m[2].replace(/\./g,'').replace(',','.')) * (m[1] ? -1 : 1);
+    if(Math.abs(alvo) < 1) return;
+    const ini = performance.now(), dur = 650;
+    let escrito = '';
+    const passo = t=>{
+      if(escrito && el.textContent !== escrito) return;   // a tela foi redesenhada: para
+      const p = Math.min(1, (t - ini)/dur), e = 1 - Math.pow(1 - p, 3);
+      escrito = p < 1 ? fmtMoneySigned(alvo * e) : alvoTxt;
+      el.textContent = escrito;
+      if(p < 1) requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+  });
+}
+/* saldo grande (é um campo): conta só na abertura do app, se não estiver sendo editado */
+function efeitoContarSaldo(){
+  const inp = document.getElementById('saldoAtualInput');
+  if(!efeitosLigados || !inp || document.activeElement === inp) return;
+  const alvoTxt = inp.value, alvo = parseMoney(alvoTxt);
+  if(!(Math.abs(alvo) >= 1)) return;
+  const ini = performance.now(), dur = 900;
+  const passo = t=>{
+    if(document.activeElement === inp){ inp.value = alvoTxt; return; }
+    const p = Math.min(1, (t - ini)/dur), e = 1 - Math.pow(1 - p, 3);
+    inp.value = p < 1 ? (alvo*e).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : alvoTxt;
+    if(p < 1) requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+}
+function efeitoAoTrocarAba(aba){
+  const raiz = document.getElementById('aba-'+aba);
+  efeitoEntradaCartoes(raiz);
+  efeitoContarNumeros(raiz);
+}
+/* "feito": qualquer toque nos controles de marcar (conta paga, batida/dia do ponto, ordem, roteiro, salário, dízimo, fatura...) */
+const EFEITO_FEITO = /togglePaid|contaTapEnd|toggleDiaConcluido|toggleOrdemComando|marcarLvRoteiro|toggleCompraPago|toggleExtraRecebido|cpToggleSalario|cpToggleExtra|cpToggleDizimo|toggleFaturaMes/;
+document.addEventListener('pointerup', ev=>{
+  if(!efeitosLigados) return;
+  const alvo = ev.target.closest('[onclick], [onpointerup]');
+  if(!alvo || !EFEITO_FEITO.test((alvo.getAttribute('onclick')||'') + (alvo.getAttribute('onpointerup')||''))) return;
+  const b = document.createElement('div');
+  b.className = 'efeito-feito';
+  b.style.left = ev.clientX + 'px'; b.style.top = ev.clientY + 'px';
+  b.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  document.body.appendChild(b);
+  setTimeout(()=>b.remove(), 650);
+  if(navigator.vibrate) navigator.vibrate(8);
+}, true);
 

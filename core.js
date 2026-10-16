@@ -466,6 +466,11 @@ function fecharSplash(imediato){
     if(!el) return;
     el.classList.add('saindo');
     setTimeout(()=>el.classList.add('oculta'), 1450);
+    /* enquanto a abertura some: cartões entram e os números contam */
+    setTimeout(()=>{
+      const aba = document.querySelector('.aba.active');
+      if(aba && typeof efeitoEntradaCartoes==='function'){ efeitoEntradaCartoes(aba); efeitoContarNumeros(aba); efeitoContarSaldo(); }
+    }, 250);
   };
   const falta = SPLASH_MINIMO_MS - performance.now();
   if(imediato || falta <= 0) sair(); else setTimeout(sair, falta);
@@ -803,6 +808,7 @@ function switchAba(aba){
   if(aba==='planner'){ renderPlanner(); renderPanorama(); }
   if(aba==='louvor') renderLouvor();
   if(aba==='vendas' && typeof renderVendas==='function') renderVendas();
+  if(typeof efeitoAoTrocarAba==='function') efeitoAoTrocarAba(aba);
 }
 /* Davi/Cris é escolha de cada aparelho (fica no aparelho, não no banco): escolher Cris num celular não muda os outros */
 const CHAVE_USUARIO = 'siloe-usuario';
