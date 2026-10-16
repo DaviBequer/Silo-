@@ -93,6 +93,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.4', itens: [
+    'Notificações do celular: ao abrir, o app pede um endereço novo de notificação quando o antigo pode ter vencido'
+  ]},
   { versao: 'v5.3', itens: [
     'Sino de notificações no topo: balança quando tem aviso novo (ponto não batido, quanto falta das vendas) e cada aviso leva até o lugar dele',
     'Notificações do celular: o app renova sozinho a inscrição quando o celular troca (antes parava de chegar)'
@@ -622,6 +625,13 @@ function avisosGuardarInscricao(sub){
   state.pushInscricoes = lista;
   try{ localStorage.setItem('siloe-avisos-endpoint', j.endpoint); }catch(e){}
 }
+/* sempre um endereço novo: cancela o que o celular tinha e inscreve de novo */
+async function avisosInscricaoNova(reg){
+  try{ const velha = await reg.pushManager.getSubscription(); if(velha) await velha.unsubscribe(); }catch(e){}
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: avisosChaveBytes() });
+  try{ localStorage.setItem('siloe-avisos-renovado', String(Date.now())); }catch(e){}
+  return sub;
+}
 /* ao abrir: se as notificações estão permitidas, confere se a inscrição deste aparelho ainda vale e renova sozinho */
 async function avisosRenovarSozinho(){
   try{
@@ -631,9 +641,13 @@ async function avisosRenovarSozinho(){
     const usava = anterior || (state.pushInscricoes || []).some(p=>p.aparelho === avisosNomeAparelho());
     if(!usava) return;   // nunca ativou neste aparelho
     const reg = await navigator.serviceWorker.getRegistration(); if(!reg) return;
+    /* o celular pode guardar um endereço que o Google já descartou (o servidor recebe "410"):
+       a cada 3 dias joga fora e pede um novo, para nunca ficar preso num endereço morto */
+    let ultima = 0; try{ ultima = Number(localStorage.getItem('siloe-avisos-renovado')) || 0; }catch(e){}
+    const renovar = Date.now() - ultima > 3 * 86400000;
     let sub = await reg.pushManager.getSubscription();
-    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: avisosChaveBytes() });
-    if((state.pushInscricoes || []).some(p=>p.endpoint === sub.endpoint)) return;   // já está certo
+    if(!renovar && sub && (state.pushInscricoes || []).some(p=>p.endpoint === sub.endpoint)) return;   // já está certo
+    sub = await avisosInscricaoNova(reg);
     avisosGuardarInscricao(sub);
     persist();
   }catch(e){}
@@ -645,7 +659,7 @@ async function ativarAvisos(){
   const perm = await Notification.requestPermission();
   if(perm !== 'granted'){ showToast(perm === 'denied' ? 'Notificações bloqueadas — libere nas configurações do celular' : 'Permissão não concedida'); atualizarStatusAvisos(); return; }
   try{
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: avisosChaveBytes() });
+    const sub = await avisosInscricaoNova(reg);
     avisosGuardarInscricao(sub);
     persist();
     reg.showNotification('Siloé', { body: 'Notificações ligadas: ponto e vendas.', icon: './icon-192.png', badge: './splash-cordeiro.png' });
