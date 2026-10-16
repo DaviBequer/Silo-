@@ -73,6 +73,7 @@ function renderAll(){
   renderLouvor();
   if(typeof renderEmprestimos==='function') renderEmprestimos();
   if(typeof renderVendas==='function') renderVendas();
+  if(typeof atualizarSino==='function') atualizarSino();
 }
 
 /* ========== STORAGE & BACKUP ========== */
@@ -92,6 +93,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.3', itens: [
+    'Sino de notificações no topo: balança quando tem aviso novo (ponto não batido, quanto falta das vendas) e cada aviso leva até o lugar dele',
+    'Notificações do celular: o app renova sozinho a inscrição quando o celular troca (antes parava de chegar)'
+  ]},
   { versao: 'v5.2', itens: [
     'Louvor: compartilhe o PDF ou a foto da cifra com o Siloé (Compartilhar → Siloé) e ele já abre importando',
     'Pesquisou e não achou? Aparece o botão "Pesquisar no Cifra Club", que abre a busca lá',
@@ -604,6 +609,35 @@ async function atualizarStatusAvisos(){
   btn.textContent = ligado ? 'Desligar neste aparelho' : 'Ativar notificações';
   btn.onclick = ligado ? desligarAvisos : ativarAvisos;
 }
+/* guarda a inscrição deste aparelho e tira a antiga dele (a que o celular trocou ou a de antes de reinstalar) */
+function avisosNomeAparelho(){ return /Android/i.test(navigator.userAgent) ? 'Android' : /iPhone|iPad/i.test(navigator.userAgent) ? 'iPhone' : 'Computador'; }
+function avisosGuardarInscricao(sub){
+  try{ localStorage.removeItem('siloe-avisos-desligado'); }catch(e){}
+  const j = sub.toJSON(), aparelho = avisosNomeAparelho(), ua = navigator.userAgent;
+  let anterior = ''; try{ anterior = localStorage.getItem('siloe-avisos-endpoint') || ''; }catch(e){}
+  const lista = (state.pushInscricoes || []).filter(p=>
+    p.endpoint !== j.endpoint && p.endpoint !== anterior &&
+    !(p.aparelho === aparelho && (!p.ua || p.ua === ua)));   // mesma pessoa, mesmo aparelho: a velha sai
+  lista.push({ id: 'p' + j.endpoint.slice(-20).replace(/[^\w]/g,''), endpoint: j.endpoint, keys: j.keys, aparelho, ua, criadoEm: Date.now() });
+  state.pushInscricoes = lista;
+  try{ localStorage.setItem('siloe-avisos-endpoint', j.endpoint); }catch(e){}
+}
+/* ao abrir: se as notificações estão permitidas, confere se a inscrição deste aparelho ainda vale e renova sozinho */
+async function avisosRenovarSozinho(){
+  try{
+    if(!avisosSuportado() || Notification.permission !== 'granted') return;
+    try{ if(localStorage.getItem('siloe-avisos-desligado') === '1') return; }catch(e){}
+    let anterior = ''; try{ anterior = localStorage.getItem('siloe-avisos-endpoint') || ''; }catch(e){}
+    const usava = anterior || (state.pushInscricoes || []).some(p=>p.aparelho === avisosNomeAparelho());
+    if(!usava) return;   // nunca ativou neste aparelho
+    const reg = await navigator.serviceWorker.getRegistration(); if(!reg) return;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: avisosChaveBytes() });
+    if((state.pushInscricoes || []).some(p=>p.endpoint === sub.endpoint)) return;   // já está certo
+    avisosGuardarInscricao(sub);
+    persist();
+  }catch(e){}
+}
 async function ativarAvisos(){
   if(!avisosSuportado()){ showToast('Este navegador não recebe notificações'); return; }
   const reg = await navigator.serviceWorker.getRegistration();
@@ -612,10 +646,7 @@ async function ativarAvisos(){
   if(perm !== 'granted'){ showToast(perm === 'denied' ? 'Notificações bloqueadas — libere nas configurações do celular' : 'Permissão não concedida'); atualizarStatusAvisos(); return; }
   try{
     const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: avisosChaveBytes() });
-    const j = sub.toJSON();
-    const lista = (state.pushInscricoes || []).filter(p=>p.endpoint !== j.endpoint);
-    lista.push({ id: 'p' + j.endpoint.slice(-20).replace(/[^\w]/g,''), endpoint: j.endpoint, keys: j.keys, aparelho: /Android/i.test(navigator.userAgent) ? 'Android' : /iPhone|iPad/i.test(navigator.userAgent) ? 'iPhone' : 'Computador', criadoEm: Date.now() });
-    state.pushInscricoes = lista;
+    avisosGuardarInscricao(sub);
     persist();
     reg.showNotification('Siloé', { body: 'Notificações ligadas: ponto e vendas.', icon: './icon-192.png', badge: './splash-cordeiro.png' });
   }catch(e){ showToast('Não consegui ativar: ' + ((e && e.message) || e)); }
@@ -624,6 +655,7 @@ async function ativarAvisos(){
 async function desligarAvisos(){
   const sub = await avisosInscricaoAtual();
   if(sub){ state.pushInscricoes = (state.pushInscricoes || []).filter(p=>p.endpoint !== sub.endpoint); try{ await sub.unsubscribe(); }catch(e){} persist(); }
+  try{ localStorage.removeItem('siloe-avisos-endpoint'); localStorage.setItem('siloe-avisos-desligado', '1'); }catch(e){}   // não renova sozinho
   showToast('Notificações desligadas neste aparelho');
   atualizarStatusAvisos();
 }
@@ -1114,3 +1146,104 @@ document.addEventListener('pointerup', ev=>{
   if(navigator.vibrate) navigator.vibrate(8);
 }, true);
 
+
+/* ========== SINO DE NOTIFICAÇÕES (dentro do app) ==========
+   Os mesmos avisos das notificações do celular, calculados aqui com os dados do app:
+   ponto (batida de hoje que já passou do horário e não foi marcada) e vendas (quanto falta para a meta).
+   O que ainda não foi visto deixa o sino balançando; tocar num aviso leva até ele. */
+const SINO_BATIDAS = [
+  { campo:'entrada', nome:'entrada', padrao:'07:00' },
+  { campo:'almocoSaida', nome:'saída do almoço', padrao:'12:00' },
+  { campo:'almocoVolta', nome:'volta do almoço', padrao:'13:00' },
+  { campo:'saida', nome:'saída', padrao:'17:00' }
+];
+function sinoVistos(){ try{ return JSON.parse(localStorage.getItem('siloe-avisos-vistos') || '[]'); }catch(e){ return []; } }
+function sinoGuardarVistos(ids){ try{ localStorage.setItem('siloe-avisos-vistos', JSON.stringify(ids.slice(-60))); }catch(e){} }
+function sinoAvisos(){
+  const out = [];
+  if(typeof state === 'undefined' || !state) return out;
+  const agora = new Date(), dow = agora.getDay();
+  const hojeTxt = agora.getFullYear() + '-' + String(agora.getMonth()+1).padStart(2,'0') + '-' + String(agora.getDate()).padStart(2,'0');
+  /* PONTO: só olha (não cria o dia) */
+  if(dow >= 1 && dow <= 5 && state.ponto && state.ponto.days){
+    const mKey = hojeTxt.slice(0,7);
+    const d = (state.ponto.days[mKey] || {})[String(agora.getDate())];
+    const agoraMin = agora.getHours()*60 + agora.getMinutes();
+    if(!(d && d.concluido)){
+      SINO_BATIDAS.forEach(b=>{
+        if(d && d[b.campo] === null) return;                       // dia sem esse horário
+        if(d && d.confirmado && d.confirmado[b.campo]) return;     // já marcou
+        let hora = (d && d[b.campo]) || b.padrao;
+        if(!d && b.campo === 'saida' && dow === 5) hora = '16:00';
+        const [h, m] = hora.split(':').map(Number);
+        if(agoraMin >= h*60 + m + 5) out.push({ id:'ponto-'+hojeTxt+'-'+b.campo, tipo:'ponto', titulo:'Bater o ponto', corpo:`Falta bater a ${b.nome} (${hora}).`, quando: hora, ir:{ aba:'ponto', dia: agora.getDate() } });
+      });
+    }
+  }
+  /* VENDAS: quanto falta para a meta do mês (um aviso novo por dia) */
+  try{
+    const v = typeof calcularAvisosVendas === 'function' ? calcularAvisosVendas() : null;
+    if(v && v.falta > 0.005){
+      const planos = [v.nA ? `${v.nA} do ${v.nomeA}` : '', v.nB ? `${v.nB} do ${v.nomeB}` : ''].filter(Boolean).join(' ou ');
+      out.push({ id:'vendas-'+hojeTxt, tipo:'vendas', titulo:'Vendas do mês', corpo:`Faltam ${fmtMoney(v.falta)} para a meta de ${v.mesNome}${planos ? ' — ' + planos : ''}.`, quando:'hoje', ir:{ aba:'vendas' } });
+    }
+  }catch(e){}
+  return out;
+}
+let sinoAtuais = [];
+function atualizarSino(semLista){
+  const btn = document.getElementById('sinoBtn'), conta = document.getElementById('sinoConta');
+  if(!btn || !conta) return;
+  sinoAtuais = sinoAvisos();
+  const vistos = new Set(sinoVistos());
+  const novos = sinoAtuais.filter(a=>!vistos.has(a.id)).length;
+  conta.textContent = novos ? (novos > 9 ? '9+' : novos) : '';
+  btn.classList.toggle('tem-novo', novos > 0);
+  btn.classList.toggle('tem-aviso', sinoAtuais.length > 0);
+  btn.title = novos ? `${novos} notificaç${novos>1?'ões novas':'ão nova'}` : 'Notificações';
+  if(!semLista && document.getElementById('modalSino')?.classList.contains('active')) sinoRenderLista();
+}
+const SINO_ICONES = {
+  ponto: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  vendas: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>'
+};
+function sinoRenderLista(){
+  const vistos = new Set(sinoVistos());
+  document.getElementById('sinoLista').innerHTML = sinoAtuais.length ? sinoAtuais.map((a, i)=>`
+    <button type="button" class="sino-item ${a.tipo}${vistos.has(a.id)?'':' novo'}" style="animation-delay:${i*0.05}s" onclick="sinoIr(${i})">
+      <span class="sino-ico">${SINO_ICONES[a.tipo] || ''}</span>
+      <span class="sino-txt"><b>${a.titulo}</b><span>${a.corpo}</span></span>
+      <span class="sino-quando">${a.quando}</span>
+    </button>`).join('')
+    : `<div class="sino-vazio"><div class="sino-vazio-ico">✓</div><b>Tudo em dia</b><span>Quando faltar bater o ponto ou vender para a meta, aparece aqui.</span></div>`;
+}
+function abrirSino(){
+  sinoAtuais = sinoAvisos();
+  sinoRenderLista();
+  document.getElementById('modalSino').classList.add('active');
+  /* abriu: tudo que está na lista conta como visto (o sino para de balançar) */
+  sinoGuardarVistos([...new Set([...sinoVistos(), ...sinoAtuais.map(a=>a.id)])]);
+  atualizarSino(true);   // a lista aberta continua mostrando o que era novo
+}
+function sinoIr(i){
+  const a = sinoAtuais[i]; if(!a) return;
+  closeModal('modalSino');
+  if(a.ir.aba === 'ponto'){
+    if(state.pontoOffset){ state.pontoOffset = 0; }
+    switchAba('ponto');
+    if(typeof renderPonto === 'function') renderPonto();
+    setTimeout(()=>sinoDestacar(document.getElementById('pontoDia-' + a.ir.dia)), 120);
+  } else if(a.ir.aba === 'vendas'){
+    switchAba('vendas');
+    setTimeout(()=>sinoDestacar(document.querySelector('#vendasConteudo .vd-meta-linha') || document.getElementById('vendasConteudo')), 120);
+  }
+}
+function sinoDestacar(el){
+  if(!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  el.classList.remove('sino-destaque'); void el.offsetWidth; el.classList.add('sino-destaque');
+  setTimeout(()=>el.classList.remove('sino-destaque'), 2400);
+}
+/* a hora passa: confere de novo a cada minuto e quando o app volta para a tela */
+setInterval(atualizarSino, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) atualizarSino(); });

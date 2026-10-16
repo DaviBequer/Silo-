@@ -165,6 +165,7 @@ function persist(){
   if((state.pushInscricoes||[]).length && typeof calcularAvisosVendas==='function'){
     try{ state.avisos = { vendas: calcularAvisosVendas(), t: Date.now() }; }catch(e){}
   }
+  if(typeof atualizarSino==='function') atualizarSino();   // marcou o ponto, vendeu...: o sino acompanha
   salvarPendente = true;
   espelharLocal();
   clearTimeout(persistTimer);
@@ -452,6 +453,7 @@ async function carregarDaNuvem(){
   fecharSplash();
   if(typeof abrirAbaDoAviso==='function') abrirAbaDoAviso();
   if(typeof lviAbrirCompartilhado==='function') lviAbrirCompartilhado();
+  if(typeof avisosRenovarSozinho==='function' && !MODO_TESTE_LOCAL) avisosRenovarSozinho();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   await finalizarMigracaoLegado(precisaSalvar, legado);
   compactarImagensDoEstado();
