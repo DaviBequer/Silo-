@@ -875,7 +875,23 @@ function renderLouvorPdfPreview(){
   else n = Number(l.colunas)||2;
   cols.style.columnCount = n;
   previewEl.style.setProperty('--lv-fs', fsPara(n).toFixed(2)+'pt');
+  lvCaberNumaPagina(previewEl, fsPara(n), paisagem);
   lvAjustarZoomFolha();
+}
+/* Prioridade: tudo numa folha A4. Se passou um pouco, a letra encolhe aos poucos até caber; se precisaria
+   ficar pequena demais (abaixo de 9pt ou de 78% do tamanho escolhido), volta ao tamanho normal e segue na 2ª página. */
+function lvCaberNumaPagina(el, fsBase, paisagem){
+  const alturaPagina = (paisagem ? 210 : 297) * 96 / 25.4 - 2;   // A4 em px (o PDF sai pela impressão desta folha)
+  if(el.offsetHeight <= alturaPagina) return;
+  const minimo = Math.max(9, fsBase * 0.78);
+  let fs = fsBase;
+  while(fs > minimo){
+    fs = Math.max(minimo, fs * 0.96);
+    el.style.setProperty('--lv-fs', fs.toFixed(2)+'pt');
+    if(el.offsetHeight <= alturaPagina) return;
+    if(fs <= minimo) break;
+  }
+  el.style.setProperty('--lv-fs', fsBase.toFixed(2)+'pt');   // não coube nem pequeno: 2 páginas no tamanho normal
 }
 /* a folha tem o tamanho real do A4; em tela pequena ela só é mostrada menor (zoom), sem mudar o desenho */
 function lvAjustarZoomFolha(){

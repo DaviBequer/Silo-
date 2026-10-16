@@ -92,6 +92,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v4.9', itens: [
+    'Microfone ao lado do Saldo em conta: fale uma compra, conta paga ou o que recebeu e o saldo do banco é atualizado (confirma antes)',
+    'Louvor: acordes no lugar certo ao importar com IA (a posição vem do próprio PDF)',
+    'Louvor: o PDF encolhe a letra só o necessário para caber em uma página'
+  ]},
   { versao: 'v4.8', itens: [
     'Notificações no celular: aviso para bater o ponto e, às 18h, quanto falta vender (Dados do App → Ativar notificações)',
     'Abertura nova com efeitos (fundo preto, brilho e nome letra por letra) e ícone sem borda branca',

@@ -1453,4 +1453,140 @@ function deleteGasto(cat, id){
   showToast('Gasto removido');
 }
 
+/* ================= FALAR (microfone ao lado do "Saldo em conta") =================
+   Fala ou escreve: "comprei 50 no mercado no Nubank", "paguei a Celesc pelo Viacredi", "recebi 300 no Inter".
+   O app entende (IA do Google se a chave estiver ligada; senão, regras simples), mostra o que vai mudar e só aplica
+   ao confirmar: tira/soma no banco (e o Saldo em conta acompanha) e, se for conta do mês, marca como paga. */
+let vozRec = null, vozPlano = null;
+function vozAbrir(){
+  document.getElementById('vozTexto').value = '';
+  document.getElementById('vozResultado').innerHTML = '';
+  vozPlano = null;
+  document.getElementById('modalVoz').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  vozOuvir();
+}
+function vozFechar(){ if(vozRec){ try{ vozRec.abort(); }catch(e){} vozRec = null; } closeModal('modalVoz'); }
+function vozOuvir(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const mic = document.getElementById('vozMic'), dica = document.getElementById('vozDica'), inp = document.getElementById('vozTexto');
+  if(!SR){ dica.textContent = 'Ditado indisponível aqui: escreva abaixo ou use o microfone do teclado.'; inp.focus(); return; }
+  if(vozRec){ vozRec.stop(); return; }
+  const r = new SR();
+  r.lang = 'pt-BR'; r.interimResults = true; r.maxAlternatives = 1;
+  let falou = false;
+  r.onresult = e=>{ let t = ''; for(const res of e.results) t += res[0].transcript; inp.value = t.trim(); falou = true; };
+  r.onerror = e=>{ if(e.error === 'not-allowed' || e.error === 'service-not-allowed') dica.textContent = 'Permita o microfone para falar (ou escreva abaixo).'; };
+  r.onend = ()=>{ vozRec = null; mic.classList.remove('ouvindo'); if(falou && inp.value.trim()) vozEntender(); };
+  try{ r.start(); vozRec = r; mic.classList.add('ouvindo'); dica.textContent = 'Ouvindo… fale a compra, a conta paga ou o que recebeu.'; }
+  catch(e){ dica.textContent = 'Não consegui ligar o microfone: escreva abaixo.'; }
+}
+/* contas do mês ainda abertas (para "paguei a ...") */
+function vozContasAbertas(){
+  const mKey = mesFinanceiroAtual(), u = state.currentUser;
+  return getContasDoMes(mKey, u).map(it=>{
+    const key = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
+    return { key, desc: it.desc || 'Conta', valor: state.paid[key] ? 0 : restanteConta(key, Number(it.valor)||0) };
+  }).filter(c=>!state.paid[c.key] && c.valor > 0.004);
+}
+function vozSemAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+/* sem IA: número + banco citado + palavras-chave */
+function vozEntenderSimples(texto, bancos, contas){
+  const t = vozSemAcento(texto);
+  const m = t.match(/(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)/);
+  let valor = m ? Number(m[1].includes(',') ? m[1].replace(/\./g,'').replace(',','.') : m[1]) : 0;
+  const banco = bancos.find(b=>t.includes(vozSemAcento(b.nome)));
+  const conta = contas.find(c=>vozSemAcento(c.desc).split(/\s+/).some(p=>p.length > 2 && t.includes(p)));
+  let acao = /\b(recebi|caiu|entrou|ganhei|depositaram)\b/.test(t) ? 'recebimento' : 'compra';
+  if(/\b(paguei|pagar|pago|quitei)\b/.test(t) && conta) acao = 'pagar_conta';
+  if(acao === 'pagar_conta' && !valor) valor = conta.valor;
+  const desc = texto.replace(/\b(comprei|gastei|paguei|recebi)\b/ig, '').replace(/\d+[.,]?\d*\s*(reais|real)?/ig, '').replace(new RegExp(banco ? banco.nome : '$^', 'ig'), '').replace(/\b(no|na|pelo|pela|do|da|de|com|em)\s*$/i, '').replace(/\s+/g,' ').trim();
+  return { acao, valor, banco: banco ? banco.nome : '', conta: acao === 'pagar_conta' && conta ? conta.key : '', descricao: desc };
+}
+const VOZ_ESQUEMA = {
+  type:'object',
+  properties:{
+    acao:{ type:'string', enum:['compra','pagar_conta','recebimento','nada'] },
+    valor:{ type:'number', description:'Valor em reais (0 se não falou)' },
+    banco:{ type:'string', description:'Nome exato de um banco da lista, ou vazio' },
+    conta:{ type:'string', description:'Chave exata de uma conta da lista quando pagou uma conta do mês, ou vazio' },
+    descricao:{ type:'string', description:'O que comprou / de onde veio, curto' }
+  },
+  required:['acao','valor','banco','conta','descricao']
+};
+async function vozEntender(){
+  const texto = (document.getElementById('vozTexto').value || '').trim();
+  const res = document.getElementById('vozResultado');
+  if(!texto){ document.getElementById('vozTexto').focus(); return; }
+  const bancos = bancosDoUsuario(), contas = vozContasAbertas();
+  let p = null;
+  if(typeof lviChaveIA === 'function' && lviChaveIA()){
+    res.innerHTML = '<div class="voz-carregando">Entendendo…</div>';
+    try{
+      p = await lviPerguntarIA([{ type:'text', text:
+        `Você organiza lançamentos de um app de finanças pessoais (Brasil, reais). A pessoa falou: "${texto}".\n` +
+        `Bancos dela: ${JSON.stringify(bancos.map(b=>b.nome))}.\n` +
+        `Contas do mês ainda abertas (chave, descrição, valor): ${JSON.stringify(contas.map(c=>[c.key, c.desc, c.valor]))}.\n` +
+        `Regras: "comprei/gastei" = compra; "paguei a <conta da lista>" = pagar_conta (use a chave dela; valor = o falado ou o da conta); "paguei" algo que não está na lista = compra; "recebi/caiu/entrou" = recebimento. ` +
+        `Valores por extenso viram número ("cinquenta e dois e noventa" = 52.90). Banco só se for citado (nome exato da lista).` }], null, VOZ_ESQUEMA);
+    }catch(e){ p = null; }
+  }
+  if(!p || p.acao === 'nada') p = vozEntenderSimples(texto, bancos, contas);
+  if(p.conta && !contas.some(c=>c.key === p.conta)) p.conta = '';
+  if(p.acao === 'pagar_conta' && !p.conta) p.acao = 'compra';
+  if(p.acao === 'pagar_conta' && !(Number(p.valor) > 0)) p.valor = contas.find(c=>c.key === p.conta).valor;
+  const banco = bancos.find(b=>vozSemAcento(b.nome) === vozSemAcento(p.banco));
+  vozPlano = { acao: p.acao, valor: Math.round((Number(p.valor)||0)*100)/100, bancoId: banco ? banco.id : (bancos.length === 1 ? bancos[0].id : ''), conta: p.conta || '', descricao: p.descricao || texto };
+  vozRenderPlano();
+}
+function vozRenderPlano(){
+  const res = document.getElementById('vozResultado'); if(!vozPlano) return;
+  const bancos = bancosDoUsuario(), contas = vozContasAbertas(), us = state.users[state.currentUser];
+  const pl = vozPlano, sinal = pl.acao === 'recebimento' ? 1 : -1;
+  const banco = bancos.find(b=>b.id === pl.bancoId);
+  const tipos = [['compra','Compra'],['pagar_conta','Conta paga'],['recebimento','Recebi']];
+  res.innerHTML = `
+    <div class="voz-plano">
+      <div class="dash-tabs voz-tipos">${tipos.map(([k,n])=>`<button type="button" class="dash-tab${pl.acao===k?' active':''}" onclick="vozMudar('acao','${k}')">${n}</button>`).join('')}</div>
+      ${pl.acao === 'pagar_conta' ? `<div class="field"><label>Conta</label><select onchange="vozMudar('conta', this.value)"><option value="">Escolha a conta</option>${contas.map(c=>`<option value="${c.key}"${c.key===pl.conta?' selected':''}>${escBanco(c.desc)} · ${fmtMoney(c.valor)}</option>`).join('')}</select></div>` : `<div class="field"><label>${pl.acao==='recebimento'?'De onde veio':'O que foi'}</label><input type="text" value="${escBanco(pl.descricao)}" oninput="vozPlano.descricao=this.value"></div>`}
+      <div class="field"><label>Valor</label><div class="input-money"><input type="text" inputmode="numeric" value="${pl.valor ? pl.valor.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : ''}" oninput="maskMoneyInput(this);vozPlano.valor=parseMoney(this.value);vozAtualizarResumo()"></div></div>
+      ${bancos.length ? `<div class="field"><label>Banco</label><div class="voz-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${b.id===pl.bancoId?' active':''}" onclick="vozMudar('bancoId','${b.id}')">${escBanco(b.nome)}</button>`).join('')}</div></div>` : ''}
+      <div class="voz-resumo" id="vozResumo">${vozResumoHtml()}</div>
+      <button type="button" class="btn btn-block" onclick="vozConfirmar()">Confirmar</button>
+    </div>`;
+}
+function vozResumoHtml(){
+  const pl = vozPlano, us = state.users[state.currentUser], sinal = pl.acao === 'recebimento' ? 1 : -1;
+  const banco = bancosDoUsuario().find(b=>b.id === pl.bancoId);
+  const linhas = [];
+  if(banco) linhas.push(`<div><span>${escBanco(banco.nome)}</span><b>${fmtMoney(banco.valor)} → ${fmtMoney((Number(banco.valor)||0) + sinal*pl.valor)}</b></div>`);
+  const total = banco ? totalBancos(bancosDoUsuario()) : (us.saldoAtual||0);
+  linhas.push(`<div><span>Saldo em conta</span><b>${fmtMoney(total)} → ${fmtMoney(total + sinal*pl.valor)}</b></div>`);
+  if(pl.acao === 'pagar_conta' && pl.conta){ const c = vozContasAbertas().find(x=>x.key === pl.conta); if(c) linhas.push(`<div><span>${escBanco(c.desc)}</span><b>marca como paga</b></div>`); }
+  if(bancosDoUsuario().length && !banco) linhas.push(`<div class="voz-aviso">Escolha o banco</div>`);
+  return linhas.join('');
+}
+function vozAtualizarResumo(){ const el = document.getElementById('vozResumo'); if(el) el.innerHTML = vozResumoHtml(); }
+function vozMudar(campo, v){
+  vozPlano[campo] = v;
+  if(campo === 'conta'){ const c = vozContasAbertas().find(x=>x.key === v); if(c) vozPlano.valor = c.valor; }
+  vozRenderPlano();
+}
+function vozConfirmar(){
+  const pl = vozPlano; if(!pl) return;
+  if(!(pl.valor > 0)){ showToast('Diga ou digite o valor'); return; }
+  const bancos = bancosDoUsuario(), us = state.users[state.currentUser];
+  if(bancos.length && !pl.bancoId){ showToast('Escolha o banco'); return; }
+  if(pl.acao === 'pagar_conta' && !pl.conta){ showToast('Escolha a conta'); return; }
+  const sinal = pl.acao === 'recebimento' ? 1 : -1;
+  const banco = bancos.find(b=>b.id === pl.bancoId);
+  if(banco){ banco.valor = Math.round(((Number(banco.valor)||0) + sinal*pl.valor)*100)/100; us.saldoAtual = totalBancos(bancos); }
+  else us.saldoAtual = Math.round(((us.saldoAtual||0) + sinal*pl.valor)*100)/100;
+  if(pl.acao === 'pagar_conta'){ state.paid[pl.conta] = true; if(state.pagamentosParciais) delete state.pagamentosParciais[pl.conta]; }
+  persist();
+  vozFechar();
+  renderPlanner(); renderPanorama();
+  showToast(`${pl.acao==='recebimento'?'+':'−'} ${fmtMoney(pl.valor)}${banco?' · '+banco.nome:''} · saldo ${fmtMoney(us.saldoAtual)}`);
+}
+
 

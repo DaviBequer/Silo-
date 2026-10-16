@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.8">
+<link rel="stylesheet" href="style.css?v=4.9">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.8</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v4.9</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -58,7 +58,9 @@
         <button type="button" class="resumo-link" onclick="openReservaModal()">Reserva</button>
       </div>
     </div>
-    <div class="resumo-label">Saldo em conta</div>
+    <div class="resumo-label resumo-label-voz">Saldo em conta
+      <button type="button" class="voz-btn" onclick="vozAbrir()" title="Falar uma compra ou conta paga" aria-label="Falar uma compra ou conta paga"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg></button>
+    </div>
     <div class="input-money"><input type="text" id="saldoAtualInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setSaldoAtual(this.value)"></div>
     <button type="button" class="saldo-bancos" id="saldoBancosInfo" style="display:none" onclick="abrirBancosModal()"></button>
     <div class="reserva-badge" id="reservaBadge" style="display:none" onclick="openReservaModal()"></div>
@@ -909,6 +911,25 @@
 </div>
 
 <!-- MODAL: saldo por banco (a soma vira o "Saldo em conta") -->
+<!-- MODAL: falar uma compra / conta paga / recebimento e atualizar o saldo -->
+<div class="modal-overlay" id="modalVoz">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Falar</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="vozFechar()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="voz-ouvir">
+      <button type="button" class="voz-mic" id="vozMic" onclick="vozOuvir()" aria-label="Falar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg></button>
+      <div class="voz-dica" id="vozDica">Toque e fale. Ex.: “comprei 50 reais no mercado no Nubank”, “paguei a Celesc pelo Viacredi”, “recebi 300 no Inter”.</div>
+    </div>
+    <form class="voz-escrever" onsubmit="event.preventDefault();vozEntender()">
+      <input type="text" id="vozTexto" class="voz-campo" placeholder="Ou escreva aqui" autocomplete="off" enterkeyhint="go">
+      <button type="submit" class="btn btn-sm">Entender</button>
+    </form>
+    <div id="vozResultado"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalBancos">
   <div class="modal">
     <div class="modal-header">
@@ -1570,18 +1591,18 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=4.8"></script>
-<script src="core.js?v=4.8"></script>
-<script src="comando.js?v=4.8"></script>
-<script src="layout.js?v=4.8"></script>
-<script src="app.js?v=4.8"></script>
-<script src="panorama.js?v=4.8"></script>
-<script src="planner.js?v=4.8"></script>
-<script src="ponto.js?v=4.8"></script>
-<script src="louvor.js?v=4.8"></script>
-<script src="louvor-extra.js?v=4.8"></script>
-<script src="emprestimo.js?v=4.8"></script>
-<script src="vendas.js?v=4.8"></script>
+<script src="supabase.js?v=4.9"></script>
+<script src="core.js?v=4.9"></script>
+<script src="comando.js?v=4.9"></script>
+<script src="layout.js?v=4.9"></script>
+<script src="app.js?v=4.9"></script>
+<script src="panorama.js?v=4.9"></script>
+<script src="planner.js?v=4.9"></script>
+<script src="ponto.js?v=4.9"></script>
+<script src="louvor.js?v=4.9"></script>
+<script src="louvor-extra.js?v=4.9"></script>
+<script src="emprestimo.js?v=4.9"></script>
+<script src="vendas.js?v=4.9"></script>
 <script>carregar();</script>
 </body>
 </html>

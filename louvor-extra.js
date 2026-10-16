@@ -508,7 +508,7 @@ function lviTextoDaRespostaIA(c){
   return '';
 }
 /* Google "com muita procura" (comum no plano grátis): tenta de novo e depois com o modelo reserva */
-async function lviPerguntarIA(partes, status){
+async function lviPerguntarIA(partes, status, esquema){
   const tentativas = [LVI_IA_MODELO, LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA];
   let limite = false;
   for(let i = 0; i < tentativas.length; i++){
@@ -516,7 +516,7 @@ async function lviPerguntarIA(partes, status){
       if(status) status('Google ocupado, tentando de novo…');
       await new Promise(r=>setTimeout(r, 2500 * i));
     }
-    try{ return await lviPerguntarIAUmaVez(partes, tentativas[i]); }
+    try{ return await lviPerguntarIAUmaVez(partes, tentativas[i], esquema); }
     catch(e){
       const reserva = tentativas[i] !== LVI_IA_MODELO;
       if(!e.passageiro && !reserva) throw e;   // chave errada, resposta estranha...: não adianta insistir
@@ -525,7 +525,7 @@ async function lviPerguntarIA(partes, status){
   }
   throw new Error(limite ? 'limite grátis do Google atingido, tente daqui a pouco' : 'o Google está com muita procura agora, tente daqui a pouco');
 }
-async function lviPerguntarIAUmaVez(partes, modelo){
+async function lviPerguntarIAUmaVez(partes, modelo, esquema){
   const chave = lviChaveIA();
   if(!chave) throw new Error('sem chave');
   const ctrl = new AbortController(), t = setTimeout(()=>ctrl.abort(), 120000);
@@ -534,7 +534,7 @@ async function lviPerguntarIAUmaVez(partes, modelo){
     res = await fetch(LVI_IA_URL, {
       method:'POST', signal: ctrl.signal,
       headers:{ 'Content-Type':'application/json', 'x-goog-api-key': chave },
-      body: JSON.stringify({ model: modelo, input: partes, response_format:{ type:'text', mime_type:'application/json', schema: LVI_IA_ESQUEMA } })
+      body: JSON.stringify({ model: modelo, input: partes, response_format:{ type:'text', mime_type:'application/json', schema: esquema || LVI_IA_ESQUEMA } })
     });
     corpo = await res.json().catch(()=>null);
   }catch(e){ throw new Error(e && e.name==='AbortError' ? 'a IA demorou demais' : 'sem conexão com a IA'); }
@@ -564,12 +564,56 @@ function lviLinhaChordPro(s){
   if(!texto.trim()) return chords.length ? { type:'chords', chords: chords.map(c=>({ name:c.name })) } : { type:'lyric', text:'', chords:[] };
   return { type:'lyric', text: texto, chords };
 }
+/* A IA acerta as partes, mas chuta a posição dos acordes. Num PDF com texto, a leitura simples sabe a posição exata
+   (pela coordenada de cada acorde em cima da letra). Para cada verso da IA, procura o mesmo verso (ou ele quebrado
+   em duas linhas) na leitura simples e, se os acordes forem os mesmos, usa as posições de lá. */
+const lviEhLetra = ch => /[a-z0-9à-ü]/.test(ch.toLowerCase());
+function lviSoLetras(s){ return Array.from(String(s||'')).filter(lviEhLetra).join('').toLowerCase(); }
+function lviLetrasAntes(texto, p){ let n = 0; for(let i = 0; i < Math.min(p, texto.length); i++) if(lviEhLetra(texto[i])) n++; return n; }
+function lviPosDaLetra(texto, k){ let n = 0; for(let i = 0; i < texto.length; i++){ if(lviEhLetra(texto[i])){ if(n === k) return i; n++; } } return -1; }
+function lviMesmoAcorde(a, b){ return String(a).replace(/\s/g,'').toLowerCase() === String(b).replace(/\s/g,'').toLowerCase(); }
+function lviCorrigirAcordesPeloPdf(linhas, simples){
+  if(!simples || !simples.length) return 0;
+  let corrigidas = 0, inicio = 0;
+  linhas.forEach(r=>{
+    if(r.type !== 'lyric' || !r.chords || !r.chords.length) return;
+    const alvo = lviSoLetras(r.text);
+    if(alvo.length < 4) return;
+    for(let k = 0; k < simples.length; k++){
+      const i = (inicio + k) % simples.length;
+      const grupo = [simples[i]];
+      if(lviSoLetras(simples[i].text) !== alvo){
+        if(i + 1 < simples.length && lviSoLetras(simples[i].text + simples[i+1].text) === alvo) grupo.push(simples[i+1]);
+        else continue;
+      }
+      /* posição de cada acorde do PDF = mesma letra no verso da IA */
+      let base = 0; const novos = [];
+      grupo.forEach(s=>{
+        const fim = s.text.replace(/\s+$/,'').length;
+        (s.chords || []).forEach(c=>{
+          let pos;
+          if(c.idx >= fim){ pos = r.text.replace(/\s+$/,'').length + (c.idx - fim); if(grupo.length > 1 && s === grupo[0]) pos = lviPosDaLetra(r.text, base + lviLetrasAntes(s.text, fim)); }
+          else { const p = lviPosDaLetra(r.text, base + lviLetrasAntes(s.text, c.idx)); pos = p < 0 ? r.text.length : p; }
+          novos.push({ name: c.name, idx: Math.max(0, pos) });
+        });
+        base += lviLetrasAntes(s.text, s.text.length);
+      });
+      if(novos.length === r.chords.length && novos.every((c, x)=>lviMesmoAcorde(c.name, r.chords[x].name))){
+        r.chords = novos.map((c, x)=>({ name: r.chords[x].name, idx: c.idx }));
+        corrigidas++; inicio = i + grupo.length;
+      }
+      break;
+    }
+  });
+  return corrigidas;
+}
 /* JSON da IA → mesmo formato de resultado do lviImportar */
-function lviMontarDaIA(j, fi){
+function lviMontarDaIA(j, fi, simples){
   let secoes = (j && j.secoes || []).map(s=>{
     const rep = String(s.repete||'').trim();
     if(rep){ const v = Math.max(1, Number(s.vezes)||1); return { repeatOf:{ name: rep }, label: 'Repete - ' + rep + (v > 1 ? ' ' + v + 'x' : ''), lines:[] }; }
     const lines = (s.linhas||[]).filter(x=>String(x).trim() !== '--').map(lviLinhaChordPro);
+    lviCorrigirAcordesPeloPdf(lines, simples);
     while(lines.length && lines[lines.length-1].type==='lyric' && !lines[lines.length-1].text.trim()) lines.pop();   // linhas vazias no fim da parte
     return { name: String(s.nome||'Parte').trim(), lines };
   });
@@ -592,11 +636,15 @@ function lviMontarDaIA(j, fi){
 async function lviImportarComIA(file, status){
   status('Lendo com IA… (alguns segundos)');
   const b64 = await lviArquivoBase64(file);
+  /* em paralelo: a leitura simples do PDF, só para pegar a posição exata dos acordes */
+  const simplesP = lviEhImagem(file) ? Promise.resolve(null) : lviImportarSimples(file, ()=>{}).catch(()=>null);
   const arquivo = lviEhImagem(file)
     ? { type:'image', data: b64, mime_type: lviTipoImagem(file) }
     : { type:'document', data: b64, mime_type: 'application/pdf' };
   const j = await lviPerguntarIA([ arquivo, { type:'text', text: LVI_IA_REGRAS + '\n\nNome do arquivo: ' + (file.name||'') } ], status);
-  return lviMontarDaIA(j, lviNomeDoArquivo(file.name||''));
+  const simples = await simplesP;
+  const linhasPdf = simples ? lviTextoParaLinhas(simples.conteudo).filter(r=>r.type==='lyric') : null;
+  return lviMontarDaIA(j, lviNomeDoArquivo(file.name||''), linhasPdf);
 }
 
 /* ---------- importar: arquivo → { titulo, artista, tom, conteudo } ---------- */
