@@ -232,7 +232,9 @@ function lmRenderEscolher(termo){
     ensureLouvorConfig(l);
     const tom = lvTomAtual(l);
     return `<button type="button" class="lm-esc-item" onclick="lmEscolher('${l.id}')"><span><b>${lvEsc(l.titulo||'Sem título')}</b><small>${lvEsc(l.artista||'')}${l.artista?' · ':''}${lmPartes(l).length} partes</small></span>${tom?`<em>${tom}</em>`:''}</button>`;
-  }).join('') || '<div class="lm-vazio">Nenhuma música encontrada.</div>';
+  }).join('') || (termo
+    ? `<div class="lv-cifraclub"><div class="lv-cc-titulo">Não está no app</div><a class="lv-cc-btn" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(document.getElementById('lmBusca').value.trim())}" target="_blank" rel="noopener"><span>Pesquisar no Cifra Club</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a></div>`
+    : '<div class="lm-vazio">Nenhuma música encontrada.</div>');
 }
 function lmEscolher(id){
   const src = lmLouvor(id); if(!src) return;
@@ -326,13 +328,19 @@ function lviRelatorioHtml(r, final){
   }
   if(perdidas) it.push(av(`${perdidas} linha${perdidas>1?'s':''} do PDF não entr${perdidas>1?'aram':'ou'}: ${(c.faltando||[]).slice(0,3).map(t=>'“'+lvEsc(t)+'”').join(', ')}${perdidas>3?'…':''}`));
   if(olhar) it.push(av(`${olhar} linha${olhar>1?'s':''} com acordes que não deu para conferir — ficam em amarelo no editor`));
-  if(r.avisoIA) it.push(av(`IA indisponível (${lvEsc(r.avisoIA)}): usei a leitura simples`));
+  if(r.avisoIA) it.push(av(`IA indisponível (${lvEsc(r.avisoIA)}): usei a leitura simples <button type="button" class="lvi-rel-ia" onclick="lviTentarIADeNovo()">Tentar com IA de novo</button>`));
   const tudoCerto = !perdidas && !olhar && !r.avisoIA && c.comPdf !== false;
   return `<div class="lvi-rel${tudoCerto?' certo':''}">
     <div class="lvi-rel-topo"><span class="lvi-rel-selo">${tudoCerto?'✓':'!'}</span><b>${tudoCerto?'Conferido':'Pronto — veja os avisos'}</b></div>
     ${it.join('')}
     ${final ? `<div class="lvi-rel-final">${final}</div>` : ''}
   </div>`;
+}
+/* a IA estava ocupada: lê o mesmo arquivo de novo (no louvor aberto, substitui sem perguntar) */
+function lviTentarIADeNovo(){
+  const u = window.lviUltimo; if(!u || !u.file) return;
+  const ev = { target:{ files:[u.file], value:'' }, semConfirmar: true };
+  if(u.onde === 'atual') lvImportarNoAtual(ev); else lvImportarNoNovo(ev);
 }
 /* contagem para a leitura simples (sem IA) */
 function lviConferenciaSimples(conteudo, usouOcr){
@@ -354,4 +362,23 @@ function lviConferenciaIA(secoes, simples){
   const tudo = lviSoLetras(letra.map(r=>r.text).join(''));
   simples.forEach(s=>{ const k = lviSoLetras(s.text); if(k.length >= 8 && !tudo.includes(k) && !lviEhInfoNaoLetra(s.text)) c.faltando.push(s.text.trim()); });
   return c;
+}
+
+/* ---------- "Compartilhar → Siloé" no celular ----------
+   O sw.js guarda o PDF/foto recebido e abre o app em ?compartilhado=1: aqui vai para o Louvor e já importa. */
+async function lviAbrirCompartilhado(){
+  if(!/[?&]compartilhado=1/.test(location.search) || !('caches' in window)) return;
+  history.replaceState(null, '', location.pathname);
+  try{
+    const cache = await caches.open('siloe-compartilhado');
+    const resp = await cache.match('./arquivo-compartilhado');
+    if(!resp){ showToast('Não recebi o arquivo. Tente compartilhar de novo.'); return; }
+    await cache.delete('./arquivo-compartilhado');
+    const nome = decodeURIComponent(resp.headers.get('X-Nome') || 'cifra.pdf');
+    const blob = await resp.blob();
+    const file = new File([blob], nome, { type: blob.type || 'application/pdf' });
+    switchAba('louvor');
+    openLouvorForm();
+    lvImportarNoNovo({ target:{ files:[file], value:'' } });
+  }catch(e){ showToast('Não consegui abrir o arquivo compartilhado'); }
 }

@@ -92,6 +92,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.2', itens: [
+    'Louvor: compartilhe o PDF ou a foto da cifra com o Siloé (Compartilhar → Siloé) e ele já abre importando',
+    'Pesquisou e não achou? Aparece o botão "Pesquisar no Cifra Club", que abre a busca lá',
+    'IA: quando o Google está ocupado, o app insiste por cerca de 1 minuto (com a contagem na tela) e, se não der, mostra "Tentar com IA de novo"'
+  ]},
   { versao: 'v5.1', itens: [
     'Louvor: Montar medley — escolha as músicas, toque nas partes na ordem em que vão cantar (pode repetir), mude o tom de cada uma e sai a cifra pronta, com PDF e slides',
     'O medley acompanha as correções das músicas originais',

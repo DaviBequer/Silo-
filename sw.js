@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v52';
-const APP_VERSION = '5.1';
+const CACHE_NAME = 'siloe-cache-v53';
+const APP_VERSION = '5.2';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -43,7 +43,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const nomes = await caches.keys();
-    await Promise.all(nomes.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)));
+    await Promise.all(nomes.filter((n) => n !== CACHE_NAME && n !== 'siloe-compartilhado').map((n) => caches.delete(n)));
     await self.clients.claim();
   })());
 });
@@ -52,8 +52,23 @@ self.addEventListener('activate', (event) => {
    O banco (Supabase) e o login nunca passam por aqui: vão direto, sem cópia. */
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  /* "Compartilhar → Siloé" (PDF/foto da cifra): guarda o arquivo e abre o app, que importa no Louvor */
+  if (req.method === 'POST' && url.origin === self.location.origin && url.searchParams.has('compartilhar')) {
+    event.respondWith((async () => {
+      try {
+        const dados = await req.formData();
+        const arq = dados.getAll('arquivo').find(f => f && typeof f !== 'string');
+        if (arq) {
+          const cache = await caches.open('siloe-compartilhado');
+          await cache.put('./arquivo-compartilhado', new Response(arq, { headers: { 'Content-Type': arq.type || 'application/pdf', 'X-Nome': encodeURIComponent(arq.name || 'cifra.pdf') } }));
+        }
+      } catch (e) {}
+      return Response.redirect('./?compartilhado=1', 303);
+    })());
+    return;
+  }
+  if (req.method !== 'GET') return;
   if (url.hostname.endsWith('supabase.co')) return;
   const daCasa = url.origin === self.location.origin;
   const guardavel = daCasa || EXTERNOS.some(e => req.url.startsWith(e)) || url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com');

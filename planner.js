@@ -1528,7 +1528,7 @@ async function vozEntender(){
         `Bancos dela: ${JSON.stringify(bancos.map(b=>b.nome))}.\n` +
         `Contas do mês ainda abertas (chave, descrição, valor): ${JSON.stringify(contas.map(c=>[c.key, c.desc, c.valor]))}.\n` +
         `Regras: "comprei/gastei" = compra; "paguei a <conta da lista>" = pagar_conta (use a chave dela; valor = o falado ou o da conta); "paguei" algo que não está na lista = compra; "recebi/caiu/entrou" = recebimento. ` +
-        `Valores por extenso viram número ("cinquenta e dois e noventa" = 52.90). Banco só se for citado (nome exato da lista).` }], null, VOZ_ESQUEMA);
+        `Valores por extenso viram número ("cinquenta e dois e noventa" = 52.90). Banco só se for citado (nome exato da lista).` }], t=>{ res.innerHTML = `<div class="voz-carregando">${lvEsc(t)}</div>`; }, VOZ_ESQUEMA);
     }catch(e){ p = null; }
   }
   if(!p || p.acao === 'nada') p = vozEntenderSimples(texto, bancos, contas);

@@ -508,17 +508,22 @@ function lviTextoDaRespostaIA(c){
   return '';
 }
 /* Google "com muita procura" (comum no plano grátis): tenta de novo e depois com o modelo reserva */
+/* Google ocupado: insiste por cerca de 1 minuto, alternando o modelo principal e o reserva,
+   com a contagem na tela. Só desiste antes se o erro não for passageiro (chave errada etc.). */
+const LVI_IA_ESPERAS = [0, 3, 5, 8, 10, 12, 15];   // segundos antes de cada tentativa (~53 s no total)
 async function lviPerguntarIA(partes, status, esquema){
-  const tentativas = [LVI_IA_MODELO, LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA];
+  const modelos = [LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA];
   let limite = false;
-  for(let i = 0; i < tentativas.length; i++){
-    if(i > 0){
-      if(status) status('Google ocupado, tentando de novo…');
-      await new Promise(r=>setTimeout(r, 2500 * i));
+  for(let i = 0; i < LVI_IA_ESPERAS.length; i++){
+    for(let s = LVI_IA_ESPERAS[i]; s > 0; s--){
+      if(status) status(`Google ocupado — tentando de novo em ${s} s (tentativa ${i+1} de ${LVI_IA_ESPERAS.length})`);
+      await new Promise(r=>setTimeout(r, 1000));
     }
-    try{ return await lviPerguntarIAUmaVez(partes, tentativas[i], esquema); }
+    if(i > 0 && status) status(`Tentando de novo (tentativa ${i+1} de ${LVI_IA_ESPERAS.length})…`);
+    const modelo = modelos[i % modelos.length];
+    try{ return await lviPerguntarIAUmaVez(partes, modelo, esquema); }
     catch(e){
-      const reserva = tentativas[i] !== LVI_IA_MODELO;
+      const reserva = modelo !== LVI_IA_MODELO;
       if(!e.passageiro && !reserva) throw e;   // chave errada, resposta estranha...: não adianta insistir
       if(!reserva) limite = limite || !!e.limite;
     }
@@ -716,6 +721,7 @@ function lviStatus(id, texto, erro){
 async function lvImportarNoNovo(ev){
   const file = ev.target.files[0]; ev.target.value = '';
   if(!file) return;
+  window.lviUltimo = { file, onde: 'novo' };
   const prog = lviProgresso('lvNovoImportStatus');
   document.getElementById('pageLouvorForm')?.classList.add('importando');
   try{
@@ -736,7 +742,8 @@ async function lvImportarNoNovo(ev){
 async function lvImportarNoAtual(ev){
   const file = ev.target.files[0]; ev.target.value = '';
   const l = getLouvorAtual(); if(!file || !l) return;
-  if((l.conteudo||'').trim() && !(await iosConfirm('Substituir a cifra atual pelo conteúdo do arquivo?'))) return;
+  if(!ev.semConfirmar && (l.conteudo||'').trim() && !(await iosConfirm('Substituir a cifra atual pelo conteúdo do arquivo?'))) return;
+  window.lviUltimo = { file, onde: 'atual' };
   const prog = lviProgresso('lvEdicaoImportStatus');
   try{
     const r = await lviImportar(file, prog);

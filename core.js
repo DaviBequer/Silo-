@@ -451,6 +451,7 @@ async function carregarDaNuvem(){
   renderAll();
   fecharSplash();
   if(typeof abrirAbaDoAviso==='function') abrirAbaDoAviso();
+  if(typeof lviAbrirCompartilhado==='function') lviAbrirCompartilhado();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   await finalizarMigracaoLegado(precisaSalvar, legado);
   compactarImagensDoEstado();

@@ -2119,3 +2119,10 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
   .lvi-passo,.lvi-rel,.lvi-rel-item,.lvi-rel-selo,.lm-chegou{animation:none}
   .lvi-passo.ativo .lvi-passo-ico{animation-duration:2s}
 }
+.lvi-rel-ia{display:block;margin-top:8px;padding:7px 14px;border-radius:999px;border:none;background:var(--gold);color:#fff;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+/* busca sem resultado: atalho para o Cifra Club */
+.lv-cifraclub{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:28px 16px;animation:lviEntra .35s var(--ease) both}
+.lv-cc-titulo{font-family:var(--font-display);font-size:22px;line-height:1.2;color:var(--text)}
+.lv-cc-btn{display:inline-flex;align-items:center;gap:10px;padding:13px 20px;border-radius:999px;background:#f26d21;color:#fff;font-size:14.5px;font-weight:600;text-decoration:none;box-shadow:0 6px 18px -8px rgba(242,109,33,.7)}
+.lv-cc-btn:active{transform:scale(.97)}
+.lv-cc-dica{font-size:12.5px;color:var(--text-faint)}
