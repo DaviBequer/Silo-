@@ -92,6 +92,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.1', itens: [
+    'Louvor: Montar medley — escolha as músicas, toque nas partes na ordem em que vão cantar (pode repetir), mude o tom de cada uma e sai a cifra pronta, com PDF e slides',
+    'O medley acompanha as correções das músicas originais',
+    'Nova tela de adicionar louvor: a importação mostra cada passo e no fim o que foi conferido (linhas, partes, acordes com o PDF); o que não deu para conferir fica em amarelo'
+  ]},
   { versao: 'v5.0', itens: [
     'Efeitos: cartões entram um após o outro, valores contam até o número certo e marcar algo como feito mostra um ✓ com vibração',
     'Textura de papel no fundo, sombras suaves nos cartões e botões que afundam ao tocar (desliga com "reduzir movimento")'

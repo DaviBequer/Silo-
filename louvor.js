@@ -164,7 +164,7 @@ function renderLouvorLista(){
     return `<div class="lv-card" onclick="abrirLouvorDetalhe('${l.id}')">
       <div class="lv-card-info">
         <div class="lv-card-titulo">${l.titulo||'Sem título'}</div>
-        <div class="lv-card-meta">${l.artista||'Artista desconhecido'} · ${l.categoria||'Louvor'}</div>
+        <div class="lv-card-meta">${l.medley ? `Medley · ${l.medley.musicas.length} música${l.medley.musicas.length===1?'':'s'}` : (l.artista||'Artista desconhecido')} · ${l.categoria||'Louvor'}</div>
         ${badges}
       </div>
       ${tomAtual?`<div class="lv-card-tom">${tomAtual}</div>`:''}
@@ -182,6 +182,8 @@ function openLouvorForm(){
   window.lvNovoTomOriginal = '';
   window.lvNovoTomModoMenor = false;
   window.lvNovoConteudo = '';   // preenchido se importar um PDF/foto
+  window.lvNovoRevisar = [];
+  document.getElementById('pageLouvorForm').classList.remove('importando');
   const st = document.getElementById('lvNovoImportStatus'); if(st){ st.textContent = ''; st.classList.remove('erro'); }
   renderLvNovoCategoriaChips();
   atualizarLvNovoTomBox();
@@ -217,6 +219,7 @@ function criarLouvor(){
     status: 'producao',
     colunas: 'auto',
     conteudo: window.lvNovoConteudo || '',
+    ...(window.lvNovoRevisar && window.lvNovoRevisar.length ? { revisar: window.lvNovoRevisar.slice() } : {}),
     criadoEm: Date.now()
   };
   state.louvores.push(novo);
@@ -236,6 +239,7 @@ function abrirLouvorDetalhe(id){
   const l = getLouvorAtual();
   if(!l) return;
   ensureLouvorConfig(l);
+  if(typeof lvAoAbrirDetalhe==='function') lvAoAbrirDetalhe(l);
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
   document.getElementById('lvTitulo').value = l.titulo || '';
   document.getElementById('lvArtista').value = l.artista || '';
@@ -288,8 +292,10 @@ function selecionarLvCategoria(c){
 function lvAtualizarEditor(){
   const ta = document.getElementById('lvConteudo'), realce = document.getElementById('lvConteudoRealce');
   if(!ta || !realce) return;
+  const olhar = typeof lvLinhasRevisar==='function' ? lvLinhasRevisar() : new Set();   // linhas que a importação não conseguiu conferir
   realce.innerHTML = ta.value.split('\n').map(linha=>{
     const t = linha.trim(), esc = lvEsc(linha) || '';
+    if(t && olhar.has(t)) return `<span class="rl-olhar">${esc}</span>`;
     if(/^\[.+\]$/.test(t)) return `<span class="rl-bloco">${esc}</span>`;
     if(/^-{1,3}$/.test(t)) return `<span class="rl-marca">${esc}</span>`;
     if(t && isChordLine(t)) return `<span class="rl-acorde">${esc}</span>`;
@@ -304,7 +310,9 @@ function salvarLouvorCampo(){
   const l = getLouvorAtual(); if(!l) return;
   l.titulo = document.getElementById('lvTitulo').value;
   l.artista = document.getElementById('lvArtista').value;
-  l.conteudo = document.getElementById('lvConteudo').value;
+  const conteudoNovo = document.getElementById('lvConteudo').value;
+  if(l.medley && conteudoNovo !== l.conteudo) l.medleyEditado = true;   // mexeu à mão: o medley para de acompanhar as originais
+  l.conteudo = conteudoNovo;
   lvAtualizarEditor();
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
   renderLouvorLista();
@@ -447,6 +455,8 @@ function renderLvTomGrid(){
   let maior, menor;
   if(lvTomPickerModo==='novo'){
     maior = window.lvNovoTomOriginal || ''; menor = !!window.lvNovoTomModoMenor;
+  }else if(lvTomPickerModo==='medley'){
+    const t = lmTomDoPicker(); maior = t.tom; menor = t.menor;
   }else{
     const l = getLouvorAtual(); if(!l) return;
     maior = lvTomMaiorAtual(l); menor = !!l.tomModoMenor;
@@ -501,6 +511,7 @@ function lvTransposeConteudoTexto(conteudo, delta, tom, tomAntes){
   }).join('\n');
 }
 function lvTomGridEscolher(nota, modoMenor){
+  if(lvTomPickerModo==='medley'){ lmTomEscolhido(nota, modoMenor); return; }
   if(lvTomPickerModo==='novo'){
     window.lvNovoTomOriginal = nota;
     window.lvNovoTomModoMenor = modoMenor;
@@ -515,6 +526,13 @@ function lvTomGridEscolher(nota, modoMenor){
   const pcNota = lvPc(nota), pcAntes = lvPc(lvTomMaiorAtual(l));
   const delta = (pcAntes===-1 || pcNota===-1) ? 0 : ((pcNota - pcAntes)%12+12)%12;
   l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, nota, lvTomMaiorAtual(l));
+  /* medley: cada música sobe/desce junto, para continuar igual quando o medley se atualizar */
+  if(l.medley){
+    l.medley.musicas.forEach((m, i)=>{ if(m.tom && delta) m.tom = lvShiftNote(m.tom, delta) || m.tom; });
+    const primeira = l.medley.musicas.find(m=>l.medley.seq.some(s=>s.id===m.id));
+    if(primeira){ primeira.tom = nota; primeira.menor = modoMenor; }
+    if(!l.medleyEditado) l.conteudo = lmGerarTexto(l.medley);
+  }
   const conteudoEl = document.getElementById('lvConteudo');
   if(conteudoEl){ conteudoEl.value = l.conteudo; lvAtualizarEditor(); }
   l.tomOriginal = nota;
@@ -702,12 +720,15 @@ function lvParseContent(conteudo){
   flushPendingChord();
 
   /* "[Repete - Refrão]" sem letra: nos slides, repete a letra do bloco original */
-  const expandidos = [], originais = [];
+  const expandidos = [];
+  let originais = [];
+  const semVezes = t=>String(t||'').trim().toLowerCase().replace(/\s*\(?\d+\s*x\)?$/,'');   // "Refrão 2x" = "Refrão"
   slides.forEach(s=>{
+    if(/^♪/.test(s.label||'')){ originais = []; return; }   // medley: começou outra música, o "Repete" vale só dentro dela
     const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(s.label||'');
     if(rep && !s.lines.length){
-      const alvo = rep[1].trim().toLowerCase();
-      expandidos.push(...originais.filter(o=>(o.label||'').trim().toLowerCase()===alvo).map(o=>({ label:o.label, lines:o.lines.slice() })));
+      const alvo = semVezes(rep[1]);
+      expandidos.push(...originais.filter(o=>semVezes(o.label)===alvo).map(o=>({ label:o.label, lines:o.lines.slice() })));
       return;
     }
     originais.push(s);
@@ -824,7 +845,11 @@ function renderLouvorPdfPreview(){
   const abre = ()=>{ if(!aberta){ aberta = true; blocoHtml = ''; blocoLinhas = 0; } };
   items.forEach(it=>{
     if(it.type==='section'){
-      fecha(); abre(); nSecoes++;
+      const musica = /^♪\s*(.+?)(?:\s+—\s+Tom\s+(\S+))?$/.exec(it.label);   // medley: começo de cada música
+      /* a primeira parte de cada música fica no mesmo bloco do nome dela (não se separam entre colunas) */
+      if(musica || !(aberta && /^<div class="lv-sheet-musica"/.test(blocoHtml) && !/lv-sheet-section/.test(blocoHtml))) fecha();
+      abre(); nSecoes++;
+      if(musica){ blocoHtml += `<div class="lv-sheet-musica" data-si="${it.idx}"><b>${lvEsc(musica[1])}</b>${musica[2]?`<span>Tom ${lvEsc(musica[2])}</span>`:''}</div>`; return; }
       const rep = /^repete\b/i.test(it.label);
       blocoHtml += `<div class="lv-sheet-section-wrap${rep?' rep':''}"><span class="lv-sheet-section" data-si="${it.idx}">${lvEsc(it.label)}</span></div>`;
     }else if(it.type==='divider'){

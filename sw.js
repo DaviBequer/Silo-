@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v51';
-const APP_VERSION = '5.0';
+const CACHE_NAME = 'siloe-cache-v52';
+const APP_VERSION = '5.1';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -15,6 +15,7 @@ const ARQUIVOS = [
   `./ponto.js?v=${APP_VERSION}`,
   `./louvor.js?v=${APP_VERSION}`,
   `./louvor-extra.js?v=${APP_VERSION}`,
+  `./louvor-medley.js?v=${APP_VERSION}`,
   `./emprestimo.js?v=${APP_VERSION}`,
   `./vendas.js?v=${APP_VERSION}`,
   './manifest.json',

@@ -600,6 +600,7 @@ function lviCorrigirAcordesPeloPdf(linhas, simples){
       });
       if(novos.length === r.chords.length && novos.every((c, x)=>lviMesmoAcorde(c.name, r.chords[x].name))){
         r.chords = novos.map((c, x)=>({ name: r.chords[x].name, idx: c.idx }));
+        r.conferido = true;
         corrigidas++; inicio = i + grupo.length;
       }
       break;
@@ -623,27 +624,39 @@ function lviMontarDaIA(j, fi, simples){
   const raiz = (fi && fi.tom) || (km && km[1]) || null;
   const menor = fi && fi.tom ? fi.menor : !!(km && km[2]);
   const cat = ['Louvor','Harpa Cristã','Corinhos'].includes(j.categoria) ? j.categoria : '';
+  const titulo = String(j.titulo||'').trim() || (fi && fi.titulo) || '';
+  const artista = String(j.artista||'').trim() || (fi && fi.artista) || '';
+  const conferencia = typeof lviConferenciaIA==='function' ? lviConferenciaIA(secoes, simples) : null;
+  if(conferencia){   // título/artista do cabeçalho do PDF não são letra que "ficou de fora"
+    const cab = [titulo, artista].map(lviSoLetras).filter(Boolean);
+    conferencia.faltando = conferencia.faltando.filter(t=>{ const k = lviSoLetras(t); return !cab.some(c=>k.includes(c) || c.includes(k)); });
+  }
   return {
-    titulo: String(j.titulo||'').trim() || (fi && fi.titulo) || '',
-    artista: String(j.artista||'').trim() || (fi && fi.artista) || '',
+    titulo,
+    artista,
     categoria: cat,
     tom: lviTomSiloe(raiz, menor),
     conteudo: lviBlocosParaTexto(secoes),
     blocos: secoes.length,
-    usouIA: true
+    usouIA: true,
+    conferencia
   };
 }
 async function lviImportarComIA(file, status){
-  status('Lendo com IA… (alguns segundos)');
+  status('Abrindo o arquivo', 'ler');
   const b64 = await lviArquivoBase64(file);
+  status('Lendo letra e acordes com IA', 'ia');
+  status('leva alguns segundos…');
   /* em paralelo: a leitura simples do PDF, só para pegar a posição exata dos acordes */
   const simplesP = lviEhImagem(file) ? Promise.resolve(null) : lviImportarSimples(file, ()=>{}).catch(()=>null);
   const arquivo = lviEhImagem(file)
     ? { type:'image', data: b64, mime_type: lviTipoImagem(file) }
     : { type:'document', data: b64, mime_type: 'application/pdf' };
   const j = await lviPerguntarIA([ arquivo, { type:'text', text: LVI_IA_REGRAS + '\n\nNome do arquivo: ' + (file.name||'') } ], status);
+  status('Separando as partes (estrofes, refrão…)', 'partes');
   const simples = await simplesP;
   const linhasPdf = simples ? lviTextoParaLinhas(simples.conteudo).filter(r=>r.type==='lyric') : null;
+  status(linhasPdf ? 'Conferindo cada acorde com o PDF' : 'Conferindo a letra', 'conferir');
   return lviMontarDaIA(j, lviNomeDoArquivo(file.name||''), linhasPdf);
 }
 
@@ -653,7 +666,7 @@ async function lviImportar(file, status){
   let avisoIA = '';
   if(lviChaveIA()){
     try{ return await lviImportarComIA(file, status); }
-    catch(e){ avisoIA = (e && e.message) || 'erro'; status('IA indisponível (' + avisoIA + ') — usando a leitura simples…'); }
+    catch(e){ avisoIA = (e && e.message) || 'erro'; (status.aviso || status)('IA indisponível (' + avisoIA + ') — usando a leitura simples'); }
   }
   const r = await lviImportarSimples(file, status);
   r.avisoIA = avisoIA;
@@ -662,29 +675,34 @@ async function lviImportar(file, status){
 async function lviImportarSimples(file, status){
   let rows = [];
   if(!lviEhImagem(file)){
-    status('Lendo o PDF...');
+    status('Lendo o PDF', 'ler');
     const cl = await lviClustersDoPdf(file);
     rows = lviLinhasDosClusters(cl, false);
   }
   let usouOcr = false;
   if(!rows.filter(r=>r.type==='lyric' || r.type==='chords').length){
     usouOcr = true;
+    status('Lendo a imagem', 'ocr');
     const cl = await lviClustersDoOcr(file, status);
     rows = lviLinhasDosClusters(cl, true);
   }
   if(!rows.length) throw new Error('não encontrei texto nesse arquivo');
+  status('Separando as partes (estrofes, refrão…)', 'partes');
   const doc = lviMontaBlocos(rows);
   const fi = lviNomeDoArquivo(file.name);
   const raiz = (fi && fi.tom) || doc.tom;
   const menor = fi && fi.tom ? fi.menor : doc.menor;
   /* título/artista: o cabeçalho do PDF (quando tem) é mais confiável que o nome do arquivo */
+  status('Conferindo a letra e os acordes', 'conferir');
+  const conteudo = lviBlocosParaTexto(doc.secoes);
   return {
     titulo: (doc.temCabecalho && doc.titulo) || (fi && fi.titulo) || doc.titulo || '',
     artista: (doc.temCabecalho && doc.artista) || (fi && fi.artista) || doc.artista || '',
     tom: lviTomSiloe(raiz, menor),
-    conteudo: lviBlocosParaTexto(doc.secoes),
+    conteudo,
     blocos: doc.secoes.length,
-    usouOcr
+    usouOcr,
+    conferencia: typeof lviConferenciaSimples==='function' ? lviConferenciaSimples(conteudo, usouOcr) : null
   };
 }
 function lviStatus(id, texto, erro){
@@ -698,37 +716,45 @@ function lviStatus(id, texto, erro){
 async function lvImportarNoNovo(ev){
   const file = ev.target.files[0]; ev.target.value = '';
   if(!file) return;
+  const prog = lviProgresso('lvNovoImportStatus');
+  document.getElementById('pageLouvorForm')?.classList.add('importando');
   try{
-    const r = await lviImportar(file, t=>lviStatus('lvNovoImportStatus', t));
+    const r = await lviImportar(file, prog);
     if(r.titulo) document.getElementById('lvNovoTitulo').value = r.titulo;
     if(r.artista) document.getElementById('lvNovoArtista').value = r.artista;
     if(r.tom.tomOriginal){ window.lvNovoTomOriginal = r.tom.tomOriginal; window.lvNovoTomModoMenor = r.tom.tomModoMenor; atualizarLvNovoTomBox(); }
     if(r.categoria){ window.lvNovoCategoriaSelecionada = r.categoria; renderLvNovoCategoriaChips(); }
     window.lvNovoConteudo = r.conteudo;
-    lviStatus('lvNovoImportStatus', `✓ Cifra ${r.usouIA?'lida com IA':'importada'} (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' por leitura de imagem — confira os acordes depois':''}. Toque em "Criar e Abrir".${r.avisoIA?' (IA indisponível: '+r.avisoIA+')':''}`);
+    window.lvNovoRevisar = (r.conferencia && r.conferencia.olhar) || [];
+    prog.fim(lviRelatorioHtml(r, 'Confira os dados abaixo e toque em <b>Criar e Abrir</b>.'));
   }catch(e){
-    lviStatus('lvNovoImportStatus', 'Não consegui ler: '+(e && e.message ? e.message : e)+'. Você pode colar a cifra como texto depois.', true);
+    prog.erro('Não consegui ler: '+(e && e.message ? e.message : e)+'. Você pode colar a cifra como texto depois.');
   }
+  document.getElementById('pageLouvorForm')?.classList.remove('importando');
 }
 /* dentro de um louvor já existente (substitui o texto) */
 async function lvImportarNoAtual(ev){
   const file = ev.target.files[0]; ev.target.value = '';
   const l = getLouvorAtual(); if(!file || !l) return;
   if((l.conteudo||'').trim() && !(await iosConfirm('Substituir a cifra atual pelo conteúdo do arquivo?'))) return;
+  const prog = lviProgresso('lvEdicaoImportStatus');
   try{
-    const r = await lviImportar(file, t=>lviStatus('lvEdicaoImportStatus', t));
+    const r = await lviImportar(file, prog);
     l.conteudo = r.conteudo;
     delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;   // texto novo: o desfazer anterior não vale mais
     if(!(l.titulo||'').trim() && r.titulo) l.titulo = r.titulo;
     if(!(l.artista||'').trim() && r.artista) l.artista = r.artista;
     if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; }
+    const olhar = (r.conferencia && r.conferencia.olhar) || [];
+    if(olhar.length) l.revisar = olhar; else delete l.revisar;
     persist();
     abrirLouvorDetalhe(l.id);
-    lviStatus('lvEdicaoImportStatus', `✓ ${r.usouIA?'Lido com IA':'Importado'} (${r.blocos} bloco${r.blocos===1?'':'s'})${r.usouOcr?' — lido da imagem, confira os acordes':''}.${r.avisoIA?' (IA indisponível: '+r.avisoIA+')':''}`);
+    prog.fim(lviRelatorioHtml(r, '<button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button>'));
   }catch(e){
-    lviStatus('lvEdicaoImportStatus', 'Não consegui ler: '+(e && e.message ? e.message : e), true);
+    prog.erro('Não consegui ler: '+(e && e.message ? e.message : e));
   }
 }
+function lviFecharRelatorio(){ const l = getLouvorAtual(); const el = document.getElementById('lvEdicaoImportStatus'); if(el) el.innerHTML = ''; if(l) lvMostrarRevisar(l); }
 
 /* ---------- organizar blocos no texto que já existe ---------- */
 function lviTextoParaLinhas(conteudo){

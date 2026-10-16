@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5.0">
+<link rel="stylesheet" href="style.css?v=5.1">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v5.0</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v5.1</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1042,8 +1042,9 @@
             <button type="button" class="lv-status-btn" id="lvStatusBtn" onclick="toggleLouvorStatus()"></button>
             <!-- Importar e Organizar ao lado do Tom -->
             <div class="lv-topo-acoes">
-              <label class="lv-icone-btn" title="Importar PDF ou foto" aria-label="Importar PDF ou foto"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></label>
-              <button type="button" class="lv-icone-btn" id="lvBtnOrganizar" title="Organizar blocos" aria-label="Organizar blocos" aria-pressed="false" onclick="lvOrganizarBlocos()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/></svg></button>
+              <label class="lv-icone-btn lv-so-musica" title="Importar PDF ou foto" aria-label="Importar PDF ou foto"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></label>
+              <button type="button" class="lv-icone-btn" id="lvBtnMedley" style="display:none" title="Montar o medley" aria-label="Montar o medley" onclick="abrirMedley(louvorAtualId)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></button>
+              <button type="button" class="lv-icone-btn lv-so-musica" id="lvBtnOrganizar" title="Organizar blocos" aria-label="Organizar blocos" aria-pressed="false" onclick="lvOrganizarBlocos()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/></svg></button>
               <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker('edit')">
                 <span class="lv-tom-box-lbl">TOM</span>
                 <span id="lvTomBoxValor">—</span>
@@ -1168,13 +1169,21 @@
     <div class="fullpage-title">Novo Louvor</div>
     <span style="width:32px;flex-shrink:0"></span>
   </div>
-  <div class="fullpage-content">
-    <label class="lv-importar">
+  <div class="fullpage-content lvn">
+    <label class="lvn-importar">
       <input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoNovo(event)">
-      <span class="lv-importar-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>
-      <span class="lv-importar-txt"><b>Importar PDF ou foto da cifra</b><small>Preenche título, artista, tom e monta a cifra com os blocos</small></span>
+      <span class="lvn-imp-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg></span>
+      <b>Importar cifra</b>
+      <small>PDF ou foto. O app lê a letra e os acordes, separa as partes e confere tudo.</small>
+      <span class="lvn-imp-btn">Escolher arquivo</span>
     </label>
-    <div class="lv-import-status" id="lvNovoImportStatus"></div>
+    <div class="lv-import-status lvi-caixa" id="lvNovoImportStatus"></div>
+    <button type="button" class="lvn-medley" onclick="abrirMedley()">
+      <span class="lvn-medley-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
+      <span class="lvn-medley-txt"><b>Montar medley</b><small>Junte partes de várias músicas, na ordem que vão cantar</small></span>
+      <svg class="lvn-seta" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div class="lvn-ou"><span>Dados do louvor</span></div>
     <div class="field full">
       <label>Título</label>
       <input type="text" id="lvNovoTitulo" placeholder="Nome do louvor">
@@ -1198,6 +1207,48 @@
       <input type="date" id="lvNovoData">
     </div>
     <button class="btn btn-block" onclick="criarLouvor()">Criar e Abrir</button>
+  </div>
+</div>
+
+<!-- FULLPAGE: Medley (escolher músicas e a sequência das partes) -->
+<div class="fullpage" id="pageLouvorMedley">
+  <div class="fullpage-header">
+    <button class="header-btn" aria-label="Voltar" onclick="fecharMedley()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title" id="lmTitulo">Novo medley</div>
+    <span style="width:32px;flex-shrink:0"></span>
+  </div>
+  <div class="fullpage-content lm" id="lmConteudo">
+    <div class="lm-col">
+      <div class="field full">
+        <label>Nome do medley</label>
+        <input type="text" id="lmNome" placeholder="Ex.: Medley Harpa — Ceia" oninput="if(lmEdit){lmEdit.mexeu=true}">
+      </div>
+      <div class="lm-sec-titulo"><span>1 · Músicas</span><small>toque nas partes na ordem em que vão cantar</small></div>
+      <div id="lmMusicas"></div>
+      <button type="button" class="lm-add" onclick="lmAbrirEscolher()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Adicionar música</button>
+      <div class="lm-sec-titulo"><span>2 · Sequência</span><small id="lmSeqConta"></small></div>
+      <div id="lmSeq" class="lm-seq"></div>
+    </div>
+    <div class="lm-col lm-col-previa">
+      <div class="lm-sec-titulo"><span>Prévia</span><small>como vai ficar a cifra</small></div>
+      <pre class="lm-previa" id="lmPrevia"></pre>
+    </div>
+    <div class="lm-rodape"><button class="btn btn-block" id="lmSalvarBtn" onclick="lmSalvar()">Criar medley</button></div>
+  </div>
+</div>
+
+<!-- MODAL: escolher música para o medley -->
+<div class="modal-overlay" id="modalLmEscolher">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Adicionar música</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalLmEscolher')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <div class="receitas-search lm-busca">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="lmBusca" placeholder="Buscar por título ou artista..." oninput="lmRenderEscolher(this.value)">
+    </div>
+    <div class="lm-esc-lista" id="lmEscolherLista"></div>
   </div>
 </div>
 
@@ -1591,18 +1642,19 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=5.0"></script>
-<script src="core.js?v=5.0"></script>
-<script src="comando.js?v=5.0"></script>
-<script src="layout.js?v=5.0"></script>
-<script src="app.js?v=5.0"></script>
-<script src="panorama.js?v=5.0"></script>
-<script src="planner.js?v=5.0"></script>
-<script src="ponto.js?v=5.0"></script>
-<script src="louvor.js?v=5.0"></script>
-<script src="louvor-extra.js?v=5.0"></script>
-<script src="emprestimo.js?v=5.0"></script>
-<script src="vendas.js?v=5.0"></script>
+<script src="supabase.js?v=5.1"></script>
+<script src="core.js?v=5.1"></script>
+<script src="comando.js?v=5.1"></script>
+<script src="layout.js?v=5.1"></script>
+<script src="app.js?v=5.1"></script>
+<script src="panorama.js?v=5.1"></script>
+<script src="planner.js?v=5.1"></script>
+<script src="ponto.js?v=5.1"></script>
+<script src="louvor.js?v=5.1"></script>
+<script src="louvor-extra.js?v=5.1"></script>
+<script src="louvor-medley.js?v=5.1"></script>
+<script src="emprestimo.js?v=5.1"></script>
+<script src="vendas.js?v=5.1"></script>
 <script>carregar();</script>
 </body>
 </html>
