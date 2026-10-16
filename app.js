@@ -93,6 +93,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.5', itens: [
+    'Entrar com PIN: crie um PIN de 6 números em Dados do App e, quando o app pedir para entrar, é só digitar o PIN (ele passa a ser a senha da conta)'
+  ]},
   { versao: 'v5.4', itens: [
     'Notificações do celular: ao abrir, o app pede um endereço novo de notificação quando o antigo pode ter vencido'
   ]},
@@ -565,7 +568,11 @@ function abrirImportExportModal(){
   document.body.style.overflow = 'hidden';
   renderChangelog();
   const btnSair = document.getElementById('btnSairApp');   // só aparece se este aparelho entrou com login
-  if(btnSair && window.SiloSupabase) window.SiloSupabase.temSessao().then(s=>{ btnSair.style.display = s ? '' : 'none'; });
+  if(btnSair && window.SiloSupabase) window.SiloSupabase.temSessao().then(s=>{
+    btnSair.style.display = s ? '' : 'none';
+    const pc = document.getElementById('pinConfig'); if(pc) pc.style.display = s ? '' : 'none';
+    if(typeof atualizarStatusPin==='function') atualizarStatusPin();
+  });
 
   const storage = calcularStorageUsage();
   
@@ -1261,3 +1268,114 @@ function sinoDestacar(el){
 /* a hora passa: confere de novo a cada minuto e quando o app volta para a tela */
 setInterval(atualizarSino, 60000);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) atualizarSino(); });
+
+/* ========== PIN DE ENTRADA ==========
+   O Supabase só entra com e-mail + senha: o PIN (6 números) vira a senha da conta e o e-mail fica guardado
+   no aparelho. Na tela de login o aparelho que já conhece o e-mail mostra só o teclado do PIN. */
+const PIN_TAM = 6;
+function pinEmailDoAparelho(){ try{ return localStorage.getItem('siloe-pin-email') || ''; }catch(e){ return ''; } }
+function pinGuardarEmail(email){ try{ if(email) localStorage.setItem('siloe-pin-email', email); else localStorage.removeItem('siloe-pin-email'); }catch(e){} }
+/* depois de carregar: se o PIN já foi criado (em qualquer aparelho), este aparelho passa a entrar com ele */
+async function pinLembrarAparelho(){
+  if(!state || !state.loginPin || pinEmailDoAparelho() || !window.SiloSupabase) return;
+  const email = await window.SiloSupabase.emailAtual();
+  if(email) pinGuardarEmail(email);
+}
+/* teclado numérico reutilizável: desenha em el, chama aoCompletar(pin) com 6 números */
+function pinTeclado(tecladoId, pontosId, aoCompletar){
+  const tec = document.getElementById(tecladoId), pts = document.getElementById(pontosId);
+  let valor = '';
+  const desenha = ()=>{ pts.innerHTML = Array.from({ length: PIN_TAM }, (_, i)=>`<i class="${i < valor.length ? 'cheio' : ''}"></i>`).join(''); };
+  const apaga = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="m18 9-6 6"/><path d="m12 9 6 6"/></svg>';
+  tec.innerHTML = ['1','2','3','4','5','6','7','8','9','','0','x'].map(t=>
+    t === '' ? '<span></span>' : `<button type="button" class="pin-tecla${t==='x'?' apagar':''}" data-t="${t}" aria-label="${t==='x'?'Apagar':t}">${t==='x'?apaga:t}</button>`).join('');
+  const toca = t=>{
+    if(t === 'x'){ valor = valor.slice(0, -1); desenha(); return; }
+    if(valor.length >= PIN_TAM) return;
+    valor += t; desenha();
+    if(navigator.vibrate) try{ navigator.vibrate(6); }catch(_){}
+    if(valor.length === PIN_TAM){ const v = valor; setTimeout(()=>aoCompletar(v), 120); }
+  };
+  tec.onclick = e=>{ const b = e.target.closest('.pin-tecla'); if(b) toca(b.dataset.t); };
+  desenha();
+  return {
+    limpar(){ valor = ''; desenha(); },
+    tremer(){ pts.classList.remove('errou'); void pts.offsetWidth; pts.classList.add('errou'); if(navigator.vibrate) try{ navigator.vibrate([40,40,40]); }catch(_){} },
+    tecla: toca,
+    el: tec
+  };
+}
+/* teclado físico (computador) no teclado que estiver aberto */
+let pinTecladoAtivo = null;
+document.addEventListener('keydown', e=>{
+  if(!pinTecladoAtivo || !pinTecladoAtivo.el.offsetParent) return;   // teclado fechado: não captura
+  if(/^[0-9]$/.test(e.key)){ pinTecladoAtivo.tecla(e.key); e.preventDefault(); }
+  else if(e.key === 'Backspace'){ pinTecladoAtivo.tecla('x'); e.preventDefault(); }
+});
+
+/* ---------- tela de login no modo PIN ---------- */
+let pinLogin = null;
+function loginModoPin(ligar){
+  const tela = document.getElementById('loginTela'); if(!tela) return;
+  const email = pinEmailDoAparelho();
+  if(ligar && !email) ligar = false;
+  tela.classList.toggle('modo-pin', !!ligar);
+  const usar = document.getElementById('loginUsarPin'); if(usar) usar.style.display = email && !ligar ? '' : 'none';
+  if(ligar){
+    document.getElementById('loginPinErro').textContent = '';
+    pinLogin = pinTeclado('loginPinTeclado', 'loginPinPontos', entrarComPin);
+    pinTecladoAtivo = pinLogin;
+  } else {
+    pinTecladoAtivo = null;
+    if(email && !document.getElementById('loginEmail').value) document.getElementById('loginEmail').value = email;
+  }
+}
+async function entrarComPin(pin){
+  const erro = document.getElementById('loginPinErro'), sub = document.getElementById('loginPinSub');
+  sub.textContent = 'Entrando…'; erro.textContent = '';
+  const r = await window.SiloSupabase.entrar(pinEmailDoAparelho(), pin);
+  sub.textContent = 'Digite seu PIN';
+  if(!r.ok){
+    erro.textContent = /incorretos/.test(r.erro) ? 'PIN errado' : r.erro;
+    pinLogin.tremer(); pinLogin.limpar();
+    return;
+  }
+  pinTecladoAtivo = null;
+  aposEntrar();
+}
+
+/* ---------- criar/trocar o PIN (Dados do App) ---------- */
+function atualizarStatusPin(){
+  const st = document.getElementById('pinStatus'), btn = document.getElementById('pinBtn');
+  if(!st || !btn) return;
+  const ligado = !!(state && state.loginPin);
+  st.textContent = ligado ? 'Ligado' : 'Desligado';
+  st.classList.toggle('ligada', ligado);
+  btn.textContent = ligado ? 'Trocar PIN' : 'Criar PIN';
+}
+let pinModal = null;
+function abrirCriarPin(){
+  let primeiro = '';
+  const titulo = document.getElementById('pinModalTitulo'), sub = document.getElementById('pinModalSub'), erro = document.getElementById('pinModalErro');
+  titulo.textContent = state.loginPin ? 'Trocar PIN' : 'Criar PIN';
+  sub.textContent = 'Escolha 6 números'; erro.textContent = '';
+  pinModal = pinTeclado('pinModalTeclado', 'pinModalPontos', async pin=>{
+    if(!primeiro){
+      if(/^(\d)\1+$/.test(pin) || '0123456789'.includes(pin) || '9876543210'.includes(pin)){ erro.textContent = 'Fácil demais de adivinhar — escolha outro'; pinModal.tremer(); pinModal.limpar(); return; }
+      primeiro = pin; erro.textContent = ''; sub.textContent = 'Digite de novo para confirmar'; pinModal.limpar(); return;
+    }
+    if(pin !== primeiro){ primeiro = ''; erro.textContent = 'Os dois não bateram. Comece de novo.'; sub.textContent = 'Escolha 6 números'; pinModal.tremer(); pinModal.limpar(); return; }
+    sub.textContent = 'Salvando…';
+    const r = await window.SiloSupabase.trocarSenha(pin);
+    if(!r.ok){ erro.textContent = r.erro; sub.textContent = 'Escolha 6 números'; primeiro = ''; pinModal.limpar(); return; }
+    pinGuardarEmail(await window.SiloSupabase.emailAtual());
+    state.loginPin = true;
+    persist();
+    pinTecladoAtivo = null;
+    closeModal('modalPin');
+    atualizarStatusPin();
+    showToast('PIN criado. Da próxima vez que pedir para entrar, é só o PIN');
+  });
+  pinTecladoAtivo = pinModal;
+  document.getElementById('modalPin').classList.add('active');
+}

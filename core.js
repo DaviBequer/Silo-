@@ -454,6 +454,7 @@ async function carregarDaNuvem(){
   if(typeof abrirAbaDoAviso==='function') abrirAbaDoAviso();
   if(typeof lviAbrirCompartilhado==='function') lviAbrirCompartilhado();
   if(typeof avisosRenovarSozinho==='function' && !MODO_TESTE_LOCAL) avisosRenovarSozinho();
+  if(typeof pinLembrarAparelho==='function') pinLembrarAparelho();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   await finalizarMigracaoLegado(precisaSalvar, legado);
   compactarImagensDoEstado();
@@ -488,6 +489,9 @@ function mostrarSplash(){
 function mostrarLogin(){
   fecharSplash(true);
   document.getElementById('loginTela')?.classList.add('show');
+  /* aparelho que já usa PIN: abre direto no teclado do PIN */
+  if(typeof loginModoPin==='function' && pinEmailDoAparelho()){ loginModoPin(true); return; }
+  if(typeof loginModoPin==='function') loginModoPin(false);
   setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
 }
 /* olho da senha: mostra/esconde (sem argumento alterna; false volta a esconder) */
@@ -515,6 +519,9 @@ async function entrarNoApp(){
   if(!r.ok){ erro.textContent = r.erro; return; }
   document.getElementById('loginSenha').value = '';
   alternarVerSenha(false);
+  aposEntrar();
+}
+function aposEntrar(){
   document.getElementById('loginTela').classList.remove('show');
   mostrarSplash();
   carregarTentativas = 0;

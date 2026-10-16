@@ -77,6 +77,22 @@
       if (client) { try { await client.auth.signOut(); } catch (e) {} }
     },
     /* desconecta TODOS os aparelhos (ex.: celular perdido); cada um vai pedir login de novo */
+    /* PIN de entrada = a senha da conta passa a ser o PIN (o Supabase só entra com e-mail + senha) */
+    async trocarSenha(nova){
+      if (!client) return { ok:false, erro:'Supabase não configurado' };
+      try {
+        const { error } = await client.auth.updateUser({ password: nova });
+        if (error) throw error;
+        return { ok:true };
+      } catch (e) {
+        const m = String((e && e.message) || e);
+        return { ok:false, erro: /should be|at least|weak/i.test(m) ? 'O banco não aceitou esse PIN como senha (' + m.slice(0,80) + ')'
+          : /reauth|recent/i.test(m) ? 'Por segurança, saia e entre de novo com a senha antiga antes de criar o PIN' : m.slice(0,120) };
+      }
+    },
+    async emailAtual(){
+      try { const { data } = await client.auth.getSession(); return (data && data.session && data.session.user && data.session.user.email) || ''; } catch (e) { return ''; }
+    },
     async sairDeTodos(){
       if (!client) return false;
       try { const { error } = await client.auth.signOut({ scope:'global' }); return !error; } catch (e) { return false; }
