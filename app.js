@@ -73,6 +73,7 @@ function renderAll(){
   renderLouvor();
   if(typeof renderEmprestimos==='function') renderEmprestimos();
   if(typeof renderVendas==='function') renderVendas();
+  if(typeof renderVersiculo==='function') renderVersiculo();
   if(typeof atualizarSino==='function') atualizarSino();
 }
 
@@ -93,6 +94,14 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.7', itens: [
+    'Versículo da Bíblia no topo de Finanças, um diferente a cada vez que o app abre',
+    'Cabeçalho preto e a versão como "Nº"; no celular o topo mostra quantos dias faltam',
+    'Imagem de fundo: barra para escolher quanto ela aparece; a foto fica desfocada atrás e os cartões em uma camada só',
+    'Louvor: tela "Nova música" nova e painel da IA ao vivo (qual IA, tempo, etapas e o que encontrou)',
+    'Dados do App em abas (Geral, Visual, Recursos, Conta) e sem barras de rolagem em todo o app',
+    'Buscar: quando não acha, oferece pesquisar o louvor no Cifra Club'
+  ]},
   { versao: 'v5.6', itens: [
     'Microfones no estilo Jarvis: anel brilhante girando, barras que reagem à fala e o texto aparecendo na hora',
     'Imagem de fundo: escolha uma foto em Dados do App (Suave, Médio ou Forte)',
@@ -564,7 +573,7 @@ function renderChangelog(){
   const v = CHANGELOG[0];
   el.innerHTML = `
     <div style="padding:8px 10px;background:var(--card-2);border-radius:8px">
-      <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px">${v.versao}</div>
+      <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px">${String(v.versao).replace(/^v(\d+)\.(\d+)$/, 'Nº $1$2')}</div>
       ${v.itens.map(txt => `<div style="font-size:11.5px;color:var(--text-faint);line-height:1.4">• ${txt}</div>`).join('')}
     </div>
   `;
@@ -578,6 +587,7 @@ function abrirImportExportModal(){
   if(btnSair && window.SiloSupabase) window.SiloSupabase.temSessao().then(s=>{
     btnSair.style.display = s ? '' : 'none';
     const pc = document.getElementById('pinConfig'); if(pc) pc.style.display = s ? '' : 'none';
+    const cv = document.getElementById('ddContaVazio'); if(cv) cv.style.display = s ? 'none' : '';
     if(typeof atualizarStatusPin==='function') atualizarStatusPin();
   });
   if(typeof atualizarStatusFundo==='function') atualizarStatusFundo();
@@ -846,7 +856,14 @@ function onBuscaGlobalInput(v){
   });
 
   if(resultados.length===0){
-    el.innerHTML = `<div class="empty-state-sm">Nada encontrado</div>`;
+    /* não achou: se for um louvor, já procura no Cifra Club */
+    const original = (document.getElementById('buscaGlobalInput')?.value || '').trim();
+    el.innerHTML = `<div class="empty-state-sm">Nada encontrado</div>${original ? `
+      <a class="busca-cifraclub" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(original)}" target="_blank" rel="noopener">
+        <span class="busca-cc-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+        <span class="busca-cc-txt"><b>É um louvor?</b><small>Pesquisar “${lvEsc(original)}” no Cifra Club</small></span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+      </a>` : ''}`;
     return;
   }
   el.innerHTML = resultados.slice(0,40).map(r=>
@@ -1391,14 +1408,18 @@ function abrirCriarPin(){
 /* ========== FUNDO COM IMAGEM (Dados do App) ==========
    state.fundoApp = { img: dataURL (reduzida), forca: 'suave' | 'medio' | 'forte' }.
    A imagem fica atrás de tudo, com um véu da cor do papel por cima para o texto continuar legível. */
-const FUNDO_VEU = { suave: .9, medio: .78, forte: .6 };
+/* quanto a imagem aparece (0 a 100); quem escolheu Suave/Médio/Forte antes continua igual */
+const FUNDO_FORCA_ANTIGA = { suave: 8, medio: 22, forte: 41 };
+function fundoVisivel(f){ return f && f.visivel != null ? Number(f.visivel) : (FUNDO_FORCA_ANTIGA[f && f.forca] ?? 22); }
+function fundoVeu(v){ return Math.max(.6, Math.min(.97, .97 - v * .0037)); }   // véu da cor do papel por cima da foto (nunca deixa o texto ilegível)
+function fundoForca(el, v){ el.style.setProperty('--veu', fundoVeu(v)); el.style.setProperty('--desfoque', Math.max(10, 30 - v * .2).toFixed(1) + 'px'); }
 function aplicarFundoApp(){
   const f = state && state.fundoApp;
   let el = document.getElementById('fundoApp');
   if(!f || !f.img){ document.documentElement.classList.remove('tem-fundo'); if(el) el.remove(); atualizarStatusFundo(); return; }
   if(!el){ el = document.createElement('div'); el.id = 'fundoApp'; el.setAttribute('aria-hidden', 'true'); document.body.prepend(el); }
   el.style.backgroundImage = `url("${f.img}")`;
-  el.style.setProperty('--veu', FUNDO_VEU[f.forca] || FUNDO_VEU.medio);
+  fundoForca(el, fundoVisivel(f));
   document.documentElement.classList.add('tem-fundo');
   atualizarStatusFundo();
 }
@@ -1411,7 +1432,7 @@ function atualizarStatusFundo(){
   if(rem) rem.style.display = tem ? '' : 'none';
   if(forca){
     forca.style.display = tem ? '' : 'none';
-    forca.querySelectorAll('[data-forca]').forEach(b=>b.classList.toggle('active', tem && (f.forca || 'medio') === b.dataset.forca));
+    if(tem){ const v = Math.round(fundoVisivel(f)); document.getElementById('fundoForcaBarra').value = v; fundoPintarBarra(v); }
   }
 }
 function escolherFundoApp(ev){
@@ -1420,17 +1441,27 @@ function escolherFundoApp(ev){
   const leitor = new FileReader();
   leitor.onload = async ()=>{
     const img = await comprimirImagemDataUrl(String(leitor.result), 1600, 0.72);
-    state.fundoApp = { img, forca: (state.fundoApp && state.fundoApp.forca) || 'medio' };
+    state.fundoApp = { img, visivel: state.fundoApp ? fundoVisivel(state.fundoApp) : 22 };
     persist();
     aplicarFundoApp();
     showToast('Fundo aplicado');
   };
   leitor.readAsDataURL(file);
 }
-function setForcaFundo(forca){
+/* barra: enquanto arrasta só mostra; ao soltar, salva */
+function setVisivelFundo(v, salvar){
   if(!state.fundoApp) return;
-  state.fundoApp.forca = forca;
-  persist(); aplicarFundoApp();
+  v = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  state.fundoApp.visivel = v; delete state.fundoApp.forca;
+  const el = document.getElementById('fundoApp');
+  if(el) fundoForca(el, v);
+  fundoPintarBarra(v);
+  if(salvar) persist();
+}
+function fundoPintarBarra(v){
+  const barra = document.getElementById('fundoForcaBarra'), txt = document.getElementById('fundoForcaValor');
+  if(barra){ barra.style.setProperty('--p', v + '%'); if(Number(barra.value) !== v) barra.value = v; }
+  if(txt) txt.textContent = v + '%';
 }
 function removerFundoApp(){
   delete state.fundoApp;
@@ -1542,3 +1573,90 @@ document.addEventListener('click', e=>{
   if(!nav || !efeitosLigados) return;
   nav.classList.remove('nav-pulo'); void nav.offsetWidth; nav.classList.add('nav-pulo');
 });
+
+/* Dados do App em abas: Geral · Visual · Recursos · Conta */
+let ddAbaAtual = 'geral';
+function ddAba(nome){
+  ddAbaAtual = nome;
+  document.querySelectorAll('#ddAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.dd === nome));
+  document.querySelectorAll('#modalImportExport .dd-painel').forEach(p=>p.classList.toggle('active', p.dataset.dd === nome));
+  const m = document.querySelector('#modalImportExport .modal'); if(m) m.scrollTop = 0;
+}
+
+/* ========== VERSÍCULO (topo de Finanças) ==========
+   Um versículo diferente a cada vez que o app abre (não repete o da última vez). */
+const VERSICULOS = [
+  ['O Senhor é o meu pastor; nada me faltará.', 'Salmos 23:1'],
+  ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'],
+  ['Entrega o teu caminho ao Senhor; confia nele, e ele tudo fará.', 'Salmos 37:5'],
+  ['Buscai primeiro o Reino de Deus e a sua justiça, e todas essas coisas vos serão acrescentadas.', 'Mateus 6:33'],
+  ['Confia no Senhor de todo o teu coração e não te estribes no teu próprio entendimento.', 'Provérbios 3:5'],
+  ['Não andeis ansiosos de coisa alguma; em tudo, pela oração, sejam conhecidas diante de Deus as vossas petições.', 'Filipenses 4:6'],
+  ['O meu Deus suprirá todas as vossas necessidades segundo as suas riquezas em glória.', 'Filipenses 4:19'],
+  ['Porque eu bem sei os planos que tenho a vosso respeito, planos de paz e não de mal.', 'Jeremias 29:11'],
+  ['Sede fortes e corajosos; não temais, porque o Senhor, vosso Deus, é convosco.', 'Josué 1:9'],
+  ['Lança o teu cuidado sobre o Senhor, e ele te susterá.', 'Salmos 55:22'],
+  ['O choro pode durar uma noite, mas a alegria vem pela manhã.', 'Salmos 30:5'],
+  ['Deleita-te no Senhor, e ele satisfará os desejos do teu coração.', 'Salmos 37:4'],
+  ['Vinde a mim, todos os que estais cansados e sobrecarregados, e eu vos aliviarei.', 'Mateus 11:28'],
+  ['Todas as coisas cooperam para o bem daqueles que amam a Deus.', 'Romanos 8:28'],
+  ['Se Deus é por nós, quem será contra nós?', 'Romanos 8:31'],
+  ['Os que esperam no Senhor renovarão as suas forças; subirão com asas como águias.', 'Isaías 40:31'],
+  ['Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus.', 'Isaías 41:10'],
+  ['Consagra ao Senhor as tuas obras, e os teus planos serão estabelecidos.', 'Provérbios 16:3'],
+  ['A bênção do Senhor é que enriquece, e não traz consigo dores.', 'Provérbios 10:22'],
+  ['Honra ao Senhor com os teus bens e com as primícias de toda a tua renda.', 'Provérbios 3:9'],
+  ['Trazei todos os dízimos à casa do tesouro, e provai-me nisto, diz o Senhor.', 'Malaquias 3:10'],
+  ['Quem é fiel no pouco também é fiel no muito.', 'Lucas 16:10'],
+  ['Tudo quanto fizerdes, fazei-o de todo o coração, como para o Senhor.', 'Colossenses 3:23'],
+  ['A mão dos diligentes enriquece.', 'Provérbios 10:4'],
+  ['Melhor é o pouco com o temor do Senhor do que um grande tesouro onde há inquietação.', 'Provérbios 15:16'],
+  ['O Senhor é a minha luz e a minha salvação; a quem temerei?', 'Salmos 27:1'],
+  ['Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia.', 'Salmos 46:1'],
+  ['Aquietai-vos e sabei que eu sou Deus.', 'Salmos 46:10'],
+  ['Lâmpada para os meus pés é a tua palavra e luz para o meu caminho.', 'Salmos 119:105'],
+  ['Elevo os meus olhos para os montes: de onde me vem o socorro? O meu socorro vem do Senhor.', 'Salmos 121:1-2'],
+  ['Este é o dia que o Senhor fez; regozijemo-nos e alegremo-nos nele.', 'Salmos 118:24'],
+  ['Bem-aventurado o homem que confia no Senhor.', 'Salmos 34:8'],
+  ['As misericórdias do Senhor se renovam cada manhã; grande é a tua fidelidade.', 'Lamentações 3:22-23'],
+  ['Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito.', 'João 3:16'],
+  ['Eu sou o caminho, e a verdade, e a vida.', 'João 14:6'],
+  ['Deixo-vos a paz, a minha paz vos dou. Não se turbe o vosso coração.', 'João 14:27'],
+  ['No mundo tereis aflições, mas tende bom ânimo: eu venci o mundo.', 'João 16:33'],
+  ['A graça do Senhor vos basta, porque o poder se aperfeiçoa na fraqueza.', '2 Coríntios 12:9'],
+  ['Deus ama ao que dá com alegria.', '2 Coríntios 9:7'],
+  ['Não vos canseis de fazer o bem, porque a seu tempo ceifaremos.', 'Gálatas 6:9'],
+  ['Aquele que começou a boa obra em vós a aperfeiçoará.', 'Filipenses 1:6'],
+  ['Alegrai-vos sempre no Senhor; outra vez digo: alegrai-vos.', 'Filipenses 4:4'],
+  ['Em tudo dai graças, porque esta é a vontade de Deus em Cristo Jesus.', '1 Tessalonicenses 5:18'],
+  ['Deus não nos deu espírito de medo, mas de poder, de amor e de moderação.', '2 Timóteo 1:7'],
+  ['A fé é a certeza das coisas que se esperam e a convicção das que não se veem.', 'Hebreus 11:1'],
+  ['Lançando sobre ele toda a vossa ansiedade, porque ele tem cuidado de vós.', '1 Pedro 5:7'],
+  ['Se algum de vós tem falta de sabedoria, peça-a a Deus, que a todos dá liberalmente.', 'Tiago 1:5'],
+  ['Chegai-vos a Deus, e ele se chegará a vós.', 'Tiago 4:8'],
+  ['O Senhor te abençoe e te guarde; o Senhor faça resplandecer o seu rosto sobre ti.', 'Números 6:24-25'],
+  ['Até aqui nos ajudou o Senhor.', '1 Samuel 7:12'],
+  ['A alegria do Senhor é a vossa força.', 'Neemias 8:10'],
+  ['Clama a mim, e responder-te-ei, e anunciar-te-ei coisas grandes e firmes que não sabes.', 'Jeremias 33:3'],
+  ['Não por força nem por violência, mas pelo meu Espírito, diz o Senhor.', 'Zacarias 4:6'],
+  ['O coração do homem planeja o seu caminho, mas o Senhor lhe dirige os passos.', 'Provérbios 16:9'],
+  ['O que lavra a sua terra se fartará de pão.', 'Provérbios 12:11'],
+  ['O temor do Senhor é o princípio da sabedoria.', 'Provérbios 9:10'],
+  ['Sobre tudo o que se deve guardar, guarda o teu coração, porque dele procedem as fontes da vida.', 'Provérbios 4:23'],
+  ['Pedi, e dar-se-vos-á; buscai, e encontrareis; batei, e abrir-se-vos-á.', 'Mateus 7:7'],
+  ['Eis que estou convosco todos os dias, até a consumação dos séculos.', 'Mateus 28:20'],
+  ['Para Deus nada é impossível.', 'Lucas 1:37']
+];
+const versiculoAtual = (()=>{
+  let ultimo = -1; try{ ultimo = Number(localStorage.getItem('siloe-versiculo')); }catch(e){}
+  let i = Math.floor(Math.random() * VERSICULOS.length);
+  if(i === ultimo) i = (i + 1 + Math.floor(Math.random() * (VERSICULOS.length - 1))) % VERSICULOS.length;
+  try{ localStorage.setItem('siloe-versiculo', String(i)); }catch(e){}
+  return VERSICULOS[i];
+})();
+function renderVersiculo(){
+  const el = document.getElementById('versiculoDia');
+  if(!el || el.dataset.pronto) return;
+  el.dataset.pronto = '1';
+  el.innerHTML = `<p class="vs-texto">${versiculoAtual[0]}</p><span class="vs-ref">${versiculoAtual[1]}</span>`;
+}

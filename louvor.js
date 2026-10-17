@@ -197,6 +197,11 @@ function openLouvorForm(){
   window.lvNovoRevisar = [];
   document.getElementById('pageLouvorForm').classList.remove('importando');
   const st = document.getElementById('lvNovoImportStatus'); if(st){ st.textContent = ''; st.classList.remove('erro'); }
+  /* selo da IA no botão Importar e a dica do formulário */
+  const chip = document.getElementById('lvnIaChip');
+  if(chip){ const ia = typeof lviChaveIA==='function' && lviChaveIA(); chip.classList.toggle('sem', !ia); chip.lastChild.textContent = ia ? 'Gemini' : 'Sem IA'; }
+  const form = document.querySelector('#pageLouvorForm .lvn-form'); if(form) form.classList.remove('preenchido');
+  const dica = document.getElementById('lvnFormDica'); if(dica) dica.textContent = 'ou preencha à mão';
   renderLvNovoCategoriaChips();
   atualizarLvNovoTomBox();
   document.getElementById('pageLouvorForm').classList.add('active');

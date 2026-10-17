@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5.6">
+<link rel="stylesheet" href="style.css?v=5.7">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">v5.6</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">Nº 57</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -36,6 +36,8 @@
 
 <!-- PLANNER -->
 <div class="aba active" id="aba-planner" data-tab="geral">
+
+  <div class="versiculo" id="versiculoDia" data-layout-fixed="1"></div>
 
   <div class="dash-switches" data-layout-fixed="1">
     <div class="dash-tabs">
@@ -1171,43 +1173,43 @@
     <span style="width:32px;flex-shrink:0"></span>
   </div>
   <div class="fullpage-content lvn">
-    <label class="lvn-importar">
-      <input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoNovo(event)">
-      <span class="lvn-imp-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg></span>
-      <b>Importar cifra</b>
-      <small>PDF ou foto. O app lê a letra e os acordes, separa as partes e confere tudo.</small>
-      <span class="lvn-imp-btn">Escolher arquivo</span>
-    </label>
+    <section class="lvn-hero">
+      <div class="lvn-hero-luz" aria-hidden="true"></div>
+      <div class="lvn-hero-txt">
+        <span class="lvn-kicker">Louvor</span>
+        <h2>Nova música</h2>
+        <p>Mande o PDF ou a foto da cifra e a IA organiza tudo — ou monte um medley com as músicas que já estão aqui.</p>
+      </div>
+      <div class="lvn-opcoes">
+        <label class="lvn-op lvn-op-importar">
+          <input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoNovo(event)">
+          <span class="lvn-op-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg></span>
+          <span class="lvn-op-txt"><b>Importar cifra</b><small>PDF ou foto · a IA lê, separa as partes e confere os acordes</small></span>
+          <span class="lvn-op-ia" id="lvnIaChip"><i></i>Gemini</span>
+        </label>
+        <button type="button" class="lvn-op lvn-op-medley" onclick="abrirMedley()">
+          <span class="lvn-op-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
+          <span class="lvn-op-txt"><b>Montar medley</b><small>Partes de várias músicas, na ordem em que vão cantar</small></span>
+          <svg class="lvn-op-seta" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+    </section>
+
     <div class="lv-import-status lvi-caixa" id="lvNovoImportStatus"></div>
-    <button type="button" class="lvn-medley" onclick="abrirMedley()">
-      <span class="lvn-medley-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
-      <span class="lvn-medley-txt"><b>Montar medley</b><small>Junte partes de várias músicas, na ordem que vão cantar</small></span>
-      <svg class="lvn-seta" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-    </button>
-    <div class="lvn-ou"><span>Dados do louvor</span></div>
-    <div class="field full">
-      <label>Título</label>
-      <input type="text" id="lvNovoTitulo" placeholder="Nome do louvor">
-    </div>
-    <div class="field full">
-      <label>Artista</label>
-      <input type="text" id="lvNovoArtista" placeholder="Artista / Autor">
-    </div>
-    <div class="field full">
-      <label>Tom</label>
-      <button type="button" class="lv-tom-box-header" id="lvNovoTomBox" onclick="abrirLvTomPicker('novo')">
-        <span id="lvNovoTomBoxValor">Selecione</span>
-      </button>
-    </div>
-    <div class="field full">
-      <label>Categoria</label>
-      <div class="dificuldade-chips" id="lvNovoCategoriaChips"></div>
-    </div>
-    <div class="field full">
-      <label>Agendamento</label>
-      <input type="date" id="lvNovoData">
-    </div>
-    <button class="btn btn-block" onclick="criarLouvor()">Criar e Abrir</button>
+
+    <section class="lvn-form">
+      <div class="lvn-form-topo"><b>Dados da música</b><small id="lvnFormDica">ou preencha à mão</small></div>
+      <div class="lvn-grade">
+        <label class="lvn-campo lvn-largo"><span>Título</span><input type="text" id="lvNovoTitulo" placeholder="Nome do louvor"></label>
+        <label class="lvn-campo lvn-largo"><span>Artista</span><input type="text" id="lvNovoArtista" placeholder="Artista ou autor"></label>
+        <div class="lvn-campo"><span>Tom</span>
+          <button type="button" class="lvn-tom" id="lvNovoTomBox" onclick="abrirLvTomPicker('novo')"><span id="lvNovoTomBoxValor">Selecione</span></button>
+        </div>
+        <div class="lvn-campo"><span>Agendamento</span><input type="date" id="lvNovoData"></div>
+        <div class="lvn-campo lvn-largo"><span>Categoria</span><div class="dificuldade-chips" id="lvNovoCategoriaChips"></div></div>
+      </div>
+      <button class="btn btn-block lvn-criar" onclick="criarLouvor()">Criar e abrir</button>
+    </section>
   </div>
 </div>
 
@@ -1331,6 +1333,13 @@
       <h3>Dados do App</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalImportExport')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
+    <div class="dash-tabs dd-abas" id="ddAbas">
+      <button type="button" class="dash-tab active" data-dd="geral" onclick="ddAba('geral')">Geral</button>
+      <button type="button" class="dash-tab" data-dd="visual" onclick="ddAba('visual')">Visual</button>
+      <button type="button" class="dash-tab" data-dd="recursos" onclick="ddAba('recursos')">Recursos</button>
+      <button type="button" class="dash-tab" data-dd="conta" onclick="ddAba('conta')">Conta</button>
+    </div>
+    <div class="dd-painel active" data-dd="geral">
     <div style="margin-bottom:var(--s4)">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;font-weight:600">O que mudou</div>
       <div id="changelogList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto"></div>
@@ -1348,12 +1357,33 @@
         <span id="storageTotal">5 MB</span>
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn" onclick="exportarDadosApp()">Exportar</button>
+      <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
+    </div>
+    </div>
+    <div class="dd-painel" data-dd="visual">
+    <div class="ia-config fundo-config">
+      <div class="ia-topo"><span class="ia-titulo">Imagem de fundo</span><span class="ia-status" id="fundoStatus">Sem imagem</span></div>
+      <div class="ia-desc">Uma foto sua atrás do app. Ela fica clarinha para o texto continuar fácil de ler.</div>
+      <div class="fundo-forca" id="fundoForca" style="display:none">
+        <div class="fundo-forca-topo"><span>Quanto a imagem aparece</span><b id="fundoForcaValor">22%</b></div>
+        <input type="range" id="fundoForcaBarra" class="fundo-barra" min="0" max="100" step="1" value="22" oninput="setVisivelFundo(this.value, false)" onchange="setVisivelFundo(this.value, true)">
+        <div class="fundo-forca-pontas"><span>Clarinha</span><span>Forte</span></div>
+      </div>
+      <div class="fundo-acoes">
+        <label class="btn btn-sm">Escolher imagem<input type="file" accept="image/*" style="display:none" onchange="escolherFundoApp(event)"></label>
+        <button type="button" class="ia-remover" id="fundoRemover" style="display:none" onclick="removerFundoApp()">Remover</button>
+      </div>
+    </div>
+    </div>
+    <div class="dd-painel" data-dd="recursos">
     <div class="ia-config">
       <div class="ia-topo"><span class="ia-titulo">Notificações</span><span class="ia-status" id="avisosStatus">Desligadas</span></div>
       <div class="ia-desc">Aviso para bater o ponto (5 min depois de cada horário, se ainda não marcou) e, às 18h, quanto falta vender para a meta.</div>
       <button type="button" class="btn btn-outline btn-block" id="avisosBtn" onclick="ativarAvisos()">Ativar notificações</button>
     </div>
-    <div class="ia-config" style="border-top:none;padding-top:0">
+    <div class="ia-config">
       <div class="ia-topo"><span class="ia-titulo">Importar cifras com IA</span><span class="ia-status" id="iaStatus">Desligada</span></div>
       <div class="ia-desc">Com uma chave grátis do Google, o Importar e o Organizar do Louvor leem qualquer PDF ou foto e já montam as partes. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Criar chave grátis</a></div>
       <div class="ia-linha">
@@ -1362,23 +1392,9 @@
       </div>
       <button type="button" class="ia-remover" id="iaRemover" style="display:none" onclick="removerChaveIA()">Remover chave</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn" onclick="exportarDadosApp()">Exportar</button>
-      <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
     </div>
-    <div class="ia-config fundo-config">
-      <div class="ia-topo"><span class="ia-titulo">Imagem de fundo</span><span class="ia-status" id="fundoStatus">Sem imagem</span></div>
-      <div class="ia-desc">Uma foto sua atrás do app. Ela fica clarinha para o texto continuar fácil de ler.</div>
-      <div class="dash-tabs fundo-forca" id="fundoForca" style="display:none">
-        <button type="button" class="dash-tab" data-forca="suave" onclick="setForcaFundo('suave')">Suave</button>
-        <button type="button" class="dash-tab" data-forca="medio" onclick="setForcaFundo('medio')">Médio</button>
-        <button type="button" class="dash-tab" data-forca="forte" onclick="setForcaFundo('forte')">Forte</button>
-      </div>
-      <div class="fundo-acoes">
-        <label class="btn btn-sm">Escolher imagem<input type="file" accept="image/*" style="display:none" onchange="escolherFundoApp(event)"></label>
-        <button type="button" class="ia-remover" id="fundoRemover" style="display:none" onclick="removerFundoApp()">Remover</button>
-      </div>
-    </div>
+    <div class="dd-painel" data-dd="conta">
+      <div class="dd-vazio" id="ddContaVazio">Este aparelho não entrou com login.</div>
     <div class="ia-config pin-config" id="pinConfig" style="display:none">
       <div class="ia-topo"><span class="ia-titulo">Entrar com PIN</span><span class="ia-status" id="pinStatus">Desligado</span></div>
       <div class="ia-desc">Em vez de e-mail e senha, entra com 6 números. O PIN passa a ser a senha da sua conta.</div>
@@ -1390,6 +1406,7 @@
         <button class="btn btn-outline" style="color:var(--danger)" onclick="sairDoApp()" title="Sair deste aparelho">Sair deste</button>
         <button class="btn btn-outline" style="color:var(--danger)" onclick="sairDeTodosAparelhos()" title="Desconectar todos os aparelhos">Sair de todos</button>
       </div>
+    </div>
     </div>
     <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="onImportFileSelected(event)">
   </div>
@@ -1699,19 +1716,19 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=5.6"></script>
-<script src="core.js?v=5.6"></script>
-<script src="comando.js?v=5.6"></script>
-<script src="layout.js?v=5.6"></script>
-<script src="app.js?v=5.6"></script>
-<script src="panorama.js?v=5.6"></script>
-<script src="planner.js?v=5.6"></script>
-<script src="ponto.js?v=5.6"></script>
-<script src="louvor.js?v=5.6"></script>
-<script src="louvor-extra.js?v=5.6"></script>
-<script src="louvor-medley.js?v=5.6"></script>
-<script src="emprestimo.js?v=5.6"></script>
-<script src="vendas.js?v=5.6"></script>
+<script src="supabase.js?v=5.7"></script>
+<script src="core.js?v=5.7"></script>
+<script src="comando.js?v=5.7"></script>
+<script src="layout.js?v=5.7"></script>
+<script src="app.js?v=5.7"></script>
+<script src="panorama.js?v=5.7"></script>
+<script src="planner.js?v=5.7"></script>
+<script src="ponto.js?v=5.7"></script>
+<script src="louvor.js?v=5.7"></script>
+<script src="louvor-extra.js?v=5.7"></script>
+<script src="louvor-medley.js?v=5.7"></script>
+<script src="emprestimo.js?v=5.7"></script>
+<script src="vendas.js?v=5.7"></script>
 <script>carregar();</script>
 </body>
 </html>

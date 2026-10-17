@@ -278,39 +278,118 @@ async function lmSalvar(){
   showToast('Medley pronto');
 }
 
-/* ================= importação com passos e conferência ================= */
-/* status(texto, passo): com "passo" abre uma etapa nova (a anterior ganha ✓); sem, escreve embaixo da etapa atual */
+/* Painel da importação: arquivo, qual IA está trabalhando, tempo, etapas com barra e um registro ao vivo.
+   status(texto, passo): com "passo" abre uma etapa nova (a anterior ganha ✓); sem, escreve embaixo da etapa atual.
+   Extras: status.log(texto, tipo) · status.modelo(nome) · status.arquivo(file) · status.aviso · status.fim(html) · status.erro */
+const LVI_PROGRESSO_ETAPA = { ler: 8, ocr: 20, ia: 22, partes: 78, conferir: 90 };
+function lviNomeModelo(m){
+  if(!m) return 'Leitura do app (sem IA)';
+  const g = /^gemini-([\d.]+)-(flash-lite|flash|pro)/i.exec(m);
+  return g ? `Gemini ${g[1]} ${g[2].replace('flash-lite','Flash-Lite').replace('flash','Flash').replace('pro','Pro')}` : m;
+}
 function lviProgresso(id){
   const el = document.getElementById(id);
-  const passos = [];
-  const desenha = ()=>{
-    if(!el) return;
+  const passos = [], inicio = Date.now();
+  let pct = 3, alvoIA = null, timer = 0, rodando = true;
+  if(el){
     el.classList.remove('erro');
-    el.innerHTML = `<div class="lvi-passos">${passos.map(p=>`<div class="lvi-passo ${p.estado}"><span class="lvi-passo-ico"></span><span class="lvi-passo-txt"><b>${lvEsc(p.titulo)}</b>${p.sub?`<small>${lvEsc(p.sub)}</small>`:''}</span></div>`).join('')}</div>`;
+    el.innerHTML = `<div class="lvc">
+      <div class="lvc-topo">
+        <div class="lvc-doc" aria-hidden="true"><div class="lvc-folha"><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="lvc-scan"></span></div>
+        <div class="lvc-info">
+          <div class="lvc-arquivo">Preparando…</div>
+          <div class="lvc-meta"></div>
+          <div class="lvc-chips"><span class="lvc-ia"><i></i><span class="lvc-ia-nome">Escolhendo a IA…</span></span><span class="lvc-tempo">00:00</span></div>
+        </div>
+      </div>
+      <div class="lvc-etapa"><b>Começando</b><small></small></div>
+      <div class="lvc-barra"><span></span></div>
+      <div class="lvc-passos"></div>
+      <div class="lvc-log"></div>
+    </div>`;
+  }
+  const q = s=>el && el.querySelector(s);
+  const mmss = ms=>{ const s = Math.floor(ms/1000); return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); };
+  const barra = ()=>{ const b = q('.lvc-barra span'); if(b) b.style.width = Math.min(100, pct) + '%'; };
+  timer = setInterval(()=>{
+    const t = q('.lvc-tempo'); if(t) t.textContent = mmss(Date.now() - inicio);
+    if(alvoIA !== null && pct < alvoIA){ pct += (alvoIA - pct) * .04; barra(); }   // enquanto a IA pensa, a barra anda devagar
+  }, 250);
+  const desenhaPassos = ()=>{
+    const p = q('.lvc-passos'); if(!p) return;
+    p.innerHTML = passos.map(x=>`<span class="lvc-p ${x.estado}">${x.estado==='ok'?'✓':x.estado==='aviso'||x.estado==='falhou'?'!':''}<em>${lvEsc(x.curto)}</em></span>`).join('');
+    const a = passos[passos.length-1];
+    if(a){ q('.lvc-etapa b').textContent = a.titulo; q('.lvc-etapa small').textContent = a.sub || ''; }
   };
-  const ativo = ()=>passos.find(p=>p.estado==='ativo');
   const fn = (texto, passo)=>{
+    if(!rodando) return;
     if(passo){
       passos.forEach(p=>{ if(p.estado==='ativo') p.estado = 'ok'; });
-      passos.push({ titulo: texto, estado: 'ativo', sub: '' });
+      passos.push({ id: passo, titulo: texto, curto: texto.replace(/\s*\(.*\)$/,'').replace(/^(Lendo|Separando|Conferindo|Abrindo) /,'').replace(/^o |^a /,''), estado: 'ativo', sub: '' });
+      pct = Math.max(pct, LVI_PROGRESSO_ETAPA[passo] || pct);
+      alvoIA = passo === 'ia' ? 72 : null;
+      barra();
+      fn.log(texto + '…');
     } else {
-      const a = ativo();
-      if(a) a.sub = texto; else passos.push({ titulo: texto, estado: 'ativo', sub: '' });
+      const a = passos.find(p=>p.estado==='ativo');
+      if(a) a.sub = texto;
     }
-    desenha();
+    desenhaPassos();
   };
-  fn.aviso = texto=>{ const a = ativo(); if(a){ a.estado = 'aviso'; a.sub = texto; } else passos.push({ titulo: texto, estado: 'aviso', sub: '' }); desenha(); };
+  fn.log = (texto, tipo)=>{
+    const lg = q('.lvc-log'); if(!lg) return;
+    lg.insertAdjacentHTML('beforeend', `<div class="lvc-linha ${tipo||''}"><time>${mmss(Date.now()-inicio)}</time><span>${lvEsc(texto)}</span></div>`);
+    while(lg.children.length > 9) lg.firstElementChild.remove();
+  };
+  fn.modelo = m=>{
+    const n = q('.lvc-ia-nome'); if(n) n.textContent = lviNomeModelo(m);
+    const c = q('.lvc-ia'); if(c) c.classList.toggle('sem', !m);
+  };
+  fn.arquivo = file=>{
+    if(!file) return;
+    const tipo = lviEhImagem(file) ? 'Foto' : 'PDF';
+    const kb = file.size > 1048576 ? (file.size/1048576).toFixed(1).replace('.',',') + ' MB' : Math.max(1, Math.round(file.size/1024)) + ' KB';
+    const a = q('.lvc-arquivo'); if(a) a.textContent = file.name || 'arquivo';
+    const m = q('.lvc-meta'); if(m) m.textContent = `${tipo} · ${kb}`;
+    fn.log(`Arquivo recebido: ${file.name || tipo} (${kb})`);
+  };
+  fn.aviso = texto=>{
+    const a = passos.find(p=>p.estado==='ativo');
+    if(a){ a.estado = 'aviso'; a.sub = texto; }
+    alvoIA = null;
+    fn.log(texto, 'aviso');
+    desenhaPassos();
+  };
+  const parar = ()=>{ rodando = false; clearInterval(timer); el && el.querySelector('.lvc')?.classList.add('parado'); };
   fn.fim = relatorio=>{
     passos.forEach(p=>{ if(p.estado==='ativo') p.estado = 'ok'; });
-    desenha();
+    pct = 100; barra(); desenhaPassos();
+    q('.lvc-etapa b').textContent = 'Pronto'; q('.lvc-etapa small').textContent = 'em ' + mmss(Date.now() - inicio).replace(/^00:/, '') + (Date.now() - inicio < 60000 ? ' s' : '');
+    fn.log('Concluído', 'ok');
+    parar();
     if(el && relatorio) el.insertAdjacentHTML('beforeend', relatorio);
   };
   fn.erro = msg=>{
     passos.forEach(p=>{ if(p.estado==='ativo') p.estado = 'falhou'; });
-    desenha();
+    desenhaPassos();
+    fn.log(msg, 'erro');
+    parar();
+    el && el.querySelector('.lvc')?.classList.add('falhou');
     if(el) el.insertAdjacentHTML('beforeend', `<div class="lvi-erro">${lvEsc(msg)}</div>`);
   };
   return fn;
+}
+/* o que a importação encontrou, no registro (título, tom, partes e conferência) */
+function lviLogResultado(prog, r){
+  if(!prog || !prog.log) return;
+  const tom = r.tom && r.tom.tomOriginal ? (r.tom.tomModoMenor ? lvRelativoMenor(r.tom.tomOriginal) + 'm' : r.tom.tomOriginal) : '';
+  if(r.titulo || r.artista) prog.log(`Música: ${r.titulo || '—'}${r.artista ? ' · ' + r.artista : ''}${tom ? ' · Tom ' + tom : ''}`, 'ok');
+  const rotulos = ((r.conteudo || '').match(/^\[(.+)\]$/gm) || []).map(s=>s.slice(1,-1));
+  const partes = rotulos.filter(s=>!/^repete\b/i.test(s)), reps = rotulos.length - partes.length;
+  if(partes.length) prog.log(`Partes: ${partes.slice(0, 8).join(', ')}${partes.length > 8 ? '…' : ''}${reps ? ` (+ ${reps} repetição${reps>1?'ões':''})` : ''}`, 'ok');
+  const c = r.conferencia || {};
+  if(r.usouIA && c.comPdf && c.acordes) prog.log(`Acordes conferidos com o PDF: ${c.conferidos} de ${c.acordes}`, (c.olhar||[]).length ? 'aviso' : 'ok');
+  (c.faltando || []).slice(0, 3).forEach(t=>prog.log(`Ficou de fora: “${t}”`, 'aviso'));
 }
 /* resumo do que foi conferido de verdade (sem prometer o que o app não consegue checar) */
 function lviRelatorioHtml(r, final){
@@ -320,7 +399,9 @@ function lviRelatorioHtml(r, final){
   const it = [];
   const perdidas = (c.faltando || []).length, olhar = (c.olhar || []).length;
   if(c.linhas) it.push(ok(`${c.linhas} linhas da letra${c.comPdf && r.usouIA && !perdidas ? ', nenhuma ficou de fora' : ''}`));
-  if(r.blocos) it.push(ok(`${r.blocos} parte${r.blocos>1?'s':''} separada${r.blocos>1?'s':''} (estrofes, refrão…)`));
+  const rotulos = ((r.conteudo || '').match(/^\[(.+)\]$/gm) || []).map(s=>s.slice(1,-1));
+  const nPartes = rotulos.filter(s=>!/^repete\b/i.test(s)).length || r.blocos, nReps = rotulos.length - rotulos.filter(s=>!/^repete\b/i.test(s)).length;
+  if(nPartes) it.push(ok(`${nPartes} parte${nPartes>1?'s':''} separada${nPartes>1?'s':''}${nReps ? ` e ${nReps} repetição${nReps>1?'ões':''} marcada${nReps>1?'s':''}` : ''}`));
   if(c.acordes){
     if(r.usouIA && c.comPdf){ if(c.conferidos) it.push(ok(`${c.conferidos} acordes conferidos com o PDF, cada um em cima da sílaba certa`)); }
     else if(c.comPdf) it.push(ok(`${c.acordes} acordes na posição exata em que estavam no PDF`));

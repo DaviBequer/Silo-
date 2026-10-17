@@ -521,8 +521,16 @@ async function lviPerguntarIA(partes, status, esquema){
     }
     if(i > 0 && status) status(`Tentando de novo (tentativa ${i+1} de ${LVI_IA_ESPERAS.length})…`);
     const modelo = modelos[i % modelos.length];
-    try{ return await lviPerguntarIAUmaVez(partes, modelo, esquema); }
+    if(status && status.modelo) status.modelo(modelo);
+    if(status && status.log) status.log(`Perguntando ao ${lviNomeModelo(modelo)}${i ? ' (tentativa ' + (i+1) + ')' : ''}`);
+    const t0 = Date.now();
+    try{
+      const resp = await lviPerguntarIAUmaVez(partes, modelo, esquema);
+      if(status && status.log) status.log(`${lviNomeModelo(modelo)} respondeu em ${((Date.now()-t0)/1000).toFixed(1).replace('.',',')} s`, 'ok');
+      return resp;
+    }
     catch(e){
+      if(status && status.log) status.log(`${lviNomeModelo(modelo)}: ${e.limite ? 'limite do plano atingido' : e.passageiro ? 'ocupado agora' : (e.message || 'erro')}`, 'aviso');
       const reserva = modelo !== LVI_IA_MODELO;
       if(!e.passageiro && !reserva) throw e;   // chave errada, resposta estranha...: não adianta insistir
       if(!reserva) limite = limite || !!e.limite;
@@ -654,6 +662,7 @@ async function lviImportarComIA(file, status){
   status('leva alguns segundos…');
   /* em paralelo: a leitura simples do PDF, só para pegar a posição exata dos acordes */
   const simplesP = lviEhImagem(file) ? Promise.resolve(null) : lviImportarSimples(file, ()=>{}).catch(()=>null);
+  if(status.log && !lviEhImagem(file)) status.log('Lendo o PDF direto também, para pegar a posição exata de cada acorde');
   const arquivo = lviEhImagem(file)
     ? { type:'image', data: b64, mime_type: lviTipoImagem(file) }
     : { type:'document', data: b64, mime_type: 'application/pdf' };
@@ -661,6 +670,7 @@ async function lviImportarComIA(file, status){
   status('Separando as partes (estrofes, refrão…)', 'partes');
   const simples = await simplesP;
   const linhasPdf = simples ? lviTextoParaLinhas(simples.conteudo).filter(r=>r.type==='lyric') : null;
+  if(status.log && linhasPdf) status.log(`Leitura direta do PDF: ${linhasPdf.length} linhas de letra`);
   status(linhasPdf ? 'Conferindo cada acorde com o PDF' : 'Conferindo a letra', 'conferir');
   return lviMontarDaIA(j, lviNomeDoArquivo(file.name||''), linhasPdf);
 }
@@ -670,9 +680,11 @@ async function lviImportar(file, status){
   /* com a chave da IA: tenta primeiro pela IA; se falhar, segue para a leitura simples (e avisa o motivo) */
   let avisoIA = '';
   if(lviChaveIA()){
+    if(status.log) status.log('IA ligada: a cifra vai ser lida pelo Google Gemini');
     try{ return await lviImportarComIA(file, status); }
     catch(e){ avisoIA = (e && e.message) || 'erro'; (status.aviso || status)('IA indisponível (' + avisoIA + ') — usando a leitura simples'); }
   }
+  if(status.modelo) status.modelo(null);
   const r = await lviImportarSimples(file, status);
   r.avisoIA = avisoIA;
   return r;
@@ -723,6 +735,7 @@ async function lvImportarNoNovo(ev){
   if(!file) return;
   window.lviUltimo = { file, onde: 'novo' };
   const prog = lviProgresso('lvNovoImportStatus');
+  prog.arquivo(file);
   document.getElementById('pageLouvorForm')?.classList.add('importando');
   try{
     const r = await lviImportar(file, prog);
@@ -732,7 +745,11 @@ async function lvImportarNoNovo(ev){
     if(r.categoria){ window.lvNovoCategoriaSelecionada = r.categoria; renderLvNovoCategoriaChips(); }
     window.lvNovoConteudo = r.conteudo;
     window.lvNovoRevisar = (r.conferencia && r.conferencia.olhar) || [];
-    prog.fim(lviRelatorioHtml(r, 'Confira os dados abaixo e toque em <b>Criar e Abrir</b>.'));
+    lviLogResultado(prog, r);
+    prog.fim(lviRelatorioHtml(r, 'Confira os dados abaixo e toque em <b>Criar e abrir</b>.'));
+    const form = document.querySelector('#pageLouvorForm .lvn-form');
+    if(form){ form.classList.remove('preenchido'); void form.offsetWidth; form.classList.add('preenchido'); }
+    const dica = document.getElementById('lvnFormDica'); if(dica) dica.textContent = '✓ preenchido pela importação — confira';
   }catch(e){
     prog.erro('Não consegui ler: '+(e && e.message ? e.message : e)+'. Você pode colar a cifra como texto depois.');
   }
@@ -745,6 +762,7 @@ async function lvImportarNoAtual(ev){
   if(!ev.semConfirmar && (l.conteudo||'').trim() && !(await iosConfirm('Substituir a cifra atual pelo conteúdo do arquivo?'))) return;
   window.lviUltimo = { file, onde: 'atual' };
   const prog = lviProgresso('lvEdicaoImportStatus');
+  prog.arquivo(file);
   try{
     const r = await lviImportar(file, prog);
     l.conteudo = r.conteudo;
@@ -756,6 +774,7 @@ async function lvImportarNoAtual(ev){
     if(olhar.length) l.revisar = olhar; else delete l.revisar;
     persist();
     abrirLouvorDetalhe(l.id);
+    lviLogResultado(prog, r);
     prog.fim(lviRelatorioHtml(r, '<button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button>'));
   }catch(e){
     prog.erro('Não consegui ler: '+(e && e.message ? e.message : e));
