@@ -29,7 +29,6 @@ function novoEstado(){
     comprasTracker:[],
     metas:[],
     louvores:[],
-    louvorRoteiro:[],
     ponto:{ valorHora:0, padraoHoras:8, days:{} },
   };
 }
@@ -349,13 +348,12 @@ async function carregarDaNuvem(){
       if(!state.pontoFechado) state.pontoFechado = {};
       if(!state.credoVistaCategoriasCustom) state.credoVistaCategoriasCustom = [];
       if(!state.louvores) state.louvores = [];
-      if(!state.louvorRoteiro) state.louvorRoteiro = [];
       // migração: garantir campos novos
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; if(!c.assinaturas) c.assinaturas=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
       /* restos de recursos que saíram do app (receitas, mercado, estoque...): só ocupavam espaço no banco */
-      ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','configTema','metaPJ','tarefas','tarefaCategorias','semanaAgenda','semanaOffset','layoutPrefs','layoutV3'].forEach(k=>{
+      ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','louvorRoteiro','configTema','metaPJ','tarefas','tarefaCategorias','semanaAgenda','semanaOffset','layoutPrefs','layoutV3'].forEach(k=>{
         if(k in state){ delete state[k]; precisaSalvar = true; }
       });
       mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso ? 1 : 0;

@@ -19,84 +19,10 @@ function lvEstaAtual(l){
 
 function renderLouvor(){
   renderLouvorFilterChips();
-  renderLvRoteiro();
   if(typeof renderCultoBotao==='function') renderCultoBotao();
   renderLouvorLista();
 }
 
-/* ---------- Roteiro: checklist dos louvores a criar ----------
-   Marcar um item: se já existe louvor com esse nome, abre ele; senão abre "Novo louvor" preenchido
-   e o item só fica marcado quando o louvor for criado. */
-let lvRoteiroAberto = (()=>{ try{ return localStorage.getItem('siloe-lv-roteiro')==='1'; }catch(e){ return false; } })();
-let lvRoteiroPendenteId = null;
-function lvRoteiroLista(){ if(!state.louvorRoteiro) state.louvorRoteiro = []; return state.louvorRoteiro; }
-function lvMesmoNome(a, b){ return String(a||'').trim().toLowerCase() === String(b||'').trim().toLowerCase(); }
-/* cabeçalho abre/fecha (sem argumento alterna) */
-function toggleLvRoteiro(v){
-  lvRoteiroAberto = v === undefined ? !lvRoteiroAberto : !!v;
-  try{ localStorage.setItem('siloe-lv-roteiro', lvRoteiroAberto?'1':'0'); }catch(e){}
-  renderLvRoteiro();
-}
-function renderLvRoteiro(){
-  const el = document.getElementById('lvRoteiro'), corpo = document.getElementById('lvRotCorpo');
-  if(!el || !corpo) return;
-  const aFazer = lvRoteiroLista().filter(i=>!i.feito).length;
-  document.getElementById('lvRotConta').textContent = aFazer ? `${aFazer} a criar` : '';
-  el.classList.toggle('aberto', lvRoteiroAberto);
-  document.getElementById('lvRotHead')?.setAttribute('aria-expanded', lvRoteiroAberto ? 'true' : 'false');
-  if(!lvRoteiroAberto){ corpo.innerHTML = ''; return; }
-  const itens = lvRoteiroLista().slice().sort((a,b)=> (a.feito?1:0)-(b.feito?1:0) || (a.criadoEm||0)-(b.criadoEm||0));
-  const linhas = itens.map(it=>{
-    const lv = it.louvorId && state.louvores.find(l=>l.id===it.louvorId);
-    const st = it.feito ? (lv ? (lv.status==='finalizada'?'Finalizado':'Em produção') : 'Criado') : '';
-    return `<div class="lv-rot-item${it.feito?' feito':''}">
-      <button type="button" class="lv-rot-check" onclick="marcarLvRoteiro('${it.id}')" aria-label="${it.feito?'Desmarcar':'Marcar e criar'}">${it.feito?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>':''}</button>
-      <div class="lv-rot-info" ${lv?`onclick="abrirLouvorDetalhe('${lv.id}')"`:''}>
-        <div class="lv-rot-titulo">${lvEsc(it.titulo)}</div>
-        <div class="lv-rot-meta">${lvEsc(it.artista||'Sem cantor')}${st?' · '+st:''}</div>
-      </div>
-      <button type="button" class="btn-icon-sm" onclick="excluirLvRoteiro('${it.id}')" title="Remover" aria-label="Remover"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-    </div>`;
-  }).join('');
-  corpo.innerHTML = `${linhas || '<div class="lv-rot-vazio">Nenhuma música para criar</div>'}
-    <form class="lv-rot-novo" onsubmit="event.preventDefault();adicionarLvRoteiro()">
-      <input type="text" id="lvRotTitulo" placeholder="Música" autocomplete="off">
-      <input type="text" id="lvRotArtista" placeholder="Cantor" autocomplete="off">
-      <button type="submit" class="lv-rot-add" aria-label="Adicionar à lista"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
-    </form>`;
-}
-function adicionarLvRoteiro(){
-  const t = document.getElementById('lvRotTitulo'), a = document.getElementById('lvRotArtista');
-  const titulo = t.value.trim();
-  if(!titulo){ t.focus(); return; }
-  lvRoteiroLista().push({ id:'rot_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), titulo, artista:a.value.trim(), feito:false, louvorId:'', criadoEm:Date.now() });
-  persist();
-  renderLvRoteiro();
-  document.getElementById('lvRotTitulo')?.focus();
-}
-function excluirLvRoteiro(id){
-  comDesfazer('Música tirada da lista', ()=>{
-    state.louvorRoteiro = lvRoteiroLista().filter(i=>i.id!==id);
-    persist();
-    renderLvRoteiro();
-  });
-}
-function marcarLvRoteiro(id){
-  const it = lvRoteiroLista().find(i=>i.id===id);
-  if(!it) return;
-  if(it.feito){ it.feito = false; it.louvorId = ''; persist(); renderLvRoteiro(); return; }
-  const existente = state.louvores.find(l=>lvMesmoNome(l.titulo, it.titulo));
-  if(existente){
-    it.feito = true; it.louvorId = existente.id;
-    persist(); renderLvRoteiro();
-    abrirLouvorDetalhe(existente.id);
-    return;
-  }
-  openLouvorForm();
-  document.getElementById('lvNovoTitulo').value = it.titulo;
-  document.getElementById('lvNovoArtista').value = it.artista || '';
-  lvRoteiroPendenteId = it.id;
-}
 function toggleLouvorFiltros(){
   louvorFiltrosVisiveis = !louvorFiltrosVisiveis;
   renderLouvorFilterChips();
@@ -187,9 +113,16 @@ function renderLouvorLista(){
   }).join('');
 }
 
+/* botão + do Louvor: menu rápido (Drive, importar, medley, à mão) */
+function lvFabMenu(abrir){
+  const m = document.getElementById('lvFabMenu'), fab = document.getElementById('lvFab'); if(!m) return;
+  if(abrir === undefined) abrir = !m.classList.contains('aberto');
+  if(abrir && typeof atualizarStatusDrive === 'function') atualizarStatusDrive();
+  m.classList.toggle('aberto', !!abrir);
+  fab?.classList.toggle('aberto', !!abrir);
+}
 /* ---------- Novo louvor ---------- */
 function openLouvorForm(){
-  lvRoteiroPendenteId = null;
   document.getElementById('lvNovoTitulo').value = '';
   document.getElementById('lvNovoArtista').value = '';
   document.getElementById('lvNovoData').value = '';
@@ -243,10 +176,6 @@ function criarLouvor(){
     criadoEm: Date.now()
   };
   state.louvores.push(novo);
-  /* veio do Roteiro: marca o item como criado */
-  const rot = lvRoteiroPendenteId && lvRoteiroLista().find(i=>i.id===lvRoteiroPendenteId);
-  if(rot){ rot.feito = true; rot.louvorId = id; }
-  lvRoteiroPendenteId = null;
   persist();
   closeLouvorForm();
   renderLouvor();

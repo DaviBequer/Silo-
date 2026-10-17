@@ -435,6 +435,16 @@ body:has(.modal-overlay.active){overflow:hidden}
 /* botão redondo flutuante */
 .receita-fab,.receita-salvar-fab{position:fixed;right:20px;width:56px;height:56px;border:none;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(28,25,23,.28);cursor:pointer;transition:transform .2s var(--mola),box-shadow .2s var(--ease)}
 .receita-fab{bottom:88px;z-index:60}
+.receita-fab svg{transition:transform .3s var(--mola)}
+.receita-fab.aberto svg{transform:rotate(45deg)}
+/* menu do + do Louvor */
+.lv-fab-menu{position:fixed;inset:0;z-index:59;display:none;background:rgba(12,10,9,.28);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.lv-fab-menu.aberto{display:block}
+.lv-fab-opcoes{position:fixed;right:20px;bottom:156px;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.lv-fab-op{display:flex;align-items:center;gap:10px;padding:0;border:none;background:none;font:inherit;cursor:pointer;animation:surgir .3s var(--mola) both}
+.lv-fab-op span{padding:8px 12px;border-radius:10px;background:var(--card);color:var(--text);font-size:13px;font-weight:600;box-shadow:var(--sombra-card)}
+.lv-fab-op i{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--card);color:var(--text);box-shadow:var(--sombra-card)}
+.lv-fab-op:nth-child(2){animation-delay:.04s}.lv-fab-op:nth-child(3){animation-delay:.08s}.lv-fab-op:nth-child(4){animation-delay:.12s}
 .receita-salvar-fab{bottom:24px;z-index:520}
 .receita-fab:active,.receita-salvar-fab:active{transform:scale(.9)}
 @media(hover:hover){ .receita-fab:hover,.receita-salvar-fab:hover{transform:translateY(-2px) rotate(90deg);box-shadow:0 14px 30px rgba(28,25,23,.32)} .receita-salvar-fab:hover{transform:translateY(-2px)} }

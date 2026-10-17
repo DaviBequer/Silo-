@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.5', itens: [
+    'Louvor: o botão + abre um menu — Puxar do Drive, Importar PDF ou foto, Montar medley, Escrever à mão',
+    'Louvor: a lista "Para criar" saiu (o Culto faz esse papel)'
+  ]},
   { versao: 'v6.4', itens: [
     'Louvor: puxar PDF do Drive — criar música nova ou atualizar a cifra, ou só abrir o PDF',
     'Louvor: ao importar ou organizar, partes com mais de 4 linhas ganham "-" e viram slides menores'
@@ -826,7 +830,7 @@ function efeitoAoTrocarAba(aba){
   efeitoContarNumeros(raiz);
 }
 /* "feito": qualquer toque nos controles de marcar (conta paga, batida/dia do ponto, ordem, roteiro, salário, dízimo, fatura...) */
-const EFEITO_FEITO = /togglePaid|contaTapEnd|toggleDiaConcluido|toggleOrdemComando|marcarLvRoteiro|toggleCompraPago|toggleExtraRecebido|cpToggleSalario|cpToggleExtra|cpToggleDizimo|toggleFaturaMes/;
+const EFEITO_FEITO = /togglePaid|contaTapEnd|toggleDiaConcluido|toggleOrdemComando|toggleCompraPago|toggleExtraRecebido|cpToggleSalario|cpToggleExtra|cpToggleDizimo|toggleFaturaMes/;
 document.addEventListener('pointerup', ev=>{
   if(!efeitosLigados) return;
   const alvo = ev.target.closest('[onclick], [onpointerup]');
