@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.6', itens: [
+    'Culto: "Adicionar parte" voltou a funcionar; partes em branco somem sozinhas',
+    'Culto: layout novo (linha do tempo das partes, data com setas) e "Ordem no WhatsApp"',
+    'Culto: o texto do grupo agora é a lista numerada de louvores, na ordem que você escolher'
+  ]},
   { versao: 'v6.5', itens: [
     'Louvor: o botão + abre um menu — Puxar do Drive, Importar PDF ou foto, Montar medley, Escrever à mão',
     'Louvor: a lista "Para criar" saiu (o Culto faz esse papel)'
