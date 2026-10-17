@@ -141,8 +141,8 @@ function renderVendas(){
   const faltaMes = alvoMes===null ? null : alvoMes - comMes;
   const pctMes = (alvoMes && alvoMes>0) ? Math.max(0, Math.min(100, Math.round(comMes/alvoMes*100))) : 0;
   const explicaMes = metaMes===null ? '' : (baseMes < 0
-    ? `Vender <b>${fmtMoney(alvoMes)}</b> · meta ${fmtMoney(metaMes)} + ${fmtMoney(-baseMes)} que faltam nas contas`
-    : `Vender <b>${fmtMoney(metaMes)}</b> · as contas já sobram ${fmtMoney(baseMes)}`);
+    ? `Vender <b>${fmtMoney(alvoMes)}</b> · meta ${fmtMoney(metaMes)} + ${fmtMoney(-baseMes)} que faltam nas contas (sem o cartão)`
+    : `Vender <b>${fmtMoney(metaMes)}</b> · as contas já sobram ${fmtMoney(baseMes)} sem contar o cartão`);
   let html = `<div class="card resumo-card">
     <div class="resumo-topo">
       <div class="resumo-mes">Vendas · ${monthLabelLong(mAtual)}</div>

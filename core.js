@@ -982,7 +982,24 @@ function futuroValorNoMes(item, mKey){
 /* Conta com pagamento parcial: só o que falta pagar entra na previsão */
 function restanteConta(paidKey, valor){
   const pago = (state.pagamentosParciais||{})[paidKey] || 0;
-  return Math.max(valor - pago, 0);
+  return Math.max(valor - pago - contaUsadaNoCartao(paidKey), 0);
+}
+/* Conta-reserva: uma conta com o mesmo nome de uma categoria do cartão (ex.: "Mercado") já foi gasta em parte
+   no cartão (compras à vista dessa categoria na fatura do mês) — essa parte sai da conta para não contar duas vezes
+   (ela já está na fatura). paidKey = mês_usuário_categoria_id */
+function semAcentoCore(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+function contaUsadaNoCartao(paidKey){
+  const p = String(paidKey).split('_');
+  const mKey = p[0], user = p[1], cat = p[2], id = p.slice(3).join('_');
+  if(user !== 'davi' || !state.users || !state.users[user]) return 0;
+  const item = ((state.users[user].expenses||{})[cat]||[]).find(i=>String(i.id) === id);
+  if(!item || !item.desc) return 0;
+  const nome = semAcentoCore(item.desc);
+  let usado = 0;
+  (state.cartoesTracker||[]).forEach(c=>(c.credoVista||[]).forEach(cv=>{
+    if(cv.mKey === mKey && !cv.ajuste && semAcentoCore(cv.categoria) === nome) usado += Number(cv.valor)||0;
+  }));
+  return Math.round(usado*100)/100;
 }
 /* cada gasto (Moradia, Assinaturas, Fixos, Contas futuras) que vale no mês, com quanto falta pagar.
    Mesma regra de expensesForMonth: é a lista que soma na linha "Gastos" do Fluxo Mensal */

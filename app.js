@@ -95,6 +95,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.2', itens: [
+    'Computador: Finanças em painel de duas colunas (resumo e gráfico à esquerda, contas e análises à direita)',
+    'Celular: Moradia, Assinaturas, Fixos e Contas futuras numa lista só',
+    'Cartão: a cor do banco virou só um detalhe; botões pequenos todos no mesmo estilo; letras pequenas maiores',
+    'Compras no cartão com o nome de uma conta (ex.: Mercado) descontam dessa conta, sem contar duas vezes',
+    'Vendas deixa claro que a sobra é sem contar o cartão'
+  ]},
   { versao: 'v6.1', itens: [
     'Cartão: botões + À vista, + Parcelada, + Assinatura e Ajuste; editar com um toque',
     'Desfazer por alguns segundos depois de excluir contas, extras e lançamentos do cartão',

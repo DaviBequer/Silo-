@@ -774,8 +774,9 @@ function renderContasPagar(){
     const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
     const isPaid = !!state.paid[paidKey];
     const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
-    const isParcial = !isPaid && valorPago > 0;
-    conta(Number(it.valor)||0, isPaid, valorPago);
+    const noCartao = isPaid ? 0 : Math.min(Number(it.valor)||0, contaUsadaNoCartao(paidKey));
+    const isParcial = !isPaid && (valorPago > 0 || noCartao > 0);
+    conta(Number(it.valor)||0, isPaid, valorPago + noCartao);
     const diasVenc = !isPaid ? diasParaVencimento(it, it.mesOrigem) : null;
     const corDia = diasVenc===null ? '' : (diasVenc<0?' atrasada':(diasVenc<=3?' urgente':''));
     const quando = diasVenc===null ? `dia ${it.dia}` : (diasVenc<0 ? `venceu dia ${it.dia}` : (diasVenc===0 ? 'vence hoje' : (diasVenc<=3 ? `vence em ${diasVenc} dia${diasVenc>1?'s':''}` : `dia ${it.dia}`)));
@@ -783,7 +784,7 @@ function renderContasPagar(){
       titulo: it.desc, logoUrl: it.logoUrl,
       sub: `<span class="cp-dia${corDia}">${quando}</span>`,
       tag: it.mesOrigem!==mKey ? `<span class="cp-tag">${monthLabel(it.mesOrigem)}</span>` : '',
-      valor: Number(it.valor)||0, valorSub: isParcial ? 'pago '+fmtMoney(valorPago) : '',
+      valor: Number(it.valor)||0, valorSub: !isParcial ? '' : [valorPago > 0 ? 'pago '+fmtMoney(valorPago) : '', noCartao > 0 ? fmtMoney(noCartao)+' no cartão' : ''].filter(Boolean).join(' · '),
       feito: isPaid, parcial: isParcial,
       acao: isPaid ? '' : `<button type="button" class="cp-parte" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="event.stopPropagation();abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')">Parte</button>`,
       attrs: `onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()"`

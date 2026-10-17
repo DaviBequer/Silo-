@@ -42,7 +42,10 @@ function applyLayout(groupKey){
       }
       return;
     }
-    el.style.gridColumn = desktop ? 'span '+(parseInt(el.dataset.span) || cfg.defaultSpan) : '';
+    /* tela larga: painel em 2 colunas — data-col="esq" (resumo, gráfico) e data-col="dir" (contas e análises) */
+    const painel = desktop && el.dataset.col && window.matchMedia('(min-width:1280px)').matches;
+    el.style.gridColumn = painel ? (el.dataset.col === 'esq' ? '1 / 6' : '6 / 13')
+      : desktop ? 'span '+(parseInt(el.dataset.span) || cfg.defaultSpan) : '';
     if(cfg.masonry){
       if(desktop){ masonryUpdateSpan(el, container); masonryObserve(el, container); }
       else el.style.gridRowEnd = '';
