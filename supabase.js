@@ -5,9 +5,6 @@
   // ID fixo: todos os aparelhos enxergam os mesmos dados. Quem protege os dados é o login + RLS no banco, não este ID.
   const USER_ID = 'siloe_b28aad42c1064df76ef2b8fe4def8dd2';
 
-  // Chaves antigas do localStorage: lidas só uma vez, para migrar os dados para o Supabase.
-  const CHAVES_LEGADO = ['siloe-data-v1','siloe-mes-atual','siloe-logo','siloe-supabase-user-id','siloe-backups-auto','siloe-versao-anterior'];
-
   function getClient(){
     if (!window.supabase) return null;
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
@@ -22,9 +19,72 @@
   const MODO_TESTE = /[?&]teste\b/.test(location.search);
   let ultimoUpdatedAt = null;   // updated_at da última leitura/gravação deste aparelho (detecta outro aparelho salvando por cima)
 
+  /* ===== IMAGENS SEPARADAS DOS DADOS =====
+     Logos e foto de fundo eram ~75% do registro e iam inteiras a cada gravação. Agora, ao salvar, cada imagem
+     grande vira "img:<hash>" no registro e vai uma vez só para a tabela app_imagens; ao carregar, volta para o lugar.
+     O resto do app continua vendo as imagens normalmente. Sem a tabela (ou se ela falhar), grava tudo junto como antes. */
+  const IMG_MIN = 2000;                          // imagens pequenas ficam no próprio registro
+  const imagensConhecidas = new Map();           // hash -> imagem (já está no banco ou acabou de ir)
+  let tabelaImagensOk = true;
+  async function hashTexto(t){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  /* JSON do estado -> { leve: JSON sem as imagens grandes, novas: [{hash, data}] } */
+  async function separarImagens(json){
+    const achadas = [];
+    json.replace(/"(data:image\/[^"\\]*(?:\\.[^"\\]*)*)"/g, (m, dentro) => { if (dentro.length >= IMG_MIN) achadas.push(dentro); return m; });
+    if (!achadas.length) return { leve: json, novas: [] };
+    const troca = new Map(), novas = [];
+    for (const bruto of achadas) {
+      if (troca.has(bruto)) continue;
+      const img = JSON.parse('"' + bruto + '"');
+      const h = await hashTexto(img);
+      troca.set(bruto, 'img:' + h);
+      if (!imagensConhecidas.has(h)) novas.push({ hash: h, data: img });
+    }
+    const leve = json.replace(/"(data:image\/[^"\\]*(?:\\.[^"\\]*)*)"/g, (m, dentro) => troca.has(dentro) ? '"' + troca.get(dentro) + '"' : m);
+    return { leve, novas };
+  }
+  /* registro do banco -> mesmo registro com as imagens de volta no lugar */
+  async function juntarImagens(dados){
+    if (!dados) return dados;
+    const refs = new Set();
+    const procurar = o => { if (!o || typeof o !== 'object') return; for (const k in o) { const v = o[k]; if (typeof v === 'string') { if (/^img:[0-9a-f]{64}$/.test(v)) refs.add(v.slice(4)); } else procurar(v); } };
+    procurar(dados);
+    if (!refs.size) return dados;
+    const faltam = [...refs].filter(h => !imagensConhecidas.has(h));
+    if (faltam.length) {
+      const { data, error } = await client.from('app_imagens').select('hash, data').eq('user_id', USER_ID).in('hash', faltam);
+      if (error) throw error;
+      (data || []).forEach(r => imagensConhecidas.set(r.hash, r.data));
+    }
+    const repor = o => { if (!o || typeof o !== 'object') return; for (const k in o) { const v = o[k]; if (typeof v === 'string') { if (/^img:[0-9a-f]{64}$/.test(v) && imagensConhecidas.has(v.slice(4))) o[k] = imagensConhecidas.get(v.slice(4)); } else repor(v); } };
+    repor(dados);
+    return dados;
+  }
+  /* manda as imagens novas; se não der, a gravação segue com as imagens dentro do registro */
+  async function prepararGravacao(json){
+    if (!tabelaImagensOk) return json;
+    try {
+      const { leve, novas } = await separarImagens(json);
+      if (novas.length) {
+        const { error } = await client.from('app_imagens').upsert(novas.map(n => ({ user_id: USER_ID, hash: n.hash, data: n.data })), { onConflict: 'user_id,hash', ignoreDuplicates: true });
+        if (error) throw error;
+        novas.forEach(n => imagensConhecidas.set(n.hash, n.data));
+      }
+      return leve;
+    } catch (e) {
+      console.warn('[SUPABASE] imagens ficam dentro do registro:', e && (e.message || e.code));
+      if (e && (e.code === '42P01' || /app_imagens|does not exist|schema cache/i.test(e.message || ''))) tabelaImagensOk = false;   // tabela ainda não criada
+      return json;
+    }
+  }
+
   window.SiloSupabase = {
     enabled: !!client,
     userId: USER_ID,
+    imagens: { separar: separarImagens, juntar: juntarImagens },   // usado pela página de testes
     lastError: '',
     client,
     /* ===== LOGIN: com a proteção (RLS) ligada no banco, só quem entrou com e-mail e senha lê e grava ===== */
@@ -108,7 +168,7 @@
           .maybeSingle();
         if (error && error.code !== 'PGRST116') throw error;
         ultimoUpdatedAt = data ? data.updated_at : null;
-        return { ok:true, data: data ? data.data : null, updatedAt: ultimoUpdatedAt };
+        return { ok:true, data: data ? await juntarImagens(data.data) : null, updatedAt: ultimoUpdatedAt };
       } catch (e) {
         console.error('[SUPABASE] Erro ao carregar estado:', e);
         this.lastError = String((e && (e.message || e.code)) || e).slice(0,120);
@@ -122,7 +182,8 @@
       this.conflito = false;
       if (MODO_TESTE) { console.info('[TESTE] gravação ignorada (?teste na URL)'); return true; }
       try {
-        const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
+        const json = typeof payload === 'string' ? payload : JSON.stringify(payload);
+        const parsed = JSON.parse(await prepararGravacao(json));
         const agora = new Date().toISOString();
         if (ultimoUpdatedAt) {
           const { data, error } = await client
@@ -167,20 +228,6 @@
       const r = await this.checarAtualizacao();
       if (r.ok) ultimoUpdatedAt = r.updatedAt;
       return r.ok;
-    },
-    // MIGRAÇÃO ÚNICA: lê o que sobrou no localStorage. Pode apagar estas duas funções quando todos os aparelhos já tiverem migrado.
-    lerLegado(){
-      const out = { state:null, mesAtual:null, logo:null };
-      try {
-        const raw = localStorage.getItem('siloe-data-v1');
-        if (raw) out.state = JSON.parse(raw);
-        out.mesAtual = localStorage.getItem('siloe-mes-atual') || null;
-        out.logo = localStorage.getItem('siloe-logo') || null;
-      } catch (e) {}
-      return out;
-    },
-    limparLegado(){
-      try { CHAVES_LEGADO.forEach(k => localStorage.removeItem(k)); } catch (e) {}
     }
   };
 

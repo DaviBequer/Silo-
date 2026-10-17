@@ -722,12 +722,6 @@ async function lviImportarSimples(file, status){
     conferencia: typeof lviConferenciaSimples==='function' ? lviConferenciaSimples(conteudo, usouOcr) : null
   };
 }
-function lviStatus(id, texto, erro){
-  const el = document.getElementById(id);
-  if(!el) return;
-  el.textContent = texto || '';
-  el.classList.toggle('erro', !!erro);
-}
 
 /* no cadastro de um louvor novo */
 async function lvImportarNoNovo(ev){

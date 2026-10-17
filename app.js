@@ -21,12 +21,13 @@ function renderHeaderHoje(){
   const faltam = ultimo - hoje.getDate();
   const data = DIA_SEMANA[hoje.getDay()]+', '+hoje.getDate()+' de '+MES_NOMES_LONGOS[hoje.getMonth()].toLowerCase();
   const dataCurta = DIA_SEMANA[hoje.getDay()]+', '+hoje.getDate()+' '+MES_NOMES[hoje.getMonth()].toLowerCase();
-  const resto = faltam===0 ? 'último dia do mês' : (faltam===1 ? 'falta 1 dia p/ o fim do mês' : 'faltam '+faltam+' dias p/ o fim do mês');
-  const restoCurto = faltam===0 ? 'último dia' : 'faltam '+faltam+' dia'+(faltam>1?'s':'');
+  /* "14 dias – R$ 9.266,28": dias até o fim do mês e o que falta pagar */
+  const resto = faltam===0 ? 'último dia' : faltam+' dia'+(faltam>1?'s':'');
+  const restoCurto = resto;
   const f = headerFaltaPagar();
-  const falta = f ? `<button type="button" class="hh-falta${f.total>0.004?'':' ok'}" onclick="headerFaltaDetalhe()" title="Gastos que faltam pagar${f.meta?' + meta de sobra':''} em ${monthLabel(f.m)}">${f.total>0.004?`<span class="hh-longo">Falta pagar</span><span class="hh-curto">A pagar</span> <b>${fmtMoney(f.total)}</b>`:'<b>✓ Tudo pago</b>'}</button>` : '';
+  const falta = f ? `<button type="button" class="hh-falta${f.total>0.004?'':' ok'}" onclick="headerFaltaDetalhe()" title="Gastos que faltam pagar${f.meta?' + meta de sobra':''} em ${monthLabel(f.m)}">${f.total>0.004?`<b>${fmtMoney(f.total)}</b>`:'<b>✓ Tudo pago</b>'}</button>` : '';
   el.innerHTML = `<div class="hh-linha1"><span class="hh-longo">${data}</span><span class="hh-curto">${dataCurta}</span></div>
-    <div class="hh-linha2"><span class="hh-longo">${resto}</span><span class="hh-curto">${restoCurto}</span>${falta?'<span class="hh-sep">·</span>'+falta:''}</div>`;
+    <div class="hh-linha2"><span class="hh-longo">${resto}</span><span class="hh-curto">${restoCurto}</span>${falta?'<span class="hh-sep">–</span>'+falta:''}</div>`;
 }
 renderHeaderHoje();
 setInterval(renderHeaderHoje, 60000);
@@ -94,6 +95,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.8', itens: [
+    'Faxina geral: visual refeito do zero numa identidade só (papel, tinta, verde; painéis pretos com brilho verde), mais leve e sem remendos',
+    'Imagens (logos e foto de fundo) separadas dos dados: cada salvamento ficou ~4x menor (falta criar a tabela no Supabase)',
+    'Mais animação: saldo conta mais devagar, barras enchem ao abrir, telas e janelas entram com mola; Jarvis no verde do app',
+    'Topo: "14 dias – R$ 9.266,28"; versículo não fica mais por cima das abas no computador',
+    'Correções: foto de fundo podia ser encolhida, Medley ficava aberto ao trocar de aba; código sem uso removido'
+  ]},
   { versao: 'v5.7', itens: [
     'Versículo da Bíblia no topo de Finanças, um diferente a cada vez que o app abre',
     'Cabeçalho preto e a versão como "Nº"; no celular o topo mostra quantos dias faltam',
@@ -193,377 +201,6 @@ const CHANGELOG = [
     'Louvor: editor estilo Word sem barras de rolagem, Importar e Organizar ao lado do tom (Organizar pode ser desfeito) e créditos saem ao importar',
     'Louvor: slides em Arial, com o arquivo igual à prévia (mesmo tamanho e fundo)',
     'Abertura com a logo em 4 segundos'
-  ]},
-  { versao: 'v3.9', itens: [
-    'Saldo por banco: anote quanto tem em cada banco e a soma vai para o Saldo em conta (digitar direto continua valendo)',
-    'Todos os campos de número abrem o teclado numérico no celular; a hora extra do Ponto aceita só números (130 vira 1:30)',
-    'Louvor: Edição, Visualizar e Slides com barra no topo e configurações num cartão compacto; PDF virou ícone no canto',
-    'Louvor: slides só com a letra e saiu o botão "Editar na folha"'
-  ]},
-  { versao: 'v3.8', itens: [
-    'Abertura com a logo mais longa e bem mais suave',
-    'Louvor: cada tom com seus próprios nomes (F# e Gb são diferentes), na cifra e no campo harmônico',
-    'Louvor: tocar e segurar uma nota escolhe o relativo menor (segurar D escolhe Bm)',
-    'Louvor: Organizar coloca a linha divisória (--) entre os blocos e mantém os "-" (próximo slide) e "---" (próxima coluna)',
-    'Louvor: importa PDF do Cifra Club em duas colunas, com título, artista e tom do cabeçalho e versos inteiros',
-    'Ponto PJ: PDF com novo layout (total de horas no topo, semanas separadas, rodapé) e sem o botão de copiar',
-    'Ponto PJ: janela de Exportar redesenhada, com resumo de dias e horas'
-  ]},
-  { versao: 'v3.7', itens: [
-    'Abertura com a logo animada enquanto os dados carregam (não mostra mais R$ 0,00)',
-    'Login com e-mail e senha (uma vez por aparelho) para proteger os dados, e "Sair deste aparelho" em Dados do App',
-    'Celular e computador salvando juntos: as alterações dos dois são juntadas em vez de uma apagar a outra',
-    'Voltaram a funcionar o botão voltar do celular, o Enter para ir ao próximo campo e a atualização do "falta pagar"',
-    'A setinha de recolher Moradia, Assinaturas e Fixos voltou a funcionar',
-    'App mais leve: logos e ícones menores, dados antigos sem uso removidos e slides do Louvor baixados só quando usados'
-  ]},
-  { versao: 'v3.6', itens: [
-    'Ponto PJ: o PDF tem o botão "Copiar para planilha" — copia os horários com tabulação, e colando numa célula cada dia vai para uma linha e cada horário para sua coluna'
-  ]},
-  { versao: 'v3.5', itens: [
-    'No computador as abas usam a largura toda; Ponto PJ e Vendas com o resumo à esquerda e o resto à direita',
-    'Ponto PJ: Valor da hora e Fechar mês num rodapé compacto',
-    'Cabeçalho no celular com textos mais curtos para o "A pagar" não cortar'
-  ]},
-  { versao: 'v3.4', itens: [
-    'Nova aba Vendas: comissão de setup (no mês da venda) e de recorrência (a partir do mês seguinte, enquanto o cliente estiver ativo), com configuração de % e de dois modelos de venda',
-    'Metas de sobra mês a mês: sobra do Fluxo (empréstimo dentro, cartão fora) + comissões = projetada, quanto falta e quantas vendas de cada modelo ainda faltam',
-    'Quando a projeção passa da meta, sugere amortizar o excedente no empréstimo',
-    'Empréstimo: novo modo "Amortizar por valor", que calcula quantas parcelas do fim o valor quita',
-    'Louvor: importar cifra de PDF ou foto (leitura de imagem), com título, artista e tom pelo nome do arquivo',
-    'Louvor: "Organizar blocos" nomeia as partes e troca blocos iguais por "Repete - ..."',
-    'Louvor: folha nova (acordes em cima da sílaba, colunas automáticas, fonte normal ou monoespaçada), edição direto na folha e PDF fiel pela impressão',
-    'Louvor: slides com acordes (fundo branco, para os músicos); "Repete" mostra a letra inteira nos slides',
-    'Ponto PJ: PDF com os horários em texto (Entrada;Almoço;Volta;Saída) para colar na planilha; saíram os botões de copiar'
-  ]},
-  { versao: 'v3.3', itens: [
-    'Cartão e Empréstimo entram no Geral para mostrar a sobra real, com liga/desliga em todos os meses ou só em um',
-    'Contas do mês redesenhada: resumo com barra, bolinha de pago em todas as linhas e blocos de Cartão e Empréstimo',
-    'Cartão: botões "+ Parcelada" e "Ajuste da fatura" (diferença para o valor do banco vira lançamento); fatura no dia do vencimento mostra "vence hoje · sem juros"',
-    'Cartão e Empréstimo com a cor da logo no topo do card',
-    'Cada bloco de contas mostra o total do mês e, se já pagou algo, pago / falta com barra',
-    'Ponto PJ: mês centralizado, PDF minimalista sem valores, período Personalizado com os dias trancados, botões de copiar dia/semana e link "Copiar para planilha" no PDF',
-    'Todas as janelas no mesmo padrão (folha no celular, cartão no computador, interruptores no lugar das caixinhas) e Enter pula para o próximo campo',
-    'Correções: marcar/desmarcar em Contas do mês atualiza o Dashboard; fatura considerada paga mostra o valor pago'
-  ]},
-  { versao: 'v3.2', itens: [
-    'Visual novo, premium e minimalista: paleta neutra com azul, fonte Inter, cards sem borda e sem caixa dentro de caixa',
-    'Dashboard reorganizado: Resumo do mês no topo (saldo, vai entrar, falta pagar, sobra prevista e Contas do mês), contas em seguida, Fluxo mensal e Projeção do saldo embaixo',
-    'Nova aba Empréstimo: parcelas, amortização antecipando as últimas parcelas, desconto obtido e simulador com a conta detalhada',
-    'Cartão: opção "Considerar fatura paga" com o valor total que você pagou',
-    'Contas do mês: Finalizar conclui o mês e já passa para o próximo',
-    'Ponto PJ reorganizado; saiu o gráfico de tendência semanal',
-    'Cabeçalho mostra a data de hoje e quantos dias faltam para o fim do mês',
-    'Saíram o botão de editar layout e a escolha manual de mês; conflito entre aparelhos agora fica com a edição mais recente, sem perguntar'
-  ]},
-  { versao: 'v3.1', itens: [
-    'Cartão: cada cartão mostra a fatura em destaque com o status (Aberta, Fechada aguardando pagamento, Vencida gerando juros, Paga ou Paga em parte), pelos dias de fechamento e vencimento',
-    'Cartão: botão Pagar abre uma janela com o valor pago; pagamento menor que a fatura fica parcial (laranja) e o que foi pago deixa de contar no acumulado',
-    'Cartão: compra nova já vem na fatura aberta (no dia do fechamento ela já vai para o mês seguinte); Crédito à Vista agora pede o mês da fatura',
-    'Faixa de faturas do cartão marca as pagas (verde), parciais (laranja) e vencidas (vermelho)',
-    'Ponto PJ: botão Fechar mês (confere os dias úteis trancados, deixa trancar ou editar os que faltam, fecha e avança o mês); mês fechado ganha marca verde e pode ser reaberto; saiu a escolha de mês das configurações',
-    'Dashboard e Contas a pagar: dá para olhar o mês anterior e navegar pelos meses seguintes só para ver; o Concluir mês do topo agora avança só o mês das contas'
-  ]},
-  { versao: 'v3.0', itens: [
-    'Dashboard novo: o antigo Planner agora se chama Dashboard, com as abas Geral e Cartão; o Dashboard antigo, a IA e os temas saíram',
-    'Geral: o Acumulado de vários meses ficou no topo (no lugar do resumo); sem cartão no Fluxo Mensal',
-    'Cartão: tem o próprio Acumulado (sobra do Geral − fatura dos cartões)',
-    'Contas a pagar: botão discreto no Saldo Atual abre a lista do mês com "recebi" do salário e de cada extra, "paguei" do dízimo e as contas; o que está marcado deixa de contar',
-    'Banco de dados: avisa na tela quando não salva, guarda uma cópia neste aparelho, e não deixa um aparelho apagar o que o outro salvou sem perguntar'
-  ]},
-  { versao: 'v2.82', itens: [
-    'Removidas as abas Receitas e Mercado (menu, buscas e IA); backup e importar dados continuam no app',
-    'Botão da IA menor e discreto (meio apagado até tocar)'
-  ]},
-  { versao: 'v2.81', itens: [
-    'Mês atual: Dashboard e Planner andam juntos (seletor na versão); o Ponto PJ tem o mês dele, só nas configurações do Ponto',
-    'Dashboard > Contas: removido o Fluxo de caixa; Contas a pagar agora vem antes de Parcelas terminando'
-  ]},
-  { versao: 'v2.80', itens: [
-    'IA no Planner: adiciona compra no cartão (à vista, parcelada, assinatura) e renda extra por voz, sempre mostrando uma janelinha para você conferir e salvar',
-    'Cartões: resumo mês a mês com sobra, fatura e quanto resta (só ali, a sobra do Dashboard segue sem o cartão)',
-    'Temas Luxury Dark e Premium funcionando (Configurações > Tema) e limpeza de código antigo'
-  ] },
-  { versao: 'v2.79', itens: [
-    'Extra do Planner: marque como recebido em cada mês (toque na linha Extra) e ele para de somar, sem duplicar com o saldo em conta; a IA também marca por voz',
-    'Configurações: opção de segurar Dashboard/Planner no mês anterior sem mexer no Ponto PJ'
-  ] },
-  { versao: 'v2.78', itens: [
-    'Removidos os microfones antigos (ditado por aba); só o microfone da IA fica, nas abas Dashboard, Planner, Ponto e Mercado. A IA agora também registra o ponto por voz, mostra dias úteis sem cadeado e mexe nas listas do Mercado'
-  ] },
-  { versao: 'v2.77', itens: [
-    'IA: análise financeira (botão ✨ e no Concluir mês), leitura de boleto por foto (botão câmera), alerta diário quando o saldo vai faltar e perguntas/simulações por voz'
-  ] },
-  { versao: 'v2.76', itens: [
-    'Assistente de voz: corrigida a repetição de palavras ao falar no celular; novo painel de conversa com o que você disse, o raciocínio da IA e as ações feitas'
-  ] },
-  { versao: 'v2.75', itens: [
-    'Assistente de voz com IA: botão de microfone flutuante em todas as abas; fale naturalmente (pausa de 3s) para atualizar saldo, marcar contas como pagas, adicionar, alterar valor, excluir e abrir o Resumo'
-  ] },
-  { versao: 'v2.74', itens: [
-    'Logos são reduzidas ao enviar e as já salvas são otimizadas uma vez; salvar na nuvem tenta de novo se falhar'
-  ]},
-  { versao: 'v2.73', itens: [
-    'Corrigido: funções de cálculo e formatação que estavam faltando deixavam o Dashboard vazio e travavam a importação',
-    'Avisos de conexão com a nuvem agora mostram o motivo do erro'
-  ]},
-  { versao: 'v2.71', itens: [
-    'Dados salvos só na nuvem (Supabase), sem localStorage; os dados antigos do aparelho são migrados na primeira abertura'
-  ]},
-  { versao: 'v2.67', itens: [
-    'Microfone em mais abas: Planner (gastos), Cartões (compra/assinatura), Ponto PJ (horários) e Louvor (novo louvor) — preenche o formulário e você confere antes de salvar',
-    'Modais: o botão Salvar não fica mais escondido pelo teclado'
-  ]},
-  { versao: 'v2.66', itens: [
-    'Mercado: lista "No mercado" sem seleção, ✕ de excluir à direita, botão Finalizar compra no fim da lista; cada item adicionado já soma no gasto do mês e no Dashboard'
-  ]},
-  { versao: 'v2.65', itens: [
-    'Mercado: mesmo espaçamento lateral em Lista, Casa e Gastos no computador; campos maiores com a fonte do app; meta de gasto com barra sempre visível na Lista',
-    'Mercado: itens sem preço em "No mercado" com borda vermelha; ditado reconhece preço por unidade (por kg fica em branco); Casa só mostra barra e selo quando há mínimo definido'
-  ]},
-  { versao: 'v2.64', itens: [
-    'Desktop: removidas as barras de rolagem dentro dos cards (altura agora acompanha o conteúdo) e espaçamento igual entre todos os cards, sem buracos, no Dashboard e no Planner',
-    'Fluxo de caixa: destaque do ponto mais apertado redesenhado; Parcelas terminando agora agrupadas por mês'
-  ]},
-  { versao: 'v2.63', itens: [
-    'Mercado: barra inferior encostada no menu (altura medida automaticamente), "1 item" no singular e títulos de grupo alinhados'
-  ]},
-  { versao: 'v2.62', itens: [
-    'Mercado: ditar itens por voz (microfone) e botão "Repetir última compra" na Planejando',
-    'Dados do App: botão para enviar o backup pelo compartilhamento do celular (Drive, WhatsApp...)'
-  ]},
-  { versao: 'v2.61', itens: [
-    'Mercado: barra fixa embaixo (Lista, Casa, Gastos) e lista no mercado agrupada por categoria',
-    'Dia de recebimento e aviso de vencimento agora abrem uma janela do app em vez da caixa do navegador'
-  ]},
-  { versao: 'v2.60', itens: [
-    'Mercado: meta de gasto mensal (definida em Gastos) com barra no topo da Lista e aviso de preço mais barato/caro na Casa',
-    'Limpeza: removidos códigos sem uso e logs de depuração'
-  ]},
-  { versao: 'v2.59', itens: [
-    'Mercado: Estoque virou "Casa" com barra de nível (vermelho/amarelo/verde), estimativa de dias restantes e filtro "Acabando"; Dashboard virou "Gastos"'
-  ]},
-  { versao: 'v2.58', itens: [
-    'Botão voltar do celular: agora fecha a tela/janela aberta primeiro e, na tela principal, pede para tocar de novo para sair',
-    'Mercado: resumo no topo (gasto do mês e itens acabando), abas Planejando/No mercado e barra do carrinho fixa embaixo'
-  ]},
-  { versao: 'v2.57', itens: [
-    'Novo: em Dados do App dá pra definir manualmente qual é o "mês atual" do app (afeta Planner, Ponto PJ, Dashboard e fatura dos cartões)'
-  ]},
-  { versao: 'v2.56', itens: [
-    'Mercado todo compacto: abas viraram texto sublinhado, itens perderam a caixa/sombra e viraram linhas finas, quantidade virou selo dourado pequeno, "mover pra lista" virou ícone — cabe muito mais item na tela em Lista, Estoque e Dashboard'
-  ]},
-  { versao: 'v2.55', itens: [
-    'Corrigido: nome do item sumia nos cards do Mercado quando não cabia ao lado da quantidade e dos botões (ficava com largura zero) — agora o nome sempre ocupa a linha toda e os botões vão pra linha de baixo'
-  ]},
-  { versao: 'v2.54', itens: [
-    'Mercado: lista de compras, estoque e dashboard ganharam layout próprio de computador (grade de cards, dashboard em 2 colunas) em vez do formato de celular esticado'
-  ]},
-  { versao: 'v2.53', itens: [
-    'Novo: tela "Comando" (clica na logo) — ordens do dia, sequência de dias em disciplina, juramento e registro de autossabotagem'
-  ]},
-  { versao: 'v2.52', itens: [
-    'Dashboard: Acumulado virou uma linha do tempo com o valor de cada mês (em vez da tabela); os dois donuts viraram um número de Sobra em destaque + barra única "Para onde foi", com % e valor de cada categoria',
-    'Planner: campo de Saldo Atual maior, com sublinhado dourado; mês atual do Fluxo Mensal destacado em dourado'
-  ]},
-  { versao: 'v2.51', itens: [
-    'Novo visual: tema claro e leve, preto e dourado — dourado marca o que está selecionado/ativo (menu, chips, versão)',
-    'Cards com mais respiro (mais espaço interno e entre eles) e cantos mais suaves',
-    'Corrigido: modal "Dados do App" ficava colado embaixo em telas médias; agora centraliza mais cedo'
-  ]},
-  { versao: 'v2.50', itens: [
-    'Cartão: assinaturas (cobrança recorrente automática todo mês, com opção de cancelar)',
-    'Cartão: dashboard de gastos do mês por categoria e por nome'
-  ]},
-  { versao: 'v2.49', itens: [
-    'Crédito à vista: mês escolhido é o mês da compra, entra na fatura do mês seguinte',
-    'Planner no computador: layout tipo Pinterest de verdade, sem espaço sobrando'
-  ]},
-  { versao: 'v2.48', itens: [
-    'Layout: padrão agora é 3 colunas, drag & drop melhorado, scrollbar oculta com seta visual',
-    'Planner: botão pra ver compras arquivadas no topo do cartão, ícones mais escuros'
-  ]},
-  { versao: 'v2.47', itens: [
-    'Novo: botão de editar layout no header (Dashboard e Planner) — no computador dá pra arrastar, redimensionar e travar os cards; no celular dá pra reordenar',
-    'Logo do Siloé e ícones do header centralizados no computador',
-    'Ponto PJ: dias agrupados por semana, com opção de recolher cada semana pra ocupar menos espaço',
-    'Modal de adicionar/editar gasto mais largo no computador, com mais campos lado a lado'
-  ]},
-  { versao: 'v2.46', itens: [
-    'Cartões de Crédito: nova fatura mês a mês (rolagem lateral), começando no mês atual — clica num mês pra ver só o que cai nele, clica de novo pra voltar a ver tudo'
-  ]},
-  { versao: 'v2.45', itens: [
-    'Novo: botão "Fonte" em Dados do App, com Inter, Poppins, Nunito e a padrão do celular pra escolher a fonte do app inteiro',
-    'Títulos do app (cabeçalhos, cards, telas cheias) agora usam uma fonte própria, mais chamativa'
-  ]},
-  { versao: 'v2.44', itens: [
-    'Corrigido: sair do Louvor pelo menu inferior sem fechar a tela do Louvor antes travava a tela aberta por cima',
-    'Louvor: configurações de Visualizar e Slides mais compactas, em grade'
-  ]},
-  { versao: 'v2.43', itens: [
-    'Louvor: editar título/artista já atualiza na hora o card na lista lateral',
-    'Louvor: título e artista do slide de capa agora centralizados (preview e PowerPoint exportado), igual aos slides de letra'
-  ]},
-  { versao: 'v2.42', itens: [
-    'Cartões de Crédito: botões "+ Parcelada" e "+ À vista" lado a lado'
-  ]},
-  { versao: 'v2.41', itens: [
-    'Cartões de Crédito: some da tela quando o usuário selecionado é a Cris',
-    'Cartões de Crédito: compras parceladas ordenadas por quem termina primeiro; ao quitar a última parcela, a compra vai para "Ver quitadas" em vez de continuar na lista',
-    'Cartões de Crédito: mostra também a data de vencimento, junto com a de fechamento'
-  ]},
-  { versao: 'v2.40', itens: [
-    'Moradia/Fixos/Assinaturas/Contas Futuras: ícones de ação em linha em cima do valor, ocupando menos espaço',
-    'Fluxo Mensal: seta pra expandir de 6 para 12 meses',
-    'Fluxo Mensal: tecla de avançar (Enter) mais confiável no teclado numérico do celular'
-  ]},
-  { versao: 'v2.39', itens: [
-    'Dados do App: mostra só a atualização mais recente (não a lista toda)',
-    'Removidos os backups automáticos (guardavam várias cópias inteiras dos dados e ocupavam espaço) — use o Exportar de vez em quando',
-    'Louvor: removida a dica de formatação embaixo do texto na Edição',
-    'Louvor: a folha de edição agora tem proporção de folha A4'
-  ]},
-  { versao: 'v2.38', itens: [
-    'Planner: linhas de Moradia/Assinaturas/Fixos/Contas Futuras sem os botões de duplicar e arquivar; os que ficaram (pagar, editar, excluir) em uma coluna só, mais visíveis',
-    'Louvor: removida a barra "Biblioteca/Estúdio" que travava a navegação — pra sair, use a setinha no cabeçalho'
-  ]},
-  { versao: 'v2.37', itens: [
-    'Removido o leitor de QR do cupom fiscal (experimental, não estava funcionando)'
-  ]},
-  { versao: 'v2.36', itens: [
-    'Modais agora abrem centralizados no computador (continuam subindo de baixo no celular), e o fundo não rola mais atrás de nenhum modal',
-    'Botões pequenos (adicionar, editar, duplicar, excluir, abrir/fechar seção) com área de toque maior, sem mudar o visual',
-    'Campos de formulário não dão mais zoom sozinhos ao tocar no iPhone',
-    'Moradia, Assinaturas, Fixos e Contas Futuras agora aparecem em caixa, igual ao resto do Dashboard',
-    'Emojis de alerta (vilão, aviso, meta batida, confirmação) trocados por ícones no estilo do app'
-  ]},
-  { versao: 'v2.35', itens: [
-    'Simulador de Orçamento: botão "Usar total dos cartões em aberto" preenche a meta com o valor total do cartão, pra simular um empréstimo que quita tudo e parcela em N vezes',
-    'PDF do Resumo: nova tabela com os próximos 6 meses, mostrando quanto de cartão e quanto de contas fixas/futuras em cada mês'
-  ]},
-  { versao: 'v2.34', itens: [
-    'Planner no computador agora organiza os cartões e seções em colunas, igual ao Dashboard, em vez de empilhar tudo'
-  ]},
-  { versao: 'v2.33', itens: [
-    'Dashboard: gastos, sobra, contas a pagar e o cartão "Meta para sair do PJ" agora só do Davi — a Cris fica só no Planner (dela)',
-    'Meta para sair do PJ: a ajuda da Cris agora vem dos extras dela marcados "vai ajudar o Davi", sem campo manual',
-    'Planner: seções Moradia/Assinaturas/Fixos/Contas Futuras podem ser fechadas tocando no título (fecham sozinhas quando vazias)',
-    'Contas a pagar: "dia X" agora mostra quantos dias faltam de verdade, mesmo olhando outro mês',
-    'Removido o campo "Já recebi" do fluxo mensal (o toggle do saldo em conta já resolve isso)',
-    'Ícones das contas um pouco maiores'
-  ]},
-  { versao: 'v2.32', itens: [
-    'Planner: status das contas (aberta, parcial, paga) com botão para registrar pagamento; pagamento parcial agora reduz o que falta pagar',
-    'Planner: campo "Já recebi" para a renda do mês e botão "+ Gasto futuro" na faixa',
-    'Dashboard: cartão "Meta para sair do PJ" com contribuição da Cris e projeção de 3 meses'
-  ]},
-  { versao: 'v2.31', itens: [
-    'Planner: faixa fixa no topo com saldo em conta, a receber, a pagar e sobra prevista do mês, sempre visível enquanto você edita'
-  ]},
-  { versao: 'v2.30', itens: [
-    'Corrigido: no computador, o Dashboard ficava aparecendo em cima das outras abas',
-    'Dashboard no computador agora ocupa a tela toda, com os cartões distribuídos em colunas'
-  ]},
-  { versao: 'v2.29', itens: [
-    'Corrigido: botão "Resumo Geral" agora sempre abre a página (antes, se algum cálculo desse errado, o clique não fazia nada; agora mostra o erro na tela em vez de travar em silêncio)',
-    'Resumo Geral em 2 colunas no computador, aproveitando a tela larga'
-  ]},
-  { versao: 'v2.28', itens: [
-    'Categorias do Mercado/Estoque e do Crédito à Vista do cartão agora podem ser criadas por você (chip "+ Nova"), além das categorias padrão'
-  ]},
-  { versao: 'v2.27', itens: [
-    'Novo botão "Resumo" no topo: página dedicada com saldo do mês, Vilão do Orçamento, comparativo, previsão do próximo mês, gasto por categoria e Contas Futuras',
-    'Exportar PDF do resumo financeiro completo, com tabelas de texto (não imagem), pronto pra mandar pra análise'
-  ]},
-  { versao: 'v2.26', itens: [
-    'Crédito à Vista do cartão agora tem categoria e mês, pra achar o gargalo real das comprinhas do dia a dia',
-    'Novo card "Previsão do próximo mês" no Dashboard, com peso maior pras Contas Futuras (o dado mais confiável)'
-  ]},
-  { versao: 'v2.25', itens: [
-    'Corrigido: não dava mais pra sair do Estúdio do Louvor no computador (o painel ficava com prioridade errada e cobria o botão de voltar)',
-    'Corrigido: campo harmônico mostrava a "preparação" errada — agora mostra de verdade a dominante de cada acorde (ex: acorde C tem G7 embaixo, não C7)',
-    'Novo: mudar o tom agora transpõe de verdade o texto da música (não só o PDF)',
-    'Louvor: página de edição não parece mais uma caixa de texto dentro da folha — o texto flui direto na "folha"',
-    'Louvor: acorde de preparação agora aparece separado, com borda pontilhada, igual o modelo de referência',
-    'Dashboard no computador aproveita melhor a largura da tela, em 3 colunas'
-  ]},
-  { versao: 'v2.24', itens: [
-    'Panorama virou Dashboard, com ícone novo e cor corrigida quando selecionado',
-    'Dashboard: gráficos com legenda ao lado (não mais embaixo), textos maiores, mais espaçamento entre as seções',
-    '"Planeje Suas Compras Futuras" mudou do Dashboard pro Planner',
-    'Dashboard agora só tem 2 abas (Resumo e Contas) — o Ponto PJ entrou dentro do Resumo',
-    'Comparativo agora mostra mês anterior E 3 meses atrás, e o app passou a guardar de verdade os números de cada mês fechado',
-    'Vilão do Orçamento ganhou um "i" explicando o que ele mostra',
-    'Cor de alerta ajustada pra combinar melhor com o resto do app',
-    'Dashboard em telas de computador agora usa 2 colunas em vez de ficar tudo esticado numa coluna só',
-    'Extras (Planner) podem ter o dia do mês que costumam cair, usado no Fluxo de Caixa',
-    'Cartão de crédito: agora dá pra editar a logo da compra direto pela lista, ver detalhes não fecha mais sozinho ao marcar como pago, cartão ganhou ícone próprio, e a tela de editar cartão ficou melhor organizada em telas grandes'
-  ]},
-  { versao: 'v2.23', itens: [
-    '[Teste] Escanear QR de cupom fiscal no Mercado, abre o link no navegador pra você conferir o que dá pra aproveitar'
-  ]},
-  { versao: 'v2.22', itens: [
-    'Novo: Panorama dividido em abas internas (Resumo / Contas / Ponto) pra não depender só de scroll',
-    'Novo: busca única (ícone de lupa no topo) que procura em contas, receitas, louvor e mercado de uma vez',
-    'Novo: backup automático diário guardado neste navegador, com opção de restaurar (não substitui exportar de vez em quando)',
-    'Ajustado: telas grandes de computador agora aproveitam melhor o espaço',
-    'Novo: barra "Biblioteca / Estúdio" no Louvor pra alternar rápido entre a lista de músicas e a música que você está editando'
-  ]},
-  { versao: 'v2.21', itens: [
-    'Novo: gráfico de tendência semanal no Ponto PJ (compara cada semana com o padrão)',
-    'Novo: meta diária sugerida no Ponto PJ (quanto trabalhar por dia útil pra bater a meta do mês)',
-    'Novo: botão nas Receitas pra mandar os ingredientes que faltam direto pra lista de compras do Mercado',
-    'Histórico de preço por item no Mercado já existia — conferido e funcionando'
-  ]},
-  { versao: 'v2.20', itens: [
-    'Novo: duplicar uma conta com 1 toque',
-    'Novo: arquivar conta em vez de excluir (com opção de restaurar depois)',
-    'Novo: "Contas Futuras" agora tem botões separados pra conta simples e conta parcelada/recorrente',
-    'Novo: aviso quando 2 ou mais parcelas (de conta ou cartão) terminam no mesmo mês',
-    'Limite do cartão com barra de comprometimento já existia — conferido e funcionando'
-  ]},
-  { versao: 'v2.19', itens: [
-    'Novo: "Vilão do Orçamento" mostra qual categoria mais cresceu em relação ao mês anterior',
-    'Novo: gasto essencial mínimo do mês, calculado automaticamente',
-    'Novo: marcar conta como essencial ou não-essencial',
-    'Novo: aviso quando uma assinatura muda de valor (compara com o valor anterior)',
-    'Novo: o dia de vencimento agora muda de cor conforme a proximidade (vermelho = urgente, laranja = próximo)'
-  ]},
-  { versao: 'v2.18', itens: [
-    'Novo: comparativo do mês atual com o mesmo mês do ano passado',
-    'Novo: simulador de aumento de renda dentro do "Gerar Orçamento" (não altera seus dados reais)',
-    'Novo: gastos podem ser marcados como Fixa ou Variável, com sugestão de média das últimas alterações',
-    'Novo: Reserva agora tem meta e "quanto guardar por mês", com barra de progresso e previsão de quando bate a meta'
-  ]},
-  { versao: 'v2.17', itens: [
-    'Removida a aba de Tarefas do Planner'
-  ]},
-  { versao: 'v2.16', itens: [
-    'Novo: Fluxo de Caixa do mês (dia a dia, mostra se o saldo fica apertado em algum ponto antes do fim do mês)',
-    'Novo: aviso de "Parcelas Terminando" (quando uma parcela acaba, mostra quanto isso libera de sobra)',
-    'Novo: selo "NOVA" em contas que apareceram pela primeira vez',
-    'Novo: aviso "Vencendo em breve" configurável (quantos dias antes avisar) em Contas a Pagar'
-  ]},
-  { versao: 'v2.15', itens: [
-    'Corrigido: arquivos do app ficavam presos em cache antigo mesmo depois de atualizar — agora cada versão força o navegador a baixar os arquivos certos'
-  ]},
-  { versao: 'v2.14', itens: [
-    'Corrigido: navegação travava no Panorama e as outras abas só apareciam rolando pra baixo — havia uma função de troca de aba antiga e duplicada; removidas todas as duplicatas escondidas no código (mesma causa do bug de rolagem anterior)'
-  ]},
-  { versao: 'v2.13', itens: [
-    'Corrigido: troca de aba não reseta mais a rolagem (não precisa mais arrastar até o fim pra aba nova aparecer)',
-    'Louvor: filtro "Atual" novo (mostra em produção ou com data de hoje em diante), botão de funil pra mostrar/ocultar os filtros, tom e agendamento já na criação do louvor, permite salvar como rascunho sem título',
-    'Louvor: slides agora sempre com o título à esquerda e o texto centralizado, com margem lateral no preview'
-  ]},
-  { versao: 'v2.12', itens: [
-    'Ajustado: tag de mês das contas antigas não corta mais em Contas a Pagar'
-  ]},
-  { versao: 'v2.11', itens: [
-    'Adicionado: lista de atualizações aqui em cima, mostrando o que foi mexido em cada versão'
-  ]},
-  { versao: 'v2.10', itens: [
-    'Corrigido: app travava a rolagem depois de fechar alguns avisos/modais',
-    'Ajustado: Contas a Pagar não corta mais dia, nome ou valor'
   ]}
 ];
 
@@ -906,8 +543,7 @@ function fecharCamadaAbertaVoltar(){
   const modais = document.querySelectorAll('.modal-overlay.active');
   if(modais.length){
     const topo = modais[modais.length-1];
-    if(topo.id==='modalNumeroSimples') cancelarNumeroModal();
-    else closeModal(topo.id);
+    closeModal(topo.id);
     return true;
   }
   const paginas = document.querySelectorAll('.fullpage.active');
@@ -941,30 +577,6 @@ function iniciarBotaoVoltar(){
 }
 iniciarBotaoVoltar();
 
-
-/* ================= MODAL DE NÚMERO (substitui prompt nativo) ================= */
-let numeroModalResolve = null;
-function pedirNumeroModal(titulo, dica, atual){
-  document.getElementById('numeroSimplesTitulo').textContent = titulo;
-  document.getElementById('numeroSimplesDica').textContent = dica;
-  const inp = document.getElementById('numeroSimplesInput');
-  inp.value = atual ?? '';
-  document.getElementById('modalNumeroSimples').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  setTimeout(()=>{ inp.focus(); inp.select(); }, 60);
-  return new Promise(resolve=>{ numeroModalResolve = resolve; });
-}
-function confirmarNumeroModal(){
-  const v = document.getElementById('numeroSimplesInput').value;
-  closeModal('modalNumeroSimples');
-  if(numeroModalResolve) numeroModalResolve(v);
-  numeroModalResolve = null;
-}
-function cancelarNumeroModal(){
-  closeModal('modalNumeroSimples');
-  if(numeroModalResolve) numeroModalResolve(null);
-  numeroModalResolve = null;
-}
 
 
 /* ================= ALTURA REAL DO MENU INFERIOR ================= */
@@ -1134,18 +746,18 @@ function efeitoEntradaCartoes(raiz){
     void el.offsetWidth;
     el.style.setProperty('--i', i);
     el.classList.add('efeito-entra');
-    setTimeout(()=>el.classList.remove('efeito-entra'), 700 + i*45);
+    setTimeout(()=>el.classList.remove('efeito-entra'), 800 + i*60);
   });
 }
 function efeitoContarNumeros(raiz){
   if(!efeitosLigados || !raiz) return;
-  raiz.querySelectorAll('.resumo-stat-val, .ponto-valor-grande, .cp-total-valor').forEach(el=>{
+  raiz.querySelectorAll('.resumo-stat-val, .ponto-valor-grande, .cp-total-valor, .cp-resumo-val, .vd-meta-linha > b').forEach(el=>{
     if(el.childNodes.length !== 1 || el.firstChild.nodeType !== 3) return;   // só texto puro (não mexe em quem tem ícone dentro)
     const alvoTxt = el.textContent, m = alvoTxt.match(/^(-?)R\$\s?([\d.]+,\d{2})$/);
     if(!m) return;
     const alvo = Number(m[2].replace(/\./g,'').replace(',','.')) * (m[1] ? -1 : 1);
     if(Math.abs(alvo) < 1) return;
-    const ini = performance.now(), dur = 650;
+    const ini = performance.now(), dur = 1400;   // devagar o bastante para ver contar
     let escrito = '';
     const passo = t=>{
       if(escrito && el.textContent !== escrito) return;   // a tela foi redesenhada: para
@@ -1163,7 +775,7 @@ function efeitoContarSaldo(){
   if(!efeitosLigados || !inp || document.activeElement === inp) return;
   const alvoTxt = inp.value, alvo = parseMoney(alvoTxt);
   if(!(Math.abs(alvo) >= 1)) return;
-  const ini = performance.now(), dur = 900;
+  const ini = performance.now(), dur = 2200;   // o saldo conta mais devagar: é o número principal
   const passo = t=>{
     if(document.activeElement === inp){ inp.value = alvoTxt; return; }
     const p = Math.min(1, (t - ini)/dur), e = 1 - Math.pow(1 - p, 3);

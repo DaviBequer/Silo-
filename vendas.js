@@ -46,7 +46,6 @@ function vendaRecorreNoMes(v, mKey){
 function vendasSetupNoMes(mKey){ return garantirVendas().lista.filter(v=>vendaMes(v)===mKey).reduce((s,v)=>s+vendaComSetup(v), 0); }
 function vendasRecNoMes(mKey){ return garantirVendas().lista.filter(v=>vendaRecorreNoMes(v, mKey)).reduce((s,v)=>s+vendaComRec(v), 0); }
 function vendasComissaoNoMes(mKey){ return vendasSetupNoMes(mKey) + vendasRecNoMes(mKey); }
-function vendasAtivosNoMes(mKey){ return garantirVendas().lista.filter(v=>vendaAtivaNoMes(v, mKey)).length; }
 
 /* ---------- sobra ---------- */
 /* Sobra estimada do Fluxo (Davi) com o empréstimo sempre dentro e o cartão sempre fora, independente dos interruptores */

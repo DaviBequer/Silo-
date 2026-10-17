@@ -448,11 +448,6 @@ function renderLvHarmonicBar(l){
 
 /* ---------- Seletor de Tom (grid cromático + relativo menor no duplo toque) ---------- */
 const LV_TOM_GRID = ['C','C#','Db','D','D#','Eb','E','F','F#','Gb','G','G#','Ab','A','A#','Bb','B'];
-function lvNotasEquivalentes(a,b){
-  if(!a || !b) return false;
-  const ia = lvPc(a), ib = lvPc(b);
-  return ia!==-1 && ia===ib;
-}
 let lvTomPickerModo = 'edit';
 function abrirLvTomPicker(modo){
   lvTomPickerModo = modo || 'edit';

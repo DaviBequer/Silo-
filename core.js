@@ -32,36 +32,7 @@ function novoEstado(){
     louvores:[],
     louvorRoteiro:[],
     ponto:{ valorHora:0, padraoHoras:8, days:{} },
-    configFonte:'system',
   };
-}
-const FONTES_APP = {
-  system:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-  inter:"'Inter',sans-serif",
-  poppins:"'Poppins',sans-serif",
-  nunito:"'Nunito',sans-serif"
-};
-function aplicarFonteApp(){
-  /* Poppins só é baixada se for a escolhida (as outras já vêm com o app) */
-  if(state.configFonte === 'poppins' && !document.getElementById('fontePoppins')){
-    const l = document.createElement('link');
-    l.id = 'fontePoppins'; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap';
-    document.head.appendChild(l);
-  }
-  /* v4.4: a fonte agora é fixa (Geist), definida no style.css */
-  document.documentElement.style.removeProperty('--font-body');
-  document.querySelectorAll('.fonte-chip').forEach(el=>el.classList.remove('active'));
-  const ativo = document.getElementById('fonteChip'+(state.configFonte||'system').charAt(0).toUpperCase()+(state.configFonte||'system').slice(1));
-  ativo?.classList.add('active');
-}
-function setAppFonte(nome){
-  state.configFonte = nome;
-  persist();
-  aplicarFonteApp();
-}
-function toggleFontePopup(){
-  document.getElementById('fontePopup')?.classList.toggle('show');
 }
 let state = novoEstado();
 
@@ -286,7 +257,6 @@ function tentarNuvemDeNovo(){
   carregarTentativas = 0;
   carregar();
 }
-window.addEventListener('online', tentarNuvemDeNovo);
 document.addEventListener('visibilitychange', async ()=>{
   if(document.hidden){ if(persistTimer || salvarPendente) persistAgora(); return; }
   if(!remoteReady){ tentarNuvemDeNovo(); return; }
@@ -307,7 +277,6 @@ async function carregar(){
   finally{ carregandoAgora = false; }
 }
 async function carregarDaNuvem(){
-  let legado = { state:null, mesAtual:null, logo:null };
   let precisaSalvar = false;
   try{
     let saved = null;
@@ -323,7 +292,6 @@ async function carregarDaNuvem(){
     baseSincronizada = r.data ? JSON.stringify(r.data) : null;
     /* banco protegido e este aparelho ainda não entrou: o registro fica invisível. Pede login em vez de começar do zero */
     if(!saved && !(await window.SiloSupabase.temSessao())){ mostrarLogin(); return; }
-    legado = window.SiloSupabase.lerLegado();
 
     /* alterações feitas neste aparelho que não chegaram ao banco (ex.: falha de conexão/gravação) */
     const pend = lerCopiaLocalPendente();
@@ -338,8 +306,6 @@ async function carregarDaNuvem(){
         else { marcarLocalSincronizado(); }
       }
     }
-
-    if(!saved && legado.state){ saved = legado.state; precisaSalvar = true; }   // primeira vez: sobe o que estava no aparelho
 
     if(saved){
       state = Object.assign(novoEstado(), saved);
@@ -387,12 +353,10 @@ async function carregarDaNuvem(){
       ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','configTema','metaPJ','tarefas','tarefaCategorias','semanaAgenda','semanaOffset','layoutPrefs','layoutV3'].forEach(k=>{
         if(k in state){ delete state[k]; precisaSalvar = true; }
       });
-      if(!state.configFonte) state.configFonte = 'system';
       mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso ? 1 : 0;
       if(state.mesAtual){
         mesAtualRef = state.mesAtual;
       } else {
-        mesAtualRef = legado.mesAtual || mesAtualRef;
         state.mesAtual = mesAtualRef;
         precisaSalvar = true;
       }
@@ -417,7 +381,6 @@ async function carregarDaNuvem(){
         precisaSalvar = true;
       });
       mesFinanceiroAtrasoRef = 0;
-      if(legado.logo && !state.logoApp){ state.logoApp = legado.logo; precisaSalvar = true; }
     } else {
       mesPontoRef = mesAtualRef;
       mesAtualRef = addMonths(mesAtualRef, 1);
@@ -447,7 +410,6 @@ async function carregarDaNuvem(){
   }
   state.currentUser = usuarioDoAparelho();   // o banco pode ter "cris" salvo por outro aparelho
   limparDadosAntigos();
-  aplicarFonteApp();
   if(typeof aplicarLogoSalva==='function') aplicarLogoSalva();
   if(typeof aplicarFundoApp==='function') aplicarFundoApp();
   renderAll();
@@ -457,7 +419,7 @@ async function carregarDaNuvem(){
   if(typeof avisosRenovarSozinho==='function' && !MODO_TESTE_LOCAL) avisosRenovarSozinho();
   if(typeof pinLembrarAparelho==='function') pinLembrarAparelho();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
-  await finalizarMigracaoLegado(precisaSalvar, legado);
+  if(precisaSalvar && remoteReady) await persistAgora();   // ajustes da carga (itens antigos limpos etc.)
   compactarImagensDoEstado();
 }
 /* ===== ABERTURA (logo animada) ===== */
@@ -545,23 +507,6 @@ async function sairDeTodosAparelhos(){
   if(!ok){ showToast('Sem conexão — tente de novo'); return; }
   apagarCopiaLocal();
   location.reload();
-}
-// Migração única do localStorage -> Supabase (pode ser apagada quando todos os aparelhos já tiverem migrado)
-async function finalizarMigracaoLegado(precisaSalvar, legado){
-  if(!remoteReady || !window.SiloSupabase) return;
-  if(precisaSalvar){
-    const ok = await persistAgora();
-    if(!ok) return;   // mantém os dados locais até conseguir salvar na nuvem
-    window.SiloSupabase.limparLegado();
-    return;
-  }
-  if(legado && legado.state){
-    // A nuvem já tinha dados e este aparelho também tem dados antigos: pergunta antes de apagar
-    const ok = await iosConfirm('Este aparelho ainda guarda dados antigos. Os dados da nuvem foram mantidos. Apagar os antigos deste aparelho?');
-    if(ok) window.SiloSupabase.limparLegado();
-  } else {
-    window.SiloSupabase.limparLegado();
-  }
 }
 
 /* ================= LIMPEZA AUTOMÁTICA (mantém só mês atual + mês passado) ================= */
@@ -699,7 +644,7 @@ async function compactarImagensDoEstado(){
     if(!o || typeof o!=='object') return;
     Object.keys(o).forEach(k=>{
       const v = o[k];
-      if(typeof v==='string' && v.startsWith('data:image/') && v.length>12000) lista.push([o,k]);
+      if(typeof v==='string' && v.startsWith('data:image/') && v.length>12000 && k !== 'img') lista.push([o,k]);   // 'img' = foto de fundo: já vem no tamanho certo
       else if(v && typeof v==='object') varrer(v);
     });
   };
@@ -794,16 +739,11 @@ function aplicarLogoSalva(){
 const ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const ICON_EYE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
-const ICON_PRATO = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>';
-const ICON_CLOCK_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
-const ICON_PORCOES_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
-const ICON_DUPLICATE_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_BAN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg>';
 const ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 const ICON_UNLOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
 const ICON_SAVE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
 const ICON_CHART = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
-const ICON_ALERT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;flex-shrink:0"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 const ICON_WALLET = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>';
 const ICON_TREND = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
 
@@ -813,6 +753,7 @@ function switchAba(aba){
   document.getElementById('aba-'+aba).classList.add('active');
   document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
   document.getElementById('pageLouvorForm')?.classList.remove('active');
+  document.getElementById('pageLouvorMedley')?.classList.remove('active');
   document.body.style.overflow = '';
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
   window.scrollTo(0,0);
@@ -1125,7 +1066,6 @@ function toggleGeralTudo(tipo){
   showToast((tipo==='cartao'?'Cartão':'Empréstimo')+(cfg[tipo]?' entra':' sai')+' do Geral em todos os meses');
 }
 function saldoForMonth(user, mKey){ return incomeForMonth(user,mKey) - expensesForMonth(user,mKey); }
-function saldoHouseholdForMonth(mKey){ return saldoForMonth('davi',mKey); } // Dashboard: só Davi
 
 function getPanoWindowMonths(){
   if(state.panoOffset < -1) state.panoOffset = -1;   // pode olhar 1 mês para trás e quantos quiser para a frente
@@ -1135,12 +1075,3 @@ function getPanoWindowMonths(){
   return arr;
 }
 
-/* Contribuição da Cris pro Davi: soma dos extras dela marcados "vai ajudar o Davi" */
-function contribCrisForMonth(mKey){
-  return (state.users.cris.extras||[]).reduce((sum,e)=>{
-    if(!e.ajudaDavi) return sum;
-    const fim = e.mesFim || e.mesInicio;
-    if(mKey >= e.mesInicio && mKey <= fim) return sum + (Number(e.valor)||0);
-    return sum;
-  }, 0);
-}

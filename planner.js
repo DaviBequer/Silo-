@@ -1061,16 +1061,6 @@ function credoVistaTotalPorCategoria(mKey){
   });
   return totais;
 }
-/* Média de crédito à vista nos últimos N meses (referência p/ previsão) */
-function credoVistaMediaUltimosMeses(nMeses){
-  let soma = 0;
-  for(let i=1;i<=nMeses;i++){
-    const mKey = addMonths(mesFinanceiroAtual(), -i);
-    const totais = credoVistaTotalPorCategoria(mKey);
-    soma += Object.values(totais).reduce((s,v)=>s+v,0);
-  }
-  return nMeses>0 ? soma/nMeses : 0;
-}
 function excluirCredoVista(cartaoId, credoId){
   const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
   if(cartao) cartao.credoVista = (cartao.credoVista||[]).filter(cv=>cv.id!==credoId);

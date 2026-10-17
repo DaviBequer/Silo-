@@ -374,29 +374,6 @@ function salvarMetas(){
 
 /* renderAll vive em app.js (chama todas as 6 abas) */
 
-function categoryTotalForMonth(cat, mKey){
-  let total = 0;
-  ['davi'].forEach(user=>{ // Dashboard: só Davi
-    const ex = state.users[user].expenses;
-    if(cat==='futuro'){
-      ex.futuro.forEach(item=>{
-        const v = futuroValorNoMes(item, mKey);
-        if(v<=0) return;
-        const paidKey = mKey+'_'+user+'_futuro_'+item.id;
-        if(state.paid[paidKey]) return;
-        total += restanteConta(paidKey, v);
-      });
-    } else {
-      ex[cat].forEach(item=>{
-        if(item.mesInicio && mKey < item.mesInicio) return;
-        const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
-        if(state.paid[paidKey]) return;
-        total += restanteConta(paidKey, Number(item.valor)||0);
-      });
-    }
-  });
-  return total;
-}
 const CATEGORIA_LABELS = { moradia:'Moradia', fixo:'Fixos', assinatura:'Assinaturas', futuro:'Contas Futuras' };
 function abrirDetalheCategoria(cat, mKey){
   const itens = getContasDoMes(mKey).filter(it=>it.cat===cat);
@@ -991,18 +968,6 @@ function salvarPagamentoConta(){
   showToast('Conta atualizada');
 }
 
-/* ================= META PARA SAIR DO PJ ================= */
-function gastosBrutosMes(user, mKey){
-  const ex = state.users[user].expenses;
-  let t = 0;
-  ['moradia','assinatura','fixo'].forEach(cat=> ex[cat].forEach(i=>{
-    if(i.mesInicio && mKey < i.mesInicio) return;
-    t += Number(i.valor)||0;
-  }));
-  ex.futuro.forEach(i=>{ t += futuroValorNoMes(i, mKey); });
-  (state.users[user].cartoes||[]).forEach(c=>{ t += Number((c.gastos||{})[mKey]) || 0; });
-  return t;
-}
 
 /* ================= HISTÓRICO DE MESES =================
    Mês atual (em andamento, calculado agora) + cada mês concluído (resumo guardado ao tocar em Finalizar, em Contas do mês).

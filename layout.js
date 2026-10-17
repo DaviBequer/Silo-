@@ -33,7 +33,15 @@ function applyLayout(groupKey){
   if(!container) return;
   const desktop = currentBp()==='desktop';
   Array.from(container.children).forEach(el=>{
-    if(el.nodeType!==1 || isLayoutFixedEl(el)) return;
+    if(el.nodeType!==1) return;
+    /* fixos (abas, versículo) ocupam a linha toda: só precisam da altura certa para não ficar por cima do resto */
+    if(isLayoutFixedEl(el)){
+      if(cfg.masonry){
+        if(desktop){ masonryUpdateSpan(el, container); masonryObserve(el, container); }
+        else el.style.gridRowEnd = '';
+      }
+      return;
+    }
     el.style.gridColumn = desktop ? 'span '+(parseInt(el.dataset.span) || cfg.defaultSpan) : '';
     if(cfg.masonry){
       if(desktop){ masonryUpdateSpan(el, container); masonryObserve(el, container); }
