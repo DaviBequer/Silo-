@@ -24,6 +24,7 @@ function renderPanorama(){
   renderResumoMes();
   renderAcumTable(months);
   renderAcumCartao(months);
+  renderOndeVai();
   const cp = document.getElementById('pageContasPagar');
   if(cp && cp.classList.contains('active')) renderContasPagar();
 }
@@ -1000,4 +1001,42 @@ function abrirHistoricoMeses(){
     + (fechados.length ? '' : '<div class="hm-dica">Os meses aparecem aqui quando você toca em Finalizar, em Contas do mês. O resumo fica guardado mesmo depois que os dados do mês são limpos.</div>');
   document.getElementById('modalHistoricoMeses').classList.add('active');
   document.body.style.overflow = 'hidden';
+}
+
+/* ===== PARA ONDE VAI O DINHEIRO: tudo o que sai no mês (pago ou não), por grupo;
+   o cartão entra aberto pelas categorias das compras à vista/assinaturas + parcelas ===== */
+let ondeVaiMes = null;
+const ONDE_VAI_CORES = ['#047857','#34d399','#0e7490','#a3a3a3','#c2410c','#7c3aed','#ca8a04','#be185d','#2563eb','#57534e'];
+function ondeVaiDados(u, mKey){
+  const g = {}, vista = {};
+  const soma = (obj, nome, v)=>{ v = Number(v)||0; if(v > 0.004) obj[nome] = (obj[nome]||0) + v; };
+  getContasDoMes(mKey, u).forEach(it=>soma(g, CATEGORIA_LABELS[it.cat] || 'Contas', it.valor));
+  soma(g, 'Dízimo', dizimoValorCheio(u, mKey));
+  if(u === 'davi'){
+    (state.cartoesTracker||[]).forEach(c=>{
+      Object.entries(cartaoGastosPorMes(c, mKey).porCategoria).forEach(([cat, v])=>soma(vista, cat === 'Ajuste' ? 'Ajuste da fatura' : cat, v));
+      soma(g, 'Parcelas no cartão', (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id).reduce((s,cp)=>s + compraTrackerValorNoMes(cp, mKey), 0));
+    });
+    const tv = Object.values(vista).reduce((s,v)=>s+v, 0);
+    if(tv > 0.004) g['Cartão à vista'] = tv;
+    soma(g, 'Empréstimo', emprestimoValorGeralNoMes(mKey));
+  }
+  return Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([nome, v])=>({ nome, v, sub: nome === 'Cartão à vista' ? Object.entries(vista).sort((a,b)=>b[1]-a[1]) : null }));
+}function ondeVaiMudarMes(d){ ondeVaiMes = addMonths(ondeVaiMes || mesFinanceiroAtual(), d); renderOndeVai(); }
+function renderOndeVai(){
+  const el = document.getElementById('ondeVaiConteudo'); if(!el || !state.users) return;
+  const u = userDash(), mKey = ondeVaiMes || mesFinanceiroAtual();
+  document.getElementById('ondeVaiMes').textContent = monthLabelLong(mKey);
+  const dados = ondeVaiDados(u, mKey), total = dados.reduce((s,d)=>s + d.v, 0);
+
+  if(!total){ el.innerHTML = `<div class="gm-vazio">Nada saindo em ${monthLabelLong(mKey)}.</div>`; return; }
+  const cor = i=>ONDE_VAI_CORES[i % ONDE_VAI_CORES.length];
+  el.innerHTML = `
+    <div class="ov-total"><span>Sai no mês</span><b>${fmtMoney(total)}</b></div>
+    <div class="ov-barra">${dados.map((d, i)=>`<i style="flex:${d.v};background:${cor(i)}" title="${escBanco(d.nome)}"></i>`).join('')}</div>
+    <div class="ov-lista">${dados.map((d, i)=>`
+      <div class="ov-linha"><span class="ov-ponto" style="background:${cor(i)}"></span><span class="ov-nome">${escBanco(d.nome)}</span><span class="ov-pct">${Math.round(d.v/total*100)}%</span><span class="ov-valor">${fmtMoney(d.v)}</span></div>${(d.sub||[]).map(([n,v])=>`
+      <div class="ov-linha ov-sub"><span></span><span class="ov-nome">${escBanco(n)}</span><span class="ov-pct"></span><span class="ov-valor">${fmtMoney(v)}</span></div>`).join('')}`).join('')}
+    </div>
+    ${u === 'davi' && (state.cartoesTracker||[]).length ? `<div class="sf-nota">Dica: no microfone do saldo, fale “no cartão: mercado 120, farmácia 45” e as compras entram aqui por categoria.</div>` : ''}`;
 }

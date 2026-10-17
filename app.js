@@ -95,6 +95,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v5.9', itens: [
+    'Cartão por voz: fale várias compras de uma vez ("no cartão Inter: mercado 120, farmácia 45") e elas entram na fatura com categoria',
+    'Para onde vai o dinheiro: gráfico do mês no Dashboard, com as compras do cartão por categoria',
+    'Metas de economia: várias metas (reserva, viagem…) com barra, quanto falta e Guardar/Tirar',
+    'Louvor: tela Culto com o roteiro por data, envio no WhatsApp, histórico das mais tocadas e botão do Drive',
+    'Louvor: rolagem automática na tela cheia do Visualizar'
+  ]},
   { versao: 'v5.8', itens: [
     'Faxina geral: visual refeito do zero numa identidade só (papel, tinta, verde; painéis pretos com brilho verde), mais leve e sem remendos',
     'Imagens (logos e foto de fundo) separadas dos dados: cada salvamento ficou ~4x menor (falta criar a tabela no Supabase)',
@@ -353,6 +360,7 @@ function atualizarStatusIA(){
   if(st){ st.textContent = tem ? 'Ligada' : 'Desligada'; st.classList.toggle('ligada', tem); }
   if(inp) inp.placeholder = tem ? 'Chave salva ✓' : 'Cole a chave aqui';
   const rem = document.getElementById('iaRemover'); if(rem) rem.style.display = tem ? '' : 'none';
+  if(typeof atualizarStatusDrive === 'function') atualizarStatusDrive();
 }
 function salvarChaveIA(){
   const inp = document.getElementById('iaChaveInput');

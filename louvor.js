@@ -20,6 +20,7 @@ function lvEstaAtual(l){
 function renderLouvor(){
   renderLouvorFilterChips();
   renderLvRoteiro();
+  if(typeof renderCultoBotao==='function') renderCultoBotao();
   renderLouvorLista();
 }
 
@@ -337,6 +338,9 @@ function salvarLouvorCampo(){
 }
 function salvarLouvorData(v){
   const l = getLouvorAtual(); if(!l) return;
+  /* a data antiga que já passou fica no histórico de tocadas (Culto → Histórico) */
+  const antiga = l.dataAgendamento, hoje = calISO(new Date());
+  if(antiga && antiga !== v && antiga <= hoje){ l.tocadaEm = [...new Set([...(l.tocadaEm||[]), antiga])].sort(); }
   l.dataAgendamento = v || '';
   persist();
 }
@@ -953,7 +957,40 @@ function lvTelaCheia(ligar){
     if(!ligar && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
   }catch(e){}
   if(ligar) wrap.scrollTop = 0;
+  if(!ligar) lvRolarAlternar(false);
+  else lvRolarMostrarVel();
   lvAjustarZoomFolha();
+}
+/* Rolagem automática na tela cheia: velocidade 1–10 (guardada em cada louvor); toque em ▶/⏸ liga e desliga */
+let lvRolarTimer = null, lvRolarResto = 0, lvRolarUltimo = 0;
+function lvRolarVelAtual(){ const l = getLouvorAtual(); return Math.min(10, Math.max(1, Number(l && l.rolagemVel) || 3)); }
+function lvRolarMostrarVel(){ const e = document.getElementById('lvRolarVel'); if(e) e.textContent = lvRolarVelAtual(); }
+function lvRolarVel(d){
+  const l = getLouvorAtual(); if(!l) return;
+  l.rolagemVel = Math.min(10, Math.max(1, lvRolarVelAtual() + d));
+  lvRolarMostrarVel();
+  persist();
+}
+function lvRolarAlternar(ligar){
+  const wrap = document.getElementById('lvPdfWrap'), play = document.getElementById('lvRolarPlay');
+  if(ligar === undefined) ligar = !lvRolarTimer;
+  if(lvRolarTimer){ cancelAnimationFrame(lvRolarTimer); lvRolarTimer = null; }
+  if(play){
+    play.classList.toggle('ligado', !!ligar);
+    play.innerHTML = ligar ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  }
+  if(!ligar || !wrap) return;
+  lvRolarResto = 0; lvRolarUltimo = 0;
+  const passo = t=>{
+    if(!wrap.classList.contains('lv-tela-cheia')){ lvRolarAlternar(false); return; }
+    const dt = lvRolarUltimo ? Math.min(100, t - lvRolarUltimo) : 0; lvRolarUltimo = t;
+    lvRolarResto += dt * lvRolarVelAtual() * 0.006;   // vel 3 ≈ 18 px/s
+    const px = Math.floor(lvRolarResto);
+    if(px >= 1){ lvRolarResto -= px; wrap.scrollTop += px; }
+    if(wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 1){ lvRolarAlternar(false); return; }   // chegou no fim
+    lvRolarTimer = requestAnimationFrame(passo);
+  };
+  lvRolarTimer = requestAnimationFrame(passo);
 }
 /* saiu da tela cheia do navegador (Esc, gesto de voltar): sai do modo também */
 document.addEventListener('fullscreenchange', ()=>{
@@ -965,10 +1002,15 @@ document.addEventListener('keydown', e=>{
 window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelPdf')?.classList.contains('active')) lvAjustarZoomFolha(); });
 function exportarLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;
+  const r = lvMontarPdf(l);
+  if(r) r.doc.save(r.nome);
+}
+/* monta o PDF (jsPDF) de um louvor qualquer → { doc, nome } (também usado no envio ao Drive) */
+function lvMontarPdf(l){
   ensureLouvorConfig(l);
   if(typeof window.jspdf === 'undefined'){
     showToast('Não foi possível carregar o gerador de PDF.');
-    return;
+    return null;
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4', orientation: l.pdfOrientacao==='paisagem' ? 'landscape' : 'portrait' });
@@ -1081,7 +1123,7 @@ function exportarLouvorPdf(){
   const tomRaiz = lvTomAtual(l);
   const nomePartes = [l.artista, l.titulo||'Sem título', tomRaiz].filter(Boolean);
   const nomeArquivo = nomePartes.join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
-  doc.save(`${nomeArquivo}.pdf`);
+  return { doc, nome: `${nomeArquivo}.pdf` };
 }
 
 /* ---------- Slides ---------- */
@@ -1160,6 +1202,11 @@ const LV_SLIDE_ARTISTA_PT = 22;
 const LV_PPTXGEN = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
 async function exportarLouvorSlides(){
   const l = getLouvorAtual(); if(!l) return;
+  const r = await lvMontarSlides(l);
+  if(r) r.pres.writeFile({ fileName: r.nome });
+}
+/* monta os slides (.pptx) de um louvor qualquer → { pres, nome } (também usado no envio ao Drive) */
+async function lvMontarSlides(l){
   ensureLouvorConfig(l);
   if(!(window.pptxgen || window.PptxGenJS)){
     showToast('Preparando os slides...');
@@ -1168,7 +1215,7 @@ async function exportarLouvorSlides(){
   const PptxCtor = window.pptxgen || window.PptxGenJS;
   if(typeof PptxCtor === 'undefined'){
     showToast('Não foi possível carregar o gerador de slides.');
-    return;
+    return null;
   }
   const pres = new PptxCtor();
   pres.defineLayout({ name:'WIDE', width:13.333, height:7.5 });
@@ -1191,6 +1238,6 @@ async function exportarLouvorSlides(){
 
   const nomePartesSlides = [l.artista, l.titulo||'Sem título'].filter(Boolean);
   const nomeArquivoSlides = nomePartesSlides.join(' - ').replace(/[\/\\:*?"<>|]/g,'').trim();
-  pres.writeFile({ fileName: `${nomeArquivoSlides}.pptx` });
+  return { pres, nome: `${nomeArquivoSlides}.pptx` };
 }
 

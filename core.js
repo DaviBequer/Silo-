@@ -21,7 +21,6 @@ function novoEstado(){
     contasArquivadas:{},
     pagamentosParciais:{},
     historicoMeses:{},
-    reserva:0,
     salarioRecebido:{},
     dizimoPago:{},
     faturasCartao:{},
@@ -337,7 +336,13 @@ async function carregarDaNuvem(){
       if(!state.metas) state.metas = [];
       if(!state.pagamentosParciais) state.pagamentosParciais = {};
       if(!state.contasArquivadas) state.contasArquivadas = {};
-      if(state.reserva === undefined) state.reserva = 0;
+      /* metas de economia (reserva, viagem...): a antiga "Reserva" vira a primeira meta */
+      if(!state.metasEconomia){
+        state.metasEconomia = [];
+        if((state.reserva||0) > 0 || (state.reservaMeta||0) > 0) state.metasEconomia.push({ id:'reserva', nome:'Reserva', guardado: Number(state.reserva)||0, alvo: Number(state.reservaMeta)||0, porMes: Number(state.reservaAporte)||0 });
+        precisaSalvar = true;
+      }
+      ['reserva','reservaMeta','reservaAporte'].forEach(k=>{ if(k in state){ delete state[k]; precisaSalvar = true; } });
       if(!state.salarioRecebido) state.salarioRecebido = {};
       if(!state.dizimoPago) state.dizimoPago = {};
       if(!state.faturasCartao) state.faturasCartao = {};
@@ -754,6 +759,7 @@ function switchAba(aba){
   document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
   document.getElementById('pageLouvorForm')?.classList.remove('active');
   document.getElementById('pageLouvorMedley')?.classList.remove('active');
+  document.getElementById('pageCulto')?.classList.remove('active');
   document.body.style.overflow = '';
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
   window.scrollTo(0,0);

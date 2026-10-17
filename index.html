@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5.8">
+<link rel="stylesheet" href="style.css?v=5.9">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">Nº 58</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">Nº 59</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -58,7 +58,7 @@
       <div class="resumo-links">
         <button type="button" class="resumo-link" onclick="abrirHistoricoMeses()">Histórico</button>
         <button type="button" class="resumo-link" onclick="abrirBancosModal()">Bancos</button>
-        <button type="button" class="resumo-link" onclick="openReservaModal()">Reserva</button>
+        <button type="button" class="resumo-link" onclick="openReservaModal()">Metas</button>
       </div>
     </div>
     <div class="resumo-label resumo-label-voz">Saldo em conta
@@ -151,6 +151,16 @@
     <svg class="atalho-seta" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
   </button>
 
+  <div class="card dg" id="cardOndeVai" data-span="12">
+    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>Para onde vai o dinheiro</div></div>
+    <div class="pano-nav">
+      <button class="pano-nav-btn" onclick="ondeVaiMudarMes(-1)">◀</button>
+      <div class="pano-nav-label" id="ondeVaiMes"></div>
+      <button class="pano-nav-btn" onclick="ondeVaiMudarMes(1)">▶</button>
+    </div>
+    <div id="ondeVaiConteudo"></div>
+  </div>
+
   <!-- CARTÃO: lista primeiro, projeção depois -->
   <div class="card dc" id="secaoCartaoTracker" data-span="12">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><div style="display:flex;align-items:center;gap:8px"><button class="section-add" aria-label="Adicionar conta" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div></div>
@@ -236,6 +246,11 @@
     </div>
 
     <div class="receita-filter-chips" id="louvorFilterChips"></div>
+    <button type="button" class="lv-culto-btn" onclick="abrirCulto()">
+      <span class="lv-culto-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg></span>
+      <span class="lv-culto-txt"><strong>Culto</strong><small id="lvCultoInfo">Roteiro, WhatsApp e mais tocadas</small></span>
+      <svg class="lv-rot-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
     <div class="lv-roteiro" id="lvRoteiro">
       <button type="button" class="lv-rot-head" onclick="toggleLvRoteiro()" aria-expanded="false" id="lvRotHead">
         <span class="lv-rot-nome">Roteiro</span>
@@ -923,7 +938,7 @@
     </div>
     <div class="voz-ouvir">
       <button type="button" class="voz-mic" id="vozMic" onclick="vozOuvir()" aria-label="Falar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg></button>
-      <div class="voz-dica" id="vozDica">Toque e fale. Ex.: “comprei 50 reais no mercado no Nubank”, “paguei a Celesc pelo Viacredi”, “recebi 300 no Inter”.</div>
+      <div class="voz-dica" id="vozDica">Toque e fale. Ex.: “comprei 50 reais no mercado no Nubank”, “paguei a Celesc pelo Viacredi”, “recebi 300 no Inter”, “no cartão Nubank: mercado 120, farmácia 45”.</div>
     </div>
     <form class="voz-escrever" onsubmit="event.preventDefault();vozEntender()">
       <input type="text" id="vozTexto" class="voz-campo" placeholder="Ou escreva aqui" autocomplete="off" enterkeyhint="go">
@@ -955,26 +970,28 @@
 <div class="modal-overlay" id="modalReserva">
   <div class="modal">
     <div class="modal-header">
-      <h3>Reserva</h3>
+      <h3>Metas de economia</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalReserva')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
-    <div class="caption" style="margin-bottom:12px">Dinheiro que está na conta mas não entra no saldo disponível — só pra controle visual.</div>
-    <div class="field full">
-      <label>Valor Reservado</label>
-      <div class="input-money"><input type="text" id="reservaValorInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarReservaProjecao()"></div>
+    <div class="caption" style="margin-bottom:6px">Dinheiro guardado não entra no saldo disponível: é só para acompanhar.</div>
+    <div id="metasLista"></div>
+    <div id="metaForm" class="meta-form" style="display:none">
+      <input type="hidden" id="metaId">
+      <div class="field full"><label>Nome</label><input type="text" id="metaNome" placeholder="Ex.: Reserva, Viagem" autocomplete="off"></div>
+      <div class="field full"><label>Já guardado</label><div class="input-money"><input type="text" id="reservaValorInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarReservaProjecao()"></div></div>
+      <div class="field full"><label>Quanto quer juntar</label><div class="input-money"><input type="text" id="reservaMetaInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarReservaProjecao()"></div></div>
+      <div class="field full"><label>Quanto pretende guardar por mês (opcional)</label><div class="input-money"><input type="text" id="reservaAporteInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarReservaProjecao()"></div></div>
+      <div id="reservaProjecao" style="margin-bottom:10px"></div>
+      <div class="meta-form-acoes">
+        <button type="button" class="link-btn-sm meta-excluir" id="metaExcluirBtn" onclick="excluirMetaEconomia()">Excluir meta</button>
+        <span style="flex:1"></span>
+        <button type="button" class="btn btn-sm btn-outline" onclick="metaFormFechar()">Voltar</button>
+        <button type="button" class="btn btn-sm" onclick="salvarReserva()">Salvar</button>
+      </div>
     </div>
-    <div class="field full">
-      <label>Meta (opcional)</label>
-      <div class="input-money"><input type="text" id="reservaMetaInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarReservaProjecao()"></div>
-    </div>
-    <div class="field full">
-      <label>Quanto pretende guardar por mês (opcional)</label>
-      <div class="input-money"><input type="text" id="reservaAporteInput" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarReservaProjecao()"></div>
-    </div>
-    <div id="reservaProjecao" style="margin-bottom:10px"></div>
-    <div class="modal-actions">
-      <button class="btn btn-outline btn-block" onclick="closeModal('modalReserva')">Cancelar</button>
-      <button class="btn btn-block" onclick="salvarReserva()">Salvar</button>
+    <div class="modal-actions" id="metasAcoes">
+      <button class="btn btn-outline btn-block" onclick="closeModal('modalReserva')">Fechar</button>
+      <button class="btn btn-block" onclick="metaFormAbrir()">+ Nova meta</button>
     </div>
   </div>
 </div>
@@ -1075,6 +1092,7 @@
           <svg id="lvPdfConfigBodyChevron" class="accordion-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="lv-barra-dir">
+          <button type="button" class="lv-barra-btn lv-btn-pdf" onclick="lvTelaCheia(true);lvRolarAlternar(true)" title="Rolar sozinho" aria-label="Tela cheia rolando sozinho"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="m6 14 6 6 6-6"/></svg></button>
           <button type="button" class="lv-barra-btn lv-btn-pdf" onclick="lvTelaCheia(true)" title="Tela cheia" aria-label="Ver em tela cheia"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
           <button type="button" class="lv-barra-btn primario lv-btn-pdf" onclick="imprimirLouvorPdf()" title="Imprimir / Salvar PDF" aria-label="Imprimir ou salvar PDF"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><text x="12" y="18.2" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="6.6" font-weight="800" fill="currentColor" stroke="none" letter-spacing=".2">PDF</text></svg></button>
         </div>
@@ -1119,6 +1137,12 @@
       </div>
       <div class="lv-pdf-wrap" id="lvPdfWrap">
         <button type="button" class="lv-tela-cheia-sair" onclick="lvTelaCheia(false)" aria-label="Sair da tela cheia" title="Sair da tela cheia"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        <div class="lv-rolar" id="lvRolar">
+          <button type="button" class="lv-rolar-btn" onclick="lvRolarVel(-1)" aria-label="Mais devagar">−</button>
+          <span class="lv-rolar-vel" id="lvRolarVel">3</span>
+          <button type="button" class="lv-rolar-btn" onclick="lvRolarVel(1)" aria-label="Mais rápido">+</button>
+          <button type="button" class="lv-rolar-play" id="lvRolarPlay" onclick="lvRolarAlternar()" aria-label="Rolar sozinho"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        </div>
         <div class="lv-pdf-preview" id="lvPdfPreview"></div>
       </div>
       <button class="receita-salvar-fab" onclick="exportarLouvorPdf()" title="Baixar PDF" aria-label="Baixar PDF">
@@ -1237,6 +1261,66 @@
       <pre class="lm-previa" id="lmPrevia"></pre>
     </div>
     <div class="lm-rodape"><button class="btn btn-block" id="lmSalvarBtn" onclick="lmSalvar()">Criar medley</button></div>
+  </div>
+</div>
+
+<!-- CULTO: roteiro por data + WhatsApp + histórico (louvor-culto.js) -->
+<div class="fullpage" id="pageCulto">
+  <div class="fullpage-header">
+    <button class="header-btn" aria-label="Voltar" onclick="fecharCulto()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title">Culto</div>
+    <span style="width:32px;flex-shrink:0"></span>
+  </div>
+  <div class="fullpage-content cu" id="cultoConteudo">
+    <div class="dash-tabs cu-abas" id="cultoAbas">
+      <button type="button" class="dash-tab active" data-aba="roteiro" onclick="cultoTrocarAba('roteiro')">Roteiro</button>
+      <button type="button" class="dash-tab" data-aba="historico" onclick="cultoTrocarAba('historico')">Histórico</button>
+    </div>
+    <div id="cultoRoteiro">
+      <div class="cu-data">
+        <button type="button" class="pano-nav-btn" onclick="cultoPularData(-7)" aria-label="Semana anterior">◀</button>
+        <div class="cu-data-meio">
+          <div class="cu-data-nome" id="cultoDataNome"></div>
+          <input type="date" id="cultoDataInput" onchange="cultoMudarData(this.value)">
+        </div>
+        <button type="button" class="pano-nav-btn" onclick="cultoPularData(7)" aria-label="Próxima semana">▶</button>
+      </div>
+      <div class="cu-estado" id="cultoEstado"></div>
+      <div id="cultoPartes"></div>
+      <button type="button" class="lm-add" onclick="cultoNovaParte()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Adicionar parte</button>
+      <div class="lm-sec-titulo"><span>Texto do grupo</span><small>só o texto; os PDFs vão para o Drive</small></div>
+      <pre class="cu-previa" id="cultoTextoPrevia"></pre>
+      <button type="button" class="link-btn-sm meta-excluir" onclick="cultoApagar()">Apagar roteiro desta data</button>
+    </div>
+    <div id="cultoHistorico" style="display:none"></div>
+    <div class="lm-rodape cu-rodape" id="cultoRodape">
+      <button class="btn btn-outline" onclick="cultoCopiar()">Copiar</button>
+      <button class="btn btn-outline cu-drive" id="cultoDriveBtn" style="display:none" onclick="cultoEnviarDrive()" title="Enviar PDFs e slides para o Drive"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>Drive</button>
+      <button class="btn cu-whats" onclick="cultoMandarWhatsApp()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>Mandar no WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCultoEscolher">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="cultoEscolherTitulo">Música</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCultoEscolher')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <input type="text" id="cultoEscolherBusca" class="voz-campo cu-busca" placeholder="Buscar música" autocomplete="off" oninput="cultoRenderEscolher()">
+    <div class="cu-escolher" id="cultoEscolherLista"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDrive">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="driveTitulo">Drive</h3>
+    </div>
+    <div class="drive-log" id="driveLog"></div>
+    <div class="modal-actions">
+      <button class="btn btn-block" id="driveFechar" onclick="closeModal('modalDrive')">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -1391,6 +1475,15 @@
         <button type="button" class="btn btn-sm" onclick="salvarChaveIA()">Salvar</button>
       </div>
       <button type="button" class="ia-remover" id="iaRemover" style="display:none" onclick="removerChaveIA()">Remover chave</button>
+    </div>
+    <div class="ia-config">
+      <div class="ia-topo"><span class="ia-titulo">Google Drive do Louvor</span><span class="ia-status" id="driveStatus">Desligado</span></div>
+      <div class="ia-desc">Com o ID do app no Google Cloud, o Culto manda os PDFs e slides da data para “Som de Adoradores” e arquiva os antigos.</div>
+      <div class="ia-linha">
+        <input type="text" id="driveClienteInput" placeholder="ID do cliente (…apps.googleusercontent.com)" autocomplete="off" spellcheck="false">
+        <button type="button" class="btn btn-sm" onclick="salvarDriveCliente()">Salvar</button>
+      </div>
+      <button type="button" class="ia-remover" id="driveRemover" style="display:none" onclick="removerDriveCliente()">Desligar</button>
     </div>
     </div>
     <div class="dd-painel" data-dd="conta">
@@ -1699,19 +1792,21 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=5.8"></script>
-<script src="core.js?v=5.8"></script>
-<script src="comando.js?v=5.8"></script>
-<script src="layout.js?v=5.8"></script>
-<script src="app.js?v=5.8"></script>
-<script src="panorama.js?v=5.8"></script>
-<script src="planner.js?v=5.8"></script>
-<script src="ponto.js?v=5.8"></script>
-<script src="louvor.js?v=5.8"></script>
-<script src="louvor-extra.js?v=5.8"></script>
-<script src="louvor-medley.js?v=5.8"></script>
-<script src="emprestimo.js?v=5.8"></script>
-<script src="vendas.js?v=5.8"></script>
+<script src="supabase.js?v=5.9"></script>
+<script src="core.js?v=5.9"></script>
+<script src="comando.js?v=5.9"></script>
+<script src="layout.js?v=5.9"></script>
+<script src="app.js?v=5.9"></script>
+<script src="panorama.js?v=5.9"></script>
+<script src="planner.js?v=5.9"></script>
+<script src="ponto.js?v=5.9"></script>
+<script src="louvor.js?v=5.9"></script>
+<script src="louvor-extra.js?v=5.9"></script>
+<script src="louvor-medley.js?v=5.9"></script>
+<script src="louvor-culto.js?v=5.9"></script>
+<script src="louvor-drive.js?v=5.9"></script>
+<script src="emprestimo.js?v=5.9"></script>
+<script src="vendas.js?v=5.9"></script>
 <script>carregar();</script>
 </body>
 </html>

@@ -191,12 +191,57 @@ function renderSaldoBancos(){
   el.innerHTML = `<span class="saldo-bancos-lista">${lista.map(b=>`<span>${escBanco(b.nome)} <b>${fmtMoney(b.valor)}</b></span>`).join('')}</span>`
     + (difere ? `<span class="saldo-bancos-aviso">Soma ${fmtMoney(total)}</span>` : '');
 }
+/* ===== METAS DE ECONOMIA (reserva, viagem...): state.metasEconomia = [{ id, nome, guardado, alvo, porMes }] ===== */
+function metasEconomia(){ if(!state.metasEconomia) state.metasEconomia = []; return state.metasEconomia; }
+function metaPct(m){ return m.alvo > 0 ? Math.min(100, Math.round((Number(m.guardado)||0) / m.alvo * 100)) : 0; }
 function openReservaModal(){
-  document.getElementById('reservaValorInput').value = state.reserva ? state.reserva.toFixed(2).replace('.',',') : '';
-  document.getElementById('reservaMetaInput').value = state.reservaMeta ? state.reservaMeta.toFixed(2).replace('.',',') : '';
-  document.getElementById('reservaAporteInput').value = state.reservaAporte ? state.reservaAporte.toFixed(2).replace('.',',') : '';
-  atualizarReservaProjecao();
+  metaMexendo = null;
+  metaFormFechar();
   document.getElementById('modalReserva').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function renderMetasLista(){
+  const el = document.getElementById('metasLista'); if(!el) return;
+  const lista = metasEconomia();
+  if(!lista.length){ el.innerHTML = `<div class="gm-vazio">Nenhuma meta ainda. Crie uma: reserva, viagem, carro…</div>`; return; }
+  const total = lista.reduce((s,m)=>s + (Number(m.guardado)||0), 0);
+  el.innerHTML = `<div class="metas-total"><span>Guardado ao todo</span><b>${fmtMoney(total)}</b></div>` + lista.map(m=>{
+    const falta = Math.max(0, (m.alvo||0) - (Number(m.guardado)||0)), pct = metaPct(m);
+    const meses = falta > 0 && m.porMes > 0 ? Math.ceil(falta / m.porMes) : 0;
+    const sub = !m.alvo ? 'sem valor alvo' : falta <= 0 ? 'Meta batida ✓' : `faltam ${fmtMoney(falta)}${meses ? ` · ${meses} ${meses===1?'mês':'meses'} no ritmo de ${fmtMoney(m.porMes)}` : ''}`;
+    return `<div class="meta-item">
+      <button type="button" class="meta-item-topo" onclick="metaFormAbrir('${m.id}')">
+        <span class="meta-item-nome">${escBanco(m.nome||'Meta')}</span>
+        <span class="meta-item-valor">${fmtMoney(m.guardado||0)}${m.alvo ? `<small> de ${fmtMoney(m.alvo)}</small>` : ''}</span>
+      </button>
+      ${m.alvo ? `<div class="reserva-proj-barra"><div class="reserva-proj-barra-fill" style="width:${pct}%"></div></div>` : ''}
+      <div class="meta-item-rodape"><span class="${falta<=0 && m.alvo ? 'reserva-proj-ok' : ''}">${sub}</span>
+        <span class="meta-item-botoes"><button type="button" class="dif-chip" onclick="metaMexer('${m.id}',-1)">− Tirar</button><button type="button" class="dif-chip" onclick="metaMexer('${m.id}',1)">+ Guardar</button></span></div>
+      ${metaMexendo && metaMexendo.id === m.id ? `<form class="meta-mexer" onsubmit="event.preventDefault();metaMexerOk()"><span>${metaMexendo.sinal > 0 ? 'Guardei' : 'Tirei'}</span><div class="input-money"><input type="text" id="metaMexerValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" enterkeyhint="done"></div><button type="submit" class="btn btn-sm">OK</button></form>` : ''}
+    </div>`;
+  }).join('');
+}
+function metaFormAbrir(id){
+  const m = id ? metasEconomia().find(x=>x.id===id) : null;
+  const din = v => v ? Number(v).toFixed(2).replace('.',',') : '';
+  document.getElementById('metaId').value = m ? m.id : '';
+  document.getElementById('metaNome').value = m ? m.nome : '';
+  document.getElementById('reservaValorInput').value = din(m && m.guardado);
+  document.getElementById('reservaMetaInput').value = din(m && m.alvo);
+  document.getElementById('reservaAporteInput').value = din(m && m.porMes);
+  ['reservaValorInput','reservaMetaInput','reservaAporteInput'].forEach(k=>{ const e = document.getElementById(k); if(e.value) maskMoneyInput(e); });
+  document.getElementById('metaExcluirBtn').style.display = m ? '' : 'none';
+  document.getElementById('metasLista').style.display = 'none';
+  document.getElementById('metasAcoes').style.display = 'none';
+  document.getElementById('metaForm').style.display = '';
+  atualizarReservaProjecao();
+  if(!m) setTimeout(()=>document.getElementById('metaNome').focus(), 60);
+}
+function metaFormFechar(){
+  document.getElementById('metaForm').style.display = 'none';
+  document.getElementById('metasLista').style.display = '';
+  document.getElementById('metasAcoes').style.display = '';
+  renderMetasLista();
 }
 function atualizarReservaProjecao(){
   const el = document.getElementById('reservaProjecao');
@@ -212,7 +257,7 @@ function atualizarReservaProjecao(){
     const meses = Math.ceil(falta/aporte);
     linhaMeses = `<div class="reserva-proj-linha">No ritmo de ${fmtMoney(aporte)}/mês, faltam <b>${meses} ${meses===1?'mês':'meses'}</b> pra bater a meta</div>`;
   } else if(falta === 0){
-    linhaMeses = `<div class="reserva-proj-linha reserva-proj-ok"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Meta batida!</div>`;
+    linhaMeses = `<div class="reserva-proj-linha reserva-proj-ok">Meta batida ✓</div>`;
   }
   el.innerHTML = `
     <div class="reserva-proj-barra"><div class="reserva-proj-barra-fill" style="width:${pct}%"></div></div>
@@ -221,27 +266,58 @@ function atualizarReservaProjecao(){
   `;
 }
 function salvarReserva(){
-  state.reserva = parseMoney(document.getElementById('reservaValorInput').value);
-  state.reservaMeta = parseMoney(document.getElementById('reservaMetaInput').value) || 0;
-  state.reservaAporte = parseMoney(document.getElementById('reservaAporteInput').value) || 0;
+  const id = document.getElementById('metaId').value;
+  const nome = document.getElementById('metaNome').value.trim();
+  if(!nome){ showToast('Dê um nome para a meta'); document.getElementById('metaNome').focus(); return; }
+  const dados = { nome,
+    guardado: parseMoney(document.getElementById('reservaValorInput').value) || 0,
+    alvo: parseMoney(document.getElementById('reservaMetaInput').value) || 0,
+    porMes: parseMoney(document.getElementById('reservaAporteInput').value) || 0 };
+  const m = id ? metasEconomia().find(x=>x.id===id) : null;
+  if(m) Object.assign(m, dados); else metasEconomia().push({ id:'me'+Date.now(), ...dados });
   persist();
-  closeModal('modalReserva');
+  metaFormFechar();
   renderReservaBadge();
-  showToast('Reserva atualizada');
+  showToast('Meta salva');
 }
-function renderReservaBadge(){
+function excluirMetaEconomia(){
+  const id = document.getElementById('metaId').value;
+  const m = metasEconomia().find(x=>x.id===id); if(!m) return;
+  if(!confirm(`Excluir a meta "${m.nome}"?`)) return;
+  state.metasEconomia = metasEconomia().filter(x=>x.id!==id);
+  persist();
+  metaFormFechar();
+  renderReservaBadge();
+}
+/* + Guardar / − Tirar: abre um campo de valor dentro da meta; OK soma/subtrai do guardado */
+let metaMexendo = null;
+function metaMexer(id, sinal){
+  metaMexendo = (metaMexendo && metaMexendo.id === id && metaMexendo.sinal === sinal) ? null : { id, sinal };
+  renderMetasLista();
+  const e = document.getElementById('metaMexerValor'); if(e) e.focus();
+}
+function metaMexerOk(){
+  const mm = metaMexendo; if(!mm) return;
+  const m = metasEconomia().find(x=>x.id===mm.id);
+  const v = parseMoney(document.getElementById('metaMexerValor').value) || 0;
+  metaMexendo = null;
+  if(!m || !(v > 0)){ renderMetasLista(); return; }
+  m.guardado = Math.max(0, Math.round(((Number(m.guardado)||0) + mm.sinal*v)*100)/100);
+  persist();
+  renderMetasLista();
+  renderReservaBadge();
+  showToast(mm.sinal > 0 && m.alvo && m.guardado >= m.alvo ? `Meta "${m.nome}" batida!` : `${m.nome}: ${fmtMoney(m.guardado)}`);
+}function renderReservaBadge(){
   const el = document.getElementById('reservaBadge');
   if(!el) return;
-  if(state.reserva && state.reserva > 0){
-    el.style.display = 'flex';
-    const meta = state.reservaMeta || 0;
-    const pctTxt = meta > 0 ? ` <span class="reserva-badge-pct">${Math.min(100,Math.round((state.reserva/meta)*100))}%</span>` : '';
-    el.innerHTML = `<span>Reservado</span><b>${fmtMoney(state.reserva)}</b>${pctTxt}`;
-  } else {
-    el.style.display = 'none';
-  }
+  const lista = metasEconomia().filter(m=>(Number(m.guardado)||0) > 0 || m.alvo > 0);
+  if(!lista.length){ el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  const total = lista.reduce((s,m)=>s + (Number(m.guardado)||0), 0);
+  const comAlvo = lista.filter(m=>m.alvo > 0);
+  const pctTxt = comAlvo.length === 1 ? ` <span class="reserva-badge-pct">${metaPct(comAlvo[0])}%</span>` : (comAlvo.length > 1 ? ` <span class="reserva-badge-pct">${comAlvo.length} metas</span>` : '');
+  el.innerHTML = `<span>Guardado</span><b>${fmtMoney(total)}</b>${pctTxt}`;
 }
-
 function futuroParcelaAtual(item){
   if(item.recorrente) return null;
   const parcelas = item.parcelas || 1;
@@ -1475,7 +1551,7 @@ function vozOuvir(){
     } else if(typeof jarvisFechar==='function') jarvisFechar();
   };
   try{
-    r.start(); vozRec = r; mic.classList.add('ouvindo'); dica.textContent = 'Ouvindo… fale a compra, a conta paga ou o que recebeu.';
+    r.start(); vozRec = r; mic.classList.add('ouvindo'); dica.textContent = 'Ouvindo… fale a compra, a conta paga, o que recebeu ou as compras do cartão.';
     if(typeof jarvisAbrir==='function') jarvisAbrir({ titulo: 'Fale a compra, a conta paga ou o que recebeu', aoParar: ()=>{ try{ r.stop(); }catch(_){ jarvisFechar(); } } });
   }
   catch(e){ dica.textContent = 'Não consegui ligar o microfone: escreva abaixo.'; }
@@ -1499,20 +1575,63 @@ function vozEntenderSimples(texto, bancos, contas){
   let acao = /\b(recebi|caiu|entrou|ganhei|depositaram)\b/.test(t) ? 'recebimento' : 'compra';
   if(/\b(paguei|pagar|pago|quitei)\b/.test(t) && conta) acao = 'pagar_conta';
   if(acao === 'pagar_conta' && !valor) valor = conta.valor;
+  const cartao = vozCartoes().find(c=>t.includes(vozSemAcento(c.nome)));
+  const numeros = (t.match(/\d+(?:[.,]\d{1,2})?/g) || []).length;
+  if(acao !== 'recebimento' && (/\b(cartao|credito)\b/.test(t) || (cartao && (numeros > 1 || !banco)))){
+    const c = cartao || (vozCartoes().length === 1 ? vozCartoes()[0] : null);
+    return { acao:'cartao', valor:0, banco:'', conta:'', descricao:'', cartao: c ? c.nome : '', itens: vozItensSimples(texto, c) };
+  }
   const desc = texto.replace(/\b(comprei|gastei|paguei|recebi)\b/ig, '').replace(/\d+[.,]?\d*\s*(reais|real)?/ig, '').replace(new RegExp(banco ? banco.nome : '$^', 'ig'), '').replace(/\b(no|na|pelo|pela|do|da|de|com|em)\s*$/i, '').replace(/\s+/g,' ').trim();
   return { acao, valor, banco: banco ? banco.nome : '', conta: acao === 'pagar_conta' && conta ? conta.key : '', descricao: desc };
 }
 const VOZ_ESQUEMA = {
   type:'object',
   properties:{
-    acao:{ type:'string', enum:['compra','pagar_conta','recebimento','nada'] },
+    acao:{ type:'string', enum:['compra','pagar_conta','recebimento','cartao','nada'] },
     valor:{ type:'number', description:'Valor em reais (0 se não falou)' },
     banco:{ type:'string', description:'Nome exato de um banco da lista, ou vazio' },
     conta:{ type:'string', description:'Chave exata de uma conta da lista quando pagou uma conta do mês, ou vazio' },
-    descricao:{ type:'string', description:'O que comprou / de onde veio, curto' }
+    descricao:{ type:'string', description:'O que comprou / de onde veio, curto' },
+    cartao:{ type:'string', description:'Nome exato de um cartão da lista quando acao = cartao, ou vazio' },
+    itens:{ type:'array', description:'Compras no cartão (acao = cartao); vazio nas outras', items:{ type:'object', properties:{
+      descricao:{ type:'string' }, valor:{ type:'number' }, categoria:{ type:'string', description:'Uma categoria exata da lista' }
+    }, required:['descricao','valor','categoria'] } }
   },
-  required:['acao','valor','banco','conta','descricao']
+  required:['acao','valor','banco','conta','descricao','cartao','itens']
 };
+/* --- compras no cartão ditadas de uma vez ("no Nubank: mercado 120, farmácia 45") → crédito à vista do mês da fatura --- */
+const VOZ_CATEGORIA_PALAVRAS = [
+  ['Mercado', /mercado|supermerc|atacad|feira|hortifruti|acougue/],
+  ['Farmácia', /farmacia|remedio|drogaria/],
+  ['Transporte', /uber|99|gasolina|combustivel|posto|onibus|estacionamento|pedagio|oficina/],
+  ['Alimentação', /lanche|restaurante|ifood|padaria|pizza|almoco|jantar|cafe|sorvete|acai|hamburguer|comida/],
+  ['Lazer', /cinema|netflix|spotify|show|passeio|jogo|viagem/]
+];
+function vozCartoes(){ return state.cartoesTracker || []; }
+function vozCategoriasCartao(){ return getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom'); }
+function vozAdivinharCategoria(desc){
+  const d = vozSemAcento(desc), cats = vozCategoriasCartao();
+  const propria = cats.find(c=>c !== 'Outros' && d.includes(vozSemAcento(c)));
+  if(propria) return propria;
+  const achou = VOZ_CATEGORIA_PALAVRAS.find(([c, re])=>re.test(d) && cats.includes(c));
+  return achou ? achou[0] : 'Outros';
+}
+/* sem IA: "mercado 120, farmácia 45 e uber 18,50" → itens */
+function vozItensSimples(texto, cartao){
+  let t = texto;
+  if(cartao) t = t.replace(new RegExp(cartao.nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'), ' ');
+  t = t.replace(/\b(no|na|do|da|pelo|pela)\s+(cart[aã]o|cr[eé]dito)\b/ig, ' ').replace(/\b(cart[aã]o|cr[eé]dito|comprei|gastei|passei|paguei)\b/ig, ' ');
+  const itens = [];
+  const re = /([^\d,;:]*?)\s*(?:r\$\s*)?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:reais|real)?/ig;
+  let m;
+  while((m = re.exec(t))){
+    const n = m[2].includes(',') ? Number(m[2].replace(/\./g,'').replace(',','.')) : Number(m[2]);
+    const desc = m[1].replace(/^\s*(e|,|no|na|de|do|da|em|com)\s+/i, '').replace(/\s+(no|na|de|do|da|em|com|e)\s*$/i, '').replace(/[:\-–]/g, ' ').replace(/\s+/g, ' ').trim();
+    if(n > 0) itens.push({ descricao: desc ? desc.charAt(0).toUpperCase() + desc.slice(1) : 'Compra', valor: n, categoria: vozAdivinharCategoria(desc) });
+  }
+  return itens;
+}
+function vozAchaCartao(nome){ const n = vozSemAcento(nome); return n ? vozCartoes().find(c=>vozSemAcento(c.nome) === n) || vozCartoes().find(c=>n.includes(vozSemAcento(c.nome)) || vozSemAcento(c.nome).includes(n)) : null; }
 async function vozEntender(){
   const texto = (document.getElementById('vozTexto').value || '').trim();
   const res = document.getElementById('vozResultado');
@@ -1526,11 +1645,21 @@ async function vozEntender(){
         `Você organiza lançamentos de um app de finanças pessoais (Brasil, reais). A pessoa falou: "${texto}".\n` +
         `Bancos dela: ${JSON.stringify(bancos.map(b=>b.nome))}.\n` +
         `Contas do mês ainda abertas (chave, descrição, valor): ${JSON.stringify(contas.map(c=>[c.key, c.desc, c.valor]))}.\n` +
+        `Cartões de crédito dela: ${JSON.stringify(vozCartoes().map(c=>c.nome))}. Categorias das compras no cartão: ${JSON.stringify(vozCategoriasCartao())}.\n` +
         `Regras: "comprei/gastei" = compra; "paguei a <conta da lista>" = pagar_conta (use a chave dela; valor = o falado ou o da conta); "paguei" algo que não está na lista = compra; "recebi/caiu/entrou" = recebimento. ` +
+        `Compras no cartão de crédito (falou "cartão"/"crédito", ou citou um cartão da lista com uma ou várias compras) = cartao: ponha cada compra em itens (descrição curta com maiúscula, valor, categoria exata da lista; na dúvida "Outros") e o nome exato do cartão; valor = 0. ` +
         `Valores por extenso viram número ("cinquenta e dois e noventa" = 52.90). Banco só se for citado (nome exato da lista).` }], t=>{ res.innerHTML = `<div class="voz-carregando">${lvEsc(t)}</div>`; }, VOZ_ESQUEMA);
     }catch(e){ p = null; }
   }
-  if(!p || p.acao === 'nada') p = vozEntenderSimples(texto, bancos, contas);
+  if(!p || p.acao === 'nada' || (p.acao === 'cartao' && !(p.itens||[]).length)) p = vozEntenderSimples(texto, bancos, contas);
+  if(p.acao === 'cartao'){
+    const cats = vozCategoriasCartao(), c = vozAchaCartao(p.cartao) || (vozCartoes().length === 1 ? vozCartoes()[0] : null);
+    vozPlano = { acao:'cartao', cartaoId: c ? c.id : '', valor:0, bancoId:'', conta:'', descricao:'',
+      itens: (p.itens||[]).filter(i=>Number(i.valor) > 0).map(i=>({ descricao: String(i.descricao||'Compra').trim(), valor: Math.round(Number(i.valor)*100)/100, categoria: cats.includes(i.categoria) ? i.categoria : vozAdivinharCategoria(i.descricao) })) };
+    if(!vozPlano.itens.length) vozPlano.itens.push({ descricao:'', valor:0, categoria:'Outros' });
+    vozRenderPlano();
+    return;
+  }
   if(p.conta && !contas.some(c=>c.key === p.conta)) p.conta = '';
   if(p.acao === 'pagar_conta' && !p.conta) p.acao = 'compra';
   if(p.acao === 'pagar_conta' && !(Number(p.valor) > 0)) p.valor = contas.find(c=>c.key === p.conta).valor;
@@ -1544,9 +1673,31 @@ function vozRenderPlano(){
   const pl = vozPlano, sinal = pl.acao === 'recebimento' ? 1 : -1;
   const banco = bancos.find(b=>b.id === pl.bancoId);
   const tipos = [['compra','Compra'],['pagar_conta','Conta paga'],['recebimento','Recebi']];
+  if(vozCartoes().length) tipos.push(['cartao','Cartão']);
+  const abas = `<div class="dash-tabs voz-tipos">${tipos.map(([k,n])=>`<button type="button" class="dash-tab${pl.acao===k?' active':''}" onclick="vozMudar('acao','${k}')">${n}</button>`).join('')}</div>`;
+  if(pl.acao === 'cartao'){
+    const cats = vozCategoriasCartao();
+    res.innerHTML = `
+    <div class="voz-plano">
+      ${abas}
+      <div class="field"><label>Cartão</label><div class="voz-bancos">${vozCartoes().map(c=>`<button type="button" class="dif-chip${c.id===pl.cartaoId?' active':''}" onclick="vozMudar('cartaoId','${c.id}')">${escBanco(c.nome)}</button>`).join('')}</div></div>
+      <div class="voz-itens">${pl.itens.map((it, i)=>`
+        <div class="voz-item">
+          <input type="text" class="voz-item-desc" value="${escBanco(it.descricao)}" placeholder="O que foi" oninput="vozPlano.itens[${i}].descricao=this.value">
+          <div class="input-money voz-item-valor"><input type="text" inputmode="numeric" value="${it.valor ? it.valor.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : ''}" oninput="maskMoneyInput(this);vozPlano.itens[${i}].valor=parseMoney(this.value);vozAtualizarResumo()"></div>
+          <select class="voz-item-cat" onchange="vozPlano.itens[${i}].categoria=this.value">${cats.map(c=>`<option${c===it.categoria?' selected':''}>${escBanco(c)}</option>`).join('')}</select>
+          <button type="button" class="btn-icon-sm" aria-label="Tirar" onclick="vozItemTirar(${i})">${ICON_TRASH}</button>
+        </div>`).join('')}
+      </div>
+      <button type="button" class="link-btn-sm" onclick="vozItemNovo()">+ Outra compra</button>
+      <div class="voz-resumo" id="vozResumo">${vozResumoHtml()}</div>
+      <button type="button" class="btn btn-block" onclick="vozConfirmar()">Confirmar</button>
+    </div>`;
+    return;
+  }
   res.innerHTML = `
     <div class="voz-plano">
-      <div class="dash-tabs voz-tipos">${tipos.map(([k,n])=>`<button type="button" class="dash-tab${pl.acao===k?' active':''}" onclick="vozMudar('acao','${k}')">${n}</button>`).join('')}</div>
+      ${abas}
       ${pl.acao === 'pagar_conta' ? `<div class="field"><label>Conta</label><select onchange="vozMudar('conta', this.value)"><option value="">Escolha a conta</option>${contas.map(c=>`<option value="${c.key}"${c.key===pl.conta?' selected':''}>${escBanco(c.desc)} · ${fmtMoney(c.valor)}</option>`).join('')}</select></div>` : `<div class="field"><label>${pl.acao==='recebimento'?'De onde veio':'O que foi'}</label><input type="text" value="${escBanco(pl.descricao)}" oninput="vozPlano.descricao=this.value"></div>`}
       <div class="field"><label>Valor</label><div class="input-money"><input type="text" inputmode="numeric" value="${pl.valor ? pl.valor.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : ''}" oninput="maskMoneyInput(this);vozPlano.valor=parseMoney(this.value);vozAtualizarResumo()"></div></div>
       ${bancos.length ? `<div class="field"><label>Banco</label><div class="voz-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${b.id===pl.bancoId?' active':''}" onclick="vozMudar('bancoId','${b.id}')">${escBanco(b.nome)}</button>`).join('')}</div></div>` : ''}
@@ -1556,6 +1707,14 @@ function vozRenderPlano(){
 }
 function vozResumoHtml(){
   const pl = vozPlano, us = state.users[state.currentUser], sinal = pl.acao === 'recebimento' ? 1 : -1;
+  if(pl.acao === 'cartao'){
+    const c = vozCartoes().find(x=>x.id === pl.cartaoId);
+    const total = pl.itens.reduce((s,i)=>s + (Number(i.valor)||0), 0);
+    if(!c) return `<div class="voz-aviso">Escolha o cartão</div>`;
+    const mKey = faturaAbertaMes(c);
+    return `<div><span>${pl.itens.length} ${pl.itens.length === 1 ? 'compra' : 'compras'} à vista</span><b>${fmtMoney(total)}</b></div>
+      <div><span>Fatura de ${monthLabel(mKey)} · ${escBanco(c.nome)}</span><b>${fmtMoney(faturaCartaoNoMes(c, mKey))} → ${fmtMoney(faturaCartaoNoMes(c, mKey) + total)}</b></div>`;
+  }
   const banco = bancosDoUsuario().find(b=>b.id === pl.bancoId);
   const linhas = [];
   if(banco) linhas.push(`<div><span>${escBanco(banco.nome)}</span><b>${fmtMoney(banco.valor)} → ${fmtMoney((Number(banco.valor)||0) + sinal*pl.valor)}</b></div>`);
@@ -1567,12 +1726,39 @@ function vozResumoHtml(){
 }
 function vozAtualizarResumo(){ const el = document.getElementById('vozResumo'); if(el) el.innerHTML = vozResumoHtml(); }
 function vozMudar(campo, v){
+  const antes = vozPlano.acao;
   vozPlano[campo] = v;
   if(campo === 'conta'){ const c = vozContasAbertas().find(x=>x.key === v); if(c) vozPlano.valor = c.valor; }
+  if(campo === 'acao' && v === 'cartao' && antes !== 'cartao'){
+    if(!vozPlano.itens || !vozPlano.itens.length) vozPlano.itens = [{ descricao: vozPlano.descricao || '', valor: vozPlano.valor || 0, categoria: vozAdivinharCategoria(vozPlano.descricao) }];
+    if(!vozPlano.cartaoId && vozCartoes().length === 1) vozPlano.cartaoId = vozCartoes()[0].id;
+  }
+  if(campo === 'acao' && antes === 'cartao' && v !== 'cartao' && vozPlano.itens && vozPlano.itens.length){
+    vozPlano.descricao = vozPlano.itens.map(i=>i.descricao).filter(Boolean).join(', ');
+    vozPlano.valor = Math.round(vozPlano.itens.reduce((s,i)=>s + (Number(i.valor)||0), 0)*100)/100;
+    if(!vozPlano.bancoId && bancosDoUsuario().length === 1) vozPlano.bancoId = bancosDoUsuario()[0].id;
+  }
   vozRenderPlano();
+}
+function vozItemNovo(){ vozPlano.itens.push({ descricao:'', valor:0, categoria:'Outros' }); vozRenderPlano(); const d = document.querySelectorAll('.voz-item-desc'); if(d.length) d[d.length-1].focus(); }
+function vozItemTirar(i){ vozPlano.itens.splice(i, 1); if(!vozPlano.itens.length) vozPlano.itens.push({ descricao:'', valor:0, categoria:'Outros' }); vozRenderPlano(); }
+function vozConfirmarCartao(){
+  const pl = vozPlano, c = vozCartoes().find(x=>x.id === pl.cartaoId);
+  if(!c){ showToast('Escolha o cartão'); return; }
+  const itens = pl.itens.filter(i=>Number(i.valor) > 0);
+  if(!itens.length){ showToast('Diga ou digite o valor'); return; }
+  const mKey = faturaAbertaMes(c), agora = Date.now();
+  if(!c.credoVista) c.credoVista = [];
+  itens.forEach((i, n)=>c.credoVista.push({ id:'cv'+agora+'_'+n, descricao: String(i.descricao||'').trim() || 'Crédito à vista', valor: Math.round(Number(i.valor)*100)/100, categoria: i.categoria || 'Outros', mKey, criadoEm: agora }));
+  const total = itens.reduce((s,i)=>s + Number(i.valor), 0);
+  persist();
+  vozFechar();
+  renderPlanner(); renderPanorama();
+  showToast(`${itens.length} ${itens.length === 1 ? 'compra' : 'compras'} no ${c.nome} · ${fmtMoney(total)} na fatura de ${monthLabel(mKey)}`);
 }
 function vozConfirmar(){
   const pl = vozPlano; if(!pl) return;
+  if(pl.acao === 'cartao') return vozConfirmarCartao();
   if(!(pl.valor > 0)){ showToast('Diga ou digite o valor'); return; }
   const bancos = bancosDoUsuario(), us = state.users[state.currentUser];
   if(bancos.length && !pl.bancoId){ showToast('Escolha o banco'); return; }
