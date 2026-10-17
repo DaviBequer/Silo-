@@ -797,19 +797,21 @@ function renderCartaoTrackerList(){
         <div class="ct-fatura-mensal-strip" id="faturaStrip-${cartao.id}">${gerarFaturaMensalHtml(cartao)}</div>
         <button class="btn-icon-sm" onclick="scrollFaturaMensal('${cartao.id}',1)">›</button>
       </div>
-      <div class="ct-toggle-compras" onclick="toggleCartaoDetalhes('${cartao.id}')">Ver detalhes</div>
+      <div class="ct-toggle-compras" id="cartaoToggle-${cartao.id}" onclick="toggleCartaoDetalhes('${cartao.id}')">${cartoesExpandidos[cartao.id]?'Ocultar detalhes':'Ver detalhes'}</div>
       <div class="compras-do-cartao${cartoesExpandidos[cartao.id]?' expanded':''}" id="cartaoDetalhes-${cartao.id}">
         ${comprasHtml}
         ${quitadasHtml}
         <div class="credo-vista-list">
-          ${(cartao.credoVista||[]).filter(cv=>!mesSelecionado || cv.mKey===mesSelecionado).map(cv=>`<div class="credo-vista-item" ondblclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" onclick="excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
-          ${(cartao.assinaturas||[]).filter(a=>!mesSelecionado || assinaturaValorNoMes(a, mesSelecionado)>0).map(a=>`<div class="credo-vista-item" ondblclick="openAssinaturaModal('${cartao.id}','${a.id}')"><span class="cv-cat-badge">${a.categoria||'Outros'}</span><span class="cv-desc">${a.nome}${a.canceladoApartirDe?' · cancelada':''} <span class="badge-teste">Assinatura</span></span><span class="cv-valor">${fmtMoney(a.valor)}</span><button class="btn-icon-sm" onclick="excluirAssinatura('${cartao.id}','${a.id}')">${ICON_TRASH}</button></div>`).join('')}
+          ${(cartao.credoVista||[]).filter(cv=>!mesSelecionado || cv.mKey===mesSelecionado).map(cv=>`<div class="credo-vista-item" onclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" aria-label="Excluir" onclick="event.stopPropagation();excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
+          ${(cartao.assinaturas||[]).filter(a=>!mesSelecionado || assinaturaValorNoMes(a, mesSelecionado)>0).map(a=>`<div class="credo-vista-item" onclick="openAssinaturaModal('${cartao.id}','${a.id}')"><span class="cv-cat-badge">${a.categoria||'Outros'}</span><span class="cv-desc">${a.nome}${a.canceladoApartirDe?' · cancelada':''} <span class="badge-teste">Assinatura</span></span><span class="cv-valor">${fmtMoney(a.valor)}</span><button class="btn-icon-sm" aria-label="Excluir" onclick="event.stopPropagation();excluirAssinatura('${cartao.id}','${a.id}')">${ICON_TRASH}</button></div>`).join('')}
         </div>
         <button type="button" class="link-btn-sm" onclick="toggleGastosDashboard('${cartao.id}')">${gastosDashboardAberto[cartao.id]?'Ocultar':'Ver'} gastos por categoria</button>
         ${gastosDashboardAberto[cartao.id] ? renderCartaoGastosDashboard(cartao, mesSelecionado || mesFinanceiroAtual()) : ''}
-        <div style="display:flex;gap:6px;margin-top:10px">
-          <button class="btn btn-sm btn-outline" style="flex:1" onclick="openCompraTrackerModal('${cartao.id}')">+ Parcelada</button>
-          <button class="btn btn-sm btn-outline" style="flex:1" onclick="abrirAjusteFatura('${cartao.id}')">Ajuste da fatura</button>
+        <div class="ct-acoes">
+          <button class="btn btn-sm btn-outline" onclick="openCredoVistaModal('${cartao.id}')">+ À vista</button>
+          <button class="btn btn-sm btn-outline" onclick="openCompraTrackerModal('${cartao.id}')">+ Parcelada</button>
+          <button class="btn btn-sm btn-outline" onclick="openAssinaturaModal('${cartao.id}')">+ Assinatura</button>
+          <button class="btn btn-sm btn-outline" onclick="abrirAjusteFatura('${cartao.id}')">Ajuste da fatura</button>
         </div>
       </div>
     </div>`;
@@ -871,6 +873,8 @@ function toggleCartaoDetalhes(cartaoId){
   cartoesExpandidos[cartaoId] = !cartoesExpandidos[cartaoId];
   const el = document.getElementById('cartaoDetalhes-'+cartaoId);
   if(el) el.classList.toggle('expanded', cartoesExpandidos[cartaoId]);
+  const bt = document.getElementById('cartaoToggle-'+cartaoId);
+  if(bt) bt.textContent = cartoesExpandidos[cartaoId] ? 'Ocultar detalhes' : 'Ver detalhes';
 }
 
 /* --- Cartão (fechamento/vencimento/limite) --- */
@@ -1138,11 +1142,13 @@ function credoVistaTotalPorCategoria(mKey){
   return totais;
 }
 function excluirCredoVista(cartaoId, credoId){
-  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
-  if(cartao) cartao.credoVista = (cartao.credoVista||[]).filter(cv=>cv.id!==credoId);
-  persist();
-  renderCartaoTrackerList();
-  renderPanorama();
+  comDesfazer('Compra excluída', ()=>{
+    const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+    if(cartao) cartao.credoVista = (cartao.credoVista||[]).filter(cv=>cv.id!==credoId);
+    persist();
+    renderCartaoTrackerList();
+    renderPanorama();
+  });
 }
 
 /* --- Assinaturas do cartão: recorrência mensal, sem precisar relançar --- */
@@ -1210,10 +1216,12 @@ function cancelarAssinatura(){
   showToast('Assinatura cancelada a partir de ' + monthLabel(item.canceladoApartirDe));
 }
 function excluirAssinatura(cartaoId, assinaturaId){
-  const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
-  if(cartao) cartao.assinaturas = (cartao.assinaturas||[]).filter(a=>a.id!==assinaturaId);
-  persist();
-  renderCartaoTrackerList();
+  comDesfazer('Assinatura excluída', ()=>{
+    const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
+    if(cartao) cartao.assinaturas = (cartao.assinaturas||[]).filter(a=>a.id!==assinaturaId);
+    persist();
+    renderCartaoTrackerList();
+  });
 }
 /* Valor da assinatura num mês qualquer: cobra a partir do mês de início, e para de cobrar a partir do mês de cancelamento */
 function assinaturaValorNoMes(item, mKey){
@@ -1258,10 +1266,12 @@ function renderCartaoGastosDashboard(cartao, mKey){
     <div class="bar-chart">${nomeEntries.map(([n,v])=>barRow(n,v,maiorNome)).join('')}</div>`;
 }
 function excluirCompraTracker(id){
-  state.comprasTracker = (state.comprasTracker||[]).filter(i=>i.id!==id);
-  persist();
-  renderCartaoTrackerList();
-  renderPanorama();
+  comDesfazer('Parcelada excluída', ()=>{
+    state.comprasTracker = (state.comprasTracker||[]).filter(i=>i.id!==id);
+    persist();
+    renderCartaoTrackerList();
+    renderPanorama();
+  });
 }
 
 /* ================= CARTÕES DE CRÉDITO ================= */
@@ -1510,13 +1520,14 @@ function saveGasto(){
   showToast('Gasto salvo');
 }
 function deleteGasto(cat, id){
-  const list = state.users[state.currentUser].expenses[cat];
-  const idx = list.findIndex(i=>i.id===id);
-  if(idx>-1) list.splice(idx,1);
-  renderPlanner();
-  renderPanorama();
-  persist();
-  showToast('Gasto removido');
+  comDesfazer('Conta excluída', ()=>{
+    const list = state.users[state.currentUser].expenses[cat];
+    const idx = list.findIndex(i=>i.id===id);
+    if(idx>-1) list.splice(idx,1);
+    renderPlanner();
+    renderPanorama();
+    persist();
+  });
 }
 
 /* ================= FALAR (microfone ao lado do "Saldo em conta") =================

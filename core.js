@@ -948,11 +948,13 @@ function salvarExtraItem(){
   showToast('Extra salvo');
 }
 function excluirExtraItem(id){
-  state.users[rendaExtraUser].extras = (state.users[rendaExtraUser].extras||[]).filter(e=>e.id!==id);
-  persist();
-  renderRendaExtraLista();
-  renderRendaTable();
-  renderPanorama();
+  comDesfazer('Extra excluído', ()=>{
+    state.users[rendaExtraUser].extras = (state.users[rendaExtraUser].extras||[]).filter(e=>e.id!==id);
+    persist();
+    renderRendaExtraLista();
+    renderRendaTable();
+    renderPanorama();
+  }, ()=>{ if(typeof renderRendaExtraLista==='function') renderRendaExtraLista(); });
 }
 function closeRendaExtraModal(){
   document.getElementById('modalRendaExtra').classList.remove('active');

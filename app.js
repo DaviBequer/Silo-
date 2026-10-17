@@ -11,7 +11,7 @@ function headerFaltaPagar(){
 }
 function headerFaltaDetalhe(){
   const f = headerFaltaPagar(); if(!f) return;
-  showToast(`${monthLabel(f.m)}: gastos a pagar ${fmtMoney(f.gastos)}${f.meta?` + meta de sobra ${fmtMoney(f.meta)}`:''}`);
+  showToast(f.meta ? `A juntar em ${monthLabel(f.m)}: ${fmtMoney(f.gastos)} de contas + ${fmtMoney(f.meta)} de meta` : `A pagar em ${monthLabel(f.m)}: ${fmtMoney(f.gastos)}`);
 }
 function renderHeaderHoje(){
   const el = document.getElementById('headerHoje');
@@ -25,7 +25,7 @@ function renderHeaderHoje(){
   const resto = faltam===0 ? 'último dia' : faltam+' dia'+(faltam>1?'s':'');
   const restoCurto = resto;
   const f = headerFaltaPagar();
-  const falta = f ? `<button type="button" class="hh-falta${f.total>0.004?'':' ok'}" onclick="headerFaltaDetalhe()" title="Gastos que faltam pagar${f.meta?' + meta de sobra':''} em ${monthLabel(f.m)}">${f.total>0.004?`<b>${fmtMoney(f.total)}</b>`:'<b>✓ Tudo pago</b>'}</button>` : '';
+  const falta = f ? `<button type="button" class="hh-falta${f.total>0.004?'':' ok'}" onclick="headerFaltaDetalhe()" title="Gastos que faltam pagar${f.meta?' + meta de sobra':''} em ${monthLabel(f.m)}">${f.total>0.004?`<b>${fmtMoney(f.total)}</b> <span class="hh-rotulo">${f.meta?'a juntar':'a pagar'}</span>`:'<b>✓ Tudo pago</b>'}</button>` : '';
   el.innerHTML = `<div class="hh-linha1"><span class="hh-longo">${data}</span><span class="hh-curto">${dataCurta}</span></div>
     <div class="hh-linha2"><span class="hh-longo">${resto}</span><span class="hh-curto">${restoCurto}</span>${falta?'<span class="hh-sep">–</span>'+falta:''}</div>`;
 }
@@ -95,6 +95,15 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.1', itens: [
+    'Cartão: botões + À vista, + Parcelada, + Assinatura e Ajuste; editar com um toque',
+    'Desfazer por alguns segundos depois de excluir contas, extras e lançamentos do cartão',
+    'Ponto: botão Bater ponto com a hora de agora; valor da hora foi para a engrenagem',
+    'Contas do mês: botão "Parte" para pagamento parcial',
+    'Topo mostra "a juntar"; resumo legível sobre a foto; versículo mais curto no celular; lápis para digitar o saldo',
+    'Gráfico: Mercado/Gasolina no cartão desconta da conta reservada; Fluxo Mensal mostra que dá para arrastar',
+    'Louvor: lista "Roteiro" virou "Para criar"; Vendas mostra o que falta do empréstimo'
+  ]},
   { versao: 'v6.0', itens: [
     'Entrar com o PIN é a entrada principal (em aparelho novo pede o e-mail só na primeira vez); e-mail e senha ficam como opção',
     'Correções: tabela do Fluxo Mensal mostrava R$ duas vezes; seta do botão Culto'
@@ -1293,4 +1302,5 @@ function renderVersiculo(){
   if(!el || el.dataset.pronto) return;
   el.dataset.pronto = '1';
   el.innerHTML = `<p class="vs-texto">${versiculoAtual[0]}</p><span class="vs-ref">${versiculoAtual[1]}</span>`;
+  el.onclick = ()=>el.classList.toggle('inteiro');
 }

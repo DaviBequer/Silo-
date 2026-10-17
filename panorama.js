@@ -700,7 +700,7 @@ function cpItem(o){
       ${o.sub?`<div class="cp-item-sub">${o.sub}</div>`:''}
     </div>
     <div class="cp-item-val">${fmtMoney(o.valor)}${o.valorSub?`<small>${o.valorSub}</small>`:''}</div>
-    <span class="cp-check" aria-hidden="true">${o.feito?CP_ICON_OK:''}</span>
+    ${o.acao||''}<span class="cp-check" aria-hidden="true">${o.feito?CP_ICON_OK:''}</span>
   </div>`;
 }
 function cpBloco(titulo, dica, corpo){
@@ -785,6 +785,7 @@ function renderContasPagar(){
       tag: it.mesOrigem!==mKey ? `<span class="cp-tag">${monthLabel(it.mesOrigem)}</span>` : '',
       valor: Number(it.valor)||0, valorSub: isParcial ? 'pago '+fmtMoney(valorPago) : '',
       feito: isPaid, parcial: isParcial,
+      acao: isPaid ? '' : `<button type="button" class="cp-parte" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="event.stopPropagation();abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')">Parte</button>`,
       attrs: `onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()"`
     });
   });
@@ -823,7 +824,7 @@ function renderContasPagar(){
     <div class="cp-resumo-sub"><span><b>${nFeitos} de ${nItens}</b> pagas · ${fmtMoney(totalPago)}</span>${aReceber>0.004?`<span>a receber <b>${fmtMoney(aReceber)}</b></span>`:''}</div>
   </div>`;
   if(receb) html += cpBloco('Recebimentos', 'toque quando cair na conta', receb);
-  html += cpBloco('Contas', 'toque = paga · segure = pagamento parcial',
+  html += cpBloco('Contas', 'toque = paga · “Parte” = pagou só uma parte',
     contasHtml || `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Dashboard</div></div>`);
   if(cartaoHtml) html += cpBloco('Cartão', 'toque para pagar a fatura', cartaoHtml);
   if(empHtml) html += cpBloco('Empréstimo', 'toque para pagar a parcela', empHtml);
@@ -1008,20 +1009,37 @@ function abrirHistoricoMeses(){
 let ondeVaiMes = null;
 const ONDE_VAI_CORES = ['#047857','#34d399','#0e7490','#a3a3a3','#c2410c','#7c3aed','#ca8a04','#be185d','#2563eb','#57534e'];
 function ondeVaiDados(u, mKey){
-  const g = {}, vista = {};
+  const g = {}, vista = {}, envelope = {};
   const soma = (obj, nome, v)=>{ v = Number(v)||0; if(v > 0.004) obj[nome] = (obj[nome]||0) + v; };
-  getContasDoMes(mKey, u).forEach(it=>soma(g, CATEGORIA_LABELS[it.cat] || 'Contas', it.valor));
-  soma(g, 'Dízimo', dizimoValorCheio(u, mKey));
+  const sa = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if(u === 'davi'){
     (state.cartoesTracker||[]).forEach(c=>{
       Object.entries(cartaoGastosPorMes(c, mKey).porCategoria).forEach(([cat, v])=>soma(vista, cat === 'Ajuste' ? 'Ajuste da fatura' : cat, v));
       soma(g, 'Parcelas no cartão', (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id).reduce((s,cp)=>s + compraTrackerValorNoMes(cp, mKey), 0));
     });
+  }
+  /* conta fixa com o mesmo nome de uma categoria do cartão (ex.: "Mercado") é uma reserva para esse gasto:
+     o que já foi no cartão sai da conta, para não contar duas vezes */
+  const usado = {};
+  getContasDoMes(mKey, u).forEach(it=>{
+    const cat = Object.keys(vista).find(c=>sa(c) === sa(it.desc));
+    let v = Number(it.valor) || 0;
+    if(cat){
+      envelope[cat] = (envelope[cat]||0) + v;
+      const desconta = Math.min(v, vista[cat] - (usado[cat]||0));
+      usado[cat] = (usado[cat]||0) + desconta;
+      v -= desconta;
+    }
+    soma(g, CATEGORIA_LABELS[it.cat] || 'Contas', v);
+  });
+  soma(g, 'Dízimo', dizimoValorCheio(u, mKey));
+  if(u === 'davi'){
     const tv = Object.values(vista).reduce((s,v)=>s+v, 0);
     if(tv > 0.004) g['Cartão à vista'] = tv;
     soma(g, 'Empréstimo', emprestimoValorGeralNoMes(mKey));
   }
-  return Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([nome, v])=>({ nome, v, sub: nome === 'Cartão à vista' ? Object.entries(vista).sort((a,b)=>b[1]-a[1]) : null }));
+  return Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([nome, v])=>({ nome, v,
+    sub: nome === 'Cartão à vista' ? Object.entries(vista).sort((a,b)=>b[1]-a[1]).map(([n, x])=>[n, x, envelope[n] || 0]) : null }));
 }function ondeVaiMudarMes(d){ ondeVaiMes = addMonths(ondeVaiMes || mesFinanceiroAtual(), d); renderOndeVai(); }
 function renderOndeVai(){
   const el = document.getElementById('ondeVaiConteudo'); if(!el || !state.users) return;
@@ -1035,8 +1053,8 @@ function renderOndeVai(){
     <div class="ov-total"><span>Sai no mês</span><b>${fmtMoney(total)}</b></div>
     <div class="ov-barra">${dados.map((d, i)=>`<i style="flex:${d.v};background:${cor(i)}" title="${escBanco(d.nome)}"></i>`).join('')}</div>
     <div class="ov-lista">${dados.map((d, i)=>`
-      <div class="ov-linha"><span class="ov-ponto" style="background:${cor(i)}"></span><span class="ov-nome">${escBanco(d.nome)}</span><span class="ov-pct">${Math.round(d.v/total*100)}%</span><span class="ov-valor">${fmtMoney(d.v)}</span></div>${(d.sub||[]).map(([n,v])=>`
-      <div class="ov-linha ov-sub"><span></span><span class="ov-nome">${escBanco(n)}</span><span class="ov-pct"></span><span class="ov-valor">${fmtMoney(v)}</span></div>`).join('')}`).join('')}
+      <div class="ov-linha"><span class="ov-ponto" style="background:${cor(i)}"></span><span class="ov-nome">${escBanco(d.nome)}</span><span class="ov-pct">${Math.round(d.v/total*100)}%</span><span class="ov-valor">${fmtMoney(d.v)}</span></div>${(d.sub||[]).map(([n,v,env])=>`
+      <div class="ov-linha ov-sub"><span></span><span class="ov-nome">${escBanco(n)}${env ? ` <small>de ${fmtMoney(env)} reservados</small>` : ''}</span><span class="ov-pct"></span><span class="ov-valor">${fmtMoney(v)}</span></div>`).join('')}`).join('')}
     </div>
     ${u === 'davi' && (state.cartoesTracker||[]).length ? `<div class="sf-nota">Dica: no microfone do saldo, fale “no cartão: mercado 120, farmácia 45” e as compras entram aqui por categoria.</div>` : ''}`;
 }

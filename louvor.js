@@ -58,11 +58,11 @@ function renderLvRoteiro(){
       <button type="button" class="btn-icon-sm" onclick="excluirLvRoteiro('${it.id}')" title="Remover" aria-label="Remover"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>`;
   }).join('');
-  corpo.innerHTML = `${linhas || '<div class="lv-rot-vazio">Nenhum louvor no roteiro ainda</div>'}
+  corpo.innerHTML = `${linhas || '<div class="lv-rot-vazio">Nenhuma música para criar</div>'}
     <form class="lv-rot-novo" onsubmit="event.preventDefault();adicionarLvRoteiro()">
       <input type="text" id="lvRotTitulo" placeholder="Música" autocomplete="off">
       <input type="text" id="lvRotArtista" placeholder="Cantor" autocomplete="off">
-      <button type="submit" class="lv-rot-add" aria-label="Adicionar ao roteiro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+      <button type="submit" class="lv-rot-add" aria-label="Adicionar à lista"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
     </form>`;
 }
 function adicionarLvRoteiro(){
@@ -75,9 +75,11 @@ function adicionarLvRoteiro(){
   document.getElementById('lvRotTitulo')?.focus();
 }
 function excluirLvRoteiro(id){
-  state.louvorRoteiro = lvRoteiroLista().filter(i=>i.id!==id);
-  persist();
-  renderLvRoteiro();
+  comDesfazer('Música tirada da lista', ()=>{
+    state.louvorRoteiro = lvRoteiroLista().filter(i=>i.id!==id);
+    persist();
+    renderLvRoteiro();
+  });
 }
 function marcarLvRoteiro(id){
   const it = lvRoteiroLista().find(i=>i.id===id);

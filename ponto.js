@@ -134,6 +134,42 @@ function dayTotalMinutes(d){
   return periodo + (d.extra||0);
 }
 
+/* ===== BATER PONTO: um toque grava a hora de agora no próximo horário ainda não confirmado de hoje ===== */
+const PONTO_CAMPOS = ['entrada','almocoSaida','almocoVolta','saida'];
+const PONTO_NOMES = { entrada:'entrada', almocoSaida:'saída do almoço', almocoVolta:'volta do almoço', saida:'saída' };
+function pontoHoje(){
+  const hoje = new Date(), mKey = monthKey(hoje), dia = hoje.getDate();
+  const d = getDia(mKey, dia);
+  return { mKey, dia, d, campo: d.concluido ? null : PONTO_CAMPOS.find(c=>!(d.confirmado && d.confirmado[c])) };
+}
+function renderPontoBater(){
+  const el = document.getElementById('pontoBater'); if(!el) return;
+  if(pontoMonthKeyAtual() !== monthKey(new Date()) || pontoMesFechado(monthKey(new Date()))){ el.innerHTML = ''; return; }
+  const { d, campo } = pontoHoje();
+  const agora = minToTime(new Date().getHours()*60 + new Date().getMinutes());
+  const feitos = PONTO_CAMPOS.filter(c=>d.confirmado && d.confirmado[c]).map(c=>d[c]).filter(Boolean);
+  if(!campo){ el.innerHTML = `<div class="pb-ok">Hoje ${d.concluido ? 'trancado' : 'completo'} ✓ <span>${feitos.join(' · ')}</span></div>`; return; }
+  const fimDeSemana = [0, 6].includes(new Date().getDay());
+  if(fimDeSemana && !feitos.length){ el.innerHTML = `<button type="button" class="pb-discreto" onclick="baterPonto()">Trabalhando hoje? Bater ${PONTO_NOMES[campo]} ${agora}</button>`; return; }
+  el.innerHTML = `<button type="button" class="pb-btn" onclick="baterPonto()">
+      <span class="pb-txt"><small>Bater ${PONTO_NOMES[campo]}</small><b>${agora}</b></span>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    </button>${feitos.length ? `<div class="pb-feitos">Hoje: ${feitos.join(' · ')}</div>` : ''}`;
+}
+function baterPonto(){
+  const { campo } = pontoHoje(); if(!campo) return;
+  const hora = minToTime(new Date().getHours()*60 + new Date().getMinutes());
+  comDesfazer(`${PONTO_NOMES[campo].charAt(0).toUpperCase() + PONTO_NOMES[campo].slice(1)} às ${hora}`, ()=>{
+    const { d } = pontoHoje();
+    d[campo] = hora;
+    d.confirmado[campo] = true;
+    renderPonto();
+    persist();
+    if(navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
+  });
+}
+setInterval(()=>{ if(document.getElementById('aba-ponto')?.classList.contains('active')) renderPontoBater(); }, 30000);
+
 let pontoSemanaColapsada = {}; // chave mKey+'-w'+índice -> true/false (em memória, não precisa persistir)
 function toggleSemanaPonto(chave, aberta){
   pontoSemanaColapsada[chave] = !!aberta;   // inverte o que está na tela
@@ -164,6 +200,7 @@ function renderPonto(){
   document.getElementById('pontoMesLabel').innerHTML = monthLabelLong(mKey) + (fechado ? ' <span class="ponto-fechado-ico" title="Mês fechado">✓</span>' : '');
   document.querySelector('#aba-ponto .ponto-mes-nav')?.classList.toggle('fechado', fechado);
   document.getElementById('pontoValorHora').value = state.ponto.valorHora ? state.ponto.valorHora.toFixed(2).replace('.',',') : '';
+  renderPontoBater();
 
   const totalDias = daysInMonth(mKey);
   const lista = document.getElementById('pontoDiasLista');
@@ -367,7 +404,7 @@ function renderPontoFechar(){
   }
   const pend = pontoDiasUteisPendentes(mKey);
   box.innerHTML = `<div class="ponto-fechar${pend.length?'':' pronto'}">
-    <div class="pf-info"><b>Fechar mês</b><small>${pend.length ? pend.length+(pend.length>1?' dias úteis ainda sem trancar':' dia útil ainda sem trancar') : 'Todos os dias úteis trancados'}</small></div>
+    <div class="pf-info"><b>${pend.length ? 'Mês em aberto' : 'Pronto para fechar'}</b><small>${pend.length ? pend.length+(pend.length>1?' dias úteis ainda sem trancar':' dia útil ainda sem trancar') : 'Todos os dias úteis trancados'}</small></div>
     <button type="button" class="fat-btn pagar" onclick="fecharMesPonto()">Fechar mês</button>
   </div>`;
 }
@@ -741,9 +778,31 @@ document.querySelectorAll('.modal-overlay').forEach(ov=>{
 let toastTimer;
 function showToast(msg){
   const t = document.getElementById('toast');
+  t.classList.remove('com-acao');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+/* Excluir com "Desfazer": guarda uma cópia dos dados antes; tocar em Desfazer (por 6 s) devolve tudo como estava */
+function comDesfazer(msg, excluir, redesenhar){
+  const antes = JSON.parse(JSON.stringify(state));
+  excluir();
+  const t = document.getElementById('toast');
+  t.innerHTML = '';
+  const txt = document.createElement('span'); txt.textContent = msg;
+  const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'toast-desfazer'; bt.textContent = 'Desfazer';
+  bt.onclick = ()=>{
+    Object.keys(state).forEach(k=>{ if(!(k in antes)) delete state[k]; });
+    Object.assign(state, antes);
+    persist();
+    if(typeof renderAll === 'function') renderAll();
+    if(redesenhar) redesenhar();
+    t.classList.remove('show', 'com-acao');
+  };
+  t.append(txt, bt);
+  t.classList.add('show', 'com-acao');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show', 'com-acao'), 6000);
 }
 
