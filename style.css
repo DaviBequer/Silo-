@@ -1167,7 +1167,17 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cmd-card-topo{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
 .cmd-card-titulo{font-size:14px;font-weight:600;color:var(--text)}
 .cmd-card-conta{font-size:12.5px;color:var(--text-dim);font-variant-numeric:tabular-nums}
-.cmd-barra{height:3px;margin-bottom:4px}
+.cmd-barra{position:relative;height:3px;margin-bottom:4px}
+.cmd-barra-meta{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--text)}
+/* meta do dia: "Meta: 80% até 18:00 · agora 45%" (toque para mudar) */
+.cmd-meta-linha{display:flex;justify-content:space-between;gap:10px;width:100%;margin:8px 0 2px;padding:6px 0;border:none;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-align:left;cursor:pointer}
+.cmd-meta-linha b{color:var(--text);font-weight:600}
+.cmd-meta-linha b.ok{color:var(--success)}
+.cmd-meta-linha b.neg{color:var(--danger)}
+.cmd-meta-linha.vazia{justify-content:flex-start;color:var(--text-faint);text-decoration:underline;text-underline-offset:3px}
+.cmd-meta-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 4px;font-size:12.5px;color:var(--text-dim)}
+.cmd-meta-form .cmd-campo{flex:0 0 auto;width:auto;height:36px;padding:0 10px}
+.cmd-meta-form .cmd-btn-icone{width:36px;height:36px}
 .cmd-barra div{height:100%;border-radius:99px;background:var(--gold);transition:width .9s var(--mola)}
 .cmd-ordens{margin-bottom:10px}
 .cmd-ordem{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -1177,6 +1187,19 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cmd-ordem-texto{flex:1;min-width:0;font-size:14px;font-weight:500;line-height:1.35;color:var(--text);cursor:text}
 .cmd-ordem.feita .cmd-ordem-texto{color:var(--text-faint);text-decoration:line-through}
 .cmd-ordem-del{flex-shrink:0;color:var(--text-faint)}
+/* subtarefas: lista recuada embaixo da ordem; o botão mostra "feitas/total" */
+.cmd-sub-btn{flex-shrink:0;min-width:30px;height:26px;padding:0 8px;border:1px solid transparent;border-radius:999px;background:none;color:var(--text-faint);font:inherit;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cmd-sub-btn.tem{border-color:var(--line);color:var(--text-dim)}
+.cmd-sub-btn.aberta{border-color:var(--text-faint);color:var(--text)}
+.cmd-subs{padding:2px 0 8px 36px;border-bottom:1px solid var(--line);animation:surgir .3s var(--mola)}
+.cmd-sub{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.cmd-sub .cmd-ordem-texto{font-size:13.5px;font-weight:400}
+.cmd-check-sub{width:20px;height:20px}
+.cmd-sub.feita .cmd-check{background:var(--gold);border-color:var(--gold)}
+.cmd-sub.feita .cmd-ordem-texto{color:var(--text-faint);text-decoration:line-through}
+.cmd-sub-nova{display:flex;gap:8px;margin-top:8px}
+.cmd-sub-nova .cmd-campo,.cmd-sub-nova .cmd-btn-icone{height:36px}
+.cmd-sub-nova .cmd-btn-icone{width:36px}
 .cmd-vazio{padding:14px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-faint)}
 .cmd-campo{flex:1;width:0;min-width:0;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font:inherit;font-size:16px}
 .cmd-campo:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}

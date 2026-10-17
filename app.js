@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.3', itens: [
+    'Comando: subtarefas nas ordens — a ordem só conclui quando todas estiverem feitas',
+    'Comando: meta do dia (ex.: 80% até 18:00) — batendo antes da hora, o dia conta como produtivo sozinho'
+  ]},
   { versao: 'v6.2', itens: [
     'Computador: Finanças em painel de duas colunas (resumo e gráfico à esquerda, contas e análises à direita)',
     'Celular: Moradia, Assinaturas, Fixos e Contas futuras numa lista só',
