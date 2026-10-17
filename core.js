@@ -458,7 +458,7 @@ function mostrarLogin(){
   fecharSplash(true);
   document.getElementById('loginTela')?.classList.add('show');
   /* aparelho que já usa PIN: abre direto no teclado do PIN */
-  if(typeof loginModoPin==='function' && pinEmailDoAparelho()){ loginModoPin(true); return; }
+  if(typeof loginModoPin==='function' && (pinEmailDoAparelho() || pinLigadoNoAparelho())){ loginModoPin(true); return; }
   if(typeof loginModoPin==='function') loginModoPin(false);
   setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
 }

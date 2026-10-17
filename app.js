@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.0', itens: [
+    'Entrar com o PIN é a entrada principal (em aparelho novo pede o e-mail só na primeira vez); e-mail e senha ficam como opção',
+    'Correções: tabela do Fluxo Mensal mostrava R$ duas vezes; seta do botão Culto'
+  ]},
   { versao: 'v5.9', itens: [
     'Cartão por voz: fale várias compras de uma vez ("no cartão Inter: mercado 120, farmácia 45") e elas entram na fatura com categoria',
     'Para onde vai o dinheiro: gráfico do mês no Dashboard, com as compras do cartão por categoria',
@@ -921,7 +925,10 @@ const PIN_TAM = 6;
 function pinEmailDoAparelho(){ try{ return localStorage.getItem('siloe-pin-email') || ''; }catch(e){ return ''; } }
 function pinGuardarEmail(email){ try{ if(email) localStorage.setItem('siloe-pin-email', email); else localStorage.removeItem('siloe-pin-email'); }catch(e){} }
 /* depois de carregar: se o PIN já foi criado (em qualquer aparelho), este aparelho passa a entrar com ele */
+/* o login abre no PIN, a menos que este aparelho já saiba que o PIN está desligado */
+function pinLigadoNoAparelho(){ try{ return localStorage.getItem('siloe-pin-ligado') !== '0'; }catch(e){ return true; } }
 async function pinLembrarAparelho(){
+  try{ localStorage.setItem('siloe-pin-ligado', state && state.loginPin ? '1' : '0'); }catch(e){}
   if(!state || !state.loginPin || pinEmailDoAparelho() || !window.SiloSupabase) return;
   const email = await window.SiloSupabase.emailAtual();
   if(email) pinGuardarEmail(email);
@@ -954,6 +961,7 @@ function pinTeclado(tecladoId, pontosId, aoCompletar){
 let pinTecladoAtivo = null;
 document.addEventListener('keydown', e=>{
   if(!pinTecladoAtivo || !pinTecladoAtivo.el.offsetParent) return;   // teclado fechado: não captura
+  if(e.target && e.target.matches && e.target.matches('input,textarea')) return;   // digitando o e-mail
   if(/^[0-9]$/.test(e.key)){ pinTecladoAtivo.tecla(e.key); e.preventDefault(); }
   else if(e.key === 'Backspace'){ pinTecladoAtivo.tecla('x'); e.preventDefault(); }
 });
@@ -963,11 +971,13 @@ let pinLogin = null;
 function loginModoPin(ligar){
   const tela = document.getElementById('loginTela'); if(!tela) return;
   const email = pinEmailDoAparelho();
-  if(ligar && !email) ligar = false;
   tela.classList.toggle('modo-pin', !!ligar);
-  const usar = document.getElementById('loginUsarPin'); if(usar) usar.style.display = email && !ligar ? '' : 'none';
   if(ligar){
     document.getElementById('loginPinErro').textContent = '';
+    /* aparelho novo: pede o e-mail uma vez (junto com o PIN); depois ele fica guardado */
+    const campo = document.getElementById('loginPinEmail');
+    campo.style.display = email ? 'none' : '';
+    if(!email){ campo.value = document.getElementById('loginEmail').value || ''; setTimeout(()=>{ if(!campo.value) campo.focus(); }, 100); }
     pinLogin = pinTeclado('loginPinTeclado', 'loginPinPontos', entrarComPin);
     pinTecladoAtivo = pinLogin;
   } else {
@@ -977,14 +987,17 @@ function loginModoPin(ligar){
 }
 async function entrarComPin(pin){
   const erro = document.getElementById('loginPinErro'), sub = document.getElementById('loginPinSub');
+  const email = pinEmailDoAparelho() || (document.getElementById('loginPinEmail').value || '').trim();
+  if(!/\S+@\S+\.\S+/.test(email)){ erro.textContent = 'Digite seu e-mail acima'; pinLogin.tremer(); pinLogin.limpar(); document.getElementById('loginPinEmail').focus(); return; }
   sub.textContent = 'Entrando…'; erro.textContent = '';
-  const r = await window.SiloSupabase.entrar(pinEmailDoAparelho(), pin);
+  const r = await window.SiloSupabase.entrar(email, pin);
   sub.textContent = 'Digite seu PIN';
   if(!r.ok){
-    erro.textContent = /incorretos/.test(r.erro) ? 'PIN errado' : r.erro;
+    erro.textContent = /incorretos/.test(r.erro) ? (pinEmailDoAparelho() ? 'PIN errado' : 'E-mail ou PIN errado') : r.erro;
     pinLogin.tremer(); pinLogin.limpar();
     return;
   }
+  pinGuardarEmail(email);
   pinTecladoAtivo = null;
   aposEntrar();
 }
@@ -1015,6 +1028,7 @@ function abrirCriarPin(){
     if(!r.ok){ erro.textContent = r.erro; sub.textContent = 'Escolha 6 números'; primeiro = ''; pinModal.limpar(); return; }
     pinGuardarEmail(await window.SiloSupabase.emailAtual());
     state.loginPin = true;
+    try{ localStorage.setItem('siloe-pin-ligado', '1'); }catch(e){}
     persist();
     pinTecladoAtivo = null;
     closeModal('modalPin');
