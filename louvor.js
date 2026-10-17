@@ -688,6 +688,36 @@ function lvTransposeChordLine(line, delta, tom, tomAntes){
 /* Faz uma única passada pelo texto bruto e devolve:
    items -> sequência pra montar o PDF (seções, pares cifra+letra, divisores, quebras de coluna, espaços em branco)
    slides -> lista de slides (cada um só com as linhas de letra, sem cifra), quebrados por seção e por "-" */
+/* Slides do tamanho certo: numa parte com mais de LV_SLIDE_MAX linhas de letra, entra "-" (próximo slide)
+   dividindo por igual (6 → 3+3, 9 → 3+3+3). Os "-", "--" e "---" que já existem continuam e contam como divisão.
+   Usado ao importar e ao organizar. */
+const LV_SLIDE_MAX = 4;
+function lvQuebrarSlides(texto){
+  const linhas = String(texto||'').split('\n'), out = [];
+  let seg = [];
+  const fecha = ()=>{
+    const letra = seg.map((l, i)=>({ l, i })).filter(x=>x.l.trim() && !isChordLine(x.l.trim()));
+    const n = letra.length;
+    if(n > LV_SLIDE_MAX){
+      const por = Math.ceil(n / Math.ceil(n / LV_SLIDE_MAX));
+      const cortes = new Set();
+      for(let k = por; k < n; k += por){
+        let pos = letra[k].i;
+        if(pos > 0 && seg[pos-1].trim() && isChordLine(seg[pos-1].trim())) pos--;   // o acorde vai junto com a letra
+        cortes.add(pos);
+      }
+      seg.forEach((l, i)=>{ if(cortes.has(i)) out.push('-'); out.push(l); });
+    } else out.push(...seg);
+    seg = [];
+  };
+  linhas.forEach(l=>{
+    const t = l.trim();
+    if(/^\[.+\]$/.test(t) || t === '-' || t === '--' || t === '---'){ fecha(); out.push(l); }
+    else seg.push(l);
+  });
+  fecha();
+  return out.join('\n');
+}
 function lvParseContent(conteudo){
   const rawLines = (conteudo||'').split('\n');
   const items = [];

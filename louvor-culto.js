@@ -199,6 +199,7 @@ function renderCultoHistorico(){
 
 /* linha de baixo do botão "Culto" na aba Louvor: o próximo culto */
 function renderCultoBotao(){
+  if(typeof atualizarStatusDrive === 'function'){ atualizarStatusDrive(); if(driveClienteId()) drivePreparar(); }
   const el = document.getElementById('lvCultoInfo'); if(!el) return;
   const d = cultoProximaData(), c = cultoDaData(d);
   const n = c ? c.partes.reduce((s, p)=>s + p.musicas.length, 0) : (state.louvores||[]).filter(l=>l.dataAgendamento === d).length;

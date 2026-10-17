@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.4', itens: [
+    'Louvor: puxar PDF do Drive — criar música nova ou atualizar a cifra, ou só abrir o PDF',
+    'Louvor: ao importar ou organizar, partes com mais de 4 linhas ganham "-" e viram slides menores'
+  ]},
   { versao: 'v6.3', itens: [
     'Comando: subtarefas nas ordens — a ordem só conclui quando todas estiverem feitas',
     'Comando: meta do dia (ex.: 80% até 18:00) — batendo antes da hora, o dia conta como produtivo sozinho'

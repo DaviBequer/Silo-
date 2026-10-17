@@ -737,7 +737,7 @@ async function lvImportarNoNovo(ev){
     if(r.artista) document.getElementById('lvNovoArtista').value = r.artista;
     if(r.tom.tomOriginal){ window.lvNovoTomOriginal = r.tom.tomOriginal; window.lvNovoTomModoMenor = r.tom.tomModoMenor; atualizarLvNovoTomBox(); }
     if(r.categoria){ window.lvNovoCategoriaSelecionada = r.categoria; renderLvNovoCategoriaChips(); }
-    window.lvNovoConteudo = r.conteudo;
+    window.lvNovoConteudo = lvQuebrarSlides(r.conteudo);
     window.lvNovoRevisar = (r.conferencia && r.conferencia.olhar) || [];
     lviLogResultado(prog, r);
     prog.fim(lviRelatorioHtml(r, 'Confira os dados abaixo e toque em <b>Criar e abrir</b>.'));
@@ -759,7 +759,7 @@ async function lvImportarNoAtual(ev){
   prog.arquivo(file);
   try{
     const r = await lviImportar(file, prog);
-    l.conteudo = r.conteudo;
+    l.conteudo = lvQuebrarSlides(r.conteudo);
     delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;   // texto novo: o desfazer anterior não vale mais
     if(!(l.titulo||'').trim() && r.titulo) l.titulo = r.titulo;
     if(!(l.artista||'').trim() && r.artista) l.artista = r.artista;
@@ -844,7 +844,7 @@ async function lvOrganizarBlocos(){
     novo = lviBlocosParaTexto(doc.secoes);
     blocos = doc.secoes.length; reps = doc.secoes.filter(s=>s.repeatOf).length;
   }
-  l.conteudo = novo;
+  l.conteudo = lvQuebrarSlides(novo);
   l.conteudoAntesOrganizar = antes; l.conteudoOrganizado = l.conteudo;
   persist();
   document.getElementById('lvConteudo').value = l.conteudo;

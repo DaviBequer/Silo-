@@ -25,7 +25,7 @@ function atualizarStatusDrive(){
   if(st){ st.textContent = tem ? 'Ligado' : 'Desligado'; st.classList.toggle('ligada', tem); }
   if(inp) inp.placeholder = tem ? 'ID salvo ✓' : 'ID do cliente (…apps.googleusercontent.com)';
   const rem = document.getElementById('driveRemover'); if(rem) rem.style.display = tem ? '' : 'none';
-  const btn = document.getElementById('cultoDriveBtn'); if(btn) btn.style.display = tem ? '' : 'none';
+  document.querySelectorAll('#cultoDriveBtn,.so-drive').forEach(b=>b.style.display = tem ? '' : 'none');
 }
 function salvarDriveCliente(){
   const inp = document.getElementById('driveClienteInput');
@@ -190,4 +190,66 @@ async function driveEnviarLouvores(louvores){
     await driveSubir(x.blob, x.nome, x.mime, pai, ja && ja.id);
     driveLog(`${ja ? 'Atualizado' : 'Enviado'}: ${x.nome}`, 'ok');
   }
+}
+
+/* ---------- puxar um PDF do Drive: usar na música (importa e atualiza a cifra) ou só abrir ----------
+   Procura em "Som de Adoradores", nas pastas dele e nas pastas do Repertório (1. Domingo, 2. Harpa Cristã...). */
+let drivePdfModo = 'novo', drivePdfLista = [];
+function driveEscolherPdf(modo){
+  drivePdfModo = modo;
+  if(!driveClienteId()){ showToast('Ligue o Drive em Dados do App → Recursos'); return; }
+  if(!driveTokenCliente){ drivePreparar().then(ok=>showToast(ok ? 'Pronto: toque de novo' : 'Não consegui falar com o Google')); return; }
+  const pedido = drivePedirToken();   // ainda dentro do toque
+  document.getElementById('drivePdfTitulo').textContent = modo === 'atual' ? 'Atualizar com PDF do Drive' : 'PDF do Drive';
+  document.getElementById('drivePdfBusca').value = '';
+  document.getElementById('drivePdfLista').innerHTML = '<div class="voz-carregando">Abrindo o Drive…</div>';
+  document.getElementById('modalDrivePdf').classList.add('active');
+  pedido.then(driveListarPdfs).then(lista=>{ drivePdfLista = lista; driveRenderPdfs(); })
+    .catch(e=>{ document.getElementById('drivePdfLista').innerHTML = `<div class="drive-linha erro">${lvEsc(String(e && e.message || e))}</div>`; });
+}
+async function driveListarPdfs(){
+  const raiz = await drivePasta(DRIVE_PASTA_RAIZ, null, false);
+  if(!raiz) throw new Error(`Não achei a pasta "${DRIVE_PASTA_RAIZ}" no Drive`);
+  const pastas = { [raiz]: DRIVE_PASTA_RAIZ };
+  const filhas = await driveListar(`'${raiz}' in parents and mimeType='${DRIVE_PASTA_MIME}'`);
+  filhas.forEach(p=>pastas[p.id] = p.name);
+  for(const p of filhas){
+    (await driveListar(`'${p.id}' in parents and mimeType='${DRIVE_PASTA_MIME}'`)).forEach(n=>pastas[n.id] = p.name + ' / ' + n.name);
+  }
+  const ids = Object.keys(pastas), out = [];
+  for(let i = 0; i < ids.length; i += 20){   // consulta em partes (a busca do Drive tem limite de tamanho)
+    const q = '(' + ids.slice(i, i + 20).map(id=>`'${id}' in parents`).join(' or ') + `) and mimeType='application/pdf'`;
+    let page = '';
+    do{
+      const r = await driveApi('files?pageSize=1000&fields=nextPageToken,files(id,name,modifiedTime,webViewLink,parents)&q=' + encodeURIComponent(q + ' and trashed=false') + (page ? '&pageToken=' + page : ''));
+      (r.files || []).forEach(f=>out.push({ ...f, pasta: pastas[(f.parents || []).find(p=>pastas[p])] || '' }));
+      page = r.nextPageToken || '';
+    } while(page);
+  }
+  return out.sort((a, b)=>String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
+}
+function driveRenderPdfs(){
+  const el = document.getElementById('drivePdfLista'); if(!el) return;
+  const termo = vozSemAcento(document.getElementById('drivePdfBusca').value.trim());
+  const lista = drivePdfLista.filter(f=>!termo || vozSemAcento(f.name + ' ' + f.pasta).includes(termo));
+  const usar = drivePdfModo === 'atual' ? 'Atualizar' : 'Usar';
+  el.innerHTML = lista.length ? lista.slice(0, 100).map(f=>`
+    <div class="dpdf-item">
+      <div class="dpdf-info"><b>${lvEsc(f.name.replace(/\.pdf$/i, ''))}</b><small>${lvEsc(f.pasta)} · ${new Date(f.modifiedTime).toLocaleDateString('pt-BR')}</small></div>
+      <button type="button" class="link-btn-sm" onclick="window.open('${f.webViewLink}','_blank')">Abrir</button>
+      <button type="button" class="btn btn-sm" onclick="driveUsarPdf('${f.id}')">${usar}</button>
+    </div>`).join('') : `<div class="gm-vazio">${drivePdfLista.length ? 'Nenhum PDF com esse nome.' : 'Nenhum PDF nas pastas.'}</div>`;
+}
+async function driveUsarPdf(id){
+  const f = drivePdfLista.find(x=>x.id === id); if(!f) return;
+  closeModal('modalDrivePdf');
+  showToast('Baixando do Drive…');
+  try{
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
+    if(!res.ok) throw new Error('Drive: ' + res.status);
+    const file = new File([await res.blob()], f.name, { type:'application/pdf' });
+    const ev = { target:{ files:[file], value:'' } };
+    if(drivePdfModo === 'atual') lvImportarNoAtual(ev);
+    else { openLouvorForm(); lvImportarNoNovo(ev); }
+  }catch(e){ showToast('Não consegui baixar: ' + (e && e.message || e)); }
 }
