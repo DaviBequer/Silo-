@@ -960,3 +960,69 @@ function imprimirLouvorPdf(){
   window.addEventListener('afterprint', fim);
   setTimeout(()=>window.print(), 50);
 }
+
+/* ---------- Cifra Club dentro do app: cola o link ou busca pelo nome → a cifra entra sozinha ----------
+   Quem lê o Cifra Club é a função "cifra" do Supabase (o site não deixa o navegador ler direto).
+   O texto vem com [Partes] e acordes em cima da letra: passa pelo Organizar simples + "-" dos slides. */
+let ccResultados = [];
+function ccAbrir(termo){
+  if(typeof lvFabMenu === 'function') lvFabMenu(false);
+  const inp = document.getElementById('ccBusca');
+  inp.value = String(termo || '').trim();
+  document.getElementById('ccLista').innerHTML = '';
+  document.getElementById('modalCifraClub').classList.add('active');
+  if(inp.value) ccBuscar(); else setTimeout(()=>inp.focus(), 80);
+}
+async function ccChamar(corpo){
+  const sb = window.SiloSupabase && window.SiloSupabase.client;
+  if(!sb) throw new Error('sem conexão');
+  const { data, error } = await sb.functions.invoke('cifra', { body: corpo });
+  if(error){
+    const st = error.context && error.context.status;
+    if(st === 404 || /Failed to send/i.test(error.message || '')) throw new Error('Não consegui falar com a função "cifra" do Supabase — ela já foi criada? (ou está sem internet)');
+    let msg = error.message; try{ const j = await error.context.json(); if(j && j.erro) msg = j.erro; }catch(e){}
+    throw new Error(msg);
+  }
+  if(data && data.erro) throw new Error(data.erro);
+  return data;
+}
+async function ccBuscar(){
+  const termo = document.getElementById('ccBusca').value.trim(), el = document.getElementById('ccLista');
+  if(!termo) return;
+  if(/^https?:\/\//i.test(termo)){ ccImportar(termo); return; }
+  el.innerHTML = '<div class="voz-carregando">Buscando no Cifra Club…</div>';
+  try{
+    ccResultados = (await ccChamar({ busca: termo })).musicas || [];
+    el.innerHTML = ccResultados.length ? ccResultados.map((m, i)=>`
+      <button type="button" class="cu-escolher-item" onclick="ccImportar(ccResultados[${i}].url)">
+        <span class="cu-escolher-nome">${lvEsc(m.titulo)}<small>${lvEsc(m.artista)}</small></span>
+        <span class="cu-escolher-tom">${ICO(ICO_D.baixar, 18)}</span>
+      </button>`).join('') : '<div class="gm-vazio">Nada encontrado no Cifra Club.</div>';
+  }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
+}
+async function ccImportar(url){
+  const el = document.getElementById('ccLista');
+  el.innerHTML = '<div class="voz-carregando">Lendo a cifra…</div>';
+  try{
+    const c = await ccChamar({ url });
+    if(!c || !(c.texto||'').trim()) throw new Error('a página não tem cifra');
+    /* "[Intro] F#m  E5" → "[Intro]" + linha de acordes; tablaturas (E|---3---|) e "Parte 1 de 4" saem */
+    const texto = c.texto.split('\n').flatMap(l=>{
+      if(/^\s*[eEBGDAb]\|[-\d|hpbrvx\/\\~().\s]*$/.test(l) || /^\s*Parte \d+ de \d+\s*$/i.test(l)) return [];
+      const m = /^\s*(\[[^\]]+\])\s+(\S.*)$/.exec(l);
+      return m ? [m[1], m[2]] : [l];
+    }).join('\n').replace(/\n{3,}/g, '\n\n');
+    const doc = lviMontaBlocos(lviTextoParaLinhas(texto));
+    const conteudo = lvQuebrarSlides(lviBlocosParaTexto(doc.secoes));
+    const m = /^([A-G](?:#|b)?)(m?)$/.exec(c.tom || '');
+    closeModal('modalCifraClub');
+    openLouvorForm();
+    document.getElementById('lvNovoTitulo').value = c.titulo || '';
+    document.getElementById('lvNovoArtista').value = c.artista || '';
+    if(m){ const tom = lviTomSiloe(m[1], !!m[2]); window.lvNovoTomOriginal = tom.tomOriginal; window.lvNovoTomModoMenor = tom.tomModoMenor; atualizarLvNovoTomBox(); }
+    window.lvNovoConteudo = conteudo;
+    const st = document.getElementById('lvNovoImportStatus'); if(st){ st.classList.remove('erro'); st.textContent = `✓ Cifra do Cifra Club · ${doc.secoes.length} partes · confira e toque em Criar`; }
+    const dica = document.getElementById('lvnFormDica'); if(dica) dica.textContent = '✓ preenchido pelo Cifra Club — confira';
+    const form = document.querySelector('#pageLouvorForm .lvn-form'); if(form){ form.classList.remove('preenchido'); void form.offsetWidth; form.classList.add('preenchido'); }
+  }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
+}

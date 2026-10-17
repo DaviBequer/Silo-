@@ -254,3 +254,52 @@ function renderCultoBotao(){
   const n = c ? c.partes.reduce((s, p)=>s + p.musicas.length, 0) : (state.louvores||[]).filter(l=>l.dataAgendamento === d).length;
   el.textContent = `Próximo: ${cultoDataTexto(d, true)}${n ? ` · ${n} ${n === 1 ? 'música' : 'músicas'}` : ''}`;
 }
+/* ---------- sugestão de repertório (IA): tema da pregação → músicas do app que combinam, sem repetir as recentes ---------- */
+const CU_SUGESTAO_ESQUEMA = { type:'object', properties:{ musicas:{ type:'array', items:{ type:'object', properties:{
+  id:{ type:'string', description:'id exato de uma música da lista' }, motivo:{ type:'string', description:'por que combina, curto' }
+}, required:['id','motivo'] } } }, required:['musicas'] };
+let cuSugestoes = [];
+function cultoAbrirSugestao(){
+  if(typeof lviChaveIA !== 'function' || !lviChaveIA()){ showToast('Precisa da chave da IA (Dados do App → Recursos)'); return; }
+  if(!(state.louvores||[]).length){ showToast('Cadastre músicas no Louvor primeiro'); return; }
+  const c = cultoAtual();
+  document.getElementById('cuSugParte').innerHTML = c.partes.map(p=>`<option value="${p.id}"${/hino|louvor/i.test(p.nome) ? ' selected' : ''}>${lvEsc(p.nome || 'Parte')}</option>`).join('');
+  document.getElementById('cuSugLista').innerHTML = '';
+  document.getElementById('cuSugAcoes').style.display = 'none';
+  document.getElementById('modalCultoSugestao').classList.add('active');
+  setTimeout(()=>document.getElementById('cuSugTema').focus(), 80);
+}
+async function cultoSugerir(){
+  const tema = document.getElementById('cuSugTema').value.trim(), qtd = Number(document.getElementById('cuSugQtd').value) || 5;
+  const el = document.getElementById('cuSugLista');
+  if(!tema){ document.getElementById('cuSugTema').focus(); return; }
+  el.innerHTML = '<div class="voz-carregando">Pensando no repertório…</div>';
+  const hoje = calParse(cultoHojeISO()), ultimas = {};
+  cultoHistoricoDados().forEach(h=>{ ultimas[h.l.id] = Math.round((hoje - calParse(h.ultima)) / 864e5); });
+  const ja = new Set(cultoAtual().partes.flatMap(p=>p.musicas));
+  const lista = (state.louvores||[]).filter(l=>!ja.has(l.id)).map(l=>({ id:l.id, titulo:l.titulo, artista:l.artista||'', categoria:l.categoria||'', tom: lvTomAtual(l), tocadaHaDias: ultimas[l.id] ?? null,
+    letra: (l.conteudo||'').split('\n').filter(x=>x.trim() && !isChordLine(x.trim()) && !/^\[.*\]$/.test(x.trim()) && !/^-+$/.test(x.trim())).slice(0, 8).join(' / ').slice(0, 300) }));
+  try{
+    const j = await lviPerguntarIA([{ type:'text', text:
+      `Você ajuda o ministério de louvor de uma igreja evangélica a montar o repertório do culto. Tema da pregação: "${tema}".\n` +
+      `Escolha até ${qtd} músicas DA LISTA abaixo que combinam com o tema (pela letra), em uma boa ordem para o culto. ` +
+      `Evite as tocadas há menos de 21 dias (tocadaHaDias), a não ser que não haja outra opção. Use só ids da lista.\n` +
+      JSON.stringify(lista) }], t=>{ el.innerHTML = `<div class="voz-carregando">${lvEsc(t)}</div>`; }, CU_SUGESTAO_ESQUEMA);
+    cuSugestoes = (j.musicas||[]).map(m=>({ ...m, l: (state.louvores||[]).find(l=>l.id === m.id), marcado: true })).filter(m=>m.l);
+    el.innerHTML = cuSugestoes.length ? cuSugestoes.map((m, i)=>`
+      <label class="cu-sug-item">
+        <input type="checkbox" checked onchange="cuSugestoes[${i}].marcado=this.checked">
+        <span class="cu-escolher-nome">${lvEsc(m.l.titulo)}${lvTomAtual(m.l) ? ` <i class="cu-tom">${lvEsc(lvTomAtual(m.l))}</i>` : ''}<small>${lvEsc(m.motivo)}${ultimas[m.id] != null ? ` · tocada há ${ultimas[m.id]} dias` : ''}</small></span>
+      </label>`).join('') : '<div class="gm-vazio">A IA não achou músicas que combinem. Tente outro tema.</div>';
+    document.getElementById('cuSugAcoes').style.display = cuSugestoes.length ? '' : 'none';
+  }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(String(e && e.message || e))}</div>`; }
+}
+function cultoUsarSugestao(){
+  const p = cultoParte(document.getElementById('cuSugParte').value); if(!p) return;
+  const novas = cuSugestoes.filter(m=>m.marcado && !p.musicas.includes(m.id)).map(m=>m.id);
+  p.musicas.push(...novas);
+  cultoGravar();
+  closeModal('modalCultoSugestao');
+  renderCulto();
+  showToast(`${novas.length} ${novas.length === 1 ? 'música adicionada' : 'músicas adicionadas'} em ${p.nome || 'parte'}`);
+}

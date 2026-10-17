@@ -81,12 +81,11 @@ function renderLouvorLista(){
     el.innerHTML = termo
       ? `<div class="lv-cifraclub">
           <div class="lv-cc-titulo">“${lvEsc(termo)}” não está no app</div>
-          <a class="lv-cc-btn" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(termo)}" target="_blank" rel="noopener">
+          <button type="button" class="lv-cc-btn" onclick="ccAbrir(document.getElementById('louvorSearchInput').value)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <span>Pesquisar no Cifra Club</span>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
-          </a>
-          <div class="lv-cc-dica">Baixe o PDF da cifra lá e importe aqui no +</div>
+            <span>Buscar no Cifra Club</span>
+          </button>
+          <div class="lv-cc-dica">O app busca e já importa a cifra</div>
         </div>`
       : `<div class="empty-state"><div class="title">Nenhum louvor encontrado</div><div class="desc">Toque no + para adicionar</div></div>`;
     return;
@@ -187,6 +186,7 @@ function abrirLouvorDetalhe(id){
   louvorAtualId = id;
   const l = getLouvorAtual();
   if(!l) return;
+  if(typeof lvAtualizarBtnDrive === 'function') setTimeout(lvAtualizarBtnDrive, 0);
   ensureLouvorConfig(l);
   if(typeof lvAoAbrirDetalhe==='function') lvAoAbrirDetalhe(l);
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
@@ -489,6 +489,7 @@ function lvTomGridEscolher(nota, modoMenor){
   atualizarLvTomBox();
   renderLouvorPdfPreview();
   closeModal('modalLvTom');
+  if(typeof driveTomMudou === 'function') driveTomMudou(l);   // já estava no Drive: troca o arquivo pelo do tom novo
 }
 
 /* ---------- Motor de cifras: detecção automática, seções e marcadores ----------

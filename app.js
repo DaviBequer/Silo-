@@ -95,6 +95,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.7', itens: [
+    'Visual: botões só com ícone, sem caixinha; Drive e WhatsApp com as logos; resumo sobre a foto com bordas que somem',
+    'Finanças: próximos 3 meses no topo (sobra e acumulado); compra falada no Pix/débito fica registrada com categoria',
+    'Finanças: gráfico compara com o mês passado; conferir a fatura fechada do cartão pelo PDF',
+    'Louvor: Drive e WhatsApp dentro da música; trocar o tom troca o arquivo no Drive',
+    'Louvor: Cifra Club dentro do app (link ou nome) e sugestão de repertório no Culto'
+  ]},
   { versao: 'v6.6', itens: [
     'Culto: "Adicionar parte" voltou a funcionar; partes em branco somem sozinhas',
     'Culto: layout novo (linha do tempo das partes, data com setas) e "Ordem no WhatsApp"',

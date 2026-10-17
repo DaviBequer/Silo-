@@ -216,7 +216,7 @@ function renderMetasLista(){
       </button>
       ${m.alvo ? `<div class="reserva-proj-barra"><div class="reserva-proj-barra-fill" style="width:${pct}%"></div></div>` : ''}
       <div class="meta-item-rodape"><span class="${falta<=0 && m.alvo ? 'reserva-proj-ok' : ''}">${sub}</span>
-        <span class="meta-item-botoes"><button type="button" class="dif-chip" onclick="metaMexer('${m.id}',-1)">− Tirar</button><button type="button" class="dif-chip" onclick="metaMexer('${m.id}',1)">+ Guardar</button></span></div>
+        <span class="meta-item-botoes"><button type="button" class="ico-btn" title="Tirei" aria-label="Tirei dinheiro" onclick="metaMexer('${m.id}',-1)">${ICO(ICO_D.menos, 20)}</button><button type="button" class="ico-btn" title="Guardei" aria-label="Guardei dinheiro" onclick="metaMexer('${m.id}',1)">${ICO(ICO_D.mais, 20)}</button></span></div>
       ${metaMexendo && metaMexendo.id === m.id ? `<form class="meta-mexer" onsubmit="event.preventDefault();metaMexerOk()"><span>${metaMexendo.sinal > 0 ? 'Guardei' : 'Tirei'}</span><div class="input-money"><input type="text" id="metaMexerValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)" enterkeyhint="done"></div><button type="submit" class="btn btn-sm">OK</button></form>` : ''}
     </div>`;
   }).join('');
@@ -761,7 +761,7 @@ function renderCartaoTrackerList(){
       }).join('');
 
     const quitadasHtml = quitadas.length === 0 ? '' :
-      `<button class="link-btn-sm" onclick="toggleQuitadasCartao('${cartao.id}')">${quitadasMostrarPorCartao[cartao.id]?'Ocultar':'Ver'} quitadas (${quitadas.length})</button>` +
+      `<div class="ct-quitadas-tit">${quitadasMostrarPorCartao[cartao.id] ? `Quitadas (${quitadas.length})` : ''}</div>` +
       (quitadasMostrarPorCartao[cartao.id] ? quitadas.map(item=>`<div class="compra-tracker-item pago">
         <div class="ct-top">
           <div style="display:flex;align-items:center;gap:8px;min-width:0">
@@ -781,7 +781,7 @@ function renderCartaoTrackerList(){
           <div class="ct-nome-cartao">${cartao.nome}</div>
         </div>
         <div class="ct-actions">
-          <button class="btn-icon-sm" onclick="toggleQuitadasCartao('${cartao.id}')" title="Ver arquivadas">${ICON_EYE}</button>
+          <button class="btn-icon-sm${quitadasMostrarPorCartao[cartao.id]?' ativo':''}" onclick="toggleQuitadasCartao('${cartao.id}')" title="Ver quitadas" aria-label="Ver quitadas">${ICON_EYE}</button>
           <button class="btn-icon-sm" onclick="openCartaoCardModal('${cartao.id}')">${ICON_EDIT}</button>
           <button class="btn-icon-sm" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
         </div>
@@ -797,7 +797,7 @@ function renderCartaoTrackerList(){
         <div class="ct-fatura-mensal-strip" id="faturaStrip-${cartao.id}">${gerarFaturaMensalHtml(cartao)}</div>
         <button class="btn-icon-sm" onclick="scrollFaturaMensal('${cartao.id}',1)">›</button>
       </div>
-      <div class="ct-toggle-compras" id="cartaoToggle-${cartao.id}" onclick="toggleCartaoDetalhes('${cartao.id}')">${cartoesExpandidos[cartao.id]?'Ocultar detalhes':'Ver detalhes'}</div>
+      <button type="button" class="ct-toggle-compras ico-btn${cartoesExpandidos[cartao.id]?' aberto':''}" id="cartaoToggle-${cartao.id}" onclick="toggleCartaoDetalhes('${cartao.id}')" title="Detalhes" aria-label="Ver ou ocultar detalhes">${ICO(ICO_D.abaixo, 20)}</button>
       <div class="compras-do-cartao${cartoesExpandidos[cartao.id]?' expanded':''}" id="cartaoDetalhes-${cartao.id}">
         ${comprasHtml}
         ${quitadasHtml}
@@ -805,13 +805,14 @@ function renderCartaoTrackerList(){
           ${(cartao.credoVista||[]).filter(cv=>!mesSelecionado || cv.mKey===mesSelecionado).map(cv=>`<div class="credo-vista-item" onclick="openCredoVistaModal('${cartao.id}','${cv.id}')"><span class="cv-cat-badge">${cv.categoria||'Outros'}</span><span class="cv-desc">${cv.descricao||'Crédito à vista'}</span><span class="cv-valor">${fmtMoney(cv.valor)}</span><button class="btn-icon-sm" aria-label="Excluir" onclick="event.stopPropagation();excluirCredoVista('${cartao.id}','${cv.id}')">${ICON_TRASH}</button></div>`).join('')}
           ${(cartao.assinaturas||[]).filter(a=>!mesSelecionado || assinaturaValorNoMes(a, mesSelecionado)>0).map(a=>`<div class="credo-vista-item" onclick="openAssinaturaModal('${cartao.id}','${a.id}')"><span class="cv-cat-badge">${a.categoria||'Outros'}</span><span class="cv-desc">${a.nome}${a.canceladoApartirDe?' · cancelada':''} <span class="badge-teste">Assinatura</span></span><span class="cv-valor">${fmtMoney(a.valor)}</span><button class="btn-icon-sm" aria-label="Excluir" onclick="event.stopPropagation();excluirAssinatura('${cartao.id}','${a.id}')">${ICON_TRASH}</button></div>`).join('')}
         </div>
-        <button type="button" class="link-btn-sm" onclick="toggleGastosDashboard('${cartao.id}')">${gastosDashboardAberto[cartao.id]?'Ocultar':'Ver'} gastos por categoria</button>
         ${gastosDashboardAberto[cartao.id] ? renderCartaoGastosDashboard(cartao, mesSelecionado || mesFinanceiroAtual()) : ''}
-        <div class="ct-acoes">
-          <button class="btn btn-sm btn-outline" onclick="openCredoVistaModal('${cartao.id}')">+ À vista</button>
-          <button class="btn btn-sm btn-outline" onclick="openCompraTrackerModal('${cartao.id}')">+ Parcelada</button>
-          <button class="btn btn-sm btn-outline" onclick="openAssinaturaModal('${cartao.id}')">+ Assinatura</button>
-          <button class="btn btn-sm btn-outline" onclick="abrirAjusteFatura('${cartao.id}')">Ajuste da fatura</button>
+        <div class="ico-linha">
+          <button type="button" class="ico-btn" title="Compra à vista" aria-label="Compra à vista" onclick="openCredoVistaModal('${cartao.id}')">${ICO(ICO_D.vista, 20)}</button>
+          <button type="button" class="ico-btn" title="Compra parcelada" aria-label="Compra parcelada" onclick="openCompraTrackerModal('${cartao.id}')">${ICO(ICO_D.parcelada, 20)}</button>
+          <button type="button" class="ico-btn" title="Assinatura" aria-label="Assinatura" onclick="openAssinaturaModal('${cartao.id}')">${ICO(ICO_D.assinatura, 20)}</button>
+          <button type="button" class="ico-btn" title="Conferir a fatura fechada (PDF)" aria-label="Conferir a fatura fechada em PDF" onclick="fpdfEscolher('${cartao.id}')">${ICO('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/>', 20)}</button>
+          <button type="button" class="ico-btn" title="Ajuste da fatura" aria-label="Ajuste da fatura" onclick="abrirAjusteFatura('${cartao.id}')">${ICO(ICO_D.ajuste, 20)}</button>
+          <button type="button" class="ico-btn${gastosDashboardAberto[cartao.id]?' ativo':''}" title="Gastos por categoria" aria-label="Gastos por categoria" onclick="toggleGastosDashboard('${cartao.id}')">${ICO(ICO_D.grafico, 20)}</button>
         </div>
       </div>
     </div>`;
@@ -874,7 +875,7 @@ function toggleCartaoDetalhes(cartaoId){
   const el = document.getElementById('cartaoDetalhes-'+cartaoId);
   if(el) el.classList.toggle('expanded', cartoesExpandidos[cartaoId]);
   const bt = document.getElementById('cartaoToggle-'+cartaoId);
-  if(bt) bt.textContent = cartoesExpandidos[cartaoId] ? 'Ocultar detalhes' : 'Ver detalhes';
+  if(bt) bt.classList.toggle('aberto', !!cartoesExpandidos[cartaoId]);
 }
 
 /* --- Cartão (fechamento/vencimento/limite) --- */
@@ -1593,7 +1594,7 @@ function vozEntenderSimples(texto, bancos, contas){
     return { acao:'cartao', valor:0, banco:'', conta:'', descricao:'', cartao: c ? c.nome : '', itens: vozItensSimples(texto, c) };
   }
   const desc = texto.replace(/\b(comprei|gastei|paguei|recebi)\b/ig, '').replace(/\d+[.,]?\d*\s*(reais|real)?/ig, '').replace(new RegExp(banco ? banco.nome : '$^', 'ig'), '').replace(/\b(no|na|pelo|pela|do|da|de|com|em)\s*$/i, '').replace(/\s+/g,' ').trim();
-  return { acao, valor, banco: banco ? banco.nome : '', conta: acao === 'pagar_conta' && conta ? conta.key : '', descricao: desc };
+  return { acao, valor, banco: banco ? banco.nome : '', conta: acao === 'pagar_conta' && conta ? conta.key : '', descricao: desc, categoria: vozAdivinharCategoria(desc) };
 }
 const VOZ_ESQUEMA = {
   type:'object',
@@ -1603,12 +1604,13 @@ const VOZ_ESQUEMA = {
     banco:{ type:'string', description:'Nome exato de um banco da lista, ou vazio' },
     conta:{ type:'string', description:'Chave exata de uma conta da lista quando pagou uma conta do mês, ou vazio' },
     descricao:{ type:'string', description:'O que comprou / de onde veio, curto' },
+    categoria:{ type:'string', description:'Na compra (Pix/débito): uma categoria exata da lista' },
     cartao:{ type:'string', description:'Nome exato de um cartão da lista quando acao = cartao, ou vazio' },
     itens:{ type:'array', description:'Compras no cartão (acao = cartao); vazio nas outras', items:{ type:'object', properties:{
       descricao:{ type:'string' }, valor:{ type:'number' }, categoria:{ type:'string', description:'Uma categoria exata da lista' }
     }, required:['descricao','valor','categoria'] } }
   },
-  required:['acao','valor','banco','conta','descricao','cartao','itens']
+  required:['acao','valor','banco','conta','descricao','categoria','cartao','itens']
 };
 /* --- compras no cartão ditadas de uma vez ("no Nubank: mercado 120, farmácia 45") → crédito à vista do mês da fatura --- */
 const VOZ_CATEGORIA_PALAVRAS = [
@@ -1658,6 +1660,7 @@ async function vozEntender(){
         `Contas do mês ainda abertas (chave, descrição, valor): ${JSON.stringify(contas.map(c=>[c.key, c.desc, c.valor]))}.\n` +
         `Cartões de crédito dela: ${JSON.stringify(vozCartoes().map(c=>c.nome))}. Categorias das compras no cartão: ${JSON.stringify(vozCategoriasCartao())}.\n` +
         `Regras: "comprei/gastei" = compra; "paguei a <conta da lista>" = pagar_conta (use a chave dela; valor = o falado ou o da conta); "paguei" algo que não está na lista = compra; "recebi/caiu/entrou" = recebimento. ` +
+        `Na compra (Pix/débito), escolha a categoria exata da lista de categorias pelo que foi comprado (lanche = Alimentação). ` +
         `Compras no cartão de crédito (falou "cartão"/"crédito", ou citou um cartão da lista com uma ou várias compras) = cartao: ponha cada compra em itens (descrição curta com maiúscula, valor, categoria exata da lista; na dúvida "Outros") e o nome exato do cartão; valor = 0. ` +
         `Valores por extenso viram número ("cinquenta e dois e noventa" = 52.90). Banco só se for citado (nome exato da lista).` }], t=>{ res.innerHTML = `<div class="voz-carregando">${lvEsc(t)}</div>`; }, VOZ_ESQUEMA);
     }catch(e){ p = null; }
@@ -1675,7 +1678,9 @@ async function vozEntender(){
   if(p.acao === 'pagar_conta' && !p.conta) p.acao = 'compra';
   if(p.acao === 'pagar_conta' && !(Number(p.valor) > 0)) p.valor = contas.find(c=>c.key === p.conta).valor;
   const banco = bancos.find(b=>vozSemAcento(b.nome) === vozSemAcento(p.banco));
-  vozPlano = { acao: p.acao, valor: Math.round((Number(p.valor)||0)*100)/100, bancoId: banco ? banco.id : (bancos.length === 1 ? bancos[0].id : ''), conta: p.conta || '', descricao: p.descricao || texto };
+  const catsV = vozCategoriasCartao();
+  vozPlano = { acao: p.acao, valor: Math.round((Number(p.valor)||0)*100)/100, bancoId: banco ? banco.id : (bancos.length === 1 ? bancos[0].id : ''), conta: p.conta || '', descricao: p.descricao || texto,
+    categoria: catsV.includes(p.categoria) ? p.categoria : vozAdivinharCategoria(p.descricao || texto) };
   vozRenderPlano();
 }
 function vozRenderPlano(){
@@ -1710,6 +1715,7 @@ function vozRenderPlano(){
     <div class="voz-plano">
       ${abas}
       ${pl.acao === 'pagar_conta' ? `<div class="field"><label>Conta</label><select onchange="vozMudar('conta', this.value)"><option value="">Escolha a conta</option>${contas.map(c=>`<option value="${c.key}"${c.key===pl.conta?' selected':''}>${escBanco(c.desc)} · ${fmtMoney(c.valor)}</option>`).join('')}</select></div>` : `<div class="field"><label>${pl.acao==='recebimento'?'De onde veio':'O que foi'}</label><input type="text" value="${escBanco(pl.descricao)}" oninput="vozPlano.descricao=this.value"></div>`}
+      ${pl.acao === 'compra' ? `<div class="field"><label>Categoria</label><select onchange="vozPlano.categoria=this.value">${vozCategoriasCartao().map(c=>`<option${c===pl.categoria?' selected':''}>${escBanco(c)}</option>`).join('')}</select></div>` : ''}
       <div class="field"><label>Valor</label><div class="input-money"><input type="text" inputmode="numeric" value="${pl.valor ? pl.valor.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : ''}" oninput="maskMoneyInput(this);vozPlano.valor=parseMoney(this.value);vozAtualizarResumo()"></div></div>
       ${bancos.length ? `<div class="field"><label>Banco</label><div class="voz-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${b.id===pl.bancoId?' active':''}" onclick="vozMudar('bancoId','${b.id}')">${escBanco(b.nome)}</button>`).join('')}</div></div>` : ''}
       <div class="voz-resumo" id="vozResumo">${vozResumoHtml()}</div>
@@ -1741,12 +1747,13 @@ function vozMudar(campo, v){
   vozPlano[campo] = v;
   if(campo === 'conta'){ const c = vozContasAbertas().find(x=>x.key === v); if(c) vozPlano.valor = c.valor; }
   if(campo === 'acao' && v === 'cartao' && antes !== 'cartao'){
-    if(!vozPlano.itens || !vozPlano.itens.length) vozPlano.itens = [{ descricao: vozPlano.descricao || '', valor: vozPlano.valor || 0, categoria: vozAdivinharCategoria(vozPlano.descricao) }];
+    if(!vozPlano.itens || !vozPlano.itens.length) vozPlano.itens = [{ descricao: vozPlano.descricao || '', valor: vozPlano.valor || 0, categoria: vozPlano.categoria || vozAdivinharCategoria(vozPlano.descricao) }];
     if(!vozPlano.cartaoId && vozCartoes().length === 1) vozPlano.cartaoId = vozCartoes()[0].id;
   }
   if(campo === 'acao' && antes === 'cartao' && v !== 'cartao' && vozPlano.itens && vozPlano.itens.length){
     vozPlano.descricao = vozPlano.itens.map(i=>i.descricao).filter(Boolean).join(', ');
     vozPlano.valor = Math.round(vozPlano.itens.reduce((s,i)=>s + (Number(i.valor)||0), 0)*100)/100;
+    vozPlano.categoria = vozPlano.itens[0].categoria || 'Outros';
     if(!vozPlano.bancoId && bancosDoUsuario().length === 1) vozPlano.bancoId = bancosDoUsuario()[0].id;
   }
   vozRenderPlano();
@@ -1779,6 +1786,11 @@ function vozConfirmar(){
   if(banco){ banco.valor = Math.round(((Number(banco.valor)||0) + sinal*pl.valor)*100)/100; us.saldoAtual = totalBancos(bancos); }
   else us.saldoAtual = Math.round(((us.saldoAtual||0) + sinal*pl.valor)*100)/100;
   if(pl.acao === 'pagar_conta'){ state.paid[pl.conta] = true; if(state.pagamentosParciais) delete state.pagamentosParciais[pl.conta]; }
+  /* compra no Pix/débito fica registrada (com categoria) para aparecer em "Para onde vai o dinheiro" */
+  if(pl.acao === 'compra'){
+    if(!state.lancamentos) state.lancamentos = [];
+    state.lancamentos.push({ id:'la'+Date.now(), mKey: mesFinanceiroAtual(), data: calISO(new Date()), descricao: String(pl.descricao||'').trim() || 'Compra', valor: pl.valor, categoria: pl.categoria || 'Outros', banco: banco ? banco.nome : '', usuario: state.currentUser });
+  }
   persist();
   vozFechar();
   renderPlanner(); renderPanorama();

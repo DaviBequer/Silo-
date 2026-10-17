@@ -64,7 +64,7 @@ button,input,select,textarea{font-family:inherit}
 .header-sub{display:none}
 .header .header-acoes{grid-column:3;justify-self:end}
 .header-btn{width:32px;height:32px;border:none;border-radius:50%;background:none;color:rgba(250,250,249,.82);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--dur) var(--ease),color var(--dur) var(--ease),transform .12s var(--ease)}
-.header-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.header-btn:hover{background:none;color:#fff}
 /* hoje: data + "14 dias – R$ 9.266,28" */
 .header-hoje{grid-column:2;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;text-align:center;line-height:1.25;white-space:nowrap}
 .hh-linha1{font-size:13px;font-weight:700;color:var(--noite-tx)}
@@ -108,8 +108,8 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 .fullpage{display:none;position:fixed;inset:0;z-index:500;flex-direction:column;background:var(--bg)}
 .fullpage.active{display:flex}
 .fullpage-header{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:10px var(--s3);background:rgba(245,242,236,.85);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px)}
-.fullpage-header .header-btn{width:32px;height:32px;border:none;border-radius:50%;background:var(--card);color:var(--text);box-shadow:var(--sombra-card)}
-.fullpage-header .header-btn:hover{background:var(--card-2);color:var(--text)}
+.fullpage-header .header-btn{width:32px;height:32px;border:none !important;border-radius:0;background:none;color:var(--text);box-shadow:none}
+.fullpage-header .header-btn:hover{background:none;color:var(--text-dim)}
 .fullpage-title{display:flex;align-items:center;font-family:var(--font-title);font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text)}
 .fullpage-content{flex:1;overflow-y:auto;padding:16px 16px 120px}
 @media(max-width:1099px){ body:has(#pageLouvorDetalhe.active){overflow:hidden} }
@@ -201,9 +201,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 .btn-icon-sm:hover{background:var(--primary-tint);color:var(--text)}
 .btn-icon-sm.concluido-ativo{background:var(--success);color:#fff;border-color:var(--success)}
 /* chip de ação: o mesmo desenho para todo botão pequeno (Ver quitadas, + Simples, Parte, + Guardar...) */
-.link-btn-sm,.section-add-label,.cp-parte,.meta-item-botoes .dif-chip{display:inline-flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text);font:inherit;font-size:12px;font-weight:600;line-height:1.2;text-decoration:none;white-space:nowrap;cursor:pointer;transition:border-color var(--dur) var(--ease),transform .12s var(--ease)}
+.link-btn-sm,.section-add-label,.meta-item-botoes .dif-chip{display:inline-flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text);font:inherit;font-size:12px;font-weight:600;line-height:1.2;text-decoration:none;white-space:nowrap;cursor:pointer;transition:border-color var(--dur) var(--ease),transform .12s var(--ease)}
 .link-btn-sm,.section-add-label{padding:6px 12px}
-.link-btn-sm:hover,.section-add-label:hover,.cp-parte:hover,.meta-item-botoes .dif-chip:hover{border-color:var(--text-faint)}
+.link-btn-sm:hover,.section-add-label:hover,.meta-item-botoes .dif-chip:hover{border-color:var(--text-faint)}
 .link-btn-sm{margin:6px 0}
 
 /* campos */
@@ -444,6 +444,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-fab-op{display:flex;align-items:center;gap:10px;padding:0;border:none;background:none;font:inherit;cursor:pointer;animation:surgir .3s var(--mola) both}
 .lv-fab-op span{padding:8px 12px;border-radius:10px;background:var(--card);color:var(--text);font-size:13px;font-weight:600;box-shadow:var(--sombra-card)}
 .lv-fab-op i{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--card);color:var(--text);box-shadow:var(--sombra-card)}
+.lv-fab-op i.cc-logo{background:#f26d21;color:#fff;font-style:normal;font-size:13px;font-weight:800;letter-spacing:-.02em}
 .lv-fab-op:nth-child(2){animation-delay:.04s}.lv-fab-op:nth-child(3){animation-delay:.08s}.lv-fab-op:nth-child(4){animation-delay:.12s}
 .receita-salvar-fab{bottom:24px;z-index:520}
 .receita-fab:active,.receita-salvar-fab:active{transform:scale(.9)}
@@ -664,8 +665,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cp-item-sub{margin-top:1px;font-size:12px;color:var(--text-faint)}
 .cp-item-val{font-size:14px;font-weight:700;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .cp-item-val small{display:block;font-size:12px;font-weight:600;color:var(--warning)}
-.cp-parte{flex-shrink:0;padding:5px 10px}
-.cp-item.parcial .cp-parte{border-color:var(--warning);color:var(--warning)}
+.cp-parte{flex-shrink:0;color:var(--text-faint)}
+.cp-item.parcial .cp-parte{color:var(--warning)}
 .cp-check{width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--line);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .25s var(--mola)}
 .cp-item.parcial .cp-check{box-shadow:inset 0 0 0 2px var(--warning)}
 .cp-item.feito .cp-check{background:var(--success);box-shadow:none;transform:scale(1.05)}
@@ -823,12 +824,48 @@ body:has(.modal-overlay.active){overflow:hidden}
 .reserva-proj-barra-fill{height:100%;border-radius:6px;background:var(--warning);transition:width .6s var(--mola)}
 .reserva-proj-linha{margin-bottom:3px;font-size:11.5px;color:var(--text-dim)}
 .reserva-proj-ok{color:var(--success);font-weight:700}
+/* fatura fechada em PDF (fatura-pdf.js) */
+.fpdf-mes{margin-bottom:6px}
+.fpdf-resumo{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.fpdf-resumo>div{display:flex;flex-direction:column;gap:2px;padding:10px 0}
+.fpdf-resumo>div + div{padding-left:12px;border-left:1px solid var(--line)}
+.fpdf-resumo span{font-size:12px;color:var(--text-dim)}
+.fpdf-resumo b{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.fpdf-resumo .igual b{color:var(--success)}
+.fpdf-resumo .dif b{color:var(--danger)}
+.fpdf-lista{border-top:1px solid var(--line)}
+.fpdf-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.fpdf-item input{width:18px;height:18px;flex-shrink:0;accent-color:var(--gold)}
+.fpdf-ok{width:18px;flex-shrink:0;text-align:center;color:var(--success);font-weight:700}
+.fpdf-ok.aviso{color:var(--warning)}
+.fpdf-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.fpdf-info b{font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpdf-info small{font-size:11.5px;color:var(--text-faint)}
+.fpdf-valor{flex-shrink:0;font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.fpdf-valor.pos{color:var(--success)}
+.fpdf-item.ok .fpdf-info b{color:var(--text-dim)}
+/* topo de Finanças: este mês e os próximos (sobra + acumulado) */
+.resumo-proximos{display:grid;grid-template-columns:repeat(3,1fr);margin-top:14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.resumo-proximos:empty{display:none}
+.rp-mes{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 4px 10px 0;border:none;background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.rp-mes + .rp-mes{padding-left:10px;border-left:1px solid var(--line)}
+.rp-nome{font-size:12px;color:var(--text-dim)}
+.rp-mes b{font-size:13.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rp-mes small{display:flex;flex-direction:column;font-size:11px;color:var(--text-faint);white-space:nowrap}
+.rp-mes b.pos,.rp-mes i.pos{color:var(--success)}
+.rp-mes b.neg,.rp-mes i.neg{color:var(--danger)}
+.rp-mes i{font-style:normal;font-weight:600}
 .ov-total{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 10px;font-size:12.5px;color:var(--text-dim)}
 .ov-total b{color:var(--text);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
 .ov-barra{display:flex;gap:2px;height:12px;margin-bottom:10px;border-radius:6px;overflow:hidden}
 .ov-barra i{display:block;min-width:3px}
 .ov-lista{border-top:1px solid var(--line)}
 .ov-linha{display:grid;grid-template-columns:10px 1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ov-linha.ov-clica{cursor:pointer}
+.ov-var{margin-left:4px;font-size:11px;font-weight:600;color:var(--text-faint);white-space:nowrap}
+.ov-var.sobe{color:var(--danger)}
+.ov-var.desce{color:var(--success)}
+.ov-var.novo{color:var(--text-faint);font-weight:500}
 .ov-ponto{width:10px;height:10px;border-radius:50%}
 .ov-nome{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
 .ov-pct{font-size:11.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}
@@ -1450,6 +1487,14 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cu-tom{flex-shrink:0;padding:2px 8px;border-radius:999px;background:var(--card-2);color:var(--text-dim);font-size:12px;font-weight:600}
 .cu-add-musica{margin-top:6px;padding:4px 0;border:none;background:none;color:var(--gold);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .cu .lm-add{margin-top:6px}
+.cu-tit-acoes{display:flex;align-items:center;gap:6px}
+.cu-tit-acoes .ico-btn{color:var(--gold)}
+.cu-sug-qtd{flex:0 0 64px;width:64px}
+.cu-sug-item{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.cu-sug-item input{width:18px;height:18px;flex-shrink:0;accent-color:var(--gold)}
+.cu-sug-item .cu-tom{font-style:normal;margin-left:4px}
+#cuSugAcoes{display:flex;gap:8px}
+#cuSugAcoes .voz-campo{flex:1}
 /* ordem no WhatsApp */
 .cu-ordem{border-top:1px solid var(--line)}
 .cu-ordem-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
@@ -1462,7 +1507,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cu-bolha::before{content:'';position:absolute;left:-8px;top:0;border:8px solid transparent;border-top-color:color-mix(in srgb,var(--brilho) 16%,var(--card));border-right-color:color-mix(in srgb,var(--brilho) 16%,var(--card))}
 .cu-previa{margin:0;padding:0;border:none;background:none;color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .cu-apagar{margin:14px 0 6px}
-.cu-rodape{display:flex;gap:8px}
+.cu-rodape{display:flex;align-items:center;gap:8px}
+.cu-rodape .cu-ico{flex:none;width:44px;height:44px}
 .cu-rodape .btn{flex:1}
 .cu-drive{display:flex;align-items:center;justify-content:center;gap:6px}
 .dpdf-item{display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--line)}
@@ -1536,6 +1582,12 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-categoria-mini{margin-top:10px;gap:6px}
 .lv-categoria-mini .dif-chip{flex:0 0 auto;min-width:0;padding:5px 11px;border-radius:20px;font-size:11.5px}
 .lv-topo-acoes{display:flex;align-items:center;gap:6px}
+/* celular: o título ocupa a linha toda; status, ícones, tom e data descem para a linha de baixo */
+@media(max-width:600px){
+  .lv-page-top{flex-wrap:wrap}
+  .lv-page-top-text{flex:1 1 100%}
+  .lv-page-top > div:last-child{flex:1 1 100%;flex-direction:row !important;flex-wrap:wrap;align-items:center !important;justify-content:space-between}
+}
 .lv-icone-btn{width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--dur) var(--ease),color var(--dur) var(--ease),border-color var(--dur) var(--ease),transform .12s var(--ease)}
 .lv-icone-btn:hover{background:var(--card-2);color:var(--text)}
 .lv-icone-btn.ativo{background:var(--gold);border-color:var(--gold);color:#fff}
@@ -1844,6 +1896,32 @@ body:has(.modal-overlay.active){overflow:hidden}
   #pageLouvorDetalhe{left:var(--sidebar-w)!important;top:var(--header-h,64px)!important;border-left:none}
 }
 
+/* ---------- ícones puros (pedido do Davi, 17/10): botões de ícone sem fundo, sem borda, sem caixinha ----------
+   Fica só o traço do ícone; ao tocar ele escurece. O nome aparece segurando (title/aria-label). */
+.section-add,.section-toggle,.voz-btn,.btn-icon-sm,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.modal-close,.pano-nav-btn,.cmd-btn-icone:not(.escuro),.ico-btn,.lv-barra-btn:not(.primario){border:none !important;border-radius:0;background:none !important;box-shadow:none !important}
+.section-add,.voz-btn,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.modal-close,.pano-nav-btn,.cmd-btn-icone:not(.escuro),.ico-btn{color:var(--text-dim)}
+.section-add:hover,.voz-btn:hover,.btn-icon-sm:hover,.lv-icone-btn:hover,.lv-filtro-toggle:hover,.cu-data-seta:hover,.modal-close:hover,.pano-nav-btn:hover,.cmd-btn-icone:not(.escuro):hover,.ico-btn:hover{color:var(--text)}
+.lv-filtro-toggle.active{color:var(--text)}
+.lv-icone-btn.ativo,.lv-icone-btn[aria-pressed="true"]{color:var(--gold)}
+/* botão de ícone genérico (substitui os botões com texto) */
+.ico-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:32px;height:32px;padding:0 4px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:color .2s var(--ease),transform .12s var(--ease)}
+.ico-btn:active{transform:scale(.88)}
+.ico-btn svg{flex-shrink:0}
+.ico-btn.perigo{color:var(--danger)}
+.ico-btn .ico-num{font-size:11px;color:var(--text-faint)}
+.ico-linha{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:10px}
+.ico-btn.ativo,.btn-icon-sm.ativo{color:var(--gold)}
+.ct-toggle-compras.ico-btn{display:flex;width:auto;margin:6px auto 0;padding:0 8px}
+.ct-toggle-compras svg{transition:transform .3s var(--mola)}
+.ct-toggle-compras.aberto svg{transform:rotate(180deg)}
+.ct-quitadas-tit:not(:empty){margin:10px 0 2px;font-size:12px;font-weight:600;color:var(--text-faint)}
+/* logos de marca (Drive, WhatsApp) com as cores próprias */
+.logo-marca{display:block}
+.lv-head-acoes{display:flex;align-items:center;gap:4px}
+.lv-btn-marca,.lv-icone-btn.so-drive,.lv-fab-op.so-drive i{position:relative}
+.marca-seta{position:absolute;right:2px;bottom:2px;font-style:normal;font-size:11px;font-weight:800;line-height:1;color:var(--text)}
+.marca-aviso{display:none;position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 2px var(--bg)}
+.lv-btn-marca.pendente .marca-aviso{display:block}
 /* ---------- 6. EFEITOS ---------- */
 /* telas e janelas entrando */
 .aba.active{animation:abaEntra .5s var(--mola) backwards}
@@ -1916,7 +1994,9 @@ html.tem-fundo body{background-color:transparent}
 html.tem-fundo .header{background:rgba(12,10,9,.9);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 html.tem-fundo .bottom-nav{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 html.tem-fundo .card:not(.resumo-card),html.tem-fundo .section,html.tem-fundo .lv-card,html.tem-fundo .lv-roteiro,html.tem-fundo .cmd-card{background:color-mix(in srgb,var(--card) 84%,transparent);border-color:color-mix(in srgb,#fff 50%,transparent)}
-html.tem-fundo .resumo-card{padding:var(--s3) var(--s3) var(--s2);border:1px solid color-mix(in srgb,#fff 50%,transparent);border-radius:var(--radius-lg);background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+/* resumo sobre a foto: sem quadro — um véu claro que some aos poucos nas bordas */
+html.tem-fundo .resumo-card{position:relative;isolation:isolate;padding:var(--s3) var(--s3) var(--s2);border:none;background:none}
+html.tem-fundo .resumo-card::before{content:'';position:absolute;inset:-28px -20px;z-index:-1;pointer-events:none;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);-webkit-mask-image:radial-gradient(ellipse 72% 70% at 50% 50%,#000 55%,transparent 100%);mask-image:radial-gradient(ellipse 72% 70% at 50% 50%,#000 55%,transparent 100%)}
 html.tem-fundo .lv-culto-btn{background:color-mix(in srgb,var(--card) 84%,transparent);border-color:color-mix(in srgb,#fff 50%,transparent)}
 html.tem-fundo .versiculo{padding:10px 14px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:color-mix(in srgb,var(--bg) 78%,transparent)}
 

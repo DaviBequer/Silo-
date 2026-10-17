@@ -45,7 +45,20 @@ function renderResumoMes(){
   const elSobra = document.getElementById('resumoSobra');
   elSobra.textContent = fmtMoneySigned(sobra);
   elSobra.className = 'resumo-stat-val ' + (sobra >= 0 ? 'pos' : 'neg');
-  /* atalhos: cartão / empréstimo contando (ou não) neste mês */
+  /* próximos 3 meses no topo: a sobra de cada um e o acumulado (com a sobra deste mês) — toque abre o detalhe */
+  const elProx = document.getElementById('resumoProximos');
+  if(elProx){
+    let acum = saldoForMonth(u, mKey);
+    elProx.innerHTML = [1, 2, 3].map(i=>{
+      const m = addMonths(mKey, i), s = saldoForMonth(u, m);
+      acum += s;
+      return `<button type="button" class="rp-mes" onclick="abrirDetalheAcumulado('${m}')">
+        <span class="rp-nome">${monthLabel(m)}</span>
+        <b class="${s >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(s)}</b>
+        <small>acumulado <i class="${acum >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(acum)}</i></small>
+      </button>`;
+    }).join('');
+  }  /* atalhos: cartão / empréstimo contando (ou não) neste mês */
   const elInc = document.getElementById('resumoInclui');
   if(elInc){
     const chip = (tipo, rotulo, valor)=>{
@@ -786,7 +799,7 @@ function renderContasPagar(){
       tag: it.mesOrigem!==mKey ? `<span class="cp-tag">${monthLabel(it.mesOrigem)}</span>` : '',
       valor: Number(it.valor)||0, valorSub: !isParcial ? '' : [valorPago > 0 ? 'pago '+fmtMoney(valorPago) : '', noCartao > 0 ? fmtMoney(noCartao)+' no cartão' : ''].filter(Boolean).join(' · '),
       feito: isPaid, parcial: isParcial,
-      acao: isPaid ? '' : `<button type="button" class="cp-parte" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="event.stopPropagation();abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')">Parte</button>`,
+      acao: isPaid ? '' : `<button type="button" class="cp-parte ico-btn" title="Paguei só uma parte" aria-label="Paguei só uma parte" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="event.stopPropagation();abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')">${ICO(ICO_D.parte, 18)}</button>`,
       attrs: `onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()"`
     });
   });
@@ -825,7 +838,7 @@ function renderContasPagar(){
     <div class="cp-resumo-sub"><span><b>${nFeitos} de ${nItens}</b> pagas · ${fmtMoney(totalPago)}</span>${aReceber>0.004?`<span>a receber <b>${fmtMoney(aReceber)}</b></span>`:''}</div>
   </div>`;
   if(receb) html += cpBloco('Recebimentos', 'toque quando cair na conta', receb);
-  html += cpBloco('Contas', 'toque = paga · “Parte” = pagou só uma parte',
+  html += cpBloco('Contas', 'toque = paga · ◐ = pagou só uma parte',
     contasHtml || `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Dashboard</div></div>`);
   if(cartaoHtml) html += cpBloco('Cartão', 'toque para pagar a fatura', cartaoHtml);
   if(empHtml) html += cpBloco('Empréstimo', 'toque para pagar a parcela', empHtml);
@@ -1010,7 +1023,7 @@ function abrirHistoricoMeses(){
 let ondeVaiMes = null;
 const ONDE_VAI_CORES = ['#047857','#34d399','#0e7490','#a3a3a3','#c2410c','#7c3aed','#ca8a04','#be185d','#2563eb','#57534e'];
 function ondeVaiDados(u, mKey){
-  const g = {}, vista = {}, envelope = {};
+  const g = {}, vista = {}, pix = {}, envelope = {};
   const soma = (obj, nome, v)=>{ v = Number(v)||0; if(v > 0.004) obj[nome] = (obj[nome]||0) + v; };
   const sa = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if(u === 'davi'){
@@ -1019,43 +1032,75 @@ function ondeVaiDados(u, mKey){
       soma(g, 'Parcelas no cartão', (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id).reduce((s,cp)=>s + compraTrackerValorNoMes(cp, mKey), 0));
     });
   }
-  /* conta fixa com o mesmo nome de uma categoria do cartão (ex.: "Mercado") é uma reserva para esse gasto:
-     o que já foi no cartão sai da conta, para não contar duas vezes */
-  const usado = {};
+  /* compras faladas no Pix/débito */
+  (state.lancamentos||[]).filter(la=>la.mKey === mKey && (la.usuario || 'davi') === u).forEach(la=>soma(pix, la.categoria || 'Outros', la.valor));
+  /* conta fixa com o mesmo nome de uma categoria (ex.: "Mercado") é uma reserva para esse gasto:
+     o que já foi no cartão ou no Pix sai da conta, para não contar duas vezes (mesma regra de contaUsadaNoCartao) */
   getContasDoMes(mKey, u).forEach(it=>{
-    const cat = Object.keys(vista).find(c=>sa(c) === sa(it.desc));
     let v = Number(it.valor) || 0;
-    if(cat){
-      envelope[cat] = (envelope[cat]||0) + v;
-      const desconta = Math.min(v, vista[cat] - (usado[cat]||0));
-      usado[cat] = (usado[cat]||0) + desconta;
-      v -= desconta;
+    const usado = contaUsadaNoCartao(mKey + '_' + it.user + '_' + it.cat + '_' + it.id);
+    if(usado > 0){
+      [vista, pix].forEach(o=>Object.keys(o).forEach(c=>{ if(sa(c) === sa(it.desc)) envelope[c] = (envelope[c]||0) + v; }));
+      v -= Math.min(v, usado);
     }
     soma(g, CATEGORIA_LABELS[it.cat] || 'Contas', v);
   });
   soma(g, 'Dízimo', dizimoValorCheio(u, mKey));
-  if(u === 'davi'){
-    const tv = Object.values(vista).reduce((s,v)=>s+v, 0);
-    if(tv > 0.004) g['Cartão à vista'] = tv;
-    soma(g, 'Empréstimo', emprestimoValorGeralNoMes(mKey));
-  }
+  const tv = Object.values(vista).reduce((s,v)=>s+v, 0), tp = Object.values(pix).reduce((s,v)=>s+v, 0);
+  if(tv > 0.004) g['Cartão à vista'] = tv;
+  if(tp > 0.004) g['Pix e débito'] = tp;
+  if(u === 'davi') soma(g, 'Empréstimo', emprestimoValorGeralNoMes(mKey));
+  const subs = o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([n, x])=>[n, x, envelope[n] || 0]);
   return Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([nome, v])=>({ nome, v,
-    sub: nome === 'Cartão à vista' ? Object.entries(vista).sort((a,b)=>b[1]-a[1]).map(([n, x])=>[n, x, envelope[n] || 0]) : null }));
-}function ondeVaiMudarMes(d){ ondeVaiMes = addMonths(ondeVaiMes || mesFinanceiroAtual(), d); renderOndeVai(); }
+    sub: nome === 'Cartão à vista' ? subs(vista) : nome === 'Pix e débito' ? subs(pix) : null }));
+}
+function ondeVaiMudarMes(d){ ondeVaiMes = addMonths(ondeVaiMes || mesFinanceiroAtual(), d); renderOndeVai(); }
 function renderOndeVai(){
   const el = document.getElementById('ondeVaiConteudo'); if(!el || !state.users) return;
   const u = userDash(), mKey = ondeVaiMes || mesFinanceiroAtual();
   document.getElementById('ondeVaiMes').textContent = monthLabelLong(mKey);
   const dados = ondeVaiDados(u, mKey), total = dados.reduce((s,d)=>s + d.v, 0);
+  /* comparação com o mês anterior: seta e % em cada linha (gasto subiu = vermelho, caiu = verde) */
+  const antes = {}; ondeVaiDados(u, addMonths(mKey, -1)).forEach(d=>{ antes[d.nome] = d.v; (d.sub||[]).forEach(([n, x])=>{ antes[d.nome + '|' + n] = x; }); });
+  const totalAntes = Object.keys(antes).filter(k=>!k.includes('|')).reduce((s,k)=>s + antes[k], 0);
+  const varia = (agora, ant)=>{
+    if(!(ant > 0.004)) return agora > 0.004 ? '<span class="ov-var novo">novo</span>' : '';
+    const p = Math.round((agora - ant) / ant * 100);
+    if(Math.abs(p) < 1) return '<span class="ov-var">=</span>';
+    return `<span class="ov-var "> %</span>`;
+  };
 
   if(!total){ el.innerHTML = `<div class="gm-vazio">Nada saindo em ${monthLabelLong(mKey)}.</div>`; return; }
   const cor = i=>ONDE_VAI_CORES[i % ONDE_VAI_CORES.length];
   el.innerHTML = `
-    <div class="ov-total"><span>Sai no mês</span><b>${fmtMoney(total)}</b></div>
+    <div class="ov-total"><span>Sai no mês ${varia(total, totalAntes)}</span><b>${fmtMoney(total)}</b></div>
     <div class="ov-barra">${dados.map((d, i)=>`<i style="flex:${d.v};background:${cor(i)}" title="${escBanco(d.nome)}"></i>`).join('')}</div>
     <div class="ov-lista">${dados.map((d, i)=>`
-      <div class="ov-linha"><span class="ov-ponto" style="background:${cor(i)}"></span><span class="ov-nome">${escBanco(d.nome)}</span><span class="ov-pct">${Math.round(d.v/total*100)}%</span><span class="ov-valor">${fmtMoney(d.v)}</span></div>${(d.sub||[]).map(([n,v,env])=>`
-      <div class="ov-linha ov-sub"><span></span><span class="ov-nome">${escBanco(n)}${env ? ` <small>de ${fmtMoney(env)} reservados</small>` : ''}</span><span class="ov-pct"></span><span class="ov-valor">${fmtMoney(v)}</span></div>`).join('')}`).join('')}
+      <div class="ov-linha${d.nome === 'Pix e débito' ? ' ov-clica' : ''}"${d.nome === 'Pix e débito' ? ` onclick="abrirLancamentos('${mKey}')"` : ''}><span class="ov-ponto" style="background:${cor(i)}"></span><span class="ov-nome">${escBanco(d.nome)} ${varia(d.v, antes[d.nome])}</span><span class="ov-pct">${Math.round(d.v/total*100)}%</span><span class="ov-valor">${fmtMoney(d.v)}</span></div>${(d.sub||[]).map(([n,v,env])=>`
+      <div class="ov-linha ov-sub"><span></span><span class="ov-nome">${escBanco(n)} ${varia(v, antes[d.nome + '|' + n])}${env ? ` <small>de ${fmtMoney(env)} reservados</small>` : ''}</span><span class="ov-pct"></span><span class="ov-valor">${fmtMoney(v)}</span></div>`).join('')}`).join('')}
     </div>
     ${u === 'davi' && (state.cartoesTracker||[]).length ? `<div class="sf-nota">Dica: no microfone do saldo, fale “no cartão: mercado 120, farmácia 45” e as compras entram aqui por categoria.</div>` : ''}`;
+}
+
+/* lista das compras faladas no Pix/débito de um mês (toque em "Pix e débito" no gráfico) */
+function abrirLancamentos(mKey){
+  const u = userDash();
+  const lista = (state.lancamentos||[]).filter(la=>la.mKey === mKey && (la.usuario || 'davi') === u).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  const total = lista.reduce((s,la)=>s + (Number(la.valor)||0), 0);
+  document.getElementById('resumoDetalheTopo').innerHTML = `<div class="rd-rotulo">Pix e débito · ${monthLabelLong(mKey)}</div><div class="rd-total neg">${fmtMoney(total)}</div>`;
+  document.getElementById('resumoDetalheLista').innerHTML = lista.length ? lista.map(la=>`
+    <div class="gm-linha"><span class="gm-inicial">${escBanco((la.categoria||'?').charAt(0))}</span>
+      <div class="gm-info"><div class="gm-nome">${escBanco(la.descricao)}</div><div class="gm-sub">${escBanco(la.categoria||'Outros')}${la.banco ? ' · ' + escBanco(la.banco) : ''} · ${String(la.data||'').split('-').reverse().slice(0,2).join('/')}</div></div>
+      <div class="gm-valor">${fmtMoney(la.valor)}</div>
+      <button type="button" class="ico-btn" title="Excluir" aria-label="Excluir" onclick="excluirLancamento('${la.id}','${mKey}')">${ICO(ICO_D.lixo, 16)}</button>
+    </div>`).join('') : `<div class="gm-vazio">Nenhuma compra falada no Pix/débito neste mês.</div>`;
+  document.getElementById('modalResumoDetalhe').dataset.modo = 'lancamentos';
+  document.getElementById('modalResumoDetalhe').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function excluirLancamento(id, mKey){
+  comDesfazer('Compra excluída (o saldo do banco não muda)', ()=>{
+    state.lancamentos = (state.lancamentos||[]).filter(la=>la.id !== id);
+    persist(); renderPanorama(); abrirLancamentos(mKey);
+  }, ()=>{ if(document.getElementById('modalResumoDetalhe').dataset.modo === 'lancamentos') abrirLancamentos(mKey); });
 }

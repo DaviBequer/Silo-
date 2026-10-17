@@ -146,7 +146,7 @@ function renderVendas(){
   let html = `<div class="card resumo-card">
     <div class="resumo-topo">
       <div class="resumo-mes">Vendas · ${monthLabelLong(mAtual)}</div>
-      <div style="display:flex;gap:6px"><button type="button" class="resumo-link" onclick="abrirVendasConfig('simulacao')">Simular</button><button type="button" class="resumo-link" onclick="abrirVendasConfig()">Configurar</button></div>
+      <div style="display:flex;gap:6px"><button type="button" class="ico-btn" title="Simular" aria-label="Simular" onclick="abrirVendasConfig('simulacao')">${ICO(ICO_D.simular)}</button><button type="button" class="ico-btn" title="Configurar" aria-label="Configurar" onclick="abrirVendasConfig()">${ICO(ICO_D.config)}</button></div>
     </div>
     <div class="resumo-label">Comissão do mês</div>
     <div class="ponto-valor-grande">${fmtMoney(comMes)}</div>
