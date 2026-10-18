@@ -1153,10 +1153,16 @@ function lvCriarDireto(d){
 /* ---------- Letras: busca pela função "cifra" do Supabase ---------- */
 async function lviLetrasDe(titulo, artista){
   if(!(titulo||'').trim()) return null;
-  try{
-    const r = await Promise.race([ ccChamar({ letras:{ titulo, artista: artista || '' } }), new Promise(ok=>setTimeout(()=>ok(null), 15000)) ]);
-    return r && r.achou && Array.isArray(r.estrofes) && r.estrofes.length ? r : null;
-  }catch(e){ return null; }   // sem Letras (função antiga, site bloqueou, não achou): segue só com o Cifra Club
+  /* a busca do Letras não acha nada com "-" no texto: limpa; se não achar com o cantor, tenta só pelo título */
+  const limpa = s=>String(s||'').replace(/[-–—|()]/g, ' ').replace(/\s+/g, ' ').trim();
+  for(const art of [limpa(artista), '']){
+    try{
+      const r = await Promise.race([ ccChamar({ letras:{ titulo: limpa(titulo), artista: art } }), new Promise(ok=>setTimeout(()=>ok(null), 15000)) ]);
+      if(r && r.achou && Array.isArray(r.estrofes) && r.estrofes.length) return r;
+    }catch(e){ return null; }   // função antiga ou o site bloqueou: segue só com o Cifra Club
+    if(!art) break;
+  }
+  return null;
 }
 const lviNormPalavra = w=>String(w||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
 /* maior sequência de palavras em comum (na ordem) entre a linha do Letras e um trecho da cifra → pares [i, k] */
@@ -1174,14 +1180,22 @@ function lviLcsPares(a, b){
 function lviJuntarComLetras(textoCifra, estrofes){
   const rows = lviTextoParaLinhas(textoCifra);
   const W = [], soAcordes = [];   // W: palavras da cifra com os acordes; soAcordes: linhas só de acordes (intro, solo, final)
-  let rotulo = '';
+  let rotulo = '', linhaN = 0;
+  const ehSolo = t=>/^(intro|introdu|solo|instrumental|interl|final|ponte|passagem)/i.test(t || '');
   rows.forEach(r=>{
     if(r.type === 'label'){ rotulo = lvVezesDoRotulo(r.text).nome; return; }
-    if(r.type === 'chords'){ if(r.chords.length) soAcordes.push({ pos: W.length, rotulo, chords: r.chords }); return; }
+    if(r.type === 'chords'){
+      if(!r.chords.length) return;
+      const rot = ehSolo(rotulo) ? rotulo : '', ant = soAcordes[soAcordes.length - 1];
+      if(ant && ant.pos === W.length && ant.rotulo === rot) ant.linhas.push(r.chords);   // solo de várias linhas = um bloco só
+      else soAcordes.push({ pos: W.length, rotulo: rot, linhas: [r.chords] });
+      return;
+    }
     if(r.type !== 'lyric' || !(r.text||'').trim()) return;
     const pal = []; const re = /\S+/g; let m;
-    while((m = re.exec(r.text))) pal.push({ n: lviNormPalavra(m[0]), ini: m.index, fim: m.index + m[0].length, chords: [], rotulo });
+    while((m = re.exec(r.text))) pal.push({ n: lviNormPalavra(m[0]), ini: m.index, fim: m.index + m[0].length, chords: [], rotulo, linha: linhaN });
     if(!pal.length) return;
+    linhaN++;
     (r.chords||[]).forEach(c=>{
       const w = pal.find(p=>c.idx >= p.ini && c.idx < p.fim) || pal.find(p=>p.ini >= c.idx) || pal[pal.length-1];
       w.chords.push({ name: c.name, off: Math.max(0, c.idx - w.ini) });
@@ -1216,21 +1230,36 @@ function lviJuntarComLetras(textoCifra, estrofes){
       });
       ptr = ult + 1;
       fimDaEstrofe[e] = Math.max(fimDaEstrofe[e] ?? -1, ult);
-      if(melhor.pares.length < ln.length * 0.8) revisar.push(linha.trim());
-    } else revisar.push(linha.trim());
-    return { text: linha, chords };
-  }));
+      /* verso que no Cifra Club está em duas linhas: quebra no mesmo lugar */
+      const cortes = [];
+      for(let x = 1; x < melhor.pares.length; x++){
+        const [, k1] = melhor.pares[x-1], [i2, k2] = melhor.pares[x];
+        if(k2 === k1 + 1 && W[melhor.j + k2].linha !== W[melhor.j + k1].linha) cortes.push(pal[i2].ini);   // só onde a cifra segue direto para a linha de baixo
+      }
+      const partes = [];
+      let ini = 0;
+      cortes.concat([linha.length]).forEach(fim=>{
+        const t = linha.slice(ini, fim), sem = t.length - t.trimStart().length;
+        partes.push({ text: t.trim(), chords: chords.filter(c=>c.idx >= ini && (c.idx < fim || fim === linha.length)).map(c=>({ name:c.name, idx: Math.max(0, c.idx - ini - sem) })) });
+        ini = fim;
+      });
+      if(melhor.pares.length < ln.length * 0.8) partes.forEach(p=>revisar.push(p.text));
+      return partes.filter(p=>p.text);
+    }
+    revisar.push(linha.trim());
+    return [{ text: linha, chords }];
+  }).flat());
   if(!total || achadas / total < 0.55) return null;   // letra diferente demais: não é a mesma música (ou é outra versão)
   /* monta o texto: intro → estrofes (com solo/instrumental onde estavam na cifra) → final */
   const linhaTxt = r=>(r.chords.length ? [lviLinhaDeAcordes(r.chords)] : []).concat([r.text]);
-  const acordesTxt = s=>s.chords.map(c=>c.name).join('   ');
+  const acordesTxt = s=>s.linhas.map(ch=>ch.map(c=>c.name).join('   ')).join('\n');
   const out = [];
   let ultimoRot = null;
   soAcordes.filter(s=>s.pos === 0).forEach(s=>{
     if(s.rotulo !== ultimoRot) out.push('[' + (s.rotulo || 'Intro') + ']');
     ultimoRot = s.rotulo; out.push(acordesTxt(s));
   });
-  if(out.length) out.push('');
+  if(out.length) out.push('--');
   const meio = soAcordes.filter(s=>s.pos > 0 && s.pos < W.length), usados = new Set();
   saida.forEach((est, e)=>{
     if(refraoVotos[e] > 0) out.push('[Refrão]');
@@ -1271,7 +1300,7 @@ const LVI_DEUS = { jesus:'Jesus', deus:'Deus', senhor:'Senhor', cristo:'Cristo',
 /* nomes próprios e títulos que podem ou não vir com maiúscula: ficam como vieram */
 const LVI_MANTER = new Set(('israel sião siao jerusalém jerusalem belém belem calvário calvario gólgota golgota jordão jordao canaã canaa egito galileia nazaré nazare betel sinai horebe moriá jericó jerico babilônia ' +
   'maria josé jose davi abraão abraao isaque jacó jaco moisés moises elias eliseu paulo pedro joão joao saulo daniel josué josue gideão gideao sansão sansao salomão salomao ezequiel isaías isaias jó rute ester noé noe adão adao eva lázaro lazaro golias faraó farao ' +
-  'rei reis pai filho cordeiro salvador santo santíssimo criador redentor consolador verbo leão leao rocha noivo amado mestre pastor aleluia hosana amém amem glória gloria majestade soberano onipotente').split(' '));
+  'rei reis pai filho cordeiro salvador santo santíssimo criador redentor consolador verbo leão leao rocha noivo amado mestre pastor aleluia hosana amém amem glória gloria majestade soberano onipotente juiz seu sua seus suas lhe céu ceu').split(' '));
 const LVI_VERSO_MAX = 48;
 function lviCorrigirLinha(r){
   let text = String(r.text || ''), chords = (r.chords || []).map(c=>({ name:c.name, idx:c.idx }));
@@ -1309,7 +1338,8 @@ function lviCorrigirLinha(r){
   let corte = -1, dist = 1e9;
   for(let k = 1; k < text.length - 1; k++){
     if(text[k] !== ' ') continue;
-    const d = Math.abs(k - meio) - (/[,;:!?]/.test(text[k-1]) ? 15 : 0);
+    const longe = Math.abs(k - meio);
+    const d = longe - (/[,;:!?]/.test(text[k-1]) && longe <= text.length * 0.2 ? 15 : 0);   // vírgula perto do meio é o melhor corte
     if(d < dist){ dist = d; corte = k; }
   }
   if(corte < 12 || text.length - corte < 12) return [linha];

@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.1', itens: [
+    'Letras ligado: a letra do Letras com os acordes do Cifra Club, quebrando os versos onde a cifra quebra',
+    'Solo e final de várias linhas viram um bloco só; Suas, Juiz e Céu ficam como vieram'
+  ]},
   { versao: 'v7.0', itens: [
     'Cifra Club: a letra vem do Letras (ordem e frases certas) com os acordes do Cifra Club; a música é criada e abre direto',
     'Drive: escolheu o PDF, a música é criada e abre direto (sem a tela de Nova música)',
