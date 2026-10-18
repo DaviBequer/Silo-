@@ -9,7 +9,7 @@ function lmPartes(src){
   (src && src.conteudo || '').split('\n').forEach(raw=>{
     const t = raw.trim();
     const m = t.match(/^\[(.+)\]$/);
-    if(m){ atual = { nome: m[1].trim(), linhas: [] }; partes.push(atual); return; }
+    if(m){ const r = lvVezesDoRotulo(m[1]); atual = { nome: r.nome, vezes: r.vezes, linhas: [] }; partes.push(atual); return; }   // "Refrão | 2x" = Refrão, 2 vezes
     if(/^-{1,3}$/.test(t)) return;   // marcadores de slide/linha/coluna: o medley põe os dele
     if(!atual){ if(!t) return; atual = { nome: 'Início', linhas: [] }; partes.push(atual); }
     atual.linhas.push(raw.replace(/\s+$/,''));
@@ -32,7 +32,7 @@ function lmTomTexto(cfg){ return cfg && cfg.tom ? (cfg.menor ? lvRelativoMenor(c
 function lmLouvor(id){ return state.louvores.find(l=>l.id===id); }
 
 /* ---------- monta o texto do medley ----------
-   Cada música começa com [♪ Nome — Tom G]. A mesma parte seguida vira "Refrão 2x";
+   Cada música começa com [♪ Nome — Tom G]. A mesma parte seguida vira "Refrão | 2x";
    a parte que volta mais tarde na mesma música vira [Repete - Refrão] (nos slides a letra aparece de novo). */
 function lmGerarTexto(md){
   const linhas = [];
@@ -44,7 +44,7 @@ function lmGerarTexto(md){
     while(i+n < seq.length && seq[i+n].id === s.id && seq[i+n].parte === s.parte) n++;
     i += n;
     const src = lmLouvor(s.id);
-    const parte = lmPartes(src).find(p=>p.nome === s.parte);
+    const parte = lmPartes(src).find(p=>p.nome === lvVezesDoRotulo(s.parte).nome);
     if(!parte) continue;   // a parte saiu da música original
     const cfg = (md.musicas || []).find(m=>m.id === s.id) || {};
     if(s.id !== musicaAtual){
@@ -53,10 +53,10 @@ function lmGerarTexto(md){
       linhas.push(`[♪ ${(src.titulo||'Sem título').replace(/[\[\]]/g,'')}${tomTxt ? ' — Tom ' + tomTxt : ''}]`);
       musicaAtual = s.id; ditas = new Set();
     } else linhas.push('--');
-    const vezes = n > 1 ? ' ' + n + 'x' : '';
-    if(ditas.has(parte.nome)){ linhas.push(`[Repete - ${parte.nome}${vezes}]`); continue; }
+    const vezes = n * (parte.vezes || 1);
+    if(ditas.has(parte.nome)){ linhas.push('[' + lvRotuloComVezes('Repete - ' + parte.nome, vezes) + ']'); continue; }
     ditas.add(parte.nome);
-    linhas.push(`[${parte.nome}${vezes}]`);
+    linhas.push('[' + lvRotuloComVezes(parte.nome, vezes) + ']');
     let texto = parte.linhas.join('\n');
     const pcDe = lvPc(src.tomOriginal), pcPara = lvPc(cfg.tom);
     if(pcDe !== -1 && pcPara !== -1){

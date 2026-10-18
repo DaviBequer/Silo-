@@ -648,6 +648,46 @@ function lvQuebrarSlides(texto){
   fecha();
   return out.join('\n');
 }
+/* Parte cantada mais de uma vez seguida: "[Primeira Parte | 2x]", "[Repete - Refrão | 3x]".
+   Também entende o jeito antigo ("Refrão 2x", "Refrão (2x)", "Refrão x2") */
+function lvVezesDoRotulo(rotulo){
+  const t = String(rotulo||'').trim();
+  const m = /^(.*?)\s*\|?\s*[(\[]?\s*(?:(\d+)\s*[xX×]|[xX×]\s*(\d+))\s*[)\]]?$/.exec(t);
+  if(m && m[1].trim()) return { nome: m[1].replace(/\s*[|\-–:]\s*$/,'').trim(), vezes: Math.max(1, Number(m[2]||m[3])||1) };
+  return { nome: t, vezes: 1 };
+}
+function lvRotuloComVezes(nome, vezes){ return nome + (vezes > 1 ? ' | ' + vezes + 'x' : ''); }
+/* deixa o texto no padrão: "[Nome | 2x]", "[Repete - Nome | 2x]"; e o "Repete" logo depois da mesma parte
+   vira vezes dela ("[Refrão]…[Repete - Refrão]" → "[Refrão | 2x]") */
+function lvNormalizarVezes(texto){
+  const linhas = String(texto||'').split('\n'), out = [];
+  const ehSep = t=>!t || t==='-' || t==='--' || t==='---';
+  let ultimo = null;   // última parte com letra: { idx no out, nome, vezes }
+  for(let i = 0; i < linhas.length; i++){
+    const t = linhas[i].trim();
+    const m = /^\[(.+)\]$/.exec(t);
+    if(!m || /^♪/.test(m[1])){ if(m) ultimo = null; out.push(linhas[i]); continue; }
+    const { nome, vezes } = lvVezesDoRotulo(m[1]);
+    const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(nome);
+    if(rep){
+      const alvo = rep[1].trim();
+      let j = i + 1; while(j < linhas.length && ehSep(linhas[j].trim())) j++;
+      const semLetra = j >= linhas.length || /^\[.+\]$/.test(linhas[j].trim());
+      if(semLetra && ultimo && ultimo.nome.toLowerCase() === alvo.toLowerCase()){
+        while(out.length > ultimo.idx + 1 && ehSep(out[out.length-1].trim())) out.pop();
+        ultimo.vezes += vezes;
+        out[ultimo.idx] = '[' + lvRotuloComVezes(ultimo.nome, ultimo.vezes) + ']';
+        continue;
+      }
+      out.push('[' + lvRotuloComVezes('Repete - ' + alvo, vezes) + ']');
+      ultimo = null;
+      continue;
+    }
+    out.push('[' + lvRotuloComVezes(nome, vezes) + ']');
+    ultimo = { idx: out.length - 1, nome, vezes };
+  }
+  return out.join('\n');
+}
 function lvParseContent(conteudo){
   const rawLines = (conteudo||'').split('\n');
   const items = [];
@@ -700,13 +740,15 @@ function lvParseContent(conteudo){
   /* "[Repete - Refrão]" sem letra: nos slides, repete a letra do bloco original */
   const expandidos = [];
   let originais = [];
-  const semVezes = t=>String(t||'').trim().toLowerCase().replace(/\s*\(?\d+\s*x\)?$/,'');   // "Refrão 2x" = "Refrão"
+  const semVezes = t=>lvVezesDoRotulo(t).nome.toLowerCase();   // "Refrão | 2x" = "Refrão"
   slides.forEach(s=>{
     if(/^♪/.test(s.label||'')){ originais = []; return; }   // medley: começou outra música, o "Repete" vale só dentro dela
-    const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(s.label||'');
+    const { nome, vezes } = lvVezesDoRotulo(s.label);
+    s.vezes = vezes;   // "2x" no canto do slide
+    const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(nome);
     if(rep && !s.lines.length){
       const alvo = semVezes(rep[1]);
-      expandidos.push(...originais.filter(o=>semVezes(o.label)===alvo).map(o=>({ label:o.label, lines:o.lines.slice() })));
+      expandidos.push(...originais.filter(o=>semVezes(o.label)===alvo).map(o=>({ label:o.label, lines:o.lines.slice(), vezes })));
       return;
     }
     originais.push(s);
@@ -1044,7 +1086,7 @@ function lvMontarPdf(l){
       ensureSpace(lineH*1.6);
       if(doc.setCharSpace) doc.setCharSpace(0);
       doc.setFillColor(118,124,133);
-      const label = it.label.toUpperCase();
+      const rv = lvVezesDoRotulo(it.label), label = rv.nome.toUpperCase() + (rv.vezes > 1 ? ' | ' + rv.vezes + 'x' : '');
       doc.setFont('helvetica','bold');
       doc.setFontSize(fontSize-2);
       const textW = doc.getTextWidth(label);
@@ -1147,6 +1189,7 @@ function renderLouvorSlidePreview(){
     const lyricText = s.lines.join('\n');
     el.style.alignItems = 'center';
     el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${pt(l.slideTextoTamanho)};text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lvEsc(lyricText).replace(/\n/g,'<br>')}</div>`;
+    if(s.vezes > 1) el.insertAdjacentHTML('beforeend', `<span class="lv-slide-vezes" style="font-size:${pt(LV_SLIDE_VEZES_PT)}">${s.vezes}x</span>`);
   }
 }
 function lvSlideNav(delta){
@@ -1160,6 +1203,7 @@ function lvSlideNav(delta){
 const LV_SLIDE_FONTE = 'Arial';
 const LV_SLIDE_FUNDO = '#020617';
 const LV_SLIDE_ARTISTA_PT = 22;
+const LV_SLIDE_VEZES_PT = 26;   // "2x" no canto de cima, à direita
 /* gerador de slides (~470 KB) só é baixado quando for usado */
 const LV_PPTXGEN = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
 async function exportarLouvorSlides(){
@@ -1196,6 +1240,7 @@ async function lvMontarSlides(l){
     slide.background = { color: fundo };
     const lyricText = s.lines.join('\n');
     slide.addText(lyricText, { x:0.6,y:0.6,w:12.1,h:6.3, fontFace:LV_SLIDE_FONTE, fontSize:l.slideTextoTamanho, bold:true, color:'FFFFFF', align:'center', valign:'middle', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
+    if(s.vezes > 1) slide.addText(s.vezes + 'x', { x:11.55,y:0.3,w:1.45,h:0.7, shape: pres.ShapeType ? pres.ShapeType.roundRect : 'roundRect', rectRadius:0.35, line:{ color:'FFFFFF', width:1.5 }, fontFace:LV_SLIDE_FONTE, fontSize:LV_SLIDE_VEZES_PT, bold:true, color:'FFFFFF', align:'center', valign:'middle', margin:0 });
   });
 
   const nomePartesSlides = [l.artista, l.titulo||'Sem título'].filter(Boolean);

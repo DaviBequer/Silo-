@@ -1708,7 +1708,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 /* slides: prévia igual ao arquivo (.pptx) — Arial, mesmo fundo e mesma escala */
 .lv-slides-nav{display:flex;align-items:center;justify-content:center;gap:var(--s3);margin-bottom:var(--s3)}
 .lv-slides-nav span{min-width:50px;text-align:center;font-size:12px;font-weight:700;color:var(--text-dim)}
-.lv-slide-preview{container-type:inline-size;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 var(--s3);padding:5% 0;border-radius:var(--radius-md);background:#020617;font-family:Arial,Helvetica,sans-serif;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.lv-slide-preview{position:relative;container-type:inline-size;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 var(--s3);padding:5% 0;border-radius:var(--radius-md);background:#020617;font-family:Arial,Helvetica,sans-serif;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.lv-slide-vezes{position:absolute;top:4%;right:2.5%;width:10.9%;height:9.33%;display:flex;align-items:center;justify-content:center;border:calc(1.5 / 960 * 100cqw) solid #fff;border-radius:999px;color:#fff;font-weight:700;line-height:1}
 .lv-slide-preview > div{width:100%;padding:0 4.5cqw;animation:surgir .35s var(--mola)}
 .lv-slide-title,.lv-slide-lyric,.lv-slide-artist{max-width:100%;font-family:Arial,Helvetica,sans-serif;letter-spacing:normal}
 .lv-slide-title{color:#fff;font-size:5.5vw;font-weight:700}

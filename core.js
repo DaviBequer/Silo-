@@ -348,6 +348,12 @@ async function carregarDaNuvem(){
       if(!state.pontoFechado) state.pontoFechado = {};
       if(!state.credoVistaCategoriasCustom) state.credoVistaCategoriasCustom = [];
       if(!state.louvores) state.louvores = [];
+      /* partes repetidas no padrão "[Refrão | 2x]" (o "Repete" logo depois da mesma parte vira vezes dela) */
+      if(typeof lvNormalizarVezes === 'function') state.louvores.forEach(l=>{
+        if(typeof l.conteudo !== 'string') return;
+        const n = lvNormalizarVezes(l.conteudo);
+        if(n !== l.conteudo){ l.conteudo = n; precisaSalvar = true; }
+      });
       // migração: garantir campos novos
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; if(!c.assinaturas) c.assinaturas=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });

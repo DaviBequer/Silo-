@@ -206,20 +206,31 @@ function lviLinhaCurta(c){
 const LVI_ROTULOS = /^(intro|introdu[cç][aã]o|refr[aã]o|pr[eé][-\s]?refr[aã]o|coro|ponte|solo|final|interl[uú]dio|instrumental|tag|(primeira|segunda|terceira|quarta|quinta|sexta|s[eé]tima|oitava|nona|d[eé]cima)\s+parte|parte\s*\d+|estrofe\s*\d*|verso\s*\d*|repete\b.*)$/i;
 /* linhas que não são da música: créditos, ficha técnica, site, número de página...
    ("Composição de: Fulano", "Letra: ...", "Gravadora: ...", "cifraclub.com.br", "Página 1 de 2") */
-const LVI_INFO_CAMPO = /^(afina[cç][aã]o|composi[cç][aã]o(\s+de)?|compositor(a|es)?|autor(a|es)?|letra(\s+e\s+m[uú]sica)?|m[uú]sica(\s+e\s+letra)?|vers[aã]o(\s+de)?|int[eé]rprete|cantor(a)?|ministra[cç][aã]o|gravadora|selo|[aá]lbum|cd|produ[cç][aã]o|produtor|arranjo|arranjador|capotraste|capo|tom|bpm|andamento|ritmo|cifra(\s+por)?|cifrad[ao]\s+por|enviad[ao]\s+por|colabora[cç][aã]o|revis[aã]o|revisad[ao]\s+por|transcri[cç][aã]o|editora|direitos|copyright|ano)\s*:/i;
+const LVI_INFO_CAMPO = /^(afina[cç][aã]o|composi[cç][aã]o(\s+de)?|compositor(a|es)?|autor(a|es)?|letra(\s+e\s+m[uú]sica)?|m[uú]sica(\s+e\s+letra)?|vers[aã]o(\s+de)?|int[eé]rprete|cantor(a)?|ministra[cç][aã]o|gravadora|selo|[aá]lbum|cd|produ[cç][aã]o|produtor|arranjo|arranjador|capotraste|capo|tom|bpm|andamento|ritmo|cifra(\s+por)?|cifrad[ao]\s+por|enviad[ao]\s+por|colabora[cç][aã]o|revis[aã]o|revisad[ao]\s+por|transcri[cç][aã]o|editora|direitos|copyright|ano|participa[cç][aã]o(\s+especial)?|part\.|feat\.?|minist[eé]rio|banda|grupo|vocal|vozes|voz|back\s*vocal|bateria|baixo|guitarra|teclado|viol[aã]o|reg[eê]ncia|dire[cç][aã]o|grava[cç][aã]o|gravad[ao]\s+por|original|autoria|fonte|site|contato|instagram|youtube)\s*:/i;
+/* sem dois-pontos: "Composta por Fulano", "feat. Fulano", "Part. especial ...", "Versão de ...", "(Ao vivo)" */
+const LVI_INFO_POR = /^((compost|escrit|gravad|interpretad|cifrad|enviad|arranjad|produzid|revisad|transcrit|adaptad|traduzid)[ao]s?\s+(por|de)\s+\S|(feat|ft|part)\.\s*\S|feat\s+\S|participa[cç][aã]o(\s+especial)?\s+(de\s+)?\S|vers[aã]o\s+(de|original)\b|\(?\s*ao\s+vivo\s*\)?$|\(?\s*(playback|ac[uú]stico)\s*\)?$)/i;
+/* avisos e botões do site que vêm junto (Cifra Club e parecidos), e @ / e-mail */
+const LVI_INFO_SITE = /^(essa informa[cç][aã]o est[aá] errada|nos avise|simplificar cifra|auto\s*rolagem|exibir (cifra|acordes|tablatura)|ver v[ií]deo|videoaula|v[ií]deo\s*aula|cifra\s*:\s*principal|baixar cifra|imprimir cifra|meus acordes|instagram|youtube|spotify|facebook|tiktok|whatsapp|contato|e-?mail\s*:|@[\w.]{3,}$|[\w.+-]+@[\w-]+\.[\w.]+$)/i;
 function lviEhInfoNaoLetra(texto){
   const t = String(texto||'').trim();
   if(!t) return false;
   if(LVI_INFO_CAMPO.test(t)) return true;
   if(/^composi[cç][aã]o\s+de\s+\S/i.test(t)) return true;                       // "Composição de Fulano" sem dois-pontos
+  if(LVI_INFO_POR.test(t) || LVI_INFO_SITE.test(t)) return true;
   if(/^(©|\(c\)|todos os direitos)/i.test(t)) return true;
   if(/(https?:\/\/|www\.|\.com(\.br)?\b|cifraclub|cifras\.com|letras\.mus|ultimate-guitar)/i.test(t)) return true;
   if(/^p[aá]g(ina)?\.?\s*\d+(\s*(de|\/)\s*\d+)?$/i.test(t) || /^\d+\s*\/\s*\d+$/.test(t)) return true;
   return false;
 }
 function lviRotuloDe(text){
-  const t = (text||'').replace(/^[\s\-–—─_=\[\](){}:.]+|[\s\-–—─_=\[\](){}:.]+$/g, '');
-  return t && LVI_ROTULOS.test(t) ? t : null;
+  const { nome, vezes } = lvVezesDoRotulo(String(text||'').replace(/[\s:.]+$/, ''));   // "Refrão (2x)" = Refrão, 2 vezes
+  const t = nome.replace(/^[\s\-–—─_=\[\](){}:.]+|[\s\-–—─_=\[\](){}:.]+$/g, '');
+  return t && LVI_ROTULOS.test(t) ? lvRotuloComVezes(t, vezes) : null;
+}
+/* linha só com "2x", "(3x)", "x2": vale para a parte de cima */
+function lviVezesSozinho(texto){
+  const m = /^[(\[]?\s*(?:(\d+)\s*[xX×]|[xX×]\s*(\d+))\s*[)\]]?$/.exec(String(texto||'').trim());
+  return m ? Math.max(1, Number(m[1]||m[2])||1) : 0;
 }
 function lviLinhasDosClusters(clusters, tolerante){
   const gaps = [];
@@ -239,6 +250,7 @@ function lviLinhasDosClusters(clusters, tolerante){
     const mTom = /^tom\s*:\s*([A-G](?:#|b)?)\s*(m(?![a-z]))?/i.exec(textoLinha);
     if(mTom){ pre.push({ type:'tom', raiz:mTom[1].charAt(0).toUpperCase()+mTom[1].slice(1), menor:!!mTom[2] }); return; }
     if(lviEhInfoNaoLetra(textoLinha)) return;
+    if(lviVezesSozinho(textoLinha) > 1){ pre.push({ type:'vezes', n: lviVezesSozinho(textoLinha) }); return; }
     if(!tolerante && !corpoComecou && fCorpo && c.f >= fCorpo*1.3 && nGrandes < 2){
       pre.push({ type: nGrandes===0 ? 'title' : 'artist', text:textoLinha }); nGrandes++; return;
     }
@@ -321,6 +333,37 @@ const LVI_ORD = ['Primeira parte','Segunda parte','Terceira parte','Quarta parte
 function lviAssinatura(s){
   return JSON.stringify(s.lines.map(l=> l.type==='marca' ? ['m', l.text] : l.type==='chords' ? ['c', l.chords.map(c=>c.name)] : ['l', (l.text||'').replace(/\s+$/,''), (l.chords||[]).map(c=>[c.name, c.idx])]));
 }
+/* parte cantada de novo logo em seguida vira "| 2x" na mesma parte:
+   letra escrita 2 vezes dentro do bloco, o mesmo bloco duas vezes, ou "[Repete - X]" logo depois de X */
+function lviJuntarSeguidas(secoes){
+  const ass = ls=>lviAssinatura({ lines: ls });
+  secoes.forEach(s=>{
+    const ls = s.lines || [];
+    for(const k of [3, 2]){
+      if(ls.length < 2*k || ls.length % k) continue;
+      const tam = ls.length / k, pedaco = ls.slice(0, tam);
+      if(!pedaco.some(l=>l.type==='lyric' && (l.text||'').trim())) continue;
+      const a = ass(pedaco);
+      let igual = true;
+      for(let x = 1; x < k && igual; x++) igual = ass(ls.slice(x*tam, (x+1)*tam)) === a;
+      if(igual){ s.lines = pedaco; s.vezes = Math.max(s.vezes||1, k); break; }   // "2x" escrito vale mais que contar
+    }
+  });
+  for(let i = secoes.length - 1; i > 0; i--){
+    const s = secoes[i], p = secoes[i-1];
+    if(!p.lines || !p.lines.length || p.repeatOf || /^repete/i.test(p.name||'')) continue;
+    const rep = /^repete\b\s*[-–:]?\s*(.*)$/i.exec(s.name||'');
+    const alvo = s.repeatOf ? s.repeatOf.name : rep ? rep[1].trim() : null;
+    const mesmo = (s.lines && s.lines.length && !s.repeatOf) ? ass(s.lines) === ass(p.lines)
+      : !!(alvo && p.name && alvo.toLowerCase() === p.name.toLowerCase());
+    if(!mesmo) continue;
+    p.vezes = (p.vezes||1) + (s.vezes||1);
+    if(!p.name && s.name && !rep) p.name = s.name;
+    if(s.colunaDepois) p.colunaDepois = true;
+    secoes.splice(i, 1);
+  }
+  return secoes;
+}
 function lviMontaBlocos(rows){
   let titulo = '', cur = null, n = 0;
   const secoes = [];
@@ -330,7 +373,13 @@ function lviMontaBlocos(rows){
     if(r.type==='title'){ titulo = r.text; return; }
     if(r.type==='artist'){ artistaCab = r.text; return; }
     if(r.type==='tom'){ tomCab = r; return; }
-    if(r.type==='label'){ abre(r.text); if(/^repete/i.test(r.text)) cur = null; return; }
+    if(r.type==='label'){
+      const { nome, vezes } = lvVezesDoRotulo(r.text);
+      abre(nome); cur.vezes = vezes;
+      if(/^repete/i.test(nome)) cur = null;
+      return;
+    }
+    if(r.type==='vezes'){ const alvo = cur || secoes[secoes.length-1]; if(alvo) alvo.vezes = r.n; return; }
     if(r.type==='blank' || r.type==='rule'){ if(cur && cur.lines.length) cur = null; return; }
     if(r.type==='marca'){
       /* "---" fecha o bloco e a próxima parte vai para a outra coluna; "-" no meio do bloco fica onde está */
@@ -343,6 +392,23 @@ function lviMontaBlocos(rows){
     if(!cur) abre('');
     cur.lines.push(r);
   });
+  /* "Artista - Música - Tom" no topo da cifra */
+  const t = titulo.replace(/\s*-\s*[A-G6][#b]?m?\s*$/, '').trim();
+  let artista = '', nome = t;
+  const partes = t.split(/\s+-\s+/);
+  if(partes.length===2 && !/^\d/.test(partes[0])){ artista = partes[0]; nome = partes[1]; }
+  const km = /[-–]\s*([A-G][#b]?)(m?)\s*$/.exec(titulo);
+  /* cabeçalho com título e artista separados (Cifra Club) vale mais que adivinhar pelo "Artista - Música" */
+  if(artistaCab){ nome = titulo.trim(); artista = artistaCab; }
+  const tom = tomCab ? tomCab.raiz : (km ? km[1] : null);
+  const menor = tomCab ? tomCab.menor : !!(km && km[2]);
+  /* nome do cantor (ou "Cantor - Música") repetido no meio do texto não é letra */
+  const norm = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const fora = new Set(artista ? [norm(artista), norm(artista + ' ' + nome), norm(nome + ' ' + artista)] : []);
+  fora.delete('');
+  secoes.forEach(s=>{ if(fora.size) s.lines = s.lines.filter(l=>!(l.type==='lyric' && !(l.chords||[]).length && fora.has(norm(l.text)))); });
+  for(let i = secoes.length - 1; i >= 0; i--) if(!secoes[i].lines.length && !secoes[i].name) secoes.splice(i, 1);
+  lviJuntarSeguidas(secoes);
   const vistos = [];
   secoes.forEach(s=>{
     if(!s.lines.length) return;
@@ -358,16 +424,6 @@ function lviMontaBlocos(rows){
     s.name = n < LVI_ORD.length ? LVI_ORD[n] : 'Parte '+(n+1);
     n++;
   });
-  /* "Artista - Música - Tom" no topo da cifra */
-  const t = titulo.replace(/\s*-\s*[A-G6][#b]?m?\s*$/, '').trim();
-  let artista = '', nome = t;
-  const partes = t.split(/\s+-\s+/);
-  if(partes.length===2 && !/^\d/.test(partes[0])){ artista = partes[0]; nome = partes[1]; }
-  const km = /[-–]\s*([A-G][#b]?)(m?)\s*$/.exec(titulo);
-  /* cabeçalho com título e artista separados (Cifra Club) vale mais que adivinhar pelo "Artista - Música" */
-  if(artistaCab){ nome = titulo.trim(); artista = artistaCab; }
-  const tom = tomCab ? tomCab.raiz : (km ? km[1] : null);
-  const menor = tomCab ? tomCab.menor : !!(km && km[2]);
   return { titulo:nome, artista, secoes, tom, menor, temCabecalho: !!artistaCab };
 }
 /* nome do arquivo "Cantor - Música - Tom" */
@@ -404,8 +460,8 @@ function lviBlocosParaTexto(secoes){
   secoes = secoes.filter(s=>s.repeatOf || s.lines.length || /^repete/i.test(s.name||''));
   secoes.forEach((s,i)=>{
     if(i > 0) linhas.push(secoes[i-1].colunaDepois ? '---' : '--');
-    if(s.repeatOf){ linhas.push('['+(s.label || ('Repete - '+s.repeatOf.name))+']'); return; }
-    linhas.push('['+(s.name||'Parte')+']');
+    if(s.repeatOf){ linhas.push('['+lvRotuloComVezes('Repete - '+s.repeatOf.name, s.vezes||1)+']'); return; }
+    linhas.push('['+lvRotuloComVezes(s.name||'Parte', s.vezes||1)+']');
     s.lines.forEach(r=>{
       if(r.type==='marca'){ linhas.push(r.text); return; }
       if(r.type==='chords'){ linhas.push(r.chords.map(c=>c.name).join('   ')); return; }
@@ -453,11 +509,16 @@ PARTES
 - Nomes em português, só a primeira letra maiúscula em cada palavra: Intro, Primeira Parte, Segunda Parte, Terceira Parte, Quarta Parte..., Pré-Refrão, Refrão, Ponte, Solo, Final.
 - Se o arquivo já nomeia as partes, use esses nomes (ajustando para o padrão acima).
 - Se não nomeia: a estrofe que volta igual várias vezes é o Refrão; as estrofes diferentes são Primeira Parte, Segunda Parte, e assim por diante, na ordem.
-- Quando uma parte volta igual (mesma letra) depois da primeira vez, não escreva a letra de novo: crie uma parte com "repete" = nome da parte repetida e "linhas" vazio. Se o arquivo indica "2x", "3x", ponha em "vezes".
-- Se a primeira vez da parte já está marcada para cantar 2x, mantenha a letra uma vez e não crie repetição.
+- Parte cantada mais de uma vez SEGUIDA (o arquivo marca "2x", "(3x)", "x2", ou a mesma letra aparece duas vezes em seguida): escreva a letra uma vez só e ponha o número em "vezes" (2 para 2x). Não crie repetição para isso.
+- Quando uma parte volta igual (mesma letra) mais tarde, depois de outra parte: não escreva a letra de novo; crie uma parte com "repete" = nome da parte repetida, "linhas" vazio e "vezes" = quantas vezes ela é cantada nessa volta.
+- O nome da parte não leva o "2x": isso vai só em "vezes".
 
 O QUE IGNORAR
-- Cabeçalho (título, artista, "Tom: X"), créditos, compositor, nome do site, links, número de página, data/hora de impressão, afinação, tablatura, "Cifra Club", rodapés.
+- Tudo o que não é letra nem acorde, esteja no topo, no meio ou no fim: cabeçalho (título, artista, "Tom: X"), créditos, compositor, cantor, intérprete, ministério, participação (feat.), versão, gravadora, álbum, arranjo, "composto por", "enviado por", "cifrado por", nome do site, links, @ de redes sociais, número de página, data/hora de impressão, afinação, capotraste, tablatura, "Cifra Club", avisos do site, rodapés.
+- Na dúvida se uma linha é letra cantada ou informação sobre a música, só mantenha se ela for cantada.
+
+MANTER SEMPRE
+- Intro / Introdução com os acordes dela (é parte da música). Se o arquivo escreve "Introdução", o nome da parte é "Introdução"; se escreve "Intro", é "Intro".
 
 DADOS DA MÚSICA
 - titulo: só o nome da música.
@@ -476,7 +537,7 @@ const LVI_IA_ESQUEMA = {
     secoes:{ type:'array', items:{ type:'object', properties:{
       nome:{ type:'string', description:'Nome da parte, ex.: Primeira Parte, Refrão' },
       repete:{ type:'string', description:'Nome da parte anterior que esta parte só repete. Vazio quando a parte tem letra própria.' },
-      vezes:{ type:'integer', description:'Quantas vezes (2 para 2x). 1 quando não indicado.' },
+      vezes:{ type:'integer', description:'Quantas vezes a parte é cantada seguida (2 para 2x). 1 quando é uma vez só.' },
       linhas:{ type:'array', items:{ type:'string' }, description:'Linhas da parte em ChordPro. Vazio quando "repete" está preenchido.' }
     }, required:['nome','repete','vezes','linhas'] } }
   },
@@ -625,12 +686,15 @@ function lviCorrigirAcordesPeloPdf(linhas, simples){
 function lviMontarDaIA(j, fi, simples){
   let secoes = (j && j.secoes || []).map(s=>{
     const rep = String(s.repete||'').trim();
-    if(rep){ const v = Math.max(1, Number(s.vezes)||1); return { repeatOf:{ name: rep }, label: 'Repete - ' + rep + (v > 1 ? ' ' + v + 'x' : ''), lines:[] }; }
-    const lines = (s.linhas||[]).filter(x=>String(x).trim() !== '--').map(lviLinhaChordPro);
+    const v = Math.max(1, Number(s.vezes)||1);
+    if(rep){ const r = lvVezesDoRotulo(rep); return { repeatOf:{ name: r.nome }, vezes: Math.max(v, r.vezes), lines:[] }; }
+    const lines = (s.linhas||[]).filter(x=>String(x).trim() !== '--' && !(!/\[/.test(x) && lviEhInfoNaoLetra(x))).map(lviLinhaChordPro);   // crédito que a IA deixou passar
     lviCorrigirAcordesPeloPdf(lines, simples);
     while(lines.length && lines[lines.length-1].type==='lyric' && !lines[lines.length-1].text.trim()) lines.pop();   // linhas vazias no fim da parte
-    return { name: String(s.nome||'Parte').trim(), lines };
+    const nm = lvVezesDoRotulo(String(s.nome||'Parte'));
+    return { name: nm.nome || 'Parte', vezes: Math.max(v, nm.vezes), lines };
   });
+  lviJuntarSeguidas(secoes);
   secoes = secoes.filter(s=>s.repeatOf || s.lines.some(r=>r.type!=='lyric' || r.text.trim()));
   if(!secoes.some(s=>!s.repeatOf)) throw new Error('a IA não encontrou a letra');
   const km = /^([A-G][#b]?)(m?)/.exec(String(j.tom||'').trim());
@@ -789,6 +853,7 @@ function lviTextoParaLinhas(conteudo){
     if(it.type==='slidebreak'){ rows.push({ type:'marca', text:'-' }); return; }
     if(it.type==='pair'){
       if(!(it.chordLine||'').trim() && lviEhInfoNaoLetra(it.lyricLine)) return;   // créditos/site: não é da música
+      if(!(it.chordLine||'').trim() && lviVezesSozinho(it.lyricLine) > 1){ rows.push({ type:'vezes', n: lviVezesSozinho(it.lyricLine) }); return; }
       const acordes = lvAcordesDaLinha(it.chordLine);
       if(!(it.lyricLine||'').trim()) rows.push({ type:'chords', chords: acordes.map(c=>({ name:c.name })) });
       else rows.push({ type:'lyric', text: it.lyricLine.replace(/\s+$/,''), chords: acordes.map(c=>({ name:c.name, idx: Math.min(c.idx, it.lyricLine.length) })) });
@@ -898,7 +963,8 @@ function lvSincronizarFolha(e){
     if(!novo || !antigo){ renderLouvorPdfPreview(); return; }
     linhas[si] = '['+novo+']';
     /* "[Repete - Antigo]" acompanha o novo nome */
-    linhas = linhas.map(x=>{ const m = /^\s*\[\s*repete\s*[-–:]?\s*(.+)\]\s*$/i.exec(x); return (m && m[1].trim().toLowerCase()===antigo.trim().toLowerCase()) ? '[Repete - '+novo+']' : x; });
+    const nomeAntigo = lvVezesDoRotulo(antigo).nome.toLowerCase(), nomeNovo = lvVezesDoRotulo(novo).nome;
+    linhas = linhas.map(x=>{ const m = /^\s*\[\s*repete\s*[-–:]?\s*(.+)\]\s*$/i.exec(x); if(!m) return x; const r = lvVezesDoRotulo(m[1]); return r.nome.toLowerCase()===nomeAntigo ? '['+lvRotuloComVezes('Repete - '+nomeNovo, r.vezes)+']' : x; });
   } else {
     const linha = alvo.closest && alvo.closest('.lv-linha');
     if(!linha) return;

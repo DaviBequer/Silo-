@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.8', itens: [
+    'Louvor: parte repetida seguida vira "Primeira Parte | 2x" e "Repete - Refrão | 3x" (a importação percebe sozinha; músicas antigas ajustadas)',
+    'Slides: "2x", "3x" no canto de cima à direita',
+    'Importação: Intro/Introdução fica; compositor, cantor, créditos e avisos de site no meio da letra saem'
+  ]},
   { versao: 'v6.7', itens: [
     'Visual: botões só com ícone, sem caixinha; Drive e WhatsApp com as logos; resumo sobre a foto com bordas que somem',
     'Finanças: próximos 3 meses no topo (sobra e acumulado); compra falada no Pix/débito fica registrada com categoria',
