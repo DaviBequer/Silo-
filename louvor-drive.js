@@ -355,7 +355,7 @@ async function driveUsarPdf(id){
     const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
     if(!res.ok) throw new Error('Drive: ' + res.status);
     const file = new File([await res.blob()], f.name, { type:'application/pdf' });
-    const ev = { target:{ files:[file], value:'' } };
+    const ev = { target:{ files:[file], value:'' }, fiel: true, origem: { tipo:'drive', id: f.id, nome: f.name, link: f.webViewLink || '', pasta: f.pasta || '' } };   // do Drive: já está no formato certo
     if(drivePdfModo === 'atual') lvImportarNoAtual(ev);
     else {
       /* música nova: cria já e abre a tela dela; a importação preenche ali mesmo (sem a tela Nova música) */

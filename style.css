@@ -1376,6 +1376,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 .ia-linha input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
 .ia-linha .btn{min-height:40px;height:40px;flex-shrink:0}
 .ia-remover{margin-top:8px;padding:0;border:none;background:none;color:var(--danger);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.ia-topo .ia-remover{margin:0;color:var(--text-dim)}
+.ia-instrucoes{display:block;width:100%;min-height:180px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--text);font:inherit;font-size:14px;line-height:1.5;resize:vertical}
+.ia-instrucoes:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
 .aparelho-conectado{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
 .aparelho-nota{margin-bottom:10px;font-size:12.5px;line-height:1.45;color:var(--text-dim)}
 .pin-config .btn{align-self:flex-start;margin-top:4px}
@@ -1517,6 +1520,33 @@ body:has(.modal-overlay.active){overflow:hidden}
 .drive-whats:active{transform:scale(.9)}
 .drive-whats-dica{text-align:center;border-bottom:none}
 .cu-drive{display:flex;align-items:center;justify-content:center;gap:6px}
+/* Comparar com o original (louvor-comparar.js): celular = abas Original / No app; computador = lado a lado */
+.lvcmp{padding-bottom:var(--s5)}
+.lvcmp-abas{margin-bottom:var(--s2)}
+.lvcmp-grade[data-aba="original"] .lvcmp-app,.lvcmp-grade[data-aba="app"] .lvcmp-orig{display:none}
+@media (min-width:1024px){
+  .lvcmp-abas{display:none}
+  .lvcmp-grade{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);align-items:start}
+  .lvcmp-grade .lvcmp-col{display:block !important}
+}
+.lvcmp-tit{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:var(--s3) 0 8px}
+.lvcmp-tit b{font-size:15px;font-weight:600}
+.lvcmp-tit small{color:var(--text-dim);font-size:12.5px}
+.lvcmp-tit a,.lvcmp-tit .lvi-rel-ok{margin-left:auto}
+.lvcmp-tit a{color:var(--gold);font-size:12.5px;font-weight:600;text-decoration:none}
+.lvcmp-texto{padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card);font-family:'Courier New',monospace;font-size:13px;line-height:1.45;overflow-x:auto}
+.lvcmp-l{min-height:1.45em;white-space:pre}
+.lvcmp-l.ac{color:var(--gold);font-weight:700}
+.lvcmp-l.rot{margin-top:6px;color:var(--text-dim);font-weight:700}
+.lvcmp-l.marca{color:var(--text-faint)}
+.lvcmp-l.olhar{border-radius:3px;background:#fff1a8;color:#3a3000}
+.lvcmp-letras{font-family:var(--font-body);font-size:14px}
+.lvcmp-letras .lvcmp-l{white-space:normal}
+.lvcmp-estrofe+.lvcmp-estrofe{margin-top:12px}
+.lvcmp-pdf canvas{display:block;margin-bottom:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.lvcmp-img{display:block;width:100%;border-radius:6px}
+.cc-passos .drive-linha:last-of-type{border-bottom:none}
+.cc-passos-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .dpdf-tipos{margin:10px 0 4px}
 .dpdf-item{display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--line)}
 .dpdf-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}

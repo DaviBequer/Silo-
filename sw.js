@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v72';
-const APP_VERSION = '7.1';
+const CACHE_NAME = 'siloe-cache-v73';
+const APP_VERSION = '7.2';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -16,6 +16,7 @@ const ARQUIVOS = [
   `./louvor.js?v=${APP_VERSION}`,
   `./louvor-extra.js?v=${APP_VERSION}`,
   `./louvor-medley.js?v=${APP_VERSION}`,
+  `./louvor-comparar.js?v=${APP_VERSION}`,
   `./louvor-culto.js?v=${APP_VERSION}`,
   `./louvor-drive.js?v=${APP_VERSION}`,
   `./fatura-pdf.js?v=${APP_VERSION}`,

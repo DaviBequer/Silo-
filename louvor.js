@@ -187,6 +187,7 @@ function abrirLouvorDetalhe(id){
   const l = getLouvorAtual();
   if(!l) return;
   if(typeof lvAtualizarBtnDrive === 'function') setTimeout(lvAtualizarBtnDrive, 0);
+  if(typeof lvAtualizarBtnComparar === 'function') lvAtualizarBtnComparar(l);
   ensureLouvorConfig(l);
   if(typeof lvAoAbrirDetalhe==='function') lvAoAbrirDetalhe(l);
   document.getElementById('louvorDetalheHeaderTitle').textContent = l.titulo || 'Sem título';
@@ -1020,6 +1021,12 @@ function lvMontarPdf(l){
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4', orientation: l.pdfOrientacao==='paisagem' ? 'landscape' : 'portrait' });
+  /* as letras do PDF (Helvetica/Courier) não têm "♪" e outros símbolos: um só desses estraga a linha inteira
+     ("&j S A L M O S" no medley). Tira o que a letra não tem antes de escrever */
+  const seguro = t=>Array.isArray(t) ? t.map(seguro) : String(t ?? '').replace(/♪\s*/g, '').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[^\x00-\xFF—–•…]/g, '');
+  const escrever = doc.text.bind(doc), medir = doc.getTextWidth.bind(doc);
+  doc.text = (t, ...resto)=>escrever(seguro(t), ...resto);
+  doc.getTextWidth = t=>medir(seguro(t));
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const marginX = l.pdfMargem;

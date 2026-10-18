@@ -223,9 +223,30 @@ function lviEhInfoNaoLetra(texto){
   return false;
 }
 function lviRotuloDe(text){
-  const { nome, vezes } = lvVezesDoRotulo(String(text||'').replace(/[\s:.]+$/, ''));   // "Refrão (2x)" = Refrão, 2 vezes
+  const { nome, vezes } = lvVezesDoRotulo(lviDesespacar(String(text||'')).replace(/[\s:.]+$/, ''));   // "Refrão (2x)" = Refrão, 2 vezes
   const t = nome.replace(/^[\s\-–—─_=\[\](){}:.]+|[\s\-–—─_=\[\](){}:.]+$/g, '');
+  /* nome conhecido (também com letras espaçadas que viraram "PRIMEIRAPARTE"): sai no padrão, "Primeira Parte" */
+  const junto = lviNormPalavra(t);
+  const achar = k=>LVI_ROTULOS_NOMES.find(n=>lviNormPalavra(n) === k);
+  if(junto && achar(junto)) return lvRotuloComVezes(achar(junto), vezes);
+  const rep = /^repete(.+)$/.exec(junto);
+  if(rep){
+    const alvo = achar(rep[1]) || LVI_ROTULOS_NOMES.find(n=>rep[1].startsWith(lviNormPalavra(n)));   // "REPETE-REFRÃO" + "FINAL" grudados
+    if(alvo) return lvRotuloComVezes('Repete - ' + alvo, vezes);
+  }
   return t && LVI_ROTULOS.test(t) ? lvRotuloComVezes(t, vezes) : null;
+}
+const LVI_ROTULOS_NOMES = ['Intro','Introdução','Refrão','Pré-Refrão','Coro','Ponte','Solo','Final','Interlúdio','Instrumental',
+  'Primeira Parte','Segunda Parte','Terceira Parte','Quarta Parte','Quinta Parte','Sexta Parte','Sétima Parte','Oitava Parte','Nona Parte','Décima Parte'];
+/* PDF com letras espaçadas (os rótulos do próprio Siloé): "I N T R O" → "INTRO", "R E F R Ã O | 2 x" → "REFRÃO | 2x".
+   Só quando quase tudo é letra solta — letra de música normal não muda */
+function lviDesespacar(t){
+  const partes = String(t||'').split('|');
+  return partes.map(p=>{
+    const tok = p.trim().split(/\s+/).filter(Boolean);
+    if(tok.length < 3 || tok.filter(x=>x.length === 1).length < tok.length * 0.7 || tok.some(x=>x.length > 2)) return p.trim();
+    return tok.join('');
+  }).join(' | ');
 }
 /* linha só com "2x", "(3x)", "x2": vale para a parte de cima */
 function lviVezesSozinho(texto){
@@ -413,10 +434,10 @@ function lviMontaBlocos(rows){
   fora.delete('');
   secoes.forEach(s=>{ if(fora.size) s.lines = s.lines.filter(l=>!(l.type==='lyric' && !(l.chords||[]).length && fora.has(norm(l.text)))); });
   for(let i = secoes.length - 1; i >= 0; i--) if(!secoes[i].lines.length && !secoes[i].name) secoes.splice(i, 1);
-  lviJuntarSeguidas(secoes);
+  if(!lviModoFiel) lviJuntarSeguidas(secoes);   // modo fiel (arquivo do Drive já certo): nada de juntar/repetir
   const vistos = [];
   secoes.forEach(s=>{
-    if(!s.lines.length) return;
+    if(!s.lines.length || lviModoFiel) return;
     const k = lviAssinatura(s);
     const igual = vistos.find(v=>v.k===k);
     if(igual){ s.repeatOf = igual.s; if(s.name && !igual.s.name) igual.s.name = s.name; return; }
@@ -481,8 +502,8 @@ function lviBlocosParaTexto(secoes){
       if(r.type==='marca'){ linhas.push(r.text); return; }
       if(r.type==='chords'){ linhas.push(r.chords.map(c=>c.name).join('   ')); return; }
       if(!(r.text||'').trim()){ if(r.chords && r.chords.length) linhas.push(lviLinhaDeAcordes(r.chords)); linhas.push(' '); return; }
-      lviCorrigirLinha(r).forEach(c=>{   // maiúsculas, pontos, espaços e verso grande demais
-        if(c.chords.length) linhas.push(lviLinhaDeAcordes(c.chords));
+      (lviModoFiel ? [r] : lviCorrigirLinha(r)).forEach(c=>{   // maiúsculas, pontos, espaços e verso grande demais
+        if((c.chords||[]).length) linhas.push(lviLinhaDeAcordes(c.chords));
         linhas.push(c.text);
       });
     });
@@ -504,6 +525,14 @@ function lviTomSiloe(raiz, menor){
 const LVI_IA_MODELO = 'gemini-3.8-flash';
 const LVI_IA_MODELOS_RESERVA = ['gemini-3.6-flash'];   // grátis também: usado quando o principal está "com muita procura"
 const LVI_IA_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+/* modo fiel: arquivo do Drive que já está no formato certo → importa como está (sem corrigir, juntar nem repetir) */
+let lviModoFiel = false;
+const LVI_IA_FIEL = '\n\nMODO FIEL (vale mais que tudo acima): este arquivo já está do jeito certo, feito pelo próprio usuário. Copie exatamente: os mesmos nomes de partes (com 2x, Repete e o que mais estiver escrito), a mesma ordem, as mesmas quebras de linha, os mesmos acordes no mesmo lugar e o texto como está. Não junte nem separe versos, não crie nem tire Repete, não renomeie partes, não corrija maiúsculas nem pontuação. Só ignore cabeçalho, créditos e rodapé.';
+/* regras da IA + as instruções do Davi (Dados do App) + o modo fiel quando for o caso */
+function lviRegrasIA(){
+  const dele = typeof iaInstrucoes === 'function' ? iaInstrucoes() : '';
+  return LVI_IA_REGRAS + (dele ? '\n\nINSTRUÇÕES DO USUÁRIO (valem mais que as regras acima):\n' + dele : '') + (lviModoFiel ? LVI_IA_FIEL : '');
+}
 function lviChaveIA(){ return String((typeof state!=='undefined' && state && state.iaGoogleChave) || '').trim(); }
 const LVI_IA_REGRAS = `Você organiza cifras de louvor (músicas cristãs em português) para um app de igreja.
 Leia a cifra recebida e devolva o JSON pedido, seguindo estas regras:
@@ -712,7 +741,7 @@ function lviMontarDaIA(j, fi, simples){
     const nm = lvVezesDoRotulo(String(s.nome||'Parte'));
     return { name: nm.nome || 'Parte', vezes: Math.max(v, nm.vezes), lines };
   });
-  lviJuntarSeguidas(secoes);
+  if(!lviModoFiel) lviJuntarSeguidas(secoes);
   secoes = secoes.filter(s=>s.repeatOf || s.lines.some(r=>r.type!=='lyric' || r.text.trim()));
   if(!secoes.some(s=>!s.repeatOf)) throw new Error('a IA não encontrou a letra');
   const km = /^([A-G][#b]?)(m?)/.exec(String(j.tom||'').trim());
@@ -748,7 +777,7 @@ async function lviImportarComIA(file, status){
   const arquivo = lviEhImagem(file)
     ? { type:'image', data: b64, mime_type: lviTipoImagem(file) }
     : { type:'document', data: b64, mime_type: 'application/pdf' };
-  const j = await lviPerguntarIA([ arquivo, { type:'text', text: LVI_IA_REGRAS + '\n\nNome do arquivo: ' + (file.name||'') } ], status);
+  const j = await lviPerguntarIA([ arquivo, { type:'text', text: lviRegrasIA() + '\n\nNome do arquivo: ' + (file.name||'') } ], status);
   status('Separando as partes (estrofes, refrão…)', 'partes');
   const simples = await simplesP;
   const linhasPdf = simples ? lviTextoParaLinhas(simples.conteudo).filter(r=>r.type==='lyric') : null;
@@ -842,6 +871,8 @@ async function lvImportarNoAtual(ev){
   window.lviUltimo = { file, onde: 'atual' };
   const prog = lviProgresso('lvEdicaoImportStatus');
   prog.arquivo(file);
+  lviModoFiel = !!ev.fiel;   // do Drive: o arquivo já está certo, importa como está
+  if(lviModoFiel && prog.log) prog.log('Modo fiel: arquivo do Drive, importado do jeito que está (sem reorganizar)');
   try{
     const r = await lviImportar(file, prog);
     l.conteudo = lvQuebrarSlides(r.conteudo);
@@ -850,15 +881,18 @@ async function lvImportarNoAtual(ev){
     if(!(l.artista||'').trim() && r.artista) l.artista = r.artista;
     if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; }
     if(ev.novo && r.categoria) l.categoria = r.categoria;
-    const olhar = lviCorrigirTextos((r.conferencia && r.conferencia.olhar) || []);
+    const olhar = lviModoFiel ? ((r.conferencia && r.conferencia.olhar) || []) : lviCorrigirTextos((r.conferencia && r.conferencia.olhar) || []);
     if(olhar.length) l.revisar = olhar; else delete l.revisar;
+    /* o original fica guardado para comparar (o arquivo no aparelho; de onde veio, nos dados) */
+    l.origem = Object.assign({ tipo: 'arquivo', nome: file.name }, ev.origem || {}, { quando: Date.now() });
+    lvOriginalGuardar(l.id, file);
     persist();
     abrirLouvorDetalhe(l.id);
     lviLogResultado(prog, r);
-    prog.fim(lviRelatorioHtml(r, '<button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button>'));
+    prog.fim(lviRelatorioHtml(r, '<button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button>'));
   }catch(e){
     prog.erro('Não consegui ler: '+(e && e.message ? e.message : e)+(ev.novo ? '. A música ficou criada: cole a cifra ou importe de novo.' : ''));
-  }
+  }finally{ lviModoFiel = false; }
 }
 function lviFecharRelatorio(){ const l = getLouvorAtual(); const el = document.getElementById('lvEdicaoImportStatus'); if(el) el.innerHTML = ''; if(l) lvMostrarRevisar(l); }
 
@@ -919,7 +953,7 @@ async function lvOrganizarBlocos(){
     const btn = document.getElementById('lvBtnOrganizar'); btn?.classList.add('carregando');
     showToast('Organizando com IA…');
     try{
-      const j = await lviPerguntarIA([{ type:'text', text: LVI_IA_REGRAS + '\n\nA cifra abaixo já está em texto (acordes na linha de cima da letra; partes entre colchetes). Organize:\n\n' + antes }]);
+      const j = await lviPerguntarIA([{ type:'text', text: lviRegrasIA() + '\n\nA cifra abaixo já está em texto (acordes na linha de cima da letra; partes entre colchetes). Organize:\n\n' + antes }]);
       const r = lviMontarDaIA(j, null);
       novo = r.conteudo; blocos = r.blocos; reps = (novo.match(/^\[Repete/gm) || []).length;
     }catch(e){ aviso = (e && e.message) || 'erro'; }
@@ -1093,7 +1127,10 @@ async function ccBuscar(){
    e os acordes do Cifra Club são encaixados palavra por palavra. */
 async function ccImportar(url){
   const el = document.getElementById('ccLista');
-  el.innerHTML = '<div class="voz-carregando">Lendo a cifra…</div>';
+  /* cada passo aparece na tela (Cifra Club, Letras, junção) e o resumo fica na música depois */
+  const passos = [];
+  const passo = (txt, tipo)=>{ passos.push({ txt, tipo: tipo || '' }); el.innerHTML = passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join(''); };
+  passo('Lendo a cifra no Cifra Club…');
   try{
     const c = await ccChamar({ url });
     if(!c || !(c.texto||'').trim()) throw new Error('a página não tem cifra');
@@ -1102,23 +1139,31 @@ async function ccImportar(url){
       const num = (/(\d+)/.exec(c.artista || '') || /\/(\d+)-/.exec(url) || [])[1];
       c.artista = 'Harpa Cristã' + (num ? ' - ' + num : '');
     }
+    passos.pop(); passo(`✓ Cifra Club: "${c.titulo}" · ${c.artista}${c.tom ? ' · tom ' + c.tom : ''}`, 'ok');
     /* "[Intro] F#m  E5" → "[Intro]" + linha de acordes; tablaturas (E|---3---|) e "Parte 1 de 4" saem */
     let texto = c.texto.split('\n').flatMap(l=>{
-      if(/^\s*[eEBGDAb]\|[-\d|hpbrvx\/\\~().\s]*$/.test(l) || /^\s*Parte \d+ de \d+\s*$/i.test(l)) return [];
+      if(/^\s*[eEBGDAb]\|[-\d|hpbrvx\/\~().\s]*$/.test(l) || /^\s*Parte \d+ de \d+\s*$/i.test(l)) return [];
       const m = /^\s*(\[[^\]]+\])\s+(\S.*)$/.exec(l);
       return m ? [m[1], m[2]] : [l];
     }).join('\n').replace(/\n{3,}/g, '\n\n');
-    el.innerHTML = '<div class="voz-carregando">Buscando a letra no Letras…</div>';
+    passo('Buscando a letra no Letras…');
     let revisar = [], comLetras = false;
     const lt = await lviLetrasDe(c.titulo, c.artista);
-    if(lt){
+    passos.pop();
+    if(lt.achou){
+      passo(`✓ Letras: "${lt.titulo}" · ${lt.artista} · ${lt.estrofes.length} estrofes`, 'ok');
       const j = lviJuntarComLetras(texto, lt.estrofes);
-      if(j){ texto = j.texto; revisar = j.revisar; comLetras = true; }
-    }
+      if(j){
+        texto = j.texto; revisar = j.revisar; comLetras = true;
+        const versos = lt.estrofes.reduce((s, e)=>s + e.length, 0);
+        passo(`✓ Letra do Letras com os acordes do Cifra Club · ${versos - j.revisar.length} de ${versos} versos batidos${j.revisar.length ? ' · ' + j.revisar.length + ' para conferir (amarelo)' : ''}`, 'ok');
+      } else passo('A letra do Letras é diferente da cifra (outra versão): fiquei só com o Cifra Club', 'erro');
+    } else passo('Letras: ' + lt.motivo + ' — fiquei só com o Cifra Club', 'erro');
     const doc = lviMontaBlocos(lviTextoParaLinhas(texto));
     const harpa = lviEhHarpa(c.artista + ' ' + c.titulo);
-    if(harpa) lviPadraoHarpa(doc.secoes);
+    if(harpa){ lviPadraoHarpa(doc.secoes); passo('✓ Hino da Harpa: Refrão depois de cada parte', 'ok'); }
     const conteudo = lvQuebrarSlides(lviBlocosParaTexto(doc.secoes));
+    passo(`✓ ${doc.secoes.filter(s=>!s.repeatOf).length} partes · texto arrumado (maiúsculas, pontos, versos)`, 'ok');
     const m = /^([A-G](?:#|b)?)(m?)$/.exec(c.tom || '');
     const tom = m ? lviTomSiloe(m[1], !!m[2]) : null;
     closeModal('modalCifraClub');
@@ -1130,10 +1175,18 @@ async function ccImportar(url){
     const textos = new Set(conteudo.split('\n').map(x=>x.trim()));
     l.revisar = lviCorrigirTextos(revisar).filter(t=>textos.has(t));
     if(!l.revisar.length) delete l.revisar;
+    /* o original (texto do Cifra Club e a letra do Letras) fica guardado para comparar */
+    l.origem = { tipo:'cifraclub', url, texto: c.texto, letras: lt.achou ? { url: lt.url, titulo: lt.titulo, estrofes: lt.estrofes } : null, quando: Date.now() };
     persist();
-    if(typeof lvMostrarRevisar === 'function') lvMostrarRevisar(l);
+    lvAtualizarBtnComparar(l);
+    const st = document.getElementById('lvEdicaoImportStatus');
+    if(st){
+      st.classList.remove('erro');
+      st.innerHTML = `<div class="cc-passos">${passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
+        <div class="cc-passos-acoes"><button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button></div></div>`;
+    }
     showToast(comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club');
-  }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
+  }catch(e){ passo(e.message, 'erro'); }
 }
 /* cria a música já com os dados e abre a tela dela (Cifra Club e Drive) */
 function lvCriarDireto(d){
@@ -1151,18 +1204,20 @@ function lvCriarDireto(d){
 }
 
 /* ---------- Letras: busca pela função "cifra" do Supabase ---------- */
+/* → { achou:true, titulo, artista, url, estrofes } ou { achou:false, motivo } (o motivo aparece nos passos da importação) */
 async function lviLetrasDe(titulo, artista){
-  if(!(titulo||'').trim()) return null;
+  if(!(titulo||'').trim()) return { achou:false, motivo:'música sem título' };
   /* a busca do Letras não acha nada com "-" no texto: limpa; se não achar com o cantor, tenta só pelo título */
   const limpa = s=>String(s||'').replace(/[-–—|()]/g, ' ').replace(/\s+/g, ' ').trim();
   for(const art of [limpa(artista), '']){
     try{
-      const r = await Promise.race([ ccChamar({ letras:{ titulo: limpa(titulo), artista: art } }), new Promise(ok=>setTimeout(()=>ok(null), 15000)) ]);
+      const r = await Promise.race([ ccChamar({ letras:{ titulo: limpa(titulo), artista: art } }), new Promise(ok=>setTimeout(()=>ok('demorou'), 15000)) ]);
+      if(r === 'demorou') return { achou:false, motivo:'o Letras demorou demais para responder' };
       if(r && r.achou && Array.isArray(r.estrofes) && r.estrofes.length) return r;
-    }catch(e){ return null; }   // função antiga ou o site bloqueou: segue só com o Cifra Club
+    }catch(e){ return { achou:false, motivo:'não consegui acessar (' + ((e && e.message) || 'erro') + ')' }; }
     if(!art) break;
   }
-  return null;
+  return { achou:false, motivo:'essa música não está no Letras' };
 }
 const lviNormPalavra = w=>String(w||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
 /* maior sequência de palavras em comum (na ordem) entre a linha do Letras e um trecho da cifra → pares [i, k] */
@@ -1278,6 +1333,7 @@ function lviJuntarComLetras(textoCifra, estrofes){
 /* ---------- Harpa Cristã: Parte → Refrão → Parte → Repete - Refrão → … ---------- */
 function lviEhHarpa(texto){ return /harpa/i.test(String(texto||'')); }
 function lviPadraoHarpa(secoes){
+  if(lviModoFiel) return secoes;
   const ehRefrao = s=>/^(refr|coro)/i.test(s.name||'');
   const refrao = secoes.find(s=>!s.repeatOf && ehRefrao(s) && s.lines.some(l=>l.type==='lyric'));
   if(!refrao) return secoes;

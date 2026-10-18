@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.2', itens: [
+    'Instruções para a IA (Dados do App → Recursos): a IA segue as suas regras ao importar e organizar',
+    'Drive: importa exatamente como está, sem reorganizar; nomes das partes dos PDFs do app lidos certinho',
+    'Comparar com o original: o PDF do Drive ou o Cifra Club + Letras ao lado do que ficou no app',
+    'Cifra Club mostra cada passo (Cifra Club, Letras, versos batidos); medley sem caracteres estranhos no PDF'
+  ]},
   { versao: 'v7.1', itens: [
     'Letras ligado: a letra do Letras com os acordes do Cifra Club, quebrando os versos onde a cifra quebra',
     'Solo e final de várias linhas viram um bloco só; Suas, Juiz e Céu ficam como vieram'
@@ -427,6 +433,33 @@ function atualizarStatusIA(){
   if(inp) inp.placeholder = tem ? 'Chave salva ✓' : 'Cole a chave aqui';
   const rem = document.getElementById('iaRemover'); if(rem) rem.style.display = tem ? '' : 'none';
   if(typeof atualizarStatusDrive === 'function') atualizarStatusDrive();
+  const ins = document.getElementById('iaInstrucoesInput');
+  if(ins && document.activeElement !== ins) ins.value = iaInstrucoes();
+}
+/* instruções do Davi para a IA do Louvor (state.iaInstrucoes; vazio = as do padrão abaixo) */
+const IA_INSTRUCOES_PADRAO = [
+  'Nomes das partes: Intro, Primeira Parte, Segunda Parte, Terceira Parte, Pré-Refrão, Refrão, Ponte, Solo, Final.',
+  'Parte cantada mais de uma vez seguida: escreva a letra uma vez e ponha as vezes (2x, 3x).',
+  'Hino da Harpa Cristã: depois de cada parte vem o Refrão (Primeira Parte, Refrão, Segunda Parte, Repete - Refrão...).',
+  'Jesus, Deus, Senhor, Cristo, Espírito Santo e os pronomes de Deus (Ele, Tu, Teu, Tua, Te, Ti, Contigo, Dele) sempre com maiúscula.',
+  'Início de cada verso com maiúscula; no meio do verso só nomes próprios com maiúscula.',
+  'Sem ponto final nem ponto no meio do verso.',
+  'Verso curto, como se canta (até umas 40 letras); verso longo com duas frases vira duas linhas.',
+  'Intro e Introdução ficam sempre, com os acordes.',
+  'Nada de créditos, compositor, cantor, site ou rodapé no meio da letra.'
+].join('\n');
+function iaInstrucoes(){ return typeof state.iaInstrucoes === 'string' && state.iaInstrucoes.trim() ? state.iaInstrucoes : IA_INSTRUCOES_PADRAO; }
+function salvarIaInstrucoes(v){
+  v = String(v || '').trim();
+  state.iaInstrucoes = v && v !== IA_INSTRUCOES_PADRAO ? v : '';
+  persist();
+  showToast('Instruções da IA salvas');
+}
+function iaInstrucoesPadrao(){
+  state.iaInstrucoes = '';
+  persist();
+  const ins = document.getElementById('iaInstrucoesInput'); if(ins) ins.value = IA_INSTRUCOES_PADRAO;
+  showToast('Instruções no padrão');
 }
 function salvarChaveIA(){
   const inp = document.getElementById('iaChaveInput');
