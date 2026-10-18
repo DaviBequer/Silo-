@@ -198,7 +198,9 @@ function abrirLouvorDetalhe(id){
   renderLvCategoriaChips();
   atualizarLvTomBox();
   renderLvStatusBtn();
+  const pEd = document.getElementById('lvPanelEdicao'); if(pEd) pEd.dataset.modo = (l.conteudo||'').trim() ? 'folha' : 'texto';   // sem letra ainda: abre no texto para colar
   switchLouvorSubtab('edicao');
+  lvModoTexto(pEd ? pEd.dataset.modo === 'texto' : false);
   document.getElementById('pageLouvorDetalhe').classList.add('active');
   lvAtualizarEditor();
   if(typeof lvAtualizarBtnOrganizar==='function') lvAtualizarBtnOrganizar();
@@ -286,15 +288,27 @@ function excluirLouvorAtual(){
   });
 }
 
+/* aba Música = a folha (igual ao Visualizar), editável com um toque; o ícone de texto troca para o editor completo
+   (criar/apagar linhas, mexer nos acordes, "-", "--"). Música sem letra abre direto no texto. */
+function lvModoTexto(ligar){
+  const p = document.getElementById('lvPanelEdicao'); if(!p) return;
+  if(ligar === undefined) ligar = p.dataset.modo !== 'texto';
+  p.dataset.modo = ligar ? 'texto' : 'folha';
+  const b = document.getElementById('lvBtnModoTexto');
+  if(b){ const nome = ligar ? 'Voltar para a folha' : 'Editar como texto'; b.title = nome; b.setAttribute('aria-label', nome); b.setAttribute('aria-pressed', String(!!ligar)); }
+  if(ligar) lvAtualizarEditor(); else renderLouvorPdfPreview();
+}
 function switchLouvorSubtab(tab){
+  if(tab === 'pdf') tab = 'edicao';   // Visualizar e Edição viraram uma aba só
   document.querySelectorAll('.lv-subtab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
   document.querySelectorAll('.lv-panel').forEach(el=>el.classList.remove('active'));
   const conteudo = document.getElementById('louvorDetalheConteudo');
   if(conteudo) conteudo.scrollTop = 0;
-  if(tab==='edicao'){ document.getElementById('lvPanelEdicao').classList.add('active'); lvAtualizarEditor(); }
-  if(tab==='pdf'){
-    document.getElementById('lvPanelPdf').classList.add('active');
-    renderLouvorPdfPreview();
+  if(tab==='edicao'){
+    const p = document.getElementById('lvPanelEdicao');
+    p.classList.add('active');
+    lvAtualizarEditor();
+    if(p.dataset.modo !== 'texto') renderLouvorPdfPreview();
   }
   if(tab==='slides'){
     document.getElementById('lvPanelSlides').classList.add('active');
@@ -784,7 +798,7 @@ function lvAcordesDaLinha(chordLine){
   return out;
 }
 /* um par acorde+letra vira trechos: cada acorde fica em cima do pedaço da letra onde ele começa */
-function lvPairHtml(it, delta){
+function lvPairHtml(it, delta, olhar){
   const acordes = lvAcordesDaLinha(it.chordLine).map(c=>({ name: lvTransposeChord(c.name, delta), idx: c.idx }));
   const letra = it.lyricLine || '';
   const seg = (c, t, pad)=>`<span class="lv-seg"><span class="lv-c">${lvEsc(c)}</span><span class="lv-t${pad?' pad':''}">${lvEsc(t)}</span></span>`;
@@ -798,7 +812,8 @@ function lvPairHtml(it, delta){
     if(cs[0].idx > 0) html += seg('', letra.slice(0, cs[0].idx));
     cs.forEach((c, i)=>{ html += seg(c.name, letra.slice(c.idx, i+1<cs.length ? cs[i+1].idx : letra.length)); });
   }
-  return `<div class="lv-linha${acordes.length?'':' sem-acorde'}" data-ci="${it.chordIdx??''}" data-li="${it.lyricIdx??''}">${html}</div>`;
+  const conferir = olhar && letra.trim() && olhar.has(letra.trim()) ? ' olhar' : '';   // linha para conferir (amarelo, só na tela)
+  return `<div class="lv-linha${acordes.length?'':' sem-acorde'}${conferir}" data-ci="${it.chordIdx??''}" data-li="${it.lyricIdx??''}">${html}</div>`;
 }
 function setLvPdfOrientacao(v){
   const l = getLouvorAtual(); if(!l) return;
@@ -860,6 +875,7 @@ function renderLouvorPdfPreview(){
   document.getElementById('lvFonteSans')?.classList.toggle('active', l.pdfFonte==='sans');
 
   const delta = l.transpose || 0;
+  const olhar = new Set((l.revisar || []).map(t=>t.trim()));
   const { items } = lvParseContent(l.conteudo);
   let bodyHtml = '', nSecoes = 0, aberta = false, blocoHtml = '', blocoLinhas = 0;
   /* cada bloco (pílula + linhas) fica junto e separado do próximo por uma linha fina;
@@ -882,7 +898,7 @@ function renderLouvorPdfPreview(){
     }else if(it.type==='blank'){
       if(aberta) blocoHtml += `<div class="lv-sheet-blank"></div>`;
     }else if(it.type==='pair'){
-      abre(); blocoHtml += lvPairHtml(it, delta); blocoLinhas++;
+      abre(); blocoHtml += lvPairHtml(it, delta, olhar); blocoLinhas++;
     }
   });
   fecha();
@@ -958,6 +974,7 @@ function lvTelaCheia(ligar){
   const wrap = document.getElementById('lvPdfWrap');
   if(!wrap) return;
   wrap.classList.toggle('lv-tela-cheia', !!ligar);
+  if(window.lvEditandoFolha === !!ligar){ window.lvEditandoFolha = !ligar; renderLouvorPdfPreview(); }   // tela cheia = só ler (sem teclado ao tocar)
   document.body.style.overflow = ligar ? 'hidden' : '';
   try{
     if(ligar && wrap.requestFullscreen && !document.fullscreenElement) wrap.requestFullscreen().catch(()=>{});
@@ -1006,7 +1023,9 @@ document.addEventListener('fullscreenchange', ()=>{
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);
 });
-window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelPdf')?.classList.contains('active')) lvAjustarZoomFolha(); });
+/* a folha se ajusta à largura sempre que o espaço muda (abrir a música, girar o celular, trocar de modo) */
+if(window.ResizeObserver){ const _w = document.getElementById('lvPdfWrap'); let _larg = 0; if(_w) new ResizeObserver(()=>{ if(_w.clientWidth && _w.clientWidth !== _larg){ _larg = _w.clientWidth; lvAjustarZoomFolha(); } }).observe(_w); }   // só quando a largura muda
+window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelEdicao')?.classList.contains('active')) lvAjustarZoomFolha(); });
 function exportarLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;
   const r = lvMontarPdf(l);

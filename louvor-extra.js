@@ -976,8 +976,8 @@ async function lvOrganizarBlocos(){
 }
 
 /* ---------- edição direto na folha (aba Visualizar) ----------
-   O botão "Editar na folha" saiu (a aba Edição já faz isso); o modo fica sempre desligado. */
-window.lvEditandoFolha = false;
+   Edição e Visualizar viraram a aba Música: a folha fica editável (toque numa palavra, acorde, nome de parte, título). */
+window.lvEditandoFolha = true;   // a folha da aba Música é editável (desliga na tela cheia e na impressão)
 function lvAplicarEdicaoFolha(){
   const el = document.getElementById('lvPdfPreview'); if(!el) return;
   const on = !!window.lvEditandoFolha;

@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.3', itens: [
+    'Louvor: Edição e Visualizar viraram uma aba só, Música — a folha que você edita tocando (palavra, acorde, parte, título)',
+    'Ícone T abre o modo texto para mexer na estrutura; linhas para conferir aparecem em amarelo na folha'
+  ]},
   { versao: 'v7.2', itens: [
     'Instruções para a IA (Dados do App → Recursos): a IA segue as suas regras ao importar e organizar',
     'Drive: importa exatamente como está, sem reorganizar; nomes das partes dos PDFs do app lidos certinho',

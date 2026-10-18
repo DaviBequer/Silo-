@@ -1611,6 +1611,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-grau-alt{width:100%;padding:3px 2px;border:1px dashed var(--line);border-radius:6px;font-size:10.5px;font-weight:700;text-align:center;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv-page-sheet{display:flex;flex-direction:column;max-width:760px;min-height:min(1000px,calc(100vh - 220px));margin:0 auto var(--s3);padding:44px 56px 56px;border:1px solid var(--line);border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(28,25,23,.06),0 12px 32px rgba(28,25,23,.08)}
 @media(max-width:600px){ .lv-page-sheet{padding:24px 18px 32px} }
+#lvPanelEdicao[data-modo="folha"] .lv-page-sheet{min-height:0;max-width:none;margin-bottom:0;padding:4px 2px 0;border:none;background:none;box-shadow:none}
 .lv-page-top{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3);margin-bottom:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .lv-page-top-text{flex:1;min-width:0}
 .lv-title-input{width:100%;padding:0;border:none;background:none;color:var(--text);font-family:var(--font-title);font-size:24px;font-weight:800;outline:none}
@@ -1725,9 +1726,20 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-t{display:block;min-height:1.3em;line-height:calc(var(--lv-lh,1.5) * .87);white-space:pre}
 .lv-pdf-preview:not(.sans) .lv-c,.lv-pdf-preview:not(.sans) .lv-t{font-family:ui-monospace,'DejaVu Sans Mono',Menlo,Consolas,'Liberation Mono',monospace}
 .lv-pdf-preview.sans .lv-c,.lv-pdf-preview.sans .lv-t{font-family:'Inter',system-ui,sans-serif}
-.lv-pdf-preview:not(.editando) .lv-linha.sem-acorde .lv-c{display:none}
-.lv-pdf-preview.editando [contenteditable]{min-width:.6em;outline:1px dashed #c4cfe3;outline-offset:1px;cursor:text}
-.lv-pdf-preview.editando [contenteditable]:focus{outline:2px solid var(--gold);background:#f3f7ff}
+.lv-pdf-preview .lv-linha.sem-acorde .lv-c{display:none}   /* igual ao Visualizar também editando (acorde novo: modo texto) */
+.lv-pdf-preview.editando [contenteditable]{min-width:.6em;border-radius:2px;cursor:text}
+.lv-pdf-preview.editando [contenteditable]:hover{background:rgba(0,0,0,.04)}
+.lv-pdf-preview.editando [contenteditable]:focus{outline:2px solid var(--gold);outline-offset:1px;background:#f3f7ff}
+.lv-pdf-preview.editando .lv-linha.olhar{border-radius:3px;background:#fff1a8}
+/* aba Música: folha (padrão) ou texto (lvModoTexto) */
+#lvPanelEdicao[data-modo="folha"] .lv-editor-wrap,
+#lvPanelEdicao[data-modo="folha"] .lv-title-input,
+#lvPanelEdicao[data-modo="folha"] .lv-artist-input,
+#lvPanelEdicao[data-modo="texto"] .lv-pdf-wrap,
+#lvPanelEdicao[data-modo="texto"] .lv-config{display:none !important}
+#lvPanelEdicao .lv-barra{justify-content:flex-start}
+#lvPanelEdicao .lv-barra-dir{margin-left:auto}
+.lv-btn-texto[aria-pressed="true"]{border-color:var(--text);color:var(--text)}
 /* nome de cada música dentro do medley, na folha */
 .lv-sheet-musica{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 0 10px;padding-bottom:4px;border-bottom:1.5px solid #1d1d1f;break-after:avoid}
 .lv-sheet-musica b{font-family:'Nunito','Inter',sans-serif;font-size:calc(var(--lv-fs,11pt) * 1.15);font-weight:800;color:#1d1d1f}
