@@ -269,7 +269,7 @@ function renderPonto(){
     rows += `<div class="ponto-semana-grupo ${colapsada?'colapsada':''}">
       <div class="ponto-semana-head" onclick="toggleSemanaPonto('${chave}', ${colapsada})">
         <span>Semana ${wIdx+1} <small>${String(primeiroDia).padStart(2,'0')}–${String(ultimoDia).padStart(2,'0')}</small></span>
-        <button type="button" class="section-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <button type="button" class="section-toggle" title="Abrir ou fechar o dia" aria-label="Abrir ou fechar o dia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
       </div>
       <div class="ponto-semana-dias">${diasHtml}</div>
     </div>`;

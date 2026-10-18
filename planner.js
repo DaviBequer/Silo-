@@ -782,8 +782,8 @@ function renderCartaoTrackerList(){
         </div>
         <div class="ct-actions">
           <button class="btn-icon-sm${quitadasMostrarPorCartao[cartao.id]?' ativo':''}" onclick="toggleQuitadasCartao('${cartao.id}')" title="Ver quitadas" aria-label="Ver quitadas">${ICON_EYE}</button>
-          <button class="btn-icon-sm" onclick="openCartaoCardModal('${cartao.id}')">${ICON_EDIT}</button>
-          <button class="btn-icon-sm" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
+          <button class="btn-icon-sm" title="Editar cartão" aria-label="Editar cartão" onclick="openCartaoCardModal('${cartao.id}')">${ICON_EDIT}</button>
+          <button class="btn-icon-sm" title="Excluir cartão" aria-label="Excluir cartão" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
         </div>
       </div>
       <div class="ct-disponivel-lbl">Disponível</div>

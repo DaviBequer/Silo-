@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=6.8">
+<link rel="stylesheet" href="style.css?v=6.9">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">Nº 68</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="abrirImportExportModal()" style="cursor:pointer">Nº 69</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -81,9 +81,10 @@
         <span>Contas do mês</span><span class="resumo-btn-info" id="resumoContasAbertas"></span>
       </button>
     </div>
+    <button type="button" class="ico-btn resumo-tudo" id="btnFinTudo" onclick="finEssencialAlternar()" title="Mostrar tudo" aria-label="Mostrar tudo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
   </div>
 
-  <div class="section dg" id="secao-moradia" data-span="6" data-col="dir">
+  <div class="section dg fin-extra" id="secao-moradia" data-span="6" data-col="dir">
     <div class="section-head" onclick="toggleSecaoGasto('moradia')" style="cursor:pointer">
       <div class="section-title">Moradia</div>
       <button type="button" class="section-toggle" aria-label="Recolher ou abrir" onclick="event.stopPropagation();toggleSecaoGasto('moradia')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -93,7 +94,7 @@
     <div id="grid-moradia-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section dg" id="secao-assinatura" data-span="6" data-col="dir">
+  <div class="section dg fin-extra" id="secao-assinatura" data-span="6" data-col="dir">
     <div class="section-head" onclick="toggleSecaoGasto('assinatura')" style="cursor:pointer">
       <div class="section-title">Assinaturas</div>
       <button type="button" class="section-toggle" aria-label="Recolher ou abrir" onclick="event.stopPropagation();toggleSecaoGasto('assinatura')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -103,7 +104,7 @@
     <div id="grid-assinatura-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section dg" id="secao-fixo" data-span="6" data-col="dir">
+  <div class="section dg fin-extra" id="secao-fixo" data-span="6" data-col="dir">
     <div class="section-head" onclick="toggleSecaoGasto('fixo')" style="cursor:pointer">
       <div class="section-title">Fixos</div>
       <button type="button" class="section-toggle" aria-label="Recolher ou abrir" onclick="event.stopPropagation();toggleSecaoGasto('fixo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -113,7 +114,7 @@
     <div id="grid-fixo-arquivados" class="grid-arquivados"></div>
   </div>
 
-  <div class="section dg" id="secao-futuro" data-span="6" data-col="dir">
+  <div class="section dg fin-extra" id="secao-futuro" data-span="6" data-col="dir">
     <div class="section-head" onclick="toggleSecaoGasto('futuro')" style="cursor:pointer">
       <div class="section-title">Contas Futuras</div>
       <button type="button" class="section-toggle" aria-label="Recolher ou abrir" onclick="event.stopPropagation();toggleSecaoGasto('futuro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -127,7 +128,7 @@
   </div>
 
   <!-- GERAL: detalhes e projeção, depois das contas -->
-  <div class="card dg" data-span="12" data-col="dir">
+  <div class="card dg fin-extra" data-span="12" data-col="dir">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Fluxo Mensal</div><div style="display:flex;gap:4px"><button class="btn-icon-sm fluxo-meses-toggle" id="btnToggleFluxoMeses" onclick="toggleFluxoMeses()" title="Ver mais meses"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button></div></div>
     <div class="ponto-table-wrap fluxo-wrap" onscroll="this.classList.toggle('no-fim', this.scrollLeft + this.clientWidth >= this.scrollWidth - 4)">
       <table class="money-table">
@@ -137,7 +138,7 @@
     </div>
   </div>
 
-  <div class="card dg" id="cardAcumulado" data-span="8" data-col="dir">
+  <div class="card dg fin-extra" id="cardAcumulado" data-span="8" data-col="dir">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Projeção do saldo</div></div>
     <div class="pano-nav">
       <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)">◀</button>
@@ -147,13 +148,13 @@
     <div class="acum-timeline" id="acumTimelineWrap"></div>
   </div>
 
-  <button type="button" class="card dg atalho-card" data-span="4" data-col="esq" onclick="openSimuladorModal()">
+  <button type="button" class="card dg atalho-card fin-extra" data-span="4" data-col="esq" onclick="openSimuladorModal()">
     <span class="atalho-icone"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg></span>
     <span class="atalho-txt"><strong>Simular compra</strong><small>Veja como uma meta afeta seu orçamento</small></span>
     <svg class="atalho-seta" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
   </button>
 
-  <div class="card dg" id="cardOndeVai" data-span="12" data-col="esq">
+  <div class="card dg fin-extra" id="cardOndeVai" data-span="12" data-col="esq">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>Para onde vai o dinheiro</div></div>
     <div class="pano-nav">
       <button class="pano-nav-btn" onclick="ondeVaiMudarMes(-1)">◀</button>
@@ -256,8 +257,8 @@
 
   <div class="lv-fab-menu" id="lvFabMenu" onclick="lvFabMenu(false)">
     <div class="lv-fab-opcoes" onclick="event.stopPropagation()">
-      <button type="button" class="lv-fab-op so-drive" style="display:none" onclick="lvFabMenu(false);openLouvorForm();driveEscolherPdf('novo')"><span>Puxar do Drive</span><i><svg class="logo-marca" width="20" height="18" viewBox="0 0 87.3 78" aria-hidden="true"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg><i class="marca-seta">↓</i></i></button>
-      <button type="button" class="lv-fab-op" onclick="ccAbrir()"><span>Cifra Club</span><i class="cc-logo">CC</i></button>
+      <button type="button" class="lv-fab-op so-drive" style="display:none" onclick="lvFabMenu(false);openLouvorForm();driveEscolherPdf('novo')"><span>Puxar do Drive</span><i><svg class="logo-marca" width="20" height="18" viewBox="0 0 87.3 78" aria-hidden="true"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg></i></button>
+      <button type="button" class="lv-fab-op" onclick="ccAbrir()"><span>Cifra Club</span><i class="cc-logo"><img src="logo-cifraclub.png" alt="" width="44" height="44"></i></button>
       <label class="lv-fab-op"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvFabMenu(false);openLouvorForm();lvImportarNoNovo(event)"><span>Importar PDF ou foto</span><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg></i></label>
       <button type="button" class="lv-fab-op" onclick="lvFabMenu(false);abrirMedley()"><span>Montar medley</span><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></i></button>
       <button type="button" class="lv-fab-op" onclick="lvFabMenu(false);openLouvorForm()"><span>Escrever à mão</span><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></i></button>
@@ -1067,7 +1068,7 @@
             <!-- Importar e Organizar ao lado do Tom -->
             <div class="lv-topo-acoes">
               <label class="lv-icone-btn lv-so-musica" title="Importar PDF ou foto" aria-label="Importar PDF ou foto"><input type="file" accept="application/pdf,image/*" style="display:none" onchange="lvImportarNoAtual(event)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></label>
-<button type="button" class="lv-icone-btn lv-so-musica so-drive" style="display:none" title="Atualizar com PDF do Drive" aria-label="Atualizar com PDF do Drive" onclick="driveEscolherPdf('atual')"><svg class="logo-marca" width="20" height="18" viewBox="0 0 87.3 78" aria-hidden="true"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg><i class="marca-seta">↓</i></button>
+<button type="button" class="lv-icone-btn lv-so-musica so-drive" style="display:none" title="Atualizar com PDF do Drive" aria-label="Atualizar com PDF do Drive" onclick="driveEscolherPdf('atual')"><svg class="logo-marca" width="20" height="18" viewBox="0 0 87.3 78" aria-hidden="true"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg></button>
               <button type="button" class="lv-icone-btn" id="lvBtnMedley" style="display:none" title="Montar o medley" aria-label="Montar o medley" onclick="abrirMedley(louvorAtualId)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></button>
               <button type="button" class="lv-icone-btn lv-so-musica" id="lvBtnOrganizar" title="Organizar blocos" aria-label="Organizar blocos" aria-pressed="false" onclick="lvOrganizarBlocos()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/></svg></button>
               <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker('edit')">
@@ -1374,6 +1375,7 @@
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalDrivePdf')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <input type="text" id="drivePdfBusca" class="voz-campo cu-busca" placeholder="Buscar PDF" autocomplete="off" oninput="driveRenderPdfs()">
+    <div class="dificuldade-chips dpdf-tipos" id="drivePdfTipos"></div>
     <div class="cu-escolher" id="drivePdfLista"></div>
   </div>
 </div>
@@ -1862,22 +1864,22 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=6.8"></script>
-<script src="core.js?v=6.8"></script>
-<script src="comando.js?v=6.8"></script>
-<script src="layout.js?v=6.8"></script>
-<script src="app.js?v=6.8"></script>
-<script src="panorama.js?v=6.8"></script>
-<script src="planner.js?v=6.8"></script>
-<script src="ponto.js?v=6.8"></script>
-<script src="louvor.js?v=6.8"></script>
-<script src="louvor-extra.js?v=6.8"></script>
-<script src="louvor-medley.js?v=6.8"></script>
-<script src="louvor-culto.js?v=6.8"></script>
-<script src="louvor-drive.js?v=6.8"></script>
-<script src="fatura-pdf.js?v=6.8"></script>
-<script src="emprestimo.js?v=6.8"></script>
-<script src="vendas.js?v=6.8"></script>
+<script src="supabase.js?v=6.9"></script>
+<script src="core.js?v=6.9"></script>
+<script src="comando.js?v=6.9"></script>
+<script src="layout.js?v=6.9"></script>
+<script src="app.js?v=6.9"></script>
+<script src="panorama.js?v=6.9"></script>
+<script src="planner.js?v=6.9"></script>
+<script src="ponto.js?v=6.9"></script>
+<script src="louvor.js?v=6.9"></script>
+<script src="louvor-extra.js?v=6.9"></script>
+<script src="louvor-medley.js?v=6.9"></script>
+<script src="louvor-culto.js?v=6.9"></script>
+<script src="louvor-drive.js?v=6.9"></script>
+<script src="fatura-pdf.js?v=6.9"></script>
+<script src="emprestimo.js?v=6.9"></script>
+<script src="vendas.js?v=6.9"></script>
 <script>carregar();</script>
 </body>
 </html>

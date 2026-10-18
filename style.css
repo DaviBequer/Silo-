@@ -444,7 +444,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-fab-op{display:flex;align-items:center;gap:10px;padding:0;border:none;background:none;font:inherit;cursor:pointer;animation:surgir .3s var(--mola) both}
 .lv-fab-op span{padding:8px 12px;border-radius:10px;background:var(--card);color:var(--text);font-size:13px;font-weight:600;box-shadow:var(--sombra-card)}
 .lv-fab-op i{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--card);color:var(--text);box-shadow:var(--sombra-card)}
-.lv-fab-op i.cc-logo{background:#f26d21;color:#fff;font-style:normal;font-size:13px;font-weight:800;letter-spacing:-.02em}
+.lv-fab-op i.cc-logo{overflow:hidden;background:#f26d21}
+.lv-fab-op i.cc-logo img{display:block;width:100%;height:100%}
+.cc-logo-mini{display:block;border-radius:6px}
 .lv-fab-op:nth-child(2){animation-delay:.04s}.lv-fab-op:nth-child(3){animation-delay:.08s}.lv-fab-op:nth-child(4){animation-delay:.12s}
 .receita-salvar-fab{bottom:24px;z-index:520}
 .receita-fab:active,.receita-salvar-fab:active{transform:scale(.9)}
@@ -1511,6 +1513,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cu-rodape .cu-ico{flex:none;width:44px;height:44px}
 .cu-rodape .btn{flex:1}
 .cu-drive{display:flex;align-items:center;justify-content:center;gap:6px}
+.dpdf-tipos{margin:10px 0 4px}
 .dpdf-item{display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--line)}
 .dpdf-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .dpdf-info b{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1920,12 +1923,15 @@ body:has(.modal-overlay.active){overflow:hidden}
 .logo-marca{display:block}
 .lv-head-acoes{display:flex;align-items:center;gap:4px}
 .lv-btn-marca,.lv-icone-btn.so-drive,.lv-fab-op.so-drive i{position:relative}
-.marca-seta{position:absolute;right:2px;bottom:2px;font-style:normal;font-size:11px;font-weight:800;line-height:1;color:var(--text)}
+
 .marca-aviso{display:none;position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 2px var(--bg)}
 .lv-btn-marca.pendente .marca-aviso{display:block}
 /* ---------- 6. EFEITOS ---------- */
 /* telas e janelas entrando */
 .aba.active{animation:abaEntra .5s var(--mola) backwards}
+/* aba com botão flutuante (+ do Louvor): só esmaece — o deslize faria o botão nascer no lugar errado e pular */
+.aba.active:has(> .receita-fab){animation-name:abaEsmaece}
+@keyframes abaEsmaece{from{opacity:0}to{opacity:1}}
 .fullpage.active{animation:fpEntra .45s var(--mola) backwards}
 .modal-overlay.active{animation:veuEntra .25s var(--ease)}
 .modal{animation:modalSobe .5s cubic-bezier(.2,1.15,.35,1)}
@@ -2009,3 +2015,15 @@ html.tem-fundo .versiculo{padding:10px 14px;border-radius:0 var(--radius-sm) var
 /* barras enchem quando a tela abre (só junto com a entrada dos cartões, não a cada toque) */
 .efeito-entra :is(.sec-resumo-bar div,.cp-resumo-bar div,.emp-progresso div,.vd-bar div,.cmd-barra div,.pj-banner-prog>i,.ct-bar-fill,.hm-cat-barra div,.reserva-proj-barra-fill,.ov-barra){transform-origin:left center;animation:barraEnche 1.3s .25s var(--mola) both}
 @keyframes barraEnche{from{transform:scaleX(0)}to{transform:none}}
+
+/* nome do ícone ao segurar o dedo (icoMostrarNome em app.js) */
+.ico-nome{position:fixed;z-index:3000;max-width:240px;padding:7px 12px;border-radius:999px;background:#0f1a14;color:#e8f5ee;font:600 12px/1.2 var(--font-body);box-shadow:0 6px 18px rgba(0,0,0,.25);pointer-events:none;opacity:0;transform:translateY(4px) scale(.96);transition:opacity .18s var(--ease),transform .18s var(--ease)}
+.ico-nome.aberto{opacity:1;transform:none}
+button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* Finanças "só o essencial" no celular (finAplicarEssencial em app.js) */
+.resumo-tudo{display:flex;margin:6px auto -6px;width:48px;height:28px}
+.resumo-tudo svg{transition:transform .25s var(--ease)}
+.resumo-tudo.aberto svg{transform:rotate(180deg)}
+@media (max-width:1023px){ #aba-planner.essencial .fin-extra{display:none !important} }
+@media (min-width:1024px){ .resumo-tudo{display:none} }

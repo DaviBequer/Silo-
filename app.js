@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v6.9', itens: [
+    'Segure o dedo num ícone para ver o nome dele',
+    'Finanças no celular: só o essencial (resumo); a seta embaixo abre o resto',
+    'Louvor: botão + não pula mais; Drive e Cifra Club com as logos no menu',
+    'PDF do Drive: escolha Louvor, Harpa ou Corinhos para vir primeiro'
+  ]},
   { versao: 'v6.8', itens: [
     'Louvor: parte repetida seguida vira "Primeira Parte | 2x" e "Repete - Refrão | 3x" (a importação percebe sozinha; músicas antigas ajustadas)',
     'Slides: "2x", "3x" no canto de cima à direita',
@@ -1340,3 +1346,78 @@ function renderVersiculo(){
   el.innerHTML = `<p class="vs-texto">${versiculoAtual[0]}</p><span class="vs-ref">${versiculoAtual[1]}</span>`;
   el.onclick = ()=>el.classList.toggle('inteiro');
 }
+
+/* ---------- nome do ícone ao segurar o dedo (botões só com ícone) ----------
+   Vale para todo botão com desenho e sem texto que tenha title/aria-label. Segurou → mostra o nome e não aperta. */
+let icoSegurar = null;   // { el, timer, x, y, mostrou }
+function icoNomeDe(el){
+  const nome = el.getAttribute('aria-label') || el.getAttribute('title') || '';
+  if(!nome || !el.querySelector('svg')) return '';
+  return el.textContent.replace(/\s+/g, '').length > 4 ? '' : nome;   // botão com texto já diz o que faz
+}
+function icoMostrarNome(el, nome){
+  let b = document.getElementById('icoNome');
+  if(!b){ b = document.createElement('div'); b.id = 'icoNome'; b.className = 'ico-nome'; document.body.appendChild(b); }
+  b.textContent = nome;
+  b.classList.remove('aberto');
+  const r = el.getBoundingClientRect();
+  b.style.left = '0px'; b.style.top = '0px';
+  const w = b.offsetWidth, h = b.offsetHeight;
+  const x = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width/2 - w/2));
+  const y = r.top - h - 10 < 8 ? r.bottom + 10 : r.top - h - 10;
+  b.style.left = x + 'px'; b.style.top = y + 'px';
+  void b.offsetWidth; b.classList.add('aberto');
+  clearTimeout(b._fechar); b._fechar = setTimeout(()=>b.classList.remove('aberto'), 1600);
+}
+document.addEventListener('touchstart', e=>{
+  const el = e.target.closest && e.target.closest('button,[role="button"],a,.ico-btn');
+  const nome = el ? icoNomeDe(el) : '';
+  if(icoSegurar) clearTimeout(icoSegurar.timer);
+  if(!nome){ icoSegurar = null; return; }
+  const t = e.touches[0];
+  icoSegurar = { el, x:t.clientX, y:t.clientY, mostrou:false };
+  icoSegurar.timer = setTimeout(()=>{
+    if(!icoSegurar) return;
+    icoSegurar.mostrou = true;
+    icoMostrarNome(el, nome);
+    if(navigator.vibrate) navigator.vibrate(8);
+  }, 450);
+}, { passive:true });
+document.addEventListener('touchmove', e=>{
+  if(!icoSegurar || icoSegurar.mostrou) return;
+  const t = e.touches[0];
+  if(Math.abs(t.clientX - icoSegurar.x) > 10 || Math.abs(t.clientY - icoSegurar.y) > 10){ clearTimeout(icoSegurar.timer); icoSegurar = null; }
+}, { passive:true });
+document.addEventListener('touchend', e=>{
+  if(!icoSegurar) return;
+  clearTimeout(icoSegurar.timer);
+  if(icoSegurar.mostrou){ e.preventDefault(); setTimeout(()=>{ icoSegurar = null; }, 400); }   // segurou para ver o nome: não aperta
+  else icoSegurar = null;
+}, { passive:false });
+document.addEventListener('touchcancel', ()=>{ if(icoSegurar){ clearTimeout(icoSegurar.timer); if(!icoSegurar.mostrou) icoSegurar = null; } });
+document.addEventListener('click', e=>{
+  if(icoSegurar && icoSegurar.mostrou){ e.preventDefault(); e.stopPropagation(); icoSegurar = null; }
+}, true);
+
+/* ---------- Finanças "só o essencial" (celular) ----------
+   Mostra só o resumo (saldo, vai entrar, falta pagar, próximos meses, Contas do mês); a seta embaixo abre o resto.
+   Escolha guardada no aparelho (siloe-fin-tudo = '1' → mostra tudo). */
+function finEssencial(){ try{ return localStorage.getItem('siloe-fin-tudo') !== '1'; }catch(e){ return true; } }
+function finAplicarEssencial(){
+  const aba = document.getElementById('aba-planner'), btn = document.getElementById('btnFinTudo');
+  if(!aba) return;
+  const so = finEssencial();
+  aba.classList.toggle('essencial', so);
+  if(btn){ const nome = so ? 'Mostrar tudo' : 'Só o essencial'; btn.title = nome; btn.setAttribute('aria-label', nome); btn.classList.toggle('aberto', !so); }
+  if(typeof applyAllLayouts === 'function') setTimeout(applyAllLayouts, 30);
+}
+function finEssencialAlternar(){
+  const mostrarTudo = finEssencial();
+  try{ mostrarTudo ? localStorage.setItem('siloe-fin-tudo', '1') : localStorage.removeItem('siloe-fin-tudo'); }catch(e){}
+  finAplicarEssencial();
+  if(mostrarTudo){
+    const prim = document.querySelector('#aba-planner .fin-extra');
+    if(prim) setTimeout(()=>prim.scrollIntoView({ behavior:'smooth', block:'start' }), 60);
+  }
+}
+finAplicarEssencial();

@@ -308,10 +308,26 @@ async function driveListarPdfs(){
   }
   return out.sort((a, b)=>String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
 }
+/* tipo escolhido (Louvor, Harpa Cristã, Corinhos) vem primeiro na lista — os outros continuam embaixo.
+   Tipo pela pasta ou pelo nome do arquivo; escolha guardada no aparelho (siloe-drive-tipo). */
+function driveTipoDoPdf(f){
+  const t = vozSemAcento(f.pasta + ' ' + f.name);
+  return /corinho/.test(t) ? 'Corinhos' : /harpa/.test(t) ? 'Harpa Cristã' : 'Louvor';
+}
+function driveTipoPrimeiro(){ try{ return localStorage.getItem('siloe-drive-tipo') || ''; }catch(e){ return ''; } }
+function driveEscolherTipo(c){
+  try{ c && c !== driveTipoPrimeiro() ? localStorage.setItem('siloe-drive-tipo', c) : localStorage.removeItem('siloe-drive-tipo'); }catch(e){}
+  driveRenderPdfs();
+  const el = document.getElementById('drivePdfLista'); if(el) el.scrollTop = 0;
+}
 function driveRenderPdfs(){
   const el = document.getElementById('drivePdfLista'); if(!el) return;
+  const tipo = driveTipoPrimeiro();
+  const chips = document.getElementById('drivePdfTipos');
+  if(chips) chips.innerHTML = LOUVOR_CATEGORIAS.map(c=>`<button type="button" class="dif-chip${tipo===c?' active':''}" onclick="driveEscolherTipo('${c}')">${c}</button>`).join('');
   const termo = vozSemAcento(document.getElementById('drivePdfBusca').value.trim());
-  const lista = drivePdfLista.filter(f=>!termo || vozSemAcento(f.name + ' ' + f.pasta).includes(termo));
+  let lista = drivePdfLista.filter(f=>!termo || vozSemAcento(f.name + ' ' + f.pasta).includes(termo));
+  if(tipo) lista = lista.filter(f=>driveTipoDoPdf(f) === tipo).concat(lista.filter(f=>driveTipoDoPdf(f) !== tipo));
   const usar = drivePdfModo === 'atual' ? 'Atualizar a música com este PDF' : 'Criar a música com este PDF';
   el.innerHTML = lista.length ? lista.slice(0, 100).map(f=>`
     <div class="dpdf-item">
