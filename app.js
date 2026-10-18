@@ -95,6 +95,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.0', itens: [
+    'Cifra Club: a letra vem do Letras (ordem e frases certas) com os acordes do Cifra Club; a música é criada e abre direto',
+    'Drive: escolheu o PDF, a música é criada e abre direto (sem a tela de Nova música)',
+    'Letras arrumadas sozinhas: Jesus, Deus, Ele, Tu, Teu com maiúscula; sem ponto no meio; verso grande vira dois',
+    'Harpa: Parte, Refrão, Parte, Repete - Refrão…',
+    'Culto: Cantor - Música e o tom, + só ícone, sem "Quem"; Drive pergunta se manda também no WhatsApp'
+  ]},
   { versao: 'v6.9', itens: [
     'Segure o dedo num ícone para ver o nome dele',
     'Finanças no celular: só o essencial (resumo); a seta embaixo abre o resto',

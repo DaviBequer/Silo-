@@ -26,6 +26,7 @@ function atualizarStatusDrive(){
   if(inp) inp.placeholder = tem ? 'ID salvo ✓' : 'ID do cliente (…apps.googleusercontent.com)';
   const rem = document.getElementById('driveRemover'); if(rem) rem.style.display = tem ? '' : 'none';
   document.querySelectorAll('#cultoDriveBtn,.so-drive').forEach(b=>b.style.display = tem ? '' : 'none');
+  const zap = document.getElementById('cultoWhatsBtn'); if(zap) zap.style.display = tem ? 'none' : '';   // sem Drive: o WhatsApp fica no lugar
 }
 function salvarDriveCliente(){
   const inp = document.getElementById('driveClienteInput');
@@ -129,23 +130,33 @@ function driveJanela(titulo){
 
 /* ---------- enviar os louvores da data do Culto ---------- */
 let driveEnviando = false;
-function cultoEnviarDrive(){
+/* Culto → Drive (e, se quiser, WhatsApp): pergunta antes; o acesso ao Google é pedido logo depois do toque no Sim/Não.
+   O WhatsApp só abre com um toque (regra do navegador): no fim aparece a logo dele na janela do Drive. */
+async function cultoEnviarDrive(){
   if(driveEnviando) return;
   if(!driveClienteId()){ showToast('Ligue o Drive em Dados do App → Recursos'); return; }
   if(!driveTokenCliente){ drivePreparar().then(ok=>showToast(ok ? 'Pronto: toque de novo em Drive' : 'Não consegui falar com o Google')); return; }
-  const pedido = drivePedirToken();   // primeiro, ainda dentro do toque
   const c = cultoAtual();
   let ids = [...new Set(c.partes.flatMap(p=>p.musicas))];
   if(!ids.length) ids = (state.louvores||[]).filter(l=>l.dataAgendamento === c.data).map(l=>l.id);
   const louvores = ids.map(id=>(state.louvores||[]).find(l=>l.id === id)).filter(Boolean);
   if(!louvores.length){ showToast('Nenhuma música nesse culto'); return; }
+  const comWhats = await iosConfirm('Mandar também no WhatsApp?');
+  const pedido = drivePedirToken();   // ainda junto do toque no Sim/Não
   driveEnviando = true;
+  cultoGravar();
   driveJanela('Drive · ' + cultoDataTexto(c.data, true));
   driveLog('Pedindo acesso ao Google Drive…');
+  const whats = ()=>{ if(comWhats) driveBotaoWhats(); };
   pedido.then(()=>driveEnviarLouvores(louvores))
-    .then(()=>driveLog('Pronto ✓ Tudo no Drive.', 'ok'))
-    .catch(e=>driveLog(String(e && e.message || e), 'erro'))
+    .then(()=>{ driveLog('Pronto ✓ Tudo no Drive.', 'ok'); whats(); })
+    .catch(e=>{ driveLog(String(e && e.message || e), 'erro'); whats(); })
     .finally(()=>{ driveEnviando = false; document.getElementById('driveFechar').disabled = false; });
+}
+function driveBotaoWhats(){
+  const el = document.getElementById('driveLog'); if(!el) return;
+  el.insertAdjacentHTML('beforeend', `<button type="button" class="drive-whats" title="Mandar no grupo do WhatsApp" aria-label="Mandar no grupo do WhatsApp" onclick="closeModal('modalDrive');cultoMandarWhatsApp()">${LOGO_WHATS}</button><div class="drive-linha drive-whats-dica">toque para mandar no grupo</div>`);
+  el.scrollTop = el.scrollHeight;
 }
 /* arquivos de uma música (PDF + slides) e a "chave" que identifica a música no nome, sem o tom:
    "Artista - Título - G.pdf" e "Artista - Título - A.pdf" são a mesma música → o novo substitui o antigo */
@@ -346,6 +357,13 @@ async function driveUsarPdf(id){
     const file = new File([await res.blob()], f.name, { type:'application/pdf' });
     const ev = { target:{ files:[file], value:'' } };
     if(drivePdfModo === 'atual') lvImportarNoAtual(ev);
-    else { openLouvorForm(); lvImportarNoNovo(ev); }
+    else {
+      /* música nova: cria já e abre a tela dela; a importação preenche ali mesmo (sem a tela Nova música) */
+      const fi = lviNomeDoArquivo(f.name) || {};
+      const tom = fi.tom ? lviTomSiloe(fi.tom, fi.menor) : null;
+      lvCriarDireto({ titulo: fi.titulo || f.name.replace(/\.pdf$/i, ''), artista: fi.artista || '', categoria: lviEhHarpa(f.pasta + ' ' + f.name) ? 'Harpa Cristã' : /corinho/i.test(f.pasta + ' ' + f.name) ? 'Corinhos' : 'Louvor',
+        tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false });
+      lvImportarNoAtual({ ...ev, semConfirmar: true, novo: true });
+    }
   }catch(e){ showToast('Não consegui baixar: ' + (e && e.message || e)); }
 }

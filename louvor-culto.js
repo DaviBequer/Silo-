@@ -99,14 +99,12 @@ function renderCulto(){
             <button type="button" class="btn-icon-sm" aria-label="Tirar a parte" onclick="cultoTirarParte('${p.id}')">${CU_ICO.x}</button>
           </span>
         </div>
-        <input type="text" class="cu-parte-quem" value="${lvEsc(p.quem || '')}" placeholder="Quem? (opcional)" onchange="cultoParteCampo('${p.id}','quem',this.value)">
         ${musicas.length ? `<div class="cu-musicas">${musicas.map(l=>`
           <div class="cu-musica">
-            <button type="button" class="cu-musica-nome" onclick="abrirLouvorDetalhe('${l.id}')">${lvEsc(l.titulo || 'Sem título')}</button>
-            ${lvTomAtual(l) ? `<span class="cu-tom">${lvEsc(lvTomAtual(l))}</span>` : ''}
+            <button type="button" class="cu-musica-nome" onclick="abrirLouvorDetalhe('${l.id}')"><span class="cu-musica-txt">${lvEsc(cultoNomeMusica(l))}</span>${lvTomAtual(l) ? `<span class="cu-tom">${lvEsc(lvTomAtual(l))}</span>` : ''}</button>
             <button type="button" class="btn-icon-sm" aria-label="Tirar a música" onclick="cultoTirarMusica('${p.id}','${l.id}')">${CU_ICO.x}</button>
           </div>`).join('')}</div>` : ''}
-        <button type="button" class="cu-add-musica" onclick="cultoAbrirEscolher('${p.id}')">+ música</button>
+        <button type="button" class="ico-btn cu-add-musica" title="Adicionar música" aria-label="Adicionar música" onclick="cultoAbrirEscolher('${p.id}')">${ICO(ICO_D.mais, 20)}</button>
       </div>
     </div>`;
   }).join('') || `<div class="gm-vazio">Nenhuma parte. Toque em "Adicionar parte".</div>`;
@@ -117,7 +115,7 @@ function renderCulto(){
     <div class="cu-ordem">${ordem.map((l, i)=>`
       <div class="cu-ordem-item">
         <span class="cu-ordem-num">${i + 1}</span>
-        <span class="cu-ordem-nome">${lvEsc(l.titulo || 'Sem título')}${lvTomAtual(l) ? ` <small>Tom ${lvEsc(lvTomAtual(l))}</small>` : ''}</span>
+        <span class="cu-ordem-nome">${lvEsc(cultoNomeMusica(l))}${lvTomAtual(l) ? ` <small>${lvEsc(lvTomAtual(l))}</small>` : ''}</span>
         <button type="button" class="btn-icon-sm" aria-label="Subir" ${i === 0 ? 'disabled' : ''} onclick="cultoMoverWhats('${l.id}',-1)">${CU_ICO.sobe}</button>
         <button type="button" class="btn-icon-sm" aria-label="Descer" ${i === ordem.length - 1 ? 'disabled' : ''} onclick="cultoMoverWhats('${l.id}',1)">${CU_ICO.desce}</button>
       </div>`).join('')}
@@ -193,11 +191,13 @@ function cultoEscolher(louvorId){
   renderCulto();
 }
 
+/* "Cantor - Música" (padrão do Davi em todo o Culto) */
+function cultoNomeMusica(l){ return [l.artista, l.titulo || 'Sem título'].filter(x=>(x||'').trim()).join(' - '); }
 /* ---------- texto para o grupo (só texto; os PDFs vão para o Drive) ---------- */
 function cultoTexto(c){
   const musicas = cultoMusicasOrdem(c).map(id=>(state.louvores||[]).find(l=>l.id === id)).filter(Boolean);
   const linhas = ['*Culto · ' + cultoDataTexto(c.data, true) + '*', ''];
-  musicas.forEach((l, i)=>linhas.push(`${i + 1}. ${l.titulo || 'Sem título'}${lvTomAtual(l) ? ' (Tom ' + lvTomAtual(l) + ')' : ''}`));
+  musicas.forEach((l, i)=>linhas.push(`${i + 1}. ${cultoNomeMusica(l)}${lvTomAtual(l) ? ' - ' + lvTomAtual(l) : ''}`));
   if(!musicas.length) linhas.push('(sem músicas ainda)');
   return linhas.join('\n').trim();
 }async function cultoMandarWhatsApp(){
@@ -208,10 +208,6 @@ function cultoTexto(c){
     catch(e){ if(e && e.name === 'AbortError') return; }
   }
   window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
-}
-async function cultoCopiar(){
-  try{ await navigator.clipboard.writeText(cultoTexto(cultoAtual())); showToast('Texto copiado'); }
-  catch(e){ showToast('Não consegui copiar'); }
 }
 
 /* ---------- histórico: músicas mais tocadas ---------- */

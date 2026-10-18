@@ -508,8 +508,10 @@ const LV_CHORD_RE = new RegExp(`^[A-G](##|bb|#|b)?(${LV_CHORD_SUFFIX_RE})?(\\([^
 function isChordLine(line){
   const trimmed = line.trim();
   if(!trimmed) return false;
-  const tokens = trimmed.split(/\s+/).filter(Boolean);
-  return tokens.every(t=>LV_CHORD_RE.test(t));
+  /* "( Bb  D7 )" (acordes de passagem entre parênteses, como no Cifra Club) também é linha de acordes */
+  const tokens = trimmed.split(/\s+/).filter(t=>t && !/^[()]+$/.test(t));
+  const acorde = t=>[t, t.replace(/^\(+/, ''), t.replace(/\)+$/, ''), t.replace(/^\(+|\)+$/g, '')].some(x=>x && LV_CHORD_RE.test(x));   // "D9(11)" e "(Bb"
+  return tokens.length > 0 && tokens.every(acorde);
 }
 const LV_CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const LV_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];

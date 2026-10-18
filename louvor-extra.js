@@ -329,7 +329,7 @@ function lviJuntarLinhasQuebradas(rows){
 }
 
 /* ---------- blocos: nomeia, detecta repetição ("Repete - Refrão") ---------- */
-const LVI_ORD = ['Primeira parte','Segunda parte','Terceira parte','Quarta parte','Quinta parte','Sexta parte','Sétima parte','Oitava parte','Nona parte','Décima parte'];
+const LVI_ORD = ['Primeira Parte','Segunda Parte','Terceira Parte','Quarta Parte','Quinta Parte','Sexta Parte','Sétima Parte','Oitava Parte','Nona Parte','Décima Parte'];
 function lviAssinatura(s){
   return JSON.stringify(s.lines.map(l=> l.type==='marca' ? ['m', l.text] : l.type==='chords' ? ['c', l.chords.map(c=>c.name)] : ['l', (l.text||'').replace(/\s+$/,''), (l.chords||[]).map(c=>[c.name, c.idx])]));
 }
@@ -369,6 +369,7 @@ function lviMontaBlocos(rows){
   const secoes = [];
   const abre = nome=>{ cur = { name:nome, lines:[] }; secoes.push(cur); };
   let artistaCab = '', tomCab = null;
+  const rotulada = rows.filter(r=>r.type==='label' && !/^(intro|introdu|solo|instrumental|interl|final|repete)/i.test(r.text)).length >= 2;
   rows.forEach(r=>{
     if(r.type==='title'){ titulo = r.text; return; }
     if(r.type==='artist'){ artistaCab = r.text; return; }
@@ -380,16 +381,20 @@ function lviMontaBlocos(rows){
       return;
     }
     if(r.type==='vezes'){ const alvo = cur || secoes[secoes.length-1]; if(alvo) alvo.vezes = r.n; return; }
+    /* cifra com as partes nomeadas (Cifra Club): linha em branco dentro da parte não abre parte nova — vira "-" (próximo slide) */
+    if(r.type==='blank' && rotulada && cur && cur.lines.some(l=>l.type==='lyric') && cur.name && !/^(intro|introdu|solo|instrumental|interl|final|repete)/i.test(cur.name)){ cur.pausa = true; return; }
     if(r.type==='blank' || r.type==='rule'){ if(cur && cur.lines.length) cur = null; return; }
     if(r.type==='marca'){
       /* "---" fecha o bloco e a próxima parte vai para a outra coluna; "-" no meio do bloco fica onde está */
       if(r.text==='---'){ const alvo = cur || secoes[secoes.length-1]; if(alvo) alvo.colunaDepois = true; cur = null; return; }
-      if(cur && cur.lines.length) cur.lines.push(r);
+      if(cur && cur.lines.length){ cur.pausa = false; cur.lines.push(r); }
       return;
     }
     /* bloco instrumental (Intro, Solo...) só com acordes: a letra que vem depois começa um bloco novo */
     if(r.type==='lyric' && cur && /^(intro|introdu|solo|instrumental|interl)/i.test(cur.name||'') && cur.lines.every(l=>l.type==='chords')) cur = null;
+    if(cur && cur.pausa && r.type !== 'lyric'){ cur.pausa = false; cur = null; }   // depois da linha em branco vieram só acordes: é outro bloco (solo)
     if(!cur) abre('');
+    if(cur.pausa){ cur.lines.push({ type:'marca', text:'-' }); cur.pausa = false; }
     cur.lines.push(r);
   });
   /* "Artista - Música - Tom" no topo da cifra */
@@ -417,10 +422,20 @@ function lviMontaBlocos(rows){
     if(igual){ s.repeatOf = igual.s; if(s.name && !igual.s.name) igual.s.name = s.name; return; }
     vistos.push({ k, s });
   });
+  /* a parte sem nome que volta igual (vira "Repete") é o Refrão; as outras são Primeira Parte, Segunda Parte… */
+  const voltam = new Set(secoes.filter(s=>s.repeatOf).map(s=>s.repeatOf));
+  let temRefrao = secoes.some(s=>/^(refr|coro)/i.test(s.name||''));
   secoes.forEach((s,i)=>{
     if(s.name || s.repeatOf) return;
     const temLetra = s.lines.some(l=>l.type==='lyric');
     if(!temLetra){ s.name = i===0 ? 'Intro' : 'Instrumental'; return; }
+    /* mesma letra de uma parte já nomeada (só os acordes mudam um pouco): mesmo nome */
+    const letra = x=>x.lines.filter(l=>l.type==='lyric').map(l=>lviNormPalavra(l.text)).join('|');
+    const igual = secoes.find(o=>o !== s && o.name && !o.repeatOf && letra(o) === letra(s));
+    if(igual){ s.name = igual.name; return; }
+    if(voltam.has(s) && !temRefrao){ s.name = 'Refrão'; temRefrao = true; return; }
+    const usados = new Set(secoes.map(o=>(o.name||'').toLowerCase()));
+    while(n < LVI_ORD.length && usados.has(LVI_ORD[n].toLowerCase())) n++;
     s.name = n < LVI_ORD.length ? LVI_ORD[n] : 'Parte '+(n+1);
     n++;
   });
@@ -465,8 +480,11 @@ function lviBlocosParaTexto(secoes){
     s.lines.forEach(r=>{
       if(r.type==='marca'){ linhas.push(r.text); return; }
       if(r.type==='chords'){ linhas.push(r.chords.map(c=>c.name).join('   ')); return; }
-      if(r.chords && r.chords.length) linhas.push(lviLinhaDeAcordes(r.chords));
-      linhas.push(r.text && r.text.trim() ? r.text : ' ');
+      if(!(r.text||'').trim()){ if(r.chords && r.chords.length) linhas.push(lviLinhaDeAcordes(r.chords)); linhas.push(' '); return; }
+      lviCorrigirLinha(r).forEach(c=>{   // maiúsculas, pontos, espaços e verso grande demais
+        if(c.chords.length) linhas.push(lviLinhaDeAcordes(c.chords));
+        linhas.push(c.text);
+      });
     });
   });
   return linhas.join('\n');
@@ -713,7 +731,7 @@ function lviMontarDaIA(j, fi, simples){
     artista,
     categoria: cat,
     tom: lviTomSiloe(raiz, menor),
-    conteudo: lviBlocosParaTexto(secoes),
+    conteudo: lviBlocosParaTexto(cat === 'Harpa Cristã' || lviEhHarpa(artista) ? lviPadraoHarpa(secoes) : secoes),
     blocos: secoes.length,
     usouIA: true,
     conferencia
@@ -775,6 +793,8 @@ async function lviImportarSimples(file, status){
   const menor = fi && fi.tom ? fi.menor : doc.menor;
   /* título/artista: o cabeçalho do PDF (quando tem) é mais confiável que o nome do arquivo */
   status('Conferindo a letra e os acordes', 'conferir');
+  const harpaArq = lviEhHarpa([doc.artista, doc.titulo, fi && fi.artista, file.name].join(' '));
+  if(harpaArq) lviPadraoHarpa(doc.secoes);
   const conteudo = lviBlocosParaTexto(doc.secoes);
   return {
     titulo: (doc.temCabecalho && doc.titulo) || (fi && fi.titulo) || doc.titulo || '',
@@ -783,6 +803,7 @@ async function lviImportarSimples(file, status){
     conteudo,
     blocos: doc.secoes.length,
     usouOcr,
+    ...(harpaArq ? { categoria:'Harpa Cristã' } : {}),
     conferencia: typeof lviConferenciaSimples==='function' ? lviConferenciaSimples(conteudo, usouOcr) : null
   };
 }
@@ -802,7 +823,7 @@ async function lvImportarNoNovo(ev){
     if(r.tom.tomOriginal){ window.lvNovoTomOriginal = r.tom.tomOriginal; window.lvNovoTomModoMenor = r.tom.tomModoMenor; atualizarLvNovoTomBox(); }
     if(r.categoria){ window.lvNovoCategoriaSelecionada = r.categoria; renderLvNovoCategoriaChips(); }
     window.lvNovoConteudo = lvQuebrarSlides(r.conteudo);
-    window.lvNovoRevisar = (r.conferencia && r.conferencia.olhar) || [];
+    window.lvNovoRevisar = lviCorrigirTextos((r.conferencia && r.conferencia.olhar) || []);
     lviLogResultado(prog, r);
     prog.fim(lviRelatorioHtml(r, 'Confira os dados abaixo e toque em <b>Criar e abrir</b>.'));
     const form = document.querySelector('#pageLouvorForm .lvn-form');
@@ -828,14 +849,15 @@ async function lvImportarNoAtual(ev){
     if(!(l.titulo||'').trim() && r.titulo) l.titulo = r.titulo;
     if(!(l.artista||'').trim() && r.artista) l.artista = r.artista;
     if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; }
-    const olhar = (r.conferencia && r.conferencia.olhar) || [];
+    if(ev.novo && r.categoria) l.categoria = r.categoria;
+    const olhar = lviCorrigirTextos((r.conferencia && r.conferencia.olhar) || []);
     if(olhar.length) l.revisar = olhar; else delete l.revisar;
     persist();
     abrirLouvorDetalhe(l.id);
     lviLogResultado(prog, r);
     prog.fim(lviRelatorioHtml(r, '<button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button>'));
   }catch(e){
-    prog.erro('Não consegui ler: '+(e && e.message ? e.message : e));
+    prog.erro('Não consegui ler: '+(e && e.message ? e.message : e)+(ev.novo ? '. A música ficou criada: cole a cifra ou importe de novo.' : ''));
   }
 }
 function lviFecharRelatorio(){ const l = getLouvorAtual(); const el = document.getElementById('lvEdicaoImportStatus'); if(el) el.innerHTML = ''; if(l) lvMostrarRevisar(l); }
@@ -1066,29 +1088,235 @@ async function ccBuscar(){
       </button>`).join('') : '<div class="gm-vazio">Nada encontrado no Cifra Club.</div>';
   }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
 }
+/* Cifra Club → cria a música direto (sem a tela Nova música) e abre ela.
+   Se a música estiver no Letras, a letra de lá é a base (ordem das partes, frases, partes que faltam)
+   e os acordes do Cifra Club são encaixados palavra por palavra. */
 async function ccImportar(url){
   const el = document.getElementById('ccLista');
   el.innerHTML = '<div class="voz-carregando">Lendo a cifra…</div>';
   try{
     const c = await ccChamar({ url });
     if(!c || !(c.texto||'').trim()) throw new Error('a página não tem cifra');
+    /* hino da Harpa: o Cifra Club põe o número no lugar do cantor → "Harpa Cristã - 525" */
+    if(/harpa-crista/i.test(url) && !/harpa/i.test(c.artista || '')){
+      const num = (/(\d+)/.exec(c.artista || '') || /\/(\d+)-/.exec(url) || [])[1];
+      c.artista = 'Harpa Cristã' + (num ? ' - ' + num : '');
+    }
     /* "[Intro] F#m  E5" → "[Intro]" + linha de acordes; tablaturas (E|---3---|) e "Parte 1 de 4" saem */
-    const texto = c.texto.split('\n').flatMap(l=>{
+    let texto = c.texto.split('\n').flatMap(l=>{
       if(/^\s*[eEBGDAb]\|[-\d|hpbrvx\/\\~().\s]*$/.test(l) || /^\s*Parte \d+ de \d+\s*$/i.test(l)) return [];
       const m = /^\s*(\[[^\]]+\])\s+(\S.*)$/.exec(l);
       return m ? [m[1], m[2]] : [l];
     }).join('\n').replace(/\n{3,}/g, '\n\n');
+    el.innerHTML = '<div class="voz-carregando">Buscando a letra no Letras…</div>';
+    let revisar = [], comLetras = false;
+    const lt = await lviLetrasDe(c.titulo, c.artista);
+    if(lt){
+      const j = lviJuntarComLetras(texto, lt.estrofes);
+      if(j){ texto = j.texto; revisar = j.revisar; comLetras = true; }
+    }
     const doc = lviMontaBlocos(lviTextoParaLinhas(texto));
+    const harpa = lviEhHarpa(c.artista + ' ' + c.titulo);
+    if(harpa) lviPadraoHarpa(doc.secoes);
     const conteudo = lvQuebrarSlides(lviBlocosParaTexto(doc.secoes));
     const m = /^([A-G](?:#|b)?)(m?)$/.exec(c.tom || '');
+    const tom = m ? lviTomSiloe(m[1], !!m[2]) : null;
     closeModal('modalCifraClub');
-    openLouvorForm();
-    document.getElementById('lvNovoTitulo').value = c.titulo || '';
-    document.getElementById('lvNovoArtista').value = c.artista || '';
-    if(m){ const tom = lviTomSiloe(m[1], !!m[2]); window.lvNovoTomOriginal = tom.tomOriginal; window.lvNovoTomModoMenor = tom.tomModoMenor; atualizarLvNovoTomBox(); }
-    window.lvNovoConteudo = conteudo;
-    const st = document.getElementById('lvNovoImportStatus'); if(st){ st.classList.remove('erro'); st.textContent = `✓ Cifra do Cifra Club · ${doc.secoes.length} partes · confira e toque em Criar`; }
-    const dica = document.getElementById('lvnFormDica'); if(dica) dica.textContent = '✓ preenchido pelo Cifra Club — confira';
-    const form = document.querySelector('#pageLouvorForm .lvn-form'); if(form){ form.classList.remove('preenchido'); void form.offsetWidth; form.classList.add('preenchido'); }
+    const l = lvCriarDireto({
+      titulo: c.titulo || '', artista: c.artista || '', categoria: harpa ? 'Harpa Cristã' : 'Louvor',
+      tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false,
+      conteudo
+    });
+    const textos = new Set(conteudo.split('\n').map(x=>x.trim()));
+    l.revisar = lviCorrigirTextos(revisar).filter(t=>textos.has(t));
+    if(!l.revisar.length) delete l.revisar;
+    persist();
+    if(typeof lvMostrarRevisar === 'function') lvMostrarRevisar(l);
+    showToast(comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club');
   }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
 }
+/* cria a música já com os dados e abre a tela dela (Cifra Club e Drive) */
+function lvCriarDireto(d){
+  const novo = {
+    id: 'lv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    titulo: d.titulo || '', artista: d.artista || '', categoria: d.categoria || 'Louvor',
+    tom: '', tomOriginal: d.tomOriginal || '', tomModoMenor: !!d.tomModoMenor, transpose: 0,
+    dataAgendamento: '', status: 'producao', colunas: 'auto', conteudo: d.conteudo || '', criadoEm: Date.now()
+  };
+  state.louvores.push(novo);
+  persist();
+  renderLouvor();
+  abrirLouvorDetalhe(novo.id);
+  return novo;
+}
+
+/* ---------- Letras: busca pela função "cifra" do Supabase ---------- */
+async function lviLetrasDe(titulo, artista){
+  if(!(titulo||'').trim()) return null;
+  try{
+    const r = await Promise.race([ ccChamar({ letras:{ titulo, artista: artista || '' } }), new Promise(ok=>setTimeout(()=>ok(null), 15000)) ]);
+    return r && r.achou && Array.isArray(r.estrofes) && r.estrofes.length ? r : null;
+  }catch(e){ return null; }   // sem Letras (função antiga, site bloqueou, não achou): segue só com o Cifra Club
+}
+const lviNormPalavra = w=>String(w||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+/* maior sequência de palavras em comum (na ordem) entre a linha do Letras e um trecho da cifra → pares [i, k] */
+function lviLcsPares(a, b){
+  const n = a.length, m = b.length, t = Array.from({ length:n+1 }, ()=>new Array(m+1).fill(0));
+  for(let i = n-1; i >= 0; i--) for(let k = m-1; k >= 0; k--) t[i][k] = a[i] && a[i] === b[k] ? t[i+1][k+1] + 1 : Math.max(t[i+1][k], t[i][k+1]);
+  const pares = []; let i = 0, k = 0;
+  while(i < n && k < m){
+    if(a[i] && a[i] === b[k]){ pares.push([i, k]); i++; k++; }
+    else if(t[i+1][k] >= t[i][k+1]) i++; else k++;
+  }
+  return pares;
+}
+/* texto da cifra (formato do Siloé) + estrofes do Letras → { texto, revisar } ou null se não for a mesma música */
+function lviJuntarComLetras(textoCifra, estrofes){
+  const rows = lviTextoParaLinhas(textoCifra);
+  const W = [], soAcordes = [];   // W: palavras da cifra com os acordes; soAcordes: linhas só de acordes (intro, solo, final)
+  let rotulo = '';
+  rows.forEach(r=>{
+    if(r.type === 'label'){ rotulo = lvVezesDoRotulo(r.text).nome; return; }
+    if(r.type === 'chords'){ if(r.chords.length) soAcordes.push({ pos: W.length, rotulo, chords: r.chords }); return; }
+    if(r.type !== 'lyric' || !(r.text||'').trim()) return;
+    const pal = []; const re = /\S+/g; let m;
+    while((m = re.exec(r.text))) pal.push({ n: lviNormPalavra(m[0]), ini: m.index, fim: m.index + m[0].length, chords: [], rotulo });
+    if(!pal.length) return;
+    (r.chords||[]).forEach(c=>{
+      const w = pal.find(p=>c.idx >= p.ini && c.idx < p.fim) || pal.find(p=>p.ini >= c.idx) || pal[pal.length-1];
+      w.chords.push({ name: c.name, off: Math.max(0, c.idx - w.ini) });
+    });
+    pal.forEach(p=>W.push(p));
+  });
+  if(!W.length) return null;
+  const Wn = W.map(w=>w.n);
+  let ptr = 0, total = 0, achadas = 0;
+  const revisar = [], fimDaEstrofe = [], refraoVotos = [];   // estrofe que na cifra estava em [Refrão]/[Coro]
+  const saida = estrofes.map((est, e)=>est.map(linha=>{
+    const pal = []; const re = /\S+/g; let m;
+    while((m = re.exec(linha))) pal.push({ n: lviNormPalavra(m[0]), ini: m.index, fim: m.index + m[0].length });
+    const ln = pal.map(p=>p.n);
+    total += ln.length;
+    /* onde essa linha está na cifra: testa os começos possíveis e fica com o que mais bate (prefere seguir em frente) */
+    let melhor = null;
+    for(let j = 0; j < Wn.length; j++){
+      if(Wn[j] !== ln[0] && Wn[j] !== ln[1]) continue;
+      const pares = lviLcsPares(ln, Wn.slice(j, j + ln.length * 2 + 2));
+      const nota = pares.length - (j < ptr ? 0.5 : 0) - Math.abs(j - ptr) / 100000;
+      if(!melhor || nota > melhor.nota) melhor = { j, pares, nota };
+    }
+    const chords = [];
+    if(melhor && melhor.pares.length >= Math.max(1, ln.length * 0.5)){
+      achadas += melhor.pares.length;
+      let ult = -1;
+      melhor.pares.forEach(([i, k])=>{
+        const w = W[melhor.j + k]; ult = melhor.j + k;
+        refraoVotos[e] = (refraoVotos[e] || 0) + (/^(refr|coro)/i.test(w.rotulo || '') ? 1 : -1);
+        w.chords.forEach(c=>chords.push({ name: c.name, idx: pal[i].ini + Math.min(c.off, pal[i].fim - pal[i].ini) }));
+      });
+      ptr = ult + 1;
+      fimDaEstrofe[e] = Math.max(fimDaEstrofe[e] ?? -1, ult);
+      if(melhor.pares.length < ln.length * 0.8) revisar.push(linha.trim());
+    } else revisar.push(linha.trim());
+    return { text: linha, chords };
+  }));
+  if(!total || achadas / total < 0.55) return null;   // letra diferente demais: não é a mesma música (ou é outra versão)
+  /* monta o texto: intro → estrofes (com solo/instrumental onde estavam na cifra) → final */
+  const linhaTxt = r=>(r.chords.length ? [lviLinhaDeAcordes(r.chords)] : []).concat([r.text]);
+  const acordesTxt = s=>s.chords.map(c=>c.name).join('   ');
+  const out = [];
+  let ultimoRot = null;
+  soAcordes.filter(s=>s.pos === 0).forEach(s=>{
+    if(s.rotulo !== ultimoRot) out.push('[' + (s.rotulo || 'Intro') + ']');
+    ultimoRot = s.rotulo; out.push(acordesTxt(s));
+  });
+  if(out.length) out.push('');
+  const meio = soAcordes.filter(s=>s.pos > 0 && s.pos < W.length), usados = new Set();
+  saida.forEach((est, e)=>{
+    if(refraoVotos[e] > 0) out.push('[Refrão]');
+    est.forEach(r=>out.push(...linhaTxt(r)));
+    out.push('--');   // estrofe do Letras = uma parte (a linha divisória fecha a parte; linha em branco não fecharia numa cifra com nomes)
+    const ate = fimDaEstrofe[e] ?? -1;
+    meio.forEach((s, x)=>{
+      if(usados.has(x) || ate < 0 || s.pos > ate + 1) return;
+      usados.add(x); out.push('[' + (s.rotulo || 'Instrumental') + ']', acordesTxt(s), '--');
+    });
+  });
+  soAcordes.filter(s=>s.pos >= W.length && s.pos > 0).forEach(s=>out.push('[' + (s.rotulo || 'Final') + ']', acordesTxt(s), ''));
+  return { texto: out.join('\n').trim(), revisar };
+}
+
+/* ---------- Harpa Cristã: Parte → Refrão → Parte → Repete - Refrão → … ---------- */
+function lviEhHarpa(texto){ return /harpa/i.test(String(texto||'')); }
+function lviPadraoHarpa(secoes){
+  const ehRefrao = s=>/^(refr|coro)/i.test(s.name||'');
+  const refrao = secoes.find(s=>!s.repeatOf && ehRefrao(s) && s.lines.some(l=>l.type==='lyric'));
+  if(!refrao) return secoes;
+  const ehParte = s=>!s.repeatOf && !ehRefrao(s) && s.lines.some(l=>l.type==='lyric') && !/^(intro|introdu|final|solo|instrumental)/i.test(s.name||'');
+  for(let i = secoes.indexOf(refrao) + 1; i < secoes.length; i++){
+    if(!ehParte(secoes[i])) continue;
+    const prox = secoes[i+1];
+    if(prox && (ehRefrao(prox) || (prox.repeatOf && ehRefrao(prox.repeatOf)))) continue;
+    secoes.splice(i + 1, 0, { repeatOf: refrao, lines: [], vezes: 1 });
+    i++;
+  }
+  return secoes;
+}
+
+/* ---------- correção do texto da letra (toda importação e o Organizar) ----------
+   Nomes e pronomes de Deus com maiúscula (pedido do Davi: Ele, Tu, Teu, Te… sempre); começo do verso com maiúscula
+   e o resto sem maiúscula solta; sem ponto no meio/fim do verso; sem espaço sobrando; verso grande demais vira dois. */
+const LVI_DEUS = { jesus:'Jesus', deus:'Deus', senhor:'Senhor', cristo:'Cristo', jeova:'Jeová', 'jeová':'Jeová', emanuel:'Emanuel', messias:'Messias', 'altíssimo':'Altíssimo', altissimo:'Altíssimo',
+  ele:'Ele', tu:'Tu', teu:'Teu', teus:'Teus', tua:'Tua', tuas:'Tuas', te:'Te', ti:'Ti', contigo:'Contigo', dele:'Dele', nele:'Nele' };
+/* nomes próprios e títulos que podem ou não vir com maiúscula: ficam como vieram */
+const LVI_MANTER = new Set(('israel sião siao jerusalém jerusalem belém belem calvário calvario gólgota golgota jordão jordao canaã canaa egito galileia nazaré nazare betel sinai horebe moriá jericó jerico babilônia ' +
+  'maria josé jose davi abraão abraao isaque jacó jaco moisés moises elias eliseu paulo pedro joão joao saulo daniel josué josue gideão gideao sansão sansao salomão salomao ezequiel isaías isaias jó rute ester noé noe adão adao eva lázaro lazaro golias faraó farao ' +
+  'rei reis pai filho cordeiro salvador santo santíssimo criador redentor consolador verbo leão leao rocha noivo amado mestre pastor aleluia hosana amém amem glória gloria majestade soberano onipotente').split(' '));
+const LVI_VERSO_MAX = 48;
+function lviCorrigirLinha(r){
+  let text = String(r.text || ''), chords = (r.chords || []).map(c=>({ name:c.name, idx:c.idx }));
+  const tira = k=>{ text = text.slice(0, k) + text.slice(k + 1); chords.forEach(c=>{ if(c.idx > k) c.idx--; }); };
+  /* "Ven_cendo", "alelu____ia" (sílaba esticada do Cifra Club) */
+  for(let k = text.length - 1; k >= 0; k--) if(text[k] === '_') tira(k);
+  /* espaços: no começo, no fim e repetidos */
+  while(text.startsWith(' ')) tira(0);
+  while(text.endsWith(' ')) tira(text.length - 1);
+  for(let k = text.length - 1; k > 0; k--) if(text[k] === ' ' && text[k-1] === ' ') tira(k);
+  /* ponto solto (não reticências) no meio ou no fim do verso */
+  for(let k = text.length - 1; k >= 0; k--){
+    if(text[k] !== '.' || text[k-1] === '.' || text[k+1] === '.') continue;
+    if(k === text.length - 1 || text[k+1] === ' ') tira(k);
+  }
+  while(text.endsWith(' ')) tira(text.length - 1);
+  /* maiúsculas (troca letra por letra: o tamanho não muda e os acordes ficam no lugar) */
+  const soLetras = text.replace(/[^\p{L}]/gu, '');
+  const tudoMaiusculo = soLetras.length > 3 && soLetras === soLetras.toUpperCase();
+  const cap = s=>s.charAt(0).toUpperCase() + s.slice(1);
+  let primeira = true, posPonto = false;
+  text = text.replace(/\p{L}[\p{L}'’-]*|[!?]/gu, w=>{
+    if(w === '!' || w === '?'){ posPonto = true; return w; }
+    const low = w.toLowerCase();
+    const inicio = primeira || posPonto; primeira = false; posPonto = false;
+    if(LVI_DEUS[low]) return LVI_DEUS[low];
+    if(LVI_MANTER.has(low)) return tudoMaiusculo ? cap(low) : (inicio ? cap(w) : w);
+    return inicio ? cap(low) : low;
+  });
+  text = text.replace(/(espírito)(\s+Santo)/gi, 'Espírito$2');
+  const linha = { type:'lyric', text, chords };
+  /* verso grande demais: quebra perto do meio (de preferência numa vírgula) */
+  if(text.length <= LVI_VERSO_MAX) return [linha];
+  const meio = text.length / 2;
+  let corte = -1, dist = 1e9;
+  for(let k = 1; k < text.length - 1; k++){
+    if(text[k] !== ' ') continue;
+    const d = Math.abs(k - meio) - (/[,;:!?]/.test(text[k-1]) ? 15 : 0);
+    if(d < dist){ dist = d; corte = k; }
+  }
+  if(corte < 12 || text.length - corte < 12) return [linha];
+  const a = { type:'lyric', text: text.slice(0, corte), chords: chords.filter(c=>c.idx < corte) };
+  const resto = text.slice(corte + 1);
+  const b = lviCorrigirLinha({ text: cap(resto), chords: chords.filter(c=>c.idx >= corte).map(c=>({ name:c.name, idx: Math.max(0, c.idx - corte - 1) })) });
+  return [a, ...b];
+}
+/* textos de linhas já corrigidos (para a lista "conferir" continuar batendo com o texto final) */
+function lviCorrigirTextos(lista){ return (lista||[]).flatMap(t=>lviCorrigirLinha({ text:t, chords:[] }).map(r=>r.text.trim())); }
