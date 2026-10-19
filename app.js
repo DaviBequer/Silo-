@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.4', itens: [
+    'Visual novo no app inteiro: claro, caixas brancas com sombra suave, letra Manrope; serifa só no saldo e na previsão',
+    'Finanças: bancos como cartões empilhados, previsão com barra, atalhos (Falar, Pagar, Cartões, Metas), curva do saldo e próximas contas',
+    'Cartões com a frente inteira na cor do banco; cabeçalho claro; setas desenhadas no lugar de ◀ ▶'
+  ]},
   { versao: 'v7.3', itens: [
     'Louvor: Edição e Visualizar viraram uma aba só, Música — a folha que você edita tocando (palavra, acorde, parte, título)',
     'Ícone T abre o modo texto para mexer na estrutura; linhas para conferir aparecem em amarelo na folha'
@@ -862,7 +867,7 @@ function efeitoEntradaCartoes(raiz){
 }
 function efeitoContarNumeros(raiz){
   if(!efeitosLigados || !raiz) return;
-  raiz.querySelectorAll('.resumo-stat-val, .ponto-valor-grande, .cp-total-valor, .cp-resumo-val, .vd-meta-linha > b').forEach(el=>{
+  raiz.querySelectorAll('.resumo-stat-val, .prev-valor, .cb-rodape strong, .ponto-valor-grande, .cp-total-valor, .cp-resumo-val, .vd-meta-linha > b').forEach(el=>{
     if(el.childNodes.length !== 1 || el.firstChild.nodeType !== 3) return;   // só texto puro (não mexe em quem tem ícone dentro)
     const alvoTxt = el.textContent, m = alvoTxt.match(/^(-?)R\$\s?([\d.]+,\d{2})$/);
     if(!m) return;

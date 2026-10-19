@@ -186,6 +186,8 @@ function renderSaldoBancos(){
   if(!lista.length){ el.style.display = 'none'; return; }
   const total = totalBancos(lista);
   const difere = Math.abs(total - (us.saldoAtual||0)) > 0.004;
+  /* os bancos aparecem na carteira (cartões empilhados); aqui fica só o aviso quando a soma não bate */
+  if(!difere){ el.style.display = 'none'; return; }
   el.style.display = 'flex';
   el.classList.toggle('difere', difere);
   el.innerHTML = `<span class="saldo-bancos-lista">${lista.map(b=>`<span>${escBanco(b.nome)} <b>${fmtMoney(b.valor)}</b></span>`).join('')}</span>`

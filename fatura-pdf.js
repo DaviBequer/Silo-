@@ -87,7 +87,7 @@ function fpdfRender(){
       <span class="fpdf-valor${i.valor < 0 ? ' pos' : ''}">${fmtMoney(i.valor)}</span>
     </div>`;
   document.getElementById('fpdfConteudo').innerHTML = `
-    <div class="pano-nav fpdf-mes"><button class="pano-nav-btn" onclick="fpdfMudarMes(-1)">◀</button><div class="pano-nav-label">Fatura de ${monthLabelLong(fpdf.mKey)}</div><button class="pano-nav-btn" onclick="fpdfMudarMes(1)">▶</button></div>
+    <div class="pano-nav fpdf-mes"><button class="pano-nav-btn" onclick="fpdfMudarMes(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 6 14 4.6 6.6 12l7.4 7.4 1.4-1.4-6-6z"/></svg></button><div class="pano-nav-label">Fatura de ${monthLabelLong(fpdf.mKey)}</div><button class="pano-nav-btn" onclick="fpdfMudarMes(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 18 10 19.4l7.4-7.4L10 4.6 8.6 6l6 6z"/></svg></button></div>
     <div class="fpdf-resumo">
       <div><span>Fatura do banco</span><b>${fmtMoney(fpdf.total)}</b></div>
       <div><span>Lançado no app</span><b>${fmtMoney(noApp)}</b></div>

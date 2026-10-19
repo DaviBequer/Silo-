@@ -42,23 +42,19 @@ function renderResumoMes(){
   elMes.textContent = monthLabelLong(mKey);
   document.getElementById('resumoEntra').textContent = fmtMoney(entra);
   document.getElementById('resumoSai').textContent = fmtMoney(sai);
+  /* previsão (serifa): sobra do mês + barra entra × falta pagar */
   const elSobra = document.getElementById('resumoSobra');
   elSobra.textContent = fmtMoneySigned(sobra);
-  elSobra.className = 'resumo-stat-val ' + (sobra >= 0 ? 'pos' : 'neg');
-  /* próximos 3 meses no topo: a sobra de cada um e o acumulado (com a sobra deste mês) — toque abre o detalhe */
-  const elProx = document.getElementById('resumoProximos');
-  if(elProx){
-    let acum = saldoForMonth(u, mKey);
-    elProx.innerHTML = [1, 2, 3].map(i=>{
-      const m = addMonths(mKey, i), s = saldoForMonth(u, m);
-      acum += s;
-      return `<button type="button" class="rp-mes" onclick="abrirDetalheAcumulado('${m}')">
-        <span class="rp-nome">${monthLabel(m)}</span>
-        <b class="${s >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(s)}</b>
-        <small>acumulado <i class="${acum >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(acum)}</i></small>
-      </button>`;
-    }).join('');
-  }  /* atalhos: cartão / empréstimo contando (ou não) neste mês */
+  elSobra.className = 'prev-valor ' + (sobra >= 0 ? 'pos' : 'neg');
+  const elPrevMes = document.getElementById('resumoPrevMes'); if(elPrevMes) elPrevMes.textContent = monthLabelLong(mKey).split(' ')[0].toLowerCase();
+  const elTipo = document.getElementById('resumoPrevTipo'); if(elTipo){ elTipo.textContent = sobra >= 0 ? 'sobra' : 'falta'; elTipo.className = 'prev-tipo ' + (sobra >= 0 ? 'pos' : 'neg'); }
+  const totBar = Math.max(1, Math.max(0, entra) + Math.max(0, sai));
+  const bE = document.getElementById('resumoBarEntra'), bS = document.getElementById('resumoBarSai');
+  if(bE) bE.style.flexGrow = Math.max(0, entra) / totBar;
+  if(bS) bS.style.flexGrow = Math.max(0, sai) / totBar;
+  renderCarteira();
+  renderCurvaSaldo(u, mKey);
+  renderProxContas(u, mKey);  /* atalhos: cartão / empréstimo contando (ou não) neste mês */
   const elInc = document.getElementById('resumoInclui');
   if(elInc){
     const chip = (tipo, rotulo, valor)=>{
@@ -73,7 +69,85 @@ function renderResumoMes(){
   }
   const dizimoAberto = (u==='davi' && dizimoValorCheio(u, mKey) > 0 && !dizimoPagoNoMes(u, mKey)) ? 1 : 0;
   const abertas = getContasDoMes(mKey, u).filter(it=>!state.paid[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]).length + cpExtrasAbertosNoMes(mKey, u) + dizimoAberto;
-  document.getElementById('resumoContasAbertas').textContent = abertas ? abertas+' em aberto ›' : 'tudo pago ›';
+  document.getElementById('resumoContasAbertas').textContent = abertas ? '· ' + abertas + ' em aberto' : '· tudo pago';
+}
+
+/* ===== Finanças — visual novo (18/10): carteira, curva do saldo, próximas contas ===== */
+/* cor de cada banco pelo nome (cartão empilhado na carteira); banco desconhecido ganha uma cor neutra da lista */
+const BANCO_CORES = [
+  [/nu ?bank|nubank/i, '#7a1fc9'], [/inter\b/i, '#ff7a1a'], [/viacredi|ailos/i, '#0f5a3b'], [/sicredi/i, '#3a8a2e'], [/sicoob/i, '#00505c'],
+  [/ita[uú]/i, '#ec7000'], [/bradesco/i, '#cc092f'], [/santander/i, '#d40000'], [/caixa/i, '#005ca9'], [/brasil|\bbb\b/i, '#0038a8'],
+  [/c6/i, '#2b2b2b'], [/picpay/i, '#11a84e'], [/mercado ?pago/i, '#009ee3'], [/pagbank|pagseguro/i, '#1aa58a'], [/neon/i, '#00a5e0'], [/next/i, '#0b8f5a']
+];
+const BANCO_NEUTRAS = ['#1c1a17', '#3f5e8c', '#7a5b3a', '#4b6b5a'];
+function corDoBanco(nome, i){
+  const achou = BANCO_CORES.find(([re])=>re.test(nome || ''));
+  return achou ? achou[1] : BANCO_NEUTRAS[(i || 0) % BANCO_NEUTRAS.length];
+}
+function renderCarteira(){
+  const el = document.getElementById('resumoCarteira'); if(!el) return;
+  const us = state.users[state.currentUser] || {};
+  const lista = (us.bancos || []).slice().sort((a, b)=>(a.valor || 0) - (b.valor || 0));   // o maior fica na frente
+  if(!lista.length){
+    el.innerHTML = `<div class="cart-banco frente" style="--cor:#1c1a17;top:0"><div class="cb-topo"><b>Seu saldo</b></div><div class="cb-rodape"><small>toque para separar por banco</small></div></div>`;
+    el.style.height = '120px';
+    return;
+  }
+  const passo = 40, alto = 128;
+  el.style.height = (alto + passo * (lista.length - 1)) + 'px';
+  el.innerHTML = lista.map((b, i)=>{
+    const frente = i === lista.length - 1;
+    return `<div class="cart-banco${frente ? ' frente' : ''}" style="--cor:${corDoBanco(b.nome, i)};top:${i * passo}px">
+      <div class="cb-topo"><b>${escBanco(b.nome)}</b>${frente ? '' : `<span>${fmtMoney(b.valor)}</span>`}</div>
+      ${frente ? `<div class="cb-rodape"><small>${lista.length > 1 ? 'maior saldo' : 'conta'}</small><strong>${fmtMoney(b.valor)}</strong></div>` : ''}
+    </div>`;
+  }).join('');
+}
+/* curva: hoje (saldo) → fim deste mês (sobra) → acumulado dos próximos 4 meses; toque num mês abre o detalhe */
+function renderCurvaSaldo(u, mKey){
+  const el = document.getElementById('resumoProximos'); if(!el) return;
+  const pts = [{ rot:'hoje', v: state.users[u].saldoAtual || 0, m:null }];
+  let acum = saldoForMonth(u, mKey);
+  pts.push({ rot: monthLabel(mKey), v: acum, m: mKey });
+  for(let i = 1; i <= 4; i++){ const m = addMonths(mKey, i); acum += saldoForMonth(u, m); pts.push({ rot: monthLabel(m), v: acum, m }); }
+  const W = 340, H = 120, pad = 14;
+  const vs = pts.map(p=>p.v), max = Math.max(0, ...vs), min = Math.min(0, ...vs), faixa = (max - min) || 1;
+  const x = i=>pad + i * (W - pad * 2) / (pts.length - 1), y = v=>pad + (max - v) * (H - pad * 2) / faixa;
+  const P = pts.map((p, i)=>[x(i), y(p.v)]);
+  let d = `M${P[0][0]},${P[0][1]}`;
+  for(let i = 0; i < P.length - 1; i++){   // curva suave (Catmull-Rom)
+    const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+    d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`;
+  }
+  const fim = pts[pts.length - 1].v, cor = fim >= 0 ? 'var(--gold)' : 'var(--danger)';
+  const zero = y(0);
+  el.innerHTML = `<div class="curva-topo"><span>Saldo nos próximos meses</span><b class="${fim >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(fim)} em ${monthLabel(pts[pts.length - 1].m)}</b></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Saldo previsto mês a mês">
+      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#1f8a5b' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#1f8a5b' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
+      ${min < 0 ? `<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#d2452f" stroke-opacity=".35" stroke-dasharray="3 4"/>` : ''}
+      <path d="${d} L${P[P.length - 1][0]},${H} L${P[0][0]},${H} Z" fill="url(#curvaFundo)"/>
+      <path d="${d}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      ${P.map((p, i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i === 0 ? 4.5 : 3}" fill="${i === 0 ? '#fff' : cor}" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join('')}
+    </svg>
+    <div class="curva-meses">${pts.map(p=>p.m ? `<button type="button" onclick="abrirDetalheAcumulado('${p.m}')"><span>${p.rot}</span><b class="${p.v >= 0 ? 'pos' : 'neg'}">${fmtCompacto(p.v)}</b></button>` : `<span class="curva-hoje"><span>hoje</span><b>${fmtCompacto(p.v)}</b></span>`).join('')}</div>`;
+}
+/* 12.345 → "12,3 mil"; −2.463 → "−2,5 mil"; 980 → "980" */
+function fmtCompacto(v){
+  const s = v < 0 ? '−' : '', a = Math.abs(v);
+  return s + (a >= 1000 ? (a / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : Math.round(a).toLocaleString('pt-BR'));
+}
+/* próximas contas em aberto (pela data), lado a lado */
+function renderProxContas(u, mKey){
+  const el = document.getElementById('resumoProxContas'); if(!el) return;
+  const hoje = new Date().getDate();
+  const abertas = getContasDoMes(mKey, u).filter(it=>!state.paid[mKey + '_' + it.user + '_' + it.cat + '_' + it.id])
+    .map(it=>({ ...it, falta: typeof restanteConta === 'function' ? restanteConta(mKey + '_' + it.user + '_' + it.cat + '_' + it.id, it.valor) : it.valor }))
+    .filter(it=>it.falta > 0.004);
+  if(!abertas.length){ el.innerHTML = '<div class="pc-vazio">Tudo pago neste mês</div>'; return; }
+  el.innerHTML = abertas.slice(0, 8).map(it=>{
+    const quando = it.dia === hoje ? 'HOJE' : 'DIA ' + it.dia;
+    return `<button type="button" class="pc-item" onclick="abrirContasPagar()"><small>${quando}</small><b>${escBanco(it.desc)}</b><span>${fmtMoney(it.falta)}</span></button>`;
+  }).join('');
 }
 
 /* ===== Detalhe do "Vai entrar" e do "Falta pagar" (toque nos números do resumo) =====
@@ -827,9 +901,9 @@ function renderContasPagar(){
   /* --- montagem --- */
   const pct = nItens ? Math.round(nFeitos/nItens*100) : 0;
   let html = `<div class="cp-mes-nav">
-    <button type="button" onclick="cpNavMes(-1)" ${podeVoltar?'':'disabled'} aria-label="Mês anterior">◀</button>
+    <button type="button" onclick="cpNavMes(-1)" ${podeVoltar?'':'disabled'} aria-label="Mês anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 6 14 4.6 6.6 12l7.4 7.4 1.4-1.4-6-6z"/></svg></button>
     <div class="cp-mes-label">${monthLabelLong(mKey)}${mKey===mesFinanceiroAtual()?' <small>atual</small>':''}</div>
-    <button type="button" onclick="cpNavMes(1)" aria-label="Próximo mês">▶</button>
+    <button type="button" onclick="cpNavMes(1)" aria-label="Próximo mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 18 10 19.4l7.4-7.4L10 4.6 8.6 6l6 6z"/></svg></button>
   </div>
   <div class="cp-resumo">
     <div class="cp-resumo-lbl">Falta pagar</div>
