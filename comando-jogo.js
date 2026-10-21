@@ -15,6 +15,11 @@ const JG_XP_SABOT = 5;                      // anotar uma sabotagem (até 3 por 
 const JG_XP_CONQUISTA = 25;
 const JG_XP_DESAFIO = 100;
 const JG_ESCUDOS_MAX = 2;
+/* modo bruto (pedido do Davi: "bruta de verdade") */
+const JG_MULTA = { 1:25, 2:15, 3:10 };       // ordem não cumprida no fim do dia (sem prioridade = 10)
+const JG_MULTA_DIA = 40;                      // dia não fechado (e cada dia sem abrir o app, até 5)
+const JG_MULTA_SEQ = 50;                      // perder a sequência (+5 por dia que tinha, até 150)
+const JG_MULTA_ADIAR = { 1:15, 2:8, 3:5 };    // jogar uma ordem para outro dia
 const JG_PATENTES = [[1,'Recruta'],[3,'Soldado'],[5,'Cabo'],[8,'Sargento'],[12,'Tenente'],[17,'Capitão'],[23,'Major'],[30,'Coronel'],[40,'General']];
 
 /* ícones preenchidos */
@@ -75,12 +80,79 @@ function jgFecharDia(diaKey){
   const j = jgEstado(), h = jgHoje();
   j.xp += h.xp;
   j.dias[diaKey] = (j.dias[diaKey] || 0) + h.xp;
+  /* modo bruto: cada ordem não cumprida naquele dia custa XP (Alta 25, Média 15, outras 10; subtarefas = a parte que faltou) */
+  j.relatorio = { dia: diaKey, linhas: [], visto: false };
+  if(h.xp) j.relatorio.linhas.push(['Ordens cumpridas', h.xp]);
+  let multa = 0, falhas = 0;
+  (state.comando.ordens || []).filter(o=>!(o.adiadaAte && o.adiadaAte > diaKey)).forEach(o=>{
+    const subs = o.sub || [];
+    const falta = subs.length ? subs.filter(s=>!s.feito).length / subs.length : (o.feito ? 0 : 1);
+    if(falta > 0){ multa += Math.round((JG_MULTA[o.prio] || 10) * falta); falhas++; }
+  });
+  if(multa){ jgPerder(multa, diaKey); j.relatorio.linhas.push([`${falhas} orde${falhas > 1 ? 'ns' : 'm'} descumprida${falhas > 1 ? 's' : ''}`, -multa]); }
   j.tot.ordens += h.ordens; j.tot.alta += h.alta;
   const ch = jgSemanaChave(diaKey);
   if(!j.semana || j.semana.chave !== ch) j.semana = { chave: ch, ordens:0, alta:0, ganhou:false };
   j.semana.ordens += h.ordens; j.semana.alta += h.alta;
   /* guarda só os últimos 60 dias de histórico */
   const chaves = Object.keys(j.dias).sort(); if(chaves.length > 60) chaves.slice(0, chaves.length - 60).forEach(k=>delete j.dias[k]);
+}
+/* ---------- modo bruto: perder XP, rebaixar, relatório do sargento ---------- */
+function jgPerder(n, diaKey){
+  const j = jgEstado();
+  const tira = Math.min(n, j.xp);   // o XP nunca fica negativo
+  j.xp -= tira;
+  if(tira) j.rebaixar = true;
+  const k = diaKey || diaKeyHoje(); j.dias[k] = (j.dias[k] || 0) - tira;
+  return tira;
+}
+/* depois da virada: dia não fechado, sequência perdida, dias sem abrir o app */
+function jgPunirDia({ fechou, perdeuSeq, seqAntes, diasSemAbrir }){
+  const j = jgEstado(), r = j.relatorio || (j.relatorio = { dia: state.comando.ultimoDia, linhas: [], visto: false });
+  if(!fechou){ jgPerder(JG_MULTA_DIA); r.linhas.push(['Dia não fechado', -JG_MULTA_DIA]); }
+  if(perdeuSeq){ const m = Math.min(150, JG_MULTA_SEQ + seqAntes * 5); jgPerder(m); r.linhas.push([`Sequência de ${seqAntes} dia${seqAntes > 1 ? 's' : ''} perdida`, -m]); }
+  if(diasSemAbrir > 0){ const d = Math.min(diasSemAbrir, 5), m = d * JG_MULTA_DIA; jgPerder(m); r.linhas.push([`${diasSemAbrir} dia${diasSemAbrir > 1 ? 's' : ''} sem aparecer (desertor)`, -m]); }
+  r.total = r.linhas.reduce((s, l)=>s + l[1], 0);
+  if(!r.linhas.length) j.relatorio = null;
+}
+/* jogar uma ordem para outro dia também custa (é adiar) */
+function jgMultaAdiar(o){
+  const m = JG_MULTA_ADIAR[o.prio] || 5;
+  return jgPerder(m);
+}
+function jgFecharRelatorio(){ const j = jgEstado(); if(j.relatorio) j.relatorio.visto = true; persist(); renderComando(); }
+/* a voz do sargento */
+const JG_SARGENTO = {
+  cumpriu: ['Cumprido.', 'Mais uma. Não para.', 'Isso. Próxima.', 'Sem descanso.', 'Assim que se faz.', 'Continua, soldado.'],
+  tudo: ['Missão cumprida. Agora feche o dia.', 'Tudo cumprido. Fecha o dia e descansa.'],
+  falta: ['Faltam {n}. Sem desculpas.', '{n} ordens esperando. Levanta.', 'Ainda faltam {n}. O dia não espera.', 'Fraqueza é parar agora. Faltam {n}.'],
+  tarde: ['O dia está acabando e faltam {n}. Mexa-se.', 'Já é tarde. {n} ordens abertas. Vergonha.'],
+  vazio: ['Sem ordens não há missão. Escreva a primeira.'],
+  fechado: ['Dia fechado. Amanhã tem mais.', 'Dever cumprido. Descansa, soldado.']
+};
+function jgFrase(tipo, n){
+  const l = JG_SARGENTO[tipo]; const f = l[(new Date().getDate() + (n || 0)) % l.length];
+  return f.replace('{n}', n);
+}
+function jgOrdemDoSargento(){
+  const c = state.comando, ords = cmdOrdensHoje(), faltam = ords.filter(o=>!o.feito).length;
+  if(c.diaFechado) return jgFrase('fechado');
+  if(!ords.length) return jgFrase('vazio');
+  if(!faltam) return jgFrase('tudo');
+  return jgFrase(new Date().getHours() >= 18 ? 'tarde' : 'falta', faltam);
+}
+function jgRelatorioHtml(){
+  const r = jgEstado().relatorio;
+  if(!r || r.visto) return '';
+  const dia = new Date(r.dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' });
+  return `
+    <div class="jg-relatorio${r.total < 0 ? ' ruim' : ''}">
+      <div class="jg-rel-topo"><span>Relatório do sargento</span><small>${dia}</small></div>
+      ${r.linhas.map(([t, v])=>`<div class="jg-rel-linha"><span>${cmdEsc(t)}</span><b class="${v < 0 ? 'neg' : 'pos'}">${v > 0 ? '+' : ''}${v} XP</b></div>`).join('')}
+      <div class="jg-rel-total"><span>Saldo do dia</span><b class="${r.total < 0 ? 'neg' : 'pos'}">${r.total > 0 ? '+' : ''}${r.total} XP</b></div>
+      <div class="jg-rel-frase">${r.total < 0 ? 'Inaceitável. Hoje você recupera.' : 'Bom trabalho. Repete hoje.'}</div>
+      <button type="button" class="btn btn-block" onclick="jgFecharRelatorio()">Entendido</button>
+    </div>`;
 }
 /* dia perdido: um escudo segura a sequência */
 function jgUsarEscudo(){
@@ -170,7 +242,7 @@ function jgChecar(){
     if(!j.semana || j.semana.chave !== dp.ch) j.semana = { chave: dp.ch, ordens:0, alta:0, ganhou:false };
     j.semana.ganhou = true; j.tot.desafios++;
     jgGanhar(JG_XP_DESAFIO);
-    jgFila.push({ tipo:'desafio', titulo:'Desafio vencido!', texto: dp.d.txt, xp: JG_XP_DESAFIO });
+    jgFila.push({ tipo:'desafio', titulo:'Missão cumprida!', texto: dp.d.txt, xp: JG_XP_DESAFIO });
     mudou = true;
   }
   const s = jgResumo();
@@ -178,7 +250,7 @@ function jgChecar(){
     if(j.conquistas[q.id] || !q.ok(s)) return;
     j.conquistas[q.id] = diaKeyHoje();
     jgGanhar(JG_XP_CONQUISTA);
-    if(!primeira) jgFila.push({ tipo:'conquista', titulo:'Conquista: ' + q.nome, texto: q.desc, xp: JG_XP_CONQUISTA });
+    if(!primeira) jgFila.push({ tipo:'conquista', titulo:'Medalha: ' + q.nome, texto: q.desc, xp: JG_XP_CONQUISTA });
     mudou = true;
   });
   const nv = jgNivel(jgXpTotal()).nivel;
@@ -188,7 +260,14 @@ function jgChecar(){
     j.nivelVisto = nv;
     jgFila.push({ tipo:'nivel', nivel: nv, patente: jgPatente(nv), novaPatente: patenteNova });
     mudou = true;
+  } else if(j.rebaixar && nv < j.nivelVisto){
+    // só multa rebaixa (desmarcar uma ordem não conta)
+    const perdeuPatente = jgPatente(nv) !== jgPatente(j.nivelVisto);
+    j.nivelVisto = nv;
+    jgFila.push({ tipo:'rebaixado', nivel: nv, patente: jgPatente(nv), perdeuPatente });
+    mudou = true;
   }
+  if(j.rebaixar){ delete j.rebaixar; mudou = true; }
   if(mudou){ persist(); setTimeout(jgMostrarFila, 450); }
 }
 /* comemorações uma de cada vez */
@@ -196,15 +275,17 @@ function jgMostrarFila(){
   if(document.getElementById('jgFesta') || !jgFila.length) return;
   const e = jgFila.shift();
   const el = document.createElement('div');
-  el.id = 'jgFesta'; el.className = 'jg-festa' + (e.tipo === 'nivel' ? ' nivel' : '');
-  el.innerHTML = e.tipo === 'nivel'
+  el.id = 'jgFesta'; el.className = 'jg-festa' + (e.tipo === 'nivel' ? ' nivel' : e.tipo === 'rebaixado' ? ' nivel rebaixado' : '');
+  el.innerHTML = e.tipo === 'rebaixado'
+    ? `<div class="jg-festa-card"><div class="jg-festa-rotulo">Rebaixado</div><div class="jg-festa-nivel">${e.nivel}</div><div class="jg-festa-titulo">${e.perdeuPatente ? 'Perdeu a patente. Agora: ' : 'Voltou para o nível ' + e.nivel + ' · '}${e.patente}</div><div class="jg-festa-texto">Ordem descumprida tem preço. Recupere.</div><div class="jg-festa-toque">Toque para continuar</div></div>`
+    : e.tipo === 'nivel'
     ? `<div class="jg-festa-card"><div class="jg-festa-rotulo">Subiu de nível</div><div class="jg-festa-nivel">${e.nivel}</div><div class="jg-festa-titulo">${e.novaPatente ? 'Nova patente: ' : ''}${e.patente}</div><div class="jg-festa-toque">Toque para continuar</div></div>`
     : `<div class="jg-festa-card"><span class="jg-festa-ico">${e.tipo === 'desafio' ? JG_ICO.alvo : JG_ICO.medalha}</span><div class="jg-festa-titulo">${cmdEsc(e.titulo)}</div><div class="jg-festa-texto">${cmdEsc(e.texto)}</div><div class="jg-festa-xp">+${e.xp} XP</div></div>`;
   const fechar = ()=>{ el.classList.add('saindo'); setTimeout(()=>{ el.remove(); jgMostrarFila(); }, 260); };
   el.addEventListener('click', fechar);
   document.body.appendChild(el);
   if(navigator.vibrate) try{ navigator.vibrate(e.tipo === 'nivel' ? [30,60,30,60,80] : [25,40,25]); }catch(_){}
-  if(e.tipo !== 'nivel') setTimeout(()=>{ if(el.isConnected) fechar(); }, 2600);
+  if(e.tipo !== 'nivel' && e.tipo !== 'rebaixado') setTimeout(()=>{ if(el.isConnected) fechar(); }, 2600);
 }
 
 /* "+20 XP" subindo de onde tocou */
@@ -213,7 +294,7 @@ function jgFlutuar(alvo, xp){
   const r = alvo.getBoundingClientRect();
   const el = document.createElement('div');
   el.className = 'jg-flutua' + (xp < 0 ? ' menos' : '');
-  el.textContent = (xp > 0 ? '+' : '') + xp + ' XP';
+  el.textContent = (xp > 0 ? '+' : '') + xp + ' XP' + (xp > 0 ? ' · ' + jgFrase('cumpriu', Math.floor(Math.random() * 6)) : '');
   el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = r.top + 'px';
   document.body.appendChild(el);
   setTimeout(()=>el.remove(), 1100);
@@ -222,20 +303,23 @@ function jgFlutuar(alvo, xp){
 /* ---------- telas ---------- */
 function jgJogadorHtml(){
   const j = jgEstado(), c = state.comando, xp = jgXpTotal(), nv = jgNivel(xp), hoje = jgHoje().xp + (j.dias[diaKeyHoje()] || 0);
+  const proxPatente = JG_PATENTES.find(([n])=>n > nv.nivel);
   const pct = Math.round(nv.dentro / nv.passo * 100);
   return `
+    ${jgRelatorioHtml()}
+    <div class="jg-sargento"><span>Sargento</span>${cmdEsc(jgOrdemDoSargento())}</div>
     <div class="jg-jogador">
       <div class="jg-nivel"><span>${nv.nivel}</span></div>
       <div class="jg-info">
         <div class="jg-patente">${jgPatente(nv.nivel)} <small>nível ${nv.nivel}</small></div>
         <div class="jg-barra"><div style="width:${pct}%"></div></div>
-        <div class="jg-xp">${nv.dentro} / ${nv.passo} XP <span>· faltam ${nv.passo - nv.dentro} para o nível ${nv.nivel + 1}</span></div>
+        <div class="jg-xp">${nv.dentro} / ${nv.passo} XP <span>· ${proxPatente ? `${proxPatente[1]} no nível ${proxPatente[0]}` : 'patente máxima'}</span></div>
       </div>
     </div>
     <div class="jg-chips">
       <span class="jg-chip fogo" title="Dias seguidos">${JG_ICO.fogo}${c.streak}</span>
       <span class="jg-chip escudo${j.escudos ? '' : ' vazio'}" title="Escudos: protegem a sequência num dia perdido (ganha 1 a cada 7 dias seguidos)">${JG_ICO.escudo}${j.escudos}/${JG_ESCUDOS_MAX}</span>
-      <span class="jg-chip estrela" title="XP ganho hoje">${JG_ICO.estrela}+${hoje} hoje</span>
+      <span class="jg-chip estrela${hoje < 0 ? ' neg' : ''}" title="XP de hoje">${JG_ICO.estrela}${hoje > 0 ? '+' : ''}${hoje} hoje</span>
     </div>`;
 }
 function jgDesafioHtml(){
@@ -244,10 +328,10 @@ function jgDesafioHtml(){
   const faltamDias = Math.max(0, Math.round((fim - new Date().setHours(12,0,0,0)) / 864e5));
   return `
     <div class="cmd-card jg-desafio${p.ganhou ? ' ganhou' : ''}">
-      <div class="cmd-card-topo"><span class="cmd-card-titulo">Desafio da semana</span><span class="cmd-card-conta">${p.ganhou ? 'vencido ✓' : `+${JG_XP_DESAFIO} XP`}</span></div>
+      <div class="cmd-card-topo"><span class="cmd-card-titulo">Missão da semana</span><span class="cmd-card-conta">${p.ganhou ? 'cumprida ✓' : `+${JG_XP_DESAFIO} XP`}</span></div>
       <div class="jg-desafio-txt"><span class="jg-desafio-ico">${JG_ICO.alvo}</span>${cmdEsc(p.d.txt)}</div>
       <div class="jg-barra jg-barra-desafio"><div style="width:${pct}%"></div></div>
-      <div class="jg-xp">${p.feito} de ${p.d.alvo} <span>· ${p.ganhou ? 'próximo desafio na segunda' : faltamDias === 0 ? 'último dia' : `faltam ${faltamDias} dia${faltamDias > 1 ? 's' : ''}`}</span></div>
+      <div class="jg-xp">${p.feito} de ${p.d.alvo} <span>· ${p.ganhou ? 'nova missão na segunda' : faltamDias === 0 ? 'último dia' : `faltam ${faltamDias} dia${faltamDias > 1 ? 's' : ''}`}</span></div>
     </div>`;
 }
 let jgConquistasAbertas = false;
@@ -260,7 +344,7 @@ function jgConquistasHtml(){
   return `
     <div class="cmd-card">
       <button type="button" class="jg-conq-topo" onclick="jgConquistasAbertas=!jgConquistasAbertas;renderComando()">
-        <span class="cmd-card-titulo">Conquistas</span>
+        <span class="cmd-card-titulo">Medalhas</span>
         <span class="jg-conq-resumo">${ganhas} de ${JG_CONQUISTAS.length}<i class="${jgConquistasAbertas ? 'aberto' : ''}">${ICO(ICO_D.abaixo, 16)}</i></span>
       </button>
       <div class="jg-barra jg-barra-fina"><div style="width:${Math.round(ganhas / JG_CONQUISTAS.length * 100)}%"></div></div>

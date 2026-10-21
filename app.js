@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v8.1', itens: [
+    'Visual militar no app inteiro: cáqui e oliva, latão, títulos retos em caixa alta, números em estêncil',
+    'Comando bruto: ordem não cumprida, dia não fechado, sequência perdida, dias sem abrir e adiar custam XP — e pode ser rebaixado de patente',
+    'Relatório do sargento todo dia de manhã e a voz do sargento cobrando no topo do Comando'
+  ]},
   { versao: 'v8.0', itens: [
     'Comando virou jogo: XP por ordem (Alta 30, Média 20, outras 10), níveis com patente (Recruta a General) e comemoração ao subir',
     'Desafio da semana, 16 conquistas e escudos que salvam a sequência num dia perdido (1 a cada 7 dias seguidos)',

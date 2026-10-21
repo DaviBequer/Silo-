@@ -37,13 +37,21 @@ function garantirEstadoComando(){
     if(!eraPrimeiraVez && !state.comando.diaFechado && cmdDiaProdutivo(state.comando.ultimoDia)) cmdMarcarDiaFechado();
     if(!eraPrimeiraVez && typeof jgFecharDia === 'function') jgFecharDia(state.comando.ultimoDia);   // XP de ontem fica garantido
     const quebrou = !eraPrimeiraVez && !state.comando.diaFechado;
+    const seqAntes = state.comando.streak;
+    let usouEscudo = false;
     if(quebrou && typeof jgUsarEscudo === 'function' && state.comando.streak > 0 && jgUsarEscudo()){
+      usouEscudo = true;
       state.comando.rupturaHoje = 'escudo';   // o escudo segurou a sequência
     } else if(quebrou){
       state.comando.streak = 0;
       state.comando.rupturaHoje = true;
     } else {
       state.comando.rupturaHoje = false;
+    }
+    /* modo bruto: dia não fechado, sequência perdida e dias sem abrir custam XP (relatório do sargento) */
+    if(!eraPrimeiraVez && typeof jgPunirDia === 'function'){
+      const diasSemAbrir = Math.max(0, Math.round((new Date(hoje + 'T12:00:00') - new Date(state.comando.ultimoDia + 'T12:00:00')) / 864e5) - 1);
+      jgPunirDia({ fechou: !quebrou, perdeuSeq: quebrou && !usouEscudo && seqAntes > 0, seqAntes, diasSemAbrir });
     }
     state.comando.ordens.forEach(o=>{
       o.feito = false; delete o.feitoEm; (o.sub||[]).forEach(s=>{ s.feito = false; delete s.feitoEm; });
@@ -143,7 +151,9 @@ function cmdAdiar(id, dia){
   const o = cmdOrdem(id); if(!o || !dia) return;
   if(dia <= diaKeyHoje()){ showToast('Escolha um dia depois de hoje'); return; }
   cmdAcoesAberta = null;
-  comDesfazer(`Ordem jogada para ${cmdNomeDia(dia)}`, ()=>{
+  const custo = typeof JG_MULTA_ADIAR !== 'undefined' ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
+  comDesfazer(`Adiada para ${cmdNomeDia(dia)}${custo ? ` · −${custo} XP` : ''}`, ()=>{
+    if(typeof jgMultaAdiar === 'function') jgMultaAdiar(o);   // modo bruto: adiar custa
     o.adiadaAte = dia;
     cmdMarcar(o, false);
     persist();
@@ -229,7 +239,7 @@ function renderComando(){
       <div class="cmd-numero">${c.streak}<span>${c.streak===1?'dia seguido':'dias seguidos'}</span></div>
       <div class="cmd-sub">${c.recorde > 0 ? `Recorde: ${c.recorde} dia${c.recorde===1?'':'s'}` : 'Feche o dia cumprindo todas as ordens'}</div>
       <div class="cmd-semana">${cmdSemanaHtml(c)}</div>
-      ${c.rupturaHoje === 'escudo' ? `<div class="cmd-ruptura escudo">Ontem não foi fechado, mas um escudo salvou sua sequência.</div>` : c.rupturaHoje ? `<div class="cmd-ruptura">Ontem não foi fechado — a sequência recomeçou. Reorganize e siga.</div>` : ''}
+      ${c.rupturaHoje === 'escudo' ? `<div class="cmd-ruptura escudo">Ontem você falhou. O escudo salvou a sequência — não conte com isso de novo.</div>` : c.rupturaHoje ? `<div class="cmd-ruptura">Ontem você falhou. Sequência zerada. Levanta e cumpre.</div>` : ''}
       ${typeof jgJogadorHtml === 'function' ? jgJogadorHtml() : ''}
     </div>
 

@@ -123,7 +123,7 @@ function renderCurvaSaldo(u, mKey){
   const zero = y(0);
   el.innerHTML = `<div class="curva-topo"><span>Saldo nos próximos meses</span><b class="${fim >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(fim)} em ${monthLabel(pts[pts.length - 1].m)}</b></div>
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Saldo previsto mês a mês">
-      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#1f8a5b' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#1f8a5b' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#5a6b2c' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#5a6b2c' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
       ${min < 0 ? `<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#d2452f" stroke-opacity=".35" stroke-dasharray="3 4"/>` : ''}
       <path d="${d} L${P[P.length - 1][0]},${H} L${P[0][0]},${H} Z" fill="url(#curvaFundo)"/>
       <path d="${d}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
