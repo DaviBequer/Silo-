@@ -42,7 +42,10 @@ function garantirEstadoComando(){
     } else {
       state.comando.rupturaHoje = false;
     }
-    state.comando.ordens.forEach(o=>{ o.feito = false; delete o.feitoEm; (o.sub||[]).forEach(s=>{ s.feito = false; delete s.feitoEm; }); });
+    state.comando.ordens.forEach(o=>{
+      o.feito = false; delete o.feitoEm; (o.sub||[]).forEach(s=>{ s.feito = false; delete s.feitoEm; });
+      if(o.adiadaAte && o.adiadaAte <= hoje) delete o.adiadaAte;   // chegou o dia: volta para a lista
+    });
     state.comando.diaFechado = false;
     state.comando.ultimoDia = hoje;
     persist();
@@ -79,21 +82,103 @@ function cmdSemanaHtml(c){
   return html;
 }
 
+/* ---------- prioridade e adiar ----------
+   o.prio = 1 Alta · 2 Média · 3 Baixa (sem = sem prioridade); a lista mostra as de maior prioridade primeiro.
+   o.adiadaAte = 'AAAA-MM-DD': some de hoje e volta nesse dia (não conta no dia, nem na meta). */
+const CMD_PRIO = { 1:'Alta', 2:'Média', 3:'Baixa' };
+const CMD_BANDEIRA = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4"/><path d="M4 4h13l-2.5 4.5L17 13H4"/></svg>';
+const CMD_BANDEIRA_VAZIA = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4"/><path d="M4 4h13l-2.5 4.5L17 13H4"/></svg>';
+const CMD_MAIS_OPCOES = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+const CMD_VOLTAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+let cmdAcoesAberta = null;   // ordem com as opções abertas (só na tela)
+let cmdNovaPrio = 0;         // prioridade da próxima ordem
+function cmdOrdensHoje(){
+  const hoje = diaKeyHoje();
+  return state.comando.ordens
+    .map((o, i)=>({ o, i }))
+    .filter(x=>!x.o.adiadaAte || x.o.adiadaAte <= hoje)
+    .sort((a, b)=>(a.o.prio || 9) - (b.o.prio || 9) || a.i - b.i)
+    .map(x=>x.o);
+}
+function cmdOrdensAdiadas(){
+  const hoje = diaKeyHoje();
+  return state.comando.ordens.filter(o=>o.adiadaAte && o.adiadaAte > hoje).sort((a, b)=>a.adiadaAte.localeCompare(b.adiadaAte));
+}
+function cmdDiaMais(n){ const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function cmdNomeDia(iso){
+  if(iso === cmdDiaMais(1)) return 'amanhã';
+  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' }).replace('.', '');
+}
+function cmdAcoesHtml(o){
+  const prio = [1,2,3,0].map(p=>`<button type="button" class="cmd-chip${(o.prio||0)===p?' ativo':''}${p?' p'+p:''}" onclick="cmdDefinirPrio('${o.id}',${p})">${p ? CMD_PRIO[p] : 'Sem'}</button>`).join('');
+  return `
+    <div class="cmd-acoes">
+      <div class="cmd-acoes-linha"><span>Prioridade</span><div class="cmd-chips">${prio}</div></div>
+      <div class="cmd-acoes-linha"><span>Jogar para</span><div class="cmd-chips">
+        <button type="button" class="cmd-chip" onclick="cmdAdiar('${o.id}','${cmdDiaMais(1)}')">Amanhã</button>
+        <button type="button" class="cmd-chip" onclick="cmdAdiar('${o.id}','${cmdDiaMais(2)}')">${cmdNomeDia(cmdDiaMais(2))}</button>
+        <button type="button" class="cmd-chip" onclick="cmdEscolherDia('${o.id}', this)">Escolher dia</button>
+        <input type="hidden" id="cmdAdiarData-${o.id}" onchange="if(this.value)cmdAdiar('${o.id}',this.value)">
+      </div></div>
+      <button type="button" class="cmd-acoes-remover" onclick="excluirOrdemComando('${o.id}')">${CMD_X} Remover ordem</button>
+    </div>`;
+}
+function cmdAbrirAcoes(id){ cmdAcoesAberta = cmdAcoesAberta === id ? null : id; renderComando(); }
+function cmdDefinirPrio(id, p){
+  const o = cmdOrdem(id); if(!o) return;
+  if(p) o.prio = p; else delete o.prio;
+  cmdAcoesAberta = null;
+  persist();
+  renderComando();
+}
+function cmdCiclarNovaPrio(){
+  cmdNovaPrio = (cmdNovaPrio + 1) % 4;   // sem → Alta → Média → Baixa → sem
+  const b = document.getElementById('cmdNovaPrioBtn');
+  if(b){ b.className = 'cmd-btn-icone cmd-prio-btn' + (cmdNovaPrio ? ' p' + cmdNovaPrio : ''); b.innerHTML = cmdNovaPrio ? CMD_BANDEIRA : CMD_BANDEIRA_VAZIA; b.title = b.ariaLabel = 'Prioridade: ' + (CMD_PRIO[cmdNovaPrio] || 'sem'); }
+  showToast('Prioridade da nova ordem: ' + (CMD_PRIO[cmdNovaPrio] || 'sem'));
+  document.getElementById('cmdNovaOrdem')?.focus();
+}
+function cmdEscolherDia(id, btn){
+  const inp = document.getElementById('cmdAdiarData-' + id); if(!inp) return;
+  if(typeof abrirCalendario === 'function') abrirCalendario(inp, btn);
+  else inp.showPicker?.();
+}
+function cmdAdiar(id, dia){
+  const o = cmdOrdem(id); if(!o || !dia) return;
+  if(dia <= diaKeyHoje()){ showToast('Escolha um dia depois de hoje'); return; }
+  cmdAcoesAberta = null;
+  comDesfazer(`Ordem jogada para ${cmdNomeDia(dia)}`, ()=>{
+    o.adiadaAte = dia;
+    cmdMarcar(o, false);
+    persist();
+    cmdChecarMeta();
+    renderComando();
+  }, ()=>{ if(document.getElementById('pageComando')?.classList.contains('active')) renderComando(); });
+}
+function cmdTrazerHoje(id){
+  const o = cmdOrdem(id); if(!o) return;
+  delete o.adiadaAte;
+  persist();
+  renderComando();
+}
+
 function renderComando(){
   const c = state.comando;
-  const total = c.ordens.length, feitas = c.ordens.filter(o=>o.feito).length;
+  const ordensHoje = cmdOrdensHoje();
+  const total = ordensHoje.length, feitas = ordensHoje.filter(o=>o.feito).length;
   const todasFeitas = total > 0 && feitas === total;
   const pct = total ? Math.round(feitas/total*100) : 0;
 
-  const ordensHtml = c.ordens.map(o=>{
+  const ordensHtml = ordensHoje.map(o=>{
     const subs = o.sub || [], subFeitas = subs.filter(s=>s.feito).length, aberta = !!cmdSubAberta[o.id];
+    const acoes = cmdAcoesAberta === o.id;
     return `
-    <div class="cmd-ordem${o.feito?' feita':''}">
+    <div class="cmd-ordem${o.feito?' feita':''}${o.prio?' p'+o.prio:''}">
       <button type="button" class="cmd-check" onclick="toggleOrdemComando('${o.id}')" aria-label="${o.feito?'Desmarcar':'Marcar como feita'}">${o.feito?CMD_CHECK:''}</button>
-      <div class="cmd-ordem-texto" id="ordemTexto-${o.id}" onclick="editarOrdemComando('${o.id}')">${cmdEsc(o.texto)}</div>
+      <div class="cmd-ordem-texto" id="ordemTexto-${o.id}" onclick="editarOrdemComando('${o.id}')">${cmdEsc(o.texto)}${o.prio ? `<span class="cmd-prio-tag p${o.prio}">${CMD_PRIO[o.prio]}</span>` : ''}</div>
       <button type="button" class="cmd-sub-btn${aberta?' aberta':''}${subs.length?' tem':''}" onclick="event.stopPropagation();cmdAbrirSub('${o.id}')" aria-label="Subtarefas" title="Subtarefas">${subs.length ? `${subFeitas}/${subs.length}` : CMD_SUB}</button>
-      <button type="button" class="btn-icon-sm cmd-ordem-del" onclick="event.stopPropagation();excluirOrdemComando('${o.id}')" aria-label="Remover ordem" title="Remover">${CMD_X}</button>
-    </div>${aberta ? `
+      <button type="button" class="btn-icon-sm cmd-ordem-del${acoes?' aberta':''}" onclick="event.stopPropagation();cmdAbrirAcoes('${o.id}')" aria-label="Prioridade, adiar, remover" title="Prioridade, adiar, remover">${CMD_MAIS_OPCOES}</button>
+    </div>${acoes ? cmdAcoesHtml(o) : ''}${aberta ? `
     <div class="cmd-subs">
       ${subs.map(s=>`
       <div class="cmd-sub${s.feito?' feita':''}">
@@ -102,7 +187,7 @@ function renderComando(){
         <button type="button" class="btn-icon-sm cmd-ordem-del" onclick="excluirSubComando('${o.id}','${s.id}')" aria-label="Remover subtarefa" title="Remover">${CMD_X}</button>
       </div>`).join('')}
       <form class="cmd-sub-nova" onsubmit="event.preventDefault();adicionarSubComando('${o.id}')">
-        <input type="text" id="cmdNovaSub-${o.id}" class="cmd-campo" placeholder="Nova subtarefa" autocomplete="off" enterkeyhint="done">
+        <input type="text" id="cmdNovaSub-${o.id}" class="cmd-campo" placeholder="Nova subtarefa" autocomplete="off" enterkeyhint="done" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();adicionarSubComando('${o.id}')}">
         <button type="submit" class="cmd-btn-icone" aria-label="Adicionar subtarefa" title="Adicionar">${CMD_MAIS}</button>
       </form>
     </div>` : ''}`;
@@ -115,6 +200,18 @@ function renderComando(){
     : todasFeitas
       ? `<button type="button" class="btn btn-block cmd-fechar" onclick="fecharDiaComando()">Fechar o dia</button>`
       : `<button type="button" class="cmd-fechar" disabled>${total ? `Falta${faltam>1?'m':''} ${faltam} orde${faltam>1?'ns':'m'} para fechar o dia` : 'Adicione uma ordem para começar'}</button>`;
+
+  const adiadas = cmdOrdensAdiadas();
+  const adiadasHtml = adiadas.length ? `
+        <div class="cmd-adiadas">
+          <div class="cmd-adiadas-titulo">Para outros dias</div>
+          ${adiadas.map(o=>`
+          <div class="cmd-adiada">
+            <span class="cmd-adiada-dia">${cmdNomeDia(o.adiadaAte)}</span>
+            <span class="cmd-adiada-texto">${cmdEsc(o.texto)}${o.prio ? `<span class="cmd-prio-tag p${o.prio}">${CMD_PRIO[o.prio]}</span>` : ''}</span>
+            <button type="button" class="btn-icon-sm" onclick="cmdTrazerHoje('${o.id}')" aria-label="Trazer para hoje" title="Trazer para hoje">${CMD_VOLTAR}</button>
+          </div>`).join('')}
+        </div>` : '';
 
   const juramentoHtml = c.juramento ? `
       <blockquote class="cmd-juramento">${cmdEsc(c.juramento).replace(/\n/g,'<br>')}</blockquote>
@@ -145,11 +242,13 @@ function renderComando(){
         ${cmdMetaHtml()}
         <div class="cmd-ordens">${ordensHtml}</div>
         <form class="cmd-nova" onsubmit="event.preventDefault();adicionarOrdemComando()">
-          <input type="text" id="cmdNovaOrdem" class="cmd-campo" placeholder="Nova ordem" autocomplete="off" enterkeyhint="done">
+          <input type="text" id="cmdNovaOrdem" class="cmd-campo" placeholder="Nova ordem" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();adicionarOrdemComando()}">
+          <button type="button" class="cmd-btn-icone cmd-prio-btn${cmdNovaPrio?' p'+cmdNovaPrio:''}" id="cmdNovaPrioBtn" onclick="cmdCiclarNovaPrio()" aria-label="Prioridade: ${CMD_PRIO[cmdNovaPrio]||'sem'}" title="Prioridade: ${CMD_PRIO[cmdNovaPrio]||'sem'}">${cmdNovaPrio?CMD_BANDEIRA:CMD_BANDEIRA_VAZIA}</button>
           <button type="button" class="cmd-btn-icone" id="cmdMic" onclick="cmdDitar('cmdNovaOrdem', this)" aria-label="Ditar por voz" title="Ditar por voz">${CMD_MIC}</button>
           <button type="submit" class="cmd-btn-icone escuro" aria-label="Adicionar ordem" title="Adicionar">${CMD_MAIS}</button>
         </form>
         ${botaoFechar}
+        ${adiadasHtml}
       </div>
 
       <div class="cmd-coluna">
@@ -161,7 +260,7 @@ function renderComando(){
           <div class="cmd-card-topo"><span class="cmd-card-titulo">Peguei-me sabotando</span></div>
           <div class="cmd-desc">Anote na hora o que quase te derrubou.</div>
           <form class="cmd-nova" onsubmit="event.preventDefault();registrarSabotagemComando()">
-            <input type="text" id="sabotagemInput" class="cmd-campo" placeholder="O que aconteceu agora?" autocomplete="off" enterkeyhint="done">
+            <input type="text" id="sabotagemInput" class="cmd-campo" placeholder="O que aconteceu agora?" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();registrarSabotagemComando()}">
             <button type="button" class="cmd-btn-icone" onclick="cmdDitar('sabotagemInput', this)" aria-label="Ditar por voz" title="Ditar por voz">${CMD_MIC}</button>
             <button type="submit" class="cmd-btn-icone escuro" aria-label="Registrar" title="Registrar">${CMD_MAIS}</button>
           </form>
@@ -234,7 +333,7 @@ function cmdMarcar(x, feito){ x.feito = feito; if(feito) x.feitoEm = Date.now();
 function cmdMeta(){ const m = state.comando.metaDia; return m && m.hora && m.pct ? m : null; }
 function cmdLimite(diaKey){ const m = cmdMeta(); return m ? new Date(diaKey + 'T' + m.hora + ':00').getTime() : null; }
 function cmdProgresso(ate){
-  const ords = state.comando.ordens; if(!ords.length) return 0;
+  const ords = cmdOrdensHoje(); if(!ords.length) return 0;
   const vale = x=>x.feito && !(ate && x.feitoEm > ate);
   return ords.reduce((s, o)=>s + ((o.sub||[]).length ? o.sub.filter(vale).length / o.sub.length : (vale(o) ? 1 : 0)), 0) / ords.length;
 }
@@ -349,21 +448,23 @@ function adicionarOrdemComando(){
   const inp = document.getElementById('cmdNovaOrdem');
   const texto = (inp && inp.value || '').trim();
   if(!texto){ inp?.focus(); return; }
-  state.comando.ordens.push({ id:'o'+Date.now(), texto, feito:false });
+  state.comando.ordens.push(Object.assign({ id:'o'+Date.now(), texto, feito:false }, cmdNovaPrio ? { prio: cmdNovaPrio } : {}));
   persist();
   renderComando();
   document.getElementById('cmdNovaOrdem')?.focus();
 }
-async function excluirOrdemComando(id){
-  const ok = await iosConfirm('Remover esta ordem?');
-  if(!ok) return;
-  state.comando.ordens = state.comando.ordens.filter(x=>x.id!==id);
-  persist();
-  renderComando();
+function excluirOrdemComando(id){
+  cmdAcoesAberta = null;
+  comDesfazer('Ordem removida', ()=>{
+    state.comando.ordens = state.comando.ordens.filter(x=>x.id!==id);
+    persist();
+    cmdChecarMeta();
+    renderComando();
+  }, ()=>{ if(document.getElementById('pageComando')?.classList.contains('active')) renderComando(); });
 }
 function fecharDiaComando(){
   const c = state.comando;
-  if(c.diaFechado || !c.ordens.every(o=>o.feito)) return;
+  if(c.diaFechado || !cmdOrdensHoje().length || !cmdOrdensHoje().every(o=>o.feito)) return;
   cmdMarcarDiaFechado();
   persist();
   renderComando();

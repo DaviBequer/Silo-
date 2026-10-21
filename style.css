@@ -1278,6 +1278,34 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cmd-ordem-texto{flex:1;min-width:0;font-size:14px;font-weight:500;line-height:1.35;color:var(--text);cursor:text}
 .cmd-ordem.feita .cmd-ordem-texto{color:var(--text-faint);text-decoration:line-through}
 .cmd-ordem-del{flex-shrink:0;color:var(--text-faint)}
+.cmd-ordem-del.aberta{color:var(--text)}
+/* prioridade: cor no círculo + etiqueta; 1 alta (vermelho) · 2 média (âmbar) · 3 baixa (azul) */
+.cmd-ordem.p1 .cmd-check{border-color:var(--danger);border-width:2px}
+.cmd-ordem.p2 .cmd-check{border-color:#d4900f;border-width:2px}
+.cmd-ordem.p3 .cmd-check{border-color:#3b7dd8;border-width:2px}
+.cmd-ordem.feita .cmd-check{border-width:1.5px}
+.cmd-prio-tag{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.02em;vertical-align:2px;text-decoration:none}
+.cmd-prio-tag.p1,.cmd-chip.p1.ativo{background:#fbe5e1;color:#b8321e}
+.cmd-prio-tag.p2,.cmd-chip.p2.ativo{background:#fbefd6;color:#9a6408}
+.cmd-prio-tag.p3,.cmd-chip.p3.ativo{background:#e2edfb;color:#2a62b0}
+.cmd-ordem.feita .cmd-prio-tag{opacity:.55}
+.cmd-prio-btn.p1{color:var(--danger)}
+.cmd-prio-btn.p2{color:#d4900f}
+.cmd-prio-btn.p3{color:#3b7dd8}
+/* opções da ordem (⋯): prioridade, jogar para outro dia, remover */
+.cmd-acoes{display:flex;flex-direction:column;gap:10px;padding:10px 0 12px 36px;border-bottom:1px solid var(--line);animation:surgir .3s var(--mola)}
+.cmd-acoes-linha{display:flex;flex-direction:column;gap:6px}
+.cmd-acoes-linha>span{font-size:11.5px;font-weight:600;color:var(--text-faint)}
+.cmd-chips{display:flex;flex-wrap:wrap;gap:6px}
+.cmd-chip{height:30px;padding:0 12px;border:none;border-radius:999px;background:var(--card-2);color:var(--text-dim);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.cmd-chip.ativo{background:var(--text);color:#fff}
+.cmd-acoes-remover{align-self:flex-start;display:flex;align-items:center;gap:6px;padding:4px 0;border:none;background:none;color:var(--danger);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+/* ordens jogadas para outros dias */
+.cmd-adiadas{margin-top:14px}
+.cmd-adiadas-titulo{margin-bottom:4px;font-size:12px;font-weight:700;color:var(--text-faint)}
+.cmd-adiada{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.cmd-adiada-dia{flex-shrink:0;min-width:74px;font-size:12px;font-weight:600;color:var(--gold-dim)}
+.cmd-adiada-texto{flex:1;min-width:0;font-size:13.5px;color:var(--text-dim)}
 /* subtarefas: lista recuada embaixo da ordem; o botão mostra "feitas/total" */
 .cmd-sub-btn{flex-shrink:0;min-width:30px;height:26px;padding:0 8px;border:1px solid transparent;border-radius:999px;background:none;color:var(--text-faint);font:inherit;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .cmd-sub-btn.tem{border-color:var(--line);color:var(--text-dim)}

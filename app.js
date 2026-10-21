@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.7', itens: [
+    'Comando: prioridade em cada ordem (Alta, Média, Baixa) — as mais importantes ficam em cima',
+    'Comando: jogar a ordem para outro dia (amanhã, depois ou escolher no calendário)',
+    'Comando: Enter ou Enviar no teclado do celular já adiciona a ordem'
+  ]},
   { versao: 'v7.6', itens: [
     'PIN é sempre a entrada principal, sem pedir e-mail',
     'Nova aba Segurança em Dados do App: PIN, senha, e-mail e aparelhos conectados (desconectar um aparelho)'
