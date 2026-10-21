@@ -52,14 +52,7 @@ function garantirEstadoComando(){
   }
 }
 
-function abrirComando(){
-  garantirEstadoComando();
-  document.getElementById('pageComando').classList.add('active');
-  renderComando();
-}
-function fecharComando(){
-  document.getElementById('pageComando').classList.remove('active');
-}
+function abrirComando(){ switchAba('comando'); }
 
 function cmdEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 const CMD_MIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg>';
@@ -153,7 +146,7 @@ function cmdAdiar(id, dia){
     persist();
     cmdChecarMeta();
     renderComando();
-  }, ()=>{ if(document.getElementById('pageComando')?.classList.contains('active')) renderComando(); });
+  }, ()=>{ if(document.getElementById('aba-comando')?.classList.contains('active')) renderComando(); });
 }
 function cmdTrazerHoje(id){
   const o = cmdOrdem(id); if(!o) return;
@@ -428,7 +421,7 @@ function excluirSubComando(id, subId){
     cmdAtualizarOrdemPelasSubs(o);
     persist();
     renderComando();
-  }, ()=>{ if(document.getElementById('pageComando')?.classList.contains('active')) renderComando(); });
+  }, ()=>{ if(document.getElementById('aba-comando')?.classList.contains('active')) renderComando(); });
 }
 function editarOrdemComando(id){
   const o = state.comando.ordens.find(x=>x.id===id);
@@ -460,7 +453,7 @@ function excluirOrdemComando(id){
     persist();
     cmdChecarMeta();
     renderComando();
-  }, ()=>{ if(document.getElementById('pageComando')?.classList.contains('active')) renderComando(); });
+  }, ()=>{ if(document.getElementById('aba-comando')?.classList.contains('active')) renderComando(); });
 }
 function fecharDiaComando(){
   const c = state.comando;

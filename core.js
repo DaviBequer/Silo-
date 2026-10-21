@@ -801,6 +801,8 @@ function switchAba(aba){
   if(aba==='planner'){ renderPlanner(); renderPanorama(); }
   if(aba==='louvor') renderLouvor();
   if(aba==='vendas' && typeof renderVendas==='function') renderVendas();
+  if(aba==='comando' && typeof renderComando==='function'){ garantirEstadoComando(); renderComando(); }
+  if(aba==='ajustes' && typeof renderAjustes==='function') renderAjustes();
   if(typeof efeitoAoTrocarAba==='function') efeitoAoTrocarAba(aba);
 }
 /* Davi/Cris é escolha de cada aparelho (fica no aparelho, não no banco): escolher Cris num celular não muda os outros */

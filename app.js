@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.8', itens: [
+    'Comando e Ajustes agora são abas na barra de baixo (Ajustes = o antigo Dados do App)'
+  ]},
   { versao: 'v7.7', itens: [
     'Comando: prioridade em cada ordem (Alta, Média, Baixa) — as mais importantes ficam em cima',
     'Comando: jogar a ordem para outro dia (amanhã, depois ou escolher no calendário)',
@@ -316,9 +319,9 @@ function renderChangelog(){
   `;
 }
 
-function abrirImportExportModal(){
-  document.getElementById('modalImportExport').classList.add('active');
-  document.body.style.overflow = 'hidden';
+/* aba Ajustes (antes a janela "Dados do App"): atualiza o que muda ao abrir */
+function abrirImportExportModal(){ switchAba('ajustes'); }
+function renderAjustes(){
   renderChangelog();
   const btnSair = document.getElementById('btnSairApp');   // só aparece se este aparelho entrou com login
   if(btnSair && window.SiloSupabase) window.SiloSupabase.temSessao().then(s=>{
@@ -522,7 +525,6 @@ function exportarDadosApp(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  closeModal('modalImportExport');
   showToast('Backup exportado');
 }
 function triggerImportarDados(){
@@ -676,8 +678,7 @@ function fecharCamadaAbertaVoltar(){
   const paginas = document.querySelectorAll('.fullpage.active');
   if(paginas.length){
     const pg = paginas[paginas.length-1];
-    if(pg.id==='pageComando' && typeof fecharComando==='function') fecharComando();
-    else pg.classList.remove('active');
+    pg.classList.remove('active');
     document.body.style.overflow = '';
     return true;
   }
@@ -1424,8 +1425,7 @@ let ddAbaAtual = 'geral';
 function ddAba(nome){
   ddAbaAtual = nome;
   document.querySelectorAll('#ddAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.dd === nome));
-  document.querySelectorAll('#modalImportExport .dd-painel').forEach(p=>p.classList.toggle('active', p.dataset.dd === nome));
-  const m = document.querySelector('#modalImportExport .modal'); if(m) m.scrollTop = 0;
+  document.querySelectorAll('#aba-ajustes .dd-painel').forEach(p=>p.classList.toggle('active', p.dataset.dd === nome));
 }
 
 /* ========== VERSÍCULO (topo de Finanças) ==========
