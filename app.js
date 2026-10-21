@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v8.0', itens: [
+    'Comando virou jogo: XP por ordem (Alta 30, Média 20, outras 10), níveis com patente (Recruta a General) e comemoração ao subir',
+    'Desafio da semana, 16 conquistas e escudos que salvam a sequência num dia perdido (1 a cada 7 dias seguidos)',
+    'Fechar o dia dá +50 XP (mais bônus da sequência); anotar sabotagem também vale XP'
+  ]},
   { versao: 'v7.9', itens: [
     'Versículo de Finanças com visual novo: caixa branca, aspas verdes, letra mais leve'
   ]},

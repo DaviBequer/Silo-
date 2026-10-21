@@ -35,8 +35,11 @@ function garantirEstadoComando(){
     const eraPrimeiraVez = !state.comando.ultimoDia;
     /* com meta do dia: ontem conta se bateu o % até a hora, mesmo sem ter tocado em Fechar */
     if(!eraPrimeiraVez && !state.comando.diaFechado && cmdDiaProdutivo(state.comando.ultimoDia)) cmdMarcarDiaFechado();
+    if(!eraPrimeiraVez && typeof jgFecharDia === 'function') jgFecharDia(state.comando.ultimoDia);   // XP de ontem fica garantido
     const quebrou = !eraPrimeiraVez && !state.comando.diaFechado;
-    if(quebrou){
+    if(quebrou && typeof jgUsarEscudo === 'function' && state.comando.streak > 0 && jgUsarEscudo()){
+      state.comando.rupturaHoje = 'escudo';   // o escudo segurou a sequência
+    } else if(quebrou){
       state.comando.streak = 0;
       state.comando.rupturaHoje = true;
     } else {
@@ -157,6 +160,7 @@ function cmdTrazerHoje(id){
 
 function renderComando(){
   const c = state.comando;
+  if(typeof jgChecar === 'function') jgChecar();   // desafio vencido, conquistas, subiu de nível
   const ordensHoje = cmdOrdensHoje();
   const total = ordensHoje.length, feitas = ordensHoje.filter(o=>o.feito).length;
   const todasFeitas = total > 0 && feitas === total;
@@ -225,7 +229,8 @@ function renderComando(){
       <div class="cmd-numero">${c.streak}<span>${c.streak===1?'dia seguido':'dias seguidos'}</span></div>
       <div class="cmd-sub">${c.recorde > 0 ? `Recorde: ${c.recorde} dia${c.recorde===1?'':'s'}` : 'Feche o dia cumprindo todas as ordens'}</div>
       <div class="cmd-semana">${cmdSemanaHtml(c)}</div>
-      ${c.rupturaHoje ? `<div class="cmd-ruptura">Ontem não foi fechado — a sequência recomeçou. Reorganize e siga.</div>` : ''}
+      ${c.rupturaHoje === 'escudo' ? `<div class="cmd-ruptura escudo">Ontem não foi fechado, mas um escudo salvou sua sequência.</div>` : c.rupturaHoje ? `<div class="cmd-ruptura">Ontem não foi fechado — a sequência recomeçou. Reorganize e siga.</div>` : ''}
+      ${typeof jgJogadorHtml === 'function' ? jgJogadorHtml() : ''}
     </div>
 
     <div class="cmd-grade">
@@ -245,6 +250,7 @@ function renderComando(){
       </div>
 
       <div class="cmd-coluna">
+        ${typeof jgDesafioHtml === 'function' ? jgDesafioHtml() : ''}
         <div class="cmd-card">
           <div class="cmd-card-topo"><span class="cmd-card-titulo">Juramento</span></div>
           ${juramentoHtml}
@@ -259,6 +265,7 @@ function renderComando(){
           </form>
           ${sabotagensHtml ? `<div class="cmd-sabs">${sabotagensHtml}</div>` : ''}
         </div>
+        ${typeof jgConquistasHtml === 'function' ? jgConquistasHtml() : ''}
       </div>
     </div>
   `;
@@ -301,7 +308,14 @@ function toggleOrdemComando(id){
     if(faltam){ cmdSubAberta[o.id] = true; renderComando(); showToast(`Falta${faltam>1?'m':''} ${faltam} subtarefa${faltam>1?'s':''} para concluir`); }
     return;
   }
-  cmdMarcar(o, !o.feito);
+  cmdComXp(`[onclick="toggleOrdemComando('${id}')"]`, ()=>cmdMarcar(o, !o.feito));
+}
+/* marca/desmarca mostrando o XP ganho (ou devolvido) no lugar do toque */
+function cmdComXp(seletor, marcar){
+  const antes = typeof jgHoje === 'function' ? jgHoje().xp : 0;
+  const alvo = document.querySelector(seletor);
+  marcar();
+  if(typeof jgFlutuar === 'function') jgFlutuar(alvo, jgHoje().xp - antes);
   persist();
   cmdChecarMeta();
   renderComando();
@@ -350,6 +364,7 @@ function cmdMarcarDiaFechado(){
   c.streak += 1;
   c.recorde = Math.max(c.recorde, c.streak);
   c.rupturaHoje = false;
+  if(typeof jgDiaFechado === 'function') jgDiaFechado();
 }
 let cmdMetaEditando = false;
 function cmdEditarMeta(v){ cmdMetaEditando = v; renderComando(); }
@@ -394,11 +409,7 @@ function adicionarSubComando(id){
 function toggleSubComando(id, subId){
   const o = cmdOrdem(id), s = o && (o.sub||[]).find(x=>x.id===subId);
   if(!s) return;
-  cmdMarcar(s, !s.feito);
-  cmdAtualizarOrdemPelasSubs(o);
-  persist();
-  cmdChecarMeta();
-  renderComando();
+  cmdComXp(`[onclick="toggleSubComando('${id}','${subId}')"]`, ()=>{ cmdMarcar(s, !s.feito); cmdAtualizarOrdemPelasSubs(o); });
 }
 function editarSubComando(id, subId){
   const o = cmdOrdem(id), s = o && (o.sub||[]).find(x=>x.id===subId);
@@ -482,6 +493,8 @@ function registrarSabotagemComando(){
   if(!nota) return;
   state.comando.sabotagens.push({data:new Date().toISOString(), nota});
   if(state.comando.sabotagens.length>50) state.comando.sabotagens = state.comando.sabotagens.slice(-50);
+  const xp = typeof jgSabotagem === 'function' ? jgSabotagem() : 0;
+  if(xp) jgFlutuar(input, xp);
   input.value = '';
   persist();
   renderComando();

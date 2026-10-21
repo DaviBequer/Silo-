@@ -1,0 +1,269 @@
+/* ========== COMANDO — GAMIFICAÇÃO ==========
+   Base: os dois estudos que o Davi mandou (Habitica/RPG e análise de 25 apps pelo Octalysis):
+   - XP + níveis com patente (progresso visível), barra de progresso (elemento "híbrido", o mais usado);
+   - feedback imediato ("+20 XP" ao marcar, comemoração ao subir de nível);
+   - conquistas (emblemas) e desafio da semana (objetivo com prazo);
+   - escudo da sequência = gerenciamento de recurso (motivação intrínseca): protege um dia perdido;
+   - sem ranking/competição e sem punição (os estudos apontam efeito contrário); interface enxuta.
+   Dados: state.comando.jogo = { xp (já garantido), tot:{ordens,alta,dias,sabot,desafios}, escudos,
+   semana:{chave,ordens,alta,ganhou}, conquistas:{id: data}, nivelVisto, dias:{AAAA-MM-DD: xp} }.
+   O XP de HOJE é calculado das ordens marcadas (desmarcar devolve) e só vira "garantido" na virada do dia. */
+
+const JG_XP_PRIO = { 1:30, 2:20, 3:10 };   // sem prioridade = 10
+const JG_XP_DIA = 50;                       // fechar o dia (+5 por dia de sequência, até +50)
+const JG_XP_SABOT = 5;                      // anotar uma sabotagem (até 3 por dia)
+const JG_XP_CONQUISTA = 25;
+const JG_XP_DESAFIO = 100;
+const JG_ESCUDOS_MAX = 2;
+const JG_PATENTES = [[1,'Recruta'],[3,'Soldado'],[5,'Cabo'],[8,'Sargento'],[12,'Tenente'],[17,'Capitão'],[23,'Major'],[30,'Coronel'],[40,'General']];
+
+/* ícones preenchidos */
+const JG_ICO = {
+  fogo:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3.5 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>',
+  escudo:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.5 3.4 9.7 8 11 4.6-1.3 8-5.5 8-11V5l-8-3z"/></svg>',
+  estrela:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>',
+  alvo:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
+  medalha:'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h4l1.5 4L14 2h3l-3 7.2A6 6 0 1 1 9.9 9.2z" opacity=".55"/><circle cx="12" cy="15" r="5.2"/></svg>',
+  cadeado:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z"/></svg>'
+};
+
+/* ---------- estado ---------- */
+function jgEstado(){
+  const c = state.comando;
+  if(!c.jogo){
+    /* começa contando o histórico que já existe (dias fechados) */
+    const dias = (c.diasFechados || []).length;
+    c.jogo = { xp: dias * JG_XP_DIA, tot:{ ordens:0, alta:0, dias, sabot:(c.sabotagens||[]).length, desafios:0 }, escudos:0, semana:null, conquistas:{}, nivelVisto:0, dias:{} };
+  }
+  const j = c.jogo;
+  j.tot = Object.assign({ ordens:0, alta:0, dias:0, sabot:0, desafios:0 }, j.tot);
+  j.conquistas = j.conquistas || {}; j.dias = j.dias || {};
+  return j;
+}
+function jgDiaKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function jgSemanaChave(diaKey){   // segunda-feira da semana
+  const d = new Date(diaKey + 'T12:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return jgDiaKey(d);
+}
+
+/* ---------- XP de hoje (vem das ordens marcadas) ---------- */
+function jgValorOrdem(o){ return JG_XP_PRIO[o.prio] || 10; }
+function jgHoje(){
+  let xp = 0, ordens = 0, alta = 0;
+  (state.comando.ordens || []).forEach(o=>{
+    const subs = o.sub || [];
+    const frac = subs.length ? subs.filter(s=>s.feito).length / subs.length : (o.feito ? 1 : 0);
+    xp += Math.round(jgValorOrdem(o) * frac);
+    if(o.feito){ ordens++; if(o.prio === 1) alta++; }
+  });
+  return { xp, ordens, alta };
+}
+function jgXpTotal(){ return jgEstado().xp + jgHoje().xp; }
+function jgGanhar(n){ const j = jgEstado(); j.xp += n; const k = diaKeyHoje(); j.dias[k] = (j.dias[k] || 0) + n; }
+
+/* ---------- nível e patente ---------- */
+function jgNivel(xp){
+  let nivel = 1, base = 0, passo = 100;
+  while(xp >= base + passo){ base += passo; nivel++; passo = 100 + 50 * (nivel - 1); }
+  return { nivel, dentro: xp - base, passo };
+}
+function jgPatente(nivel){ let p = JG_PATENTES[0][1]; JG_PATENTES.forEach(([n, t])=>{ if(nivel >= n) p = t; }); return p; }
+
+/* ---------- virada do dia (chamado por garantirEstadoComando ANTES de zerar as ordens) ---------- */
+function jgFecharDia(diaKey){
+  const j = jgEstado(), h = jgHoje();
+  j.xp += h.xp;
+  j.dias[diaKey] = (j.dias[diaKey] || 0) + h.xp;
+  j.tot.ordens += h.ordens; j.tot.alta += h.alta;
+  const ch = jgSemanaChave(diaKey);
+  if(!j.semana || j.semana.chave !== ch) j.semana = { chave: ch, ordens:0, alta:0, ganhou:false };
+  j.semana.ordens += h.ordens; j.semana.alta += h.alta;
+  /* guarda só os últimos 60 dias de histórico */
+  const chaves = Object.keys(j.dias).sort(); if(chaves.length > 60) chaves.slice(0, chaves.length - 60).forEach(k=>delete j.dias[k]);
+}
+/* dia perdido: um escudo segura a sequência */
+function jgUsarEscudo(){
+  const j = jgEstado();
+  if(j.escudos > 0){ j.escudos--; return true; }
+  return false;
+}
+/* chamado em cmdMarcarDiaFechado (depois de somar a sequência) */
+function jgDiaFechado(){
+  const j = jgEstado(), c = state.comando;
+  j.tot.dias++;
+  const xp = JG_XP_DIA + Math.min(50, c.streak * 5);
+  jgGanhar(xp);
+  if(c.streak > 0 && c.streak % 7 === 0 && j.escudos < JG_ESCUDOS_MAX){ j.escudos++; setTimeout(()=>showToast('Ganhou um escudo: ele protege a sequência num dia perdido'), 1600); }
+  if(c.ultimoDia === diaKeyHoje()){
+    if(new Date().getHours() < 12) j.madrugou = true;
+    setTimeout(()=>showToast(`Dia fechado: +${xp} XP`), 300);
+  }
+}
+function jgSabotagem(){
+  const j = jgEstado();
+  j.tot.sabot++;
+  const hoje = diaKeyHoje();
+  const deHoje = (state.comando.sabotagens || []).filter(s=>jgDiaKey(new Date(s.data)) === hoje).length;
+  if(deHoje <= 3){ jgGanhar(JG_XP_SABOT); return JG_XP_SABOT; }
+  return 0;
+}
+
+/* ---------- desafio da semana ---------- */
+const JG_DESAFIOS = [
+  { id:'fechar5', txt:'Feche 5 dias nesta semana', alvo:5 },
+  { id:'ordens20', txt:'Conclua 20 ordens nesta semana', alvo:20 },
+  { id:'alta5', txt:'Conclua 5 ordens de prioridade Alta', alvo:5 },
+  { id:'seq5', txt:'Chegue a 5 dias seguidos', alvo:5 },
+  { id:'sabot3', txt:'Anote 3 sabotagens (consciência vence o hábito)', alvo:3 }
+];
+function jgDesafioAtual(){
+  const ch = jgSemanaChave(diaKeyHoje());
+  const idx = Math.floor(new Date(ch + 'T12:00:00').getTime() / (7 * 864e5));
+  return { ch, d: JG_DESAFIOS[((idx % JG_DESAFIOS.length) + JG_DESAFIOS.length) % JG_DESAFIOS.length] };
+}
+function jgDesafioProgresso(){
+  const j = jgEstado(), c = state.comando, { ch, d } = jgDesafioAtual(), h = jgHoje();
+  const base = j.semana && j.semana.chave === ch ? j.semana : { ordens:0, alta:0 };
+  let feito = 0;
+  if(d.id === 'fechar5') feito = (c.diasFechados || []).filter(k=>jgSemanaChave(k) === ch).length;
+  else if(d.id === 'ordens20') feito = base.ordens + h.ordens;
+  else if(d.id === 'alta5') feito = base.alta + h.alta;
+  else if(d.id === 'seq5') feito = c.streak;
+  else if(d.id === 'sabot3') feito = (c.sabotagens || []).filter(s=>jgSemanaChave(jgDiaKey(new Date(s.data))) === ch).length;
+  return { d, ch, feito: Math.min(feito, d.alvo), ganhou: !!(j.semana && j.semana.chave === ch && j.semana.ganhou) };
+}
+
+/* ---------- conquistas ---------- */
+const JG_CONQUISTAS = [
+  { id:'primeira', nome:'Primeiro passo', desc:'Concluir a primeira ordem', ok:s=>s.ordens >= 1 },
+  { id:'dia1', nome:'Dia fechado', desc:'Fechar o primeiro dia', ok:s=>s.dias >= 1 },
+  { id:'juramento', nome:'Palavra dada', desc:'Assinar o juramento', ok:s=>s.juramento },
+  { id:'seq3', nome:'Embalo', desc:'3 dias seguidos', ok:s=>s.recorde >= 3 },
+  { id:'seq7', nome:'Semana firme', desc:'7 dias seguidos', ok:s=>s.recorde >= 7 },
+  { id:'seq21', nome:'21 dias', desc:'21 dias seguidos', ok:s=>s.recorde >= 21 },
+  { id:'seq66', nome:'Hábito formado', desc:'66 dias seguidos', ok:s=>s.recorde >= 66 },
+  { id:'ordens50', nome:'Cumpridor', desc:'50 ordens concluídas', ok:s=>s.ordens >= 50 },
+  { id:'ordens200', nome:'Incansável', desc:'200 ordens concluídas', ok:s=>s.ordens >= 200 },
+  { id:'alta10', nome:'O mais difícil primeiro', desc:'10 ordens de prioridade Alta', ok:s=>s.alta >= 10 },
+  { id:'madrugador', nome:'Madrugador', desc:'Fechar o dia antes do meio-dia', ok:s=>s.madrugou },
+  { id:'consciente', nome:'Consciente', desc:'Anotar 10 sabotagens', ok:s=>s.sabot >= 10 },
+  { id:'desafio1', nome:'Desafiante', desc:'Vencer um desafio da semana', ok:s=>s.desafios >= 1 },
+  { id:'desafio5', nome:'Veterano', desc:'Vencer 5 desafios da semana', ok:s=>s.desafios >= 5 },
+  { id:'nivel5', nome:'Cabo', desc:'Chegar ao nível 5', ok:s=>s.nivel >= 5 },
+  { id:'nivel12', nome:'Oficial', desc:'Chegar ao nível 12 (Tenente)', ok:s=>s.nivel >= 12 }
+];
+function jgResumo(){
+  const j = jgEstado(), c = state.comando, h = jgHoje();
+  return { ordens: j.tot.ordens + h.ordens, alta: j.tot.alta + h.alta, dias: j.tot.dias, sabot: j.tot.sabot, desafios: j.tot.desafios,
+    recorde: Math.max(c.recorde || 0, c.streak || 0), juramento: !!c.juramento, madrugou: !!j.madrugou, nivel: jgNivel(jgXpTotal()).nivel };
+}
+
+/* ---------- conferência: desafio vencido, conquistas, subiu de nível (chamado no renderComando) ---------- */
+let jgFila = [];
+function jgChecar(){
+  const j = jgEstado();
+  const primeira = !j.nivelVisto;   // primeira vez: conquistas do histórico entram sem festa
+  let mudou = false;
+  const dp = jgDesafioProgresso();
+  if(!dp.ganhou && dp.feito >= dp.d.alvo){
+    if(!j.semana || j.semana.chave !== dp.ch) j.semana = { chave: dp.ch, ordens:0, alta:0, ganhou:false };
+    j.semana.ganhou = true; j.tot.desafios++;
+    jgGanhar(JG_XP_DESAFIO);
+    jgFila.push({ tipo:'desafio', titulo:'Desafio vencido!', texto: dp.d.txt, xp: JG_XP_DESAFIO });
+    mudou = true;
+  }
+  const s = jgResumo();
+  JG_CONQUISTAS.forEach(q=>{
+    if(j.conquistas[q.id] || !q.ok(s)) return;
+    j.conquistas[q.id] = diaKeyHoje();
+    jgGanhar(JG_XP_CONQUISTA);
+    if(!primeira) jgFila.push({ tipo:'conquista', titulo:'Conquista: ' + q.nome, texto: q.desc, xp: JG_XP_CONQUISTA });
+    mudou = true;
+  });
+  const nv = jgNivel(jgXpTotal()).nivel;
+  if(!j.nivelVisto) j.nivelVisto = nv;   // primeira vez: sem festa pelo histórico antigo
+  else if(nv > j.nivelVisto){
+    const patenteNova = jgPatente(nv) !== jgPatente(j.nivelVisto);
+    j.nivelVisto = nv;
+    jgFila.push({ tipo:'nivel', nivel: nv, patente: jgPatente(nv), novaPatente: patenteNova });
+    mudou = true;
+  }
+  if(mudou){ persist(); setTimeout(jgMostrarFila, 450); }
+}
+/* comemorações uma de cada vez */
+function jgMostrarFila(){
+  if(document.getElementById('jgFesta') || !jgFila.length) return;
+  const e = jgFila.shift();
+  const el = document.createElement('div');
+  el.id = 'jgFesta'; el.className = 'jg-festa' + (e.tipo === 'nivel' ? ' nivel' : '');
+  el.innerHTML = e.tipo === 'nivel'
+    ? `<div class="jg-festa-card"><div class="jg-festa-rotulo">Subiu de nível</div><div class="jg-festa-nivel">${e.nivel}</div><div class="jg-festa-titulo">${e.novaPatente ? 'Nova patente: ' : ''}${e.patente}</div><div class="jg-festa-toque">Toque para continuar</div></div>`
+    : `<div class="jg-festa-card"><span class="jg-festa-ico">${e.tipo === 'desafio' ? JG_ICO.alvo : JG_ICO.medalha}</span><div class="jg-festa-titulo">${cmdEsc(e.titulo)}</div><div class="jg-festa-texto">${cmdEsc(e.texto)}</div><div class="jg-festa-xp">+${e.xp} XP</div></div>`;
+  const fechar = ()=>{ el.classList.add('saindo'); setTimeout(()=>{ el.remove(); jgMostrarFila(); }, 260); };
+  el.addEventListener('click', fechar);
+  document.body.appendChild(el);
+  if(navigator.vibrate) try{ navigator.vibrate(e.tipo === 'nivel' ? [30,60,30,60,80] : [25,40,25]); }catch(_){}
+  if(e.tipo !== 'nivel') setTimeout(()=>{ if(el.isConnected) fechar(); }, 2600);
+}
+
+/* "+20 XP" subindo de onde tocou */
+function jgFlutuar(alvo, xp){
+  if(!xp || !alvo) return;
+  const r = alvo.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'jg-flutua' + (xp < 0 ? ' menos' : '');
+  el.textContent = (xp > 0 ? '+' : '') + xp + ' XP';
+  el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = r.top + 'px';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 1100);
+}
+
+/* ---------- telas ---------- */
+function jgJogadorHtml(){
+  const j = jgEstado(), c = state.comando, xp = jgXpTotal(), nv = jgNivel(xp), hoje = jgHoje().xp + (j.dias[diaKeyHoje()] || 0);
+  const pct = Math.round(nv.dentro / nv.passo * 100);
+  return `
+    <div class="jg-jogador">
+      <div class="jg-nivel"><span>${nv.nivel}</span></div>
+      <div class="jg-info">
+        <div class="jg-patente">${jgPatente(nv.nivel)} <small>nível ${nv.nivel}</small></div>
+        <div class="jg-barra"><div style="width:${pct}%"></div></div>
+        <div class="jg-xp">${nv.dentro} / ${nv.passo} XP <span>· faltam ${nv.passo - nv.dentro} para o nível ${nv.nivel + 1}</span></div>
+      </div>
+    </div>
+    <div class="jg-chips">
+      <span class="jg-chip fogo" title="Dias seguidos">${JG_ICO.fogo}${c.streak}</span>
+      <span class="jg-chip escudo${j.escudos ? '' : ' vazio'}" title="Escudos: protegem a sequência num dia perdido (ganha 1 a cada 7 dias seguidos)">${JG_ICO.escudo}${j.escudos}/${JG_ESCUDOS_MAX}</span>
+      <span class="jg-chip estrela" title="XP ganho hoje">${JG_ICO.estrela}+${hoje} hoje</span>
+    </div>`;
+}
+function jgDesafioHtml(){
+  const p = jgDesafioProgresso(), pct = Math.round(p.feito / p.d.alvo * 100);
+  const fim = new Date(p.ch + 'T12:00:00'); fim.setDate(fim.getDate() + 6);
+  const faltamDias = Math.max(0, Math.round((fim - new Date().setHours(12,0,0,0)) / 864e5));
+  return `
+    <div class="cmd-card jg-desafio${p.ganhou ? ' ganhou' : ''}">
+      <div class="cmd-card-topo"><span class="cmd-card-titulo">Desafio da semana</span><span class="cmd-card-conta">${p.ganhou ? 'vencido ✓' : `+${JG_XP_DESAFIO} XP`}</span></div>
+      <div class="jg-desafio-txt"><span class="jg-desafio-ico">${JG_ICO.alvo}</span>${cmdEsc(p.d.txt)}</div>
+      <div class="jg-barra jg-barra-desafio"><div style="width:${pct}%"></div></div>
+      <div class="jg-xp">${p.feito} de ${p.d.alvo} <span>· ${p.ganhou ? 'próximo desafio na segunda' : faltamDias === 0 ? 'último dia' : `faltam ${faltamDias} dia${faltamDias > 1 ? 's' : ''}`}</span></div>
+    </div>`;
+}
+let jgConquistasAbertas = false;
+function jgConquistasHtml(){
+  const j = jgEstado(), ganhas = JG_CONQUISTAS.filter(q=>j.conquistas[q.id]).length;
+  const lista = jgConquistasAbertas ? `<div class="jg-conquistas">${JG_CONQUISTAS.map(q=>{
+    const ok = !!j.conquistas[q.id];
+    return `<div class="jg-conq${ok ? ' ok' : ''}" title="${cmdEsc(q.desc)}"><span class="jg-conq-ico">${ok ? JG_ICO.medalha : JG_ICO.cadeado}</span><b>${cmdEsc(q.nome)}</b><small>${cmdEsc(q.desc)}</small></div>`;
+  }).join('')}</div>` : '';
+  return `
+    <div class="cmd-card">
+      <button type="button" class="jg-conq-topo" onclick="jgConquistasAbertas=!jgConquistasAbertas;renderComando()">
+        <span class="cmd-card-titulo">Conquistas</span>
+        <span class="jg-conq-resumo">${ganhas} de ${JG_CONQUISTAS.length}<i class="${jgConquistasAbertas ? 'aberto' : ''}">${ICO(ICO_D.abaixo, 16)}</i></span>
+      </button>
+      <div class="jg-barra jg-barra-fina"><div style="width:${Math.round(ganhas / JG_CONQUISTAS.length * 100)}%"></div></div>
+      ${lista}
+    </div>`;
+}
