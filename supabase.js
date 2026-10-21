@@ -150,6 +150,18 @@
           : /reauth|recent/i.test(m) ? 'Por segurança, saia e entre de novo com a senha antiga antes de criar o PIN' : m.slice(0,120) };
       }
     },
+    /* troca o e-mail da conta: o Supabase manda um link de confirmação (vale só depois de confirmar) */
+    async trocarEmail(novo){
+      if (!client) return { ok:false, erro:'Supabase não configurado' };
+      try {
+        const { error } = await client.auth.updateUser({ email: novo });
+        if (error) throw error;
+        return { ok:true };
+      } catch (e) {
+        const m = String((e && e.message) || e);
+        return { ok:false, erro: /invalid/i.test(m) ? 'E-mail inválido' : /already/i.test(m) ? 'Esse e-mail já é de outra conta' : m.slice(0,120) };
+      }
+    },
     async emailAtual(){
       try { const { data } = await client.auth.getSession(); return (data && data.session && data.session.user && data.session.user.email) || ''; } catch (e) { return ''; }
     },

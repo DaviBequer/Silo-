@@ -1424,6 +1424,18 @@ body:has(.modal-overlay.active){overflow:hidden}
 .aparelho-conectado{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
 .aparelho-nota{margin-bottom:10px;font-size:12.5px;line-height:1.45;color:var(--text-dim)}
 .pin-config .btn{align-self:flex-start;margin-top:4px}
+/* aba Segurança: aparelhos conectados */
+.seg-aparelhos{display:flex;flex-direction:column}
+.seg-ap{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.seg-ap:first-child{border-top:none;padding-top:4px}
+.seg-ap-ico{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:50%;background:var(--card-2);color:var(--text-dim)}
+.seg-ap-txt{flex:1;min-width:0}
+.seg-ap-nome{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg-ap-info{font-size:12px;color:var(--text-faint)}
+.seg-este{font-weight:700;color:var(--gold)}
+.seg-ap.saindo .seg-ap-nome,.seg-ap.saindo .seg-ap-ico{opacity:.5}
+.seg-sair{color:var(--danger)}
+#segEmailAtual{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* imagem de fundo: quanto ela aparece */
 .fundo-forca{margin:12px 0 6px}
 .fundo-forca-topo{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:12.5px;color:var(--text-dim)}

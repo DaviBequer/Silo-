@@ -427,6 +427,7 @@ async function carregarDaNuvem(){
   if(typeof lviAbrirCompartilhado==='function') lviAbrirCompartilhado();
   if(typeof avisosRenovarSozinho==='function' && !MODO_TESTE_LOCAL) avisosRenovarSozinho();
   if(typeof pinLembrarAparelho==='function') pinLembrarAparelho();
+  if(typeof aparelhoRegistrar==='function') aparelhoRegistrar();
   if(typeof applyAllLayouts==='function') applyAllLayouts();
   if(precisaSalvar && remoteReady) await persistAgora();   // ajustes da carga (itens antigos limpos etc.)
   compactarImagensDoEstado();
@@ -461,8 +462,8 @@ function mostrarSplash(){
 function mostrarLogin(){
   fecharSplash(true);
   document.getElementById('loginTela')?.classList.add('show');
-  /* aparelho que já usa PIN: abre direto no teclado do PIN */
-  if(typeof loginModoPin==='function' && pinEmailDoAparelho() && pinLigadoNoAparelho()){ loginModoPin(true); return; }
+  /* o PIN é a entrada principal (só não abre nele se este aparelho já sabe que o PIN foi desligado) */
+  if(typeof loginModoPin==='function' && pinLigadoNoAparelho()){ loginModoPin(true); return; }
   if(typeof loginModoPin==='function') loginModoPin(false);
   setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
 }

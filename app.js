@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.6', itens: [
+    'PIN é sempre a entrada principal, sem pedir e-mail',
+    'Nova aba Segurança em Dados do App: PIN, senha, e-mail e aparelhos conectados (desconectar um aparelho)'
+  ]},
   { versao: 'v7.5', itens: [
     'Tela do PIN sem o campo de e-mail: o app usa o e-mail guardado no aparelho'
   ]},
@@ -313,10 +317,9 @@ function abrirImportExportModal(){
   renderChangelog();
   const btnSair = document.getElementById('btnSairApp');   // só aparece se este aparelho entrou com login
   if(btnSair && window.SiloSupabase) window.SiloSupabase.temSessao().then(s=>{
-    btnSair.style.display = s ? '' : 'none';
-    const pc = document.getElementById('pinConfig'); if(pc) pc.style.display = s ? '' : 'none';
+    document.getElementById('segConteudo').style.display = s ? '' : 'none';
     const cv = document.getElementById('ddContaVazio'); if(cv) cv.style.display = s ? 'none' : '';
-    if(typeof atualizarStatusPin==='function') atualizarStatusPin();
+    if(s) renderSeguranca();
   });
   if(typeof atualizarStatusFundo==='function') atualizarStatusFundo();
 
@@ -1029,19 +1032,15 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) atualiz
    O Supabase só entra com e-mail + senha: o PIN (6 números) vira a senha da conta e o e-mail fica guardado
    no aparelho. Na tela de login o aparelho que já conhece o e-mail mostra só o teclado do PIN. */
 const PIN_TAM = 6;
+/* o app tem uma conta só: aparelho novo já entra pelo PIN com o e-mail da conta (trocado na aba Segurança, fica guardado no aparelho) */
+const PIN_EMAIL_CONTA = atob('ZGF2aWpyMTIzLmJlcXVlckBnbWFpbC5jb20=');
 function pinEmailDoAparelho(){
   try{
     const salvo = localStorage.getItem('siloe-pin-email'); if(salvo) return salvo;
-    /* sessão antiga do Supabase guardada no aparelho (mesmo vencida) ainda tem o e-mail */
-    for(let i = 0; i < localStorage.length; i++){
-      const k = localStorage.key(i);
-      if(!/^sb-.*-auth-token$/.test(k)) continue;
-      const s = JSON.parse(localStorage.getItem(k) || 'null');
-      const e = s && ((s.user && s.user.email) || (s.currentSession && s.currentSession.user && s.currentSession.user.email));
-      if(e){ pinGuardarEmail(e); return e; }
-    }
+    const s = JSON.parse(localStorage.getItem('siloe-auth') || 'null');   // sessão guardada (mesmo vencida) tem o e-mail
+    if(s && s.user && s.user.email) return s.user.email;
   }catch(e){}
-  return '';
+  return PIN_EMAIL_CONTA;
 }
 function pinGuardarEmail(email){ try{ if(email) localStorage.setItem('siloe-pin-email', email); else localStorage.removeItem('siloe-pin-email'); }catch(e){} }
 /* depois de carregar: se o PIN já foi criado (em qualquer aparelho), este aparelho passa a entrar com ele */
@@ -1049,8 +1048,8 @@ function pinGuardarEmail(email){ try{ if(email) localStorage.setItem('siloe-pin-
 function pinLigadoNoAparelho(){ try{ return localStorage.getItem('siloe-pin-ligado') !== '0'; }catch(e){ return true; } }
 async function pinLembrarAparelho(){
   try{ localStorage.setItem('siloe-pin-ligado', state && state.loginPin ? '1' : '0'); }catch(e){}
-  if(!state || !state.loginPin || pinEmailDoAparelho() || !window.SiloSupabase) return;
-  const email = await window.SiloSupabase.emailAtual();
+  if(!window.SiloSupabase) return;
+  const email = await window.SiloSupabase.emailAtual();   // guarda sempre o e-mail atual (pode ter sido trocado em outro aparelho)
   if(email) pinGuardarEmail(email);
 }
 /* teclado numérico reutilizável: desenha em el, chama aoCompletar(pin) com 6 números */
@@ -1103,14 +1102,12 @@ function loginModoPin(ligar){
 }
 async function entrarComPin(pin){
   const erro = document.getElementById('loginPinErro'), sub = document.getElementById('loginPinSub');
-  /* sem campo de e-mail: usa o guardado no aparelho; aparelho que nunca entrou vai para e-mail e senha uma vez */
-  const email = pinEmailDoAparelho() || (document.getElementById('loginEmail').value || '').trim();
-  if(!/\S+@\S+\.\S+/.test(email)){ pinLogin.limpar(); loginModoPin(false); document.getElementById('loginErro').textContent = 'Primeira vez neste aparelho: entre com e-mail e senha'; return; }
+  const email = pinEmailDoAparelho();   // sem campo de e-mail: o PIN é a entrada principal
   sub.textContent = 'Entrando…'; erro.textContent = '';
   const r = await window.SiloSupabase.entrar(email, pin);
   sub.textContent = 'Digite seu PIN';
   if(!r.ok){
-    erro.textContent = /incorretos/.test(r.erro) ? (pinEmailDoAparelho() ? 'PIN errado' : 'E-mail ou PIN errado') : r.erro;
+    erro.textContent = /incorretos/.test(r.erro) ? 'PIN errado' : r.erro;
     pinLogin.tremer(); pinLogin.limpar();
     return;
   }
@@ -1154,6 +1151,98 @@ function abrirCriarPin(){
   });
   pinTecladoAtivo = pinModal;
   document.getElementById('modalPin').classList.add('active');
+}
+
+/* ========== SEGURANÇA (Dados do App → aba Segurança) ==========
+   PIN, senha, e-mail e aparelhos conectados. O Supabase não lista as sessões para o app, então cada aparelho
+   se registra em state.aparelhos [{id, nome, primeiro, ultimo, sair}] ao abrir; "Desconectar" marca sair:true
+   e o aparelho sai sozinho na próxima vez que abrir. */
+function aparelhoId(){
+  try{
+    let id = localStorage.getItem('siloe-aparelho-id');
+    if(!id){ id = 'ap' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('siloe-aparelho-id', id); }
+    return id;
+  }catch(e){ return ''; }
+}
+function aparelhoNome(){
+  const ua = navigator.userAgent || '';
+  const so = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'Aparelho';
+  const nav = /Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung' : /CriOS|Chrome/.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : '';
+  const app = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  return so + (app ? ' · app' : nav ? ' · ' + nav : '');
+}
+function aparelhoEhCelular(nome){ return /iPhone|Android|iPad/.test(nome || ''); }
+/* chamado depois de carregar: registra este aparelho ou sai, se outro aparelho mandou desconectar */
+async function aparelhoRegistrar(){
+  if(MODO_TESTE_LOCAL || !state || !remoteReady) return;
+  const id = aparelhoId(); if(!id) return;
+  if(!Array.isArray(state.aparelhos)) state.aparelhos = [];
+  const agora = new Date().toISOString();
+  let ap = state.aparelhos.find(a=>a.id === id);
+  if(ap && ap.sair){
+    state.aparelhos = state.aparelhos.filter(a=>a.id !== id);
+    await persistAgora();
+    await window.SiloSupabase.sair();
+    apagarCopiaLocal();
+    location.reload();
+    return;
+  }
+  const nome = aparelhoNome();
+  if(!ap){ ap = { id, nome, primeiro: agora, ultimo: agora }; state.aparelhos.push(ap); persist(); return; }
+  if(ap.nome !== nome || Date.now() - new Date(ap.ultimo).getTime() > 3600e3){ ap.nome = nome; ap.ultimo = agora; persist(); }
+}
+function segQuando(iso){
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if(!(min >= 0) || min < 60) return 'agora há pouco';
+  const h = Math.round(min / 60); if(h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24); return d === 1 ? 'ontem' : `há ${d} dias`;
+}
+function renderSeguranca(){
+  atualizarStatusPin();
+  const em = document.getElementById('segEmailAtual');
+  window.SiloSupabase.emailAtual().then(e=>{ if(em) em.textContent = e; });
+  const lista = document.getElementById('segAparelhos'); if(!lista) return;
+  const meu = aparelhoId();
+  const aps = (state.aparelhos || []).slice().sort((a, b)=>(b.id === meu) - (a.id === meu) || String(b.ultimo).localeCompare(String(a.ultimo)));
+  const celular = '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>';
+  const pc = '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>';
+  lista.innerHTML = aps.length ? aps.map(a=>{
+    const este = a.id === meu;
+    const info = este ? '<b class="seg-este">Este aparelho</b>' : a.sair ? 'Sai quando abrir de novo' : 'Usado ' + segQuando(a.ultimo);
+    const botao = este ? '' : a.sair
+      ? `<button type="button" class="ico-btn" onclick="segDesconectar('${a.id}', false)" title="Manter conectado" aria-label="Manter conectado">${ICO('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>')}</button>`
+      : `<button type="button" class="ico-btn seg-sair" onclick="segDesconectar('${a.id}', true)" title="Desconectar" aria-label="Desconectar">${ICO('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>')}</button>`;
+    return `<div class="seg-ap${a.sair ? ' saindo' : ''}"><span class="seg-ap-ico">${ICO(aparelhoEhCelular(a.nome) ? celular : pc, 20)}</span><div class="seg-ap-txt"><div class="seg-ap-nome">${escBanco(a.nome || 'Aparelho')}</div><div class="seg-ap-info">${info}</div></div>${botao}</div>`;
+  }).join('') : '<div class="ia-desc">Nenhum aparelho registrado ainda.</div>';
+}
+async function segDesconectar(id, sair){
+  const a = (state.aparelhos || []).find(x=>x.id === id); if(!a) return;
+  if(sair && !(await iosConfirm(`Desconectar ${a.nome}? Ele sai sozinho na próxima vez que abrir o app.`))) return;
+  if(sair) a.sair = true; else delete a.sair;
+  persist();
+  renderSeguranca();
+}
+async function segTrocarSenha(){
+  const inp = document.getElementById('segSenhaInput'), nova = inp.value;
+  if(nova.length < 6){ showToast('A senha precisa de pelo menos 6 caracteres'); return; }
+  if(state.loginPin && !(await iosConfirm('Trocar a senha desliga o PIN (você entra com e-mail e senha até criar outro). Continuar?'))) return;
+  const r = await window.SiloSupabase.trocarSenha(nova);
+  if(!r.ok){ showToast(r.erro.replace('esse PIN', 'essa senha').replace('criar o PIN', 'trocar a senha')); return; }
+  inp.value = '';
+  state.loginPin = false;
+  try{ localStorage.setItem('siloe-pin-ligado', '0'); }catch(e){}
+  persist();
+  atualizarStatusPin();
+  showToast('Senha trocada');
+}
+async function segTrocarEmail(){
+  const inp = document.getElementById('segEmailInput'), novo = inp.value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(novo)){ showToast('Digite um e-mail válido'); return; }
+  if(!(await iosConfirm(`Trocar o e-mail da conta para ${novo}? Vai chegar um link nesse e-mail para confirmar.`))) return;
+  const r = await window.SiloSupabase.trocarEmail(novo);
+  if(!r.ok){ showToast(r.erro); return; }
+  inp.value = '';
+  showToast('Link enviado. Abra o e-mail para confirmar a troca');
 }
 
 /* ========== FUNDO COM IMAGEM (Dados do App) ==========
