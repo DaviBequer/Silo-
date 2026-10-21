@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.5', itens: [
+    'Tela do PIN sem o campo de e-mail: o app usa o e-mail guardado no aparelho'
+  ]},
   { versao: 'v7.4', itens: [
     'Visual novo no app inteiro: claro, caixas brancas com sombra suave, letra Manrope; serifa só no saldo e na previsão',
     'Finanças: bancos como cartões empilhados, previsão com barra, atalhos (Falar, Pagar, Cartões, Metas), curva do saldo e próximas contas',
@@ -1026,7 +1029,20 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) atualiz
    O Supabase só entra com e-mail + senha: o PIN (6 números) vira a senha da conta e o e-mail fica guardado
    no aparelho. Na tela de login o aparelho que já conhece o e-mail mostra só o teclado do PIN. */
 const PIN_TAM = 6;
-function pinEmailDoAparelho(){ try{ return localStorage.getItem('siloe-pin-email') || ''; }catch(e){ return ''; } }
+function pinEmailDoAparelho(){
+  try{
+    const salvo = localStorage.getItem('siloe-pin-email'); if(salvo) return salvo;
+    /* sessão antiga do Supabase guardada no aparelho (mesmo vencida) ainda tem o e-mail */
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(!/^sb-.*-auth-token$/.test(k)) continue;
+      const s = JSON.parse(localStorage.getItem(k) || 'null');
+      const e = s && ((s.user && s.user.email) || (s.currentSession && s.currentSession.user && s.currentSession.user.email));
+      if(e){ pinGuardarEmail(e); return e; }
+    }
+  }catch(e){}
+  return '';
+}
 function pinGuardarEmail(email){ try{ if(email) localStorage.setItem('siloe-pin-email', email); else localStorage.removeItem('siloe-pin-email'); }catch(e){} }
 /* depois de carregar: se o PIN já foi criado (em qualquer aparelho), este aparelho passa a entrar com ele */
 /* o login abre no PIN, a menos que este aparelho já saiba que o PIN está desligado */
@@ -1078,10 +1094,6 @@ function loginModoPin(ligar){
   tela.classList.toggle('modo-pin', !!ligar);
   if(ligar){
     document.getElementById('loginPinErro').textContent = '';
-    /* aparelho novo: pede o e-mail uma vez (junto com o PIN); depois ele fica guardado */
-    const campo = document.getElementById('loginPinEmail');
-    campo.style.display = email ? 'none' : '';
-    if(!email){ campo.value = document.getElementById('loginEmail').value || ''; setTimeout(()=>{ if(!campo.value) campo.focus(); }, 100); }
     pinLogin = pinTeclado('loginPinTeclado', 'loginPinPontos', entrarComPin);
     pinTecladoAtivo = pinLogin;
   } else {
@@ -1091,8 +1103,9 @@ function loginModoPin(ligar){
 }
 async function entrarComPin(pin){
   const erro = document.getElementById('loginPinErro'), sub = document.getElementById('loginPinSub');
-  const email = pinEmailDoAparelho() || (document.getElementById('loginPinEmail').value || '').trim();
-  if(!/\S+@\S+\.\S+/.test(email)){ erro.textContent = 'Digite seu e-mail acima'; pinLogin.tremer(); pinLogin.limpar(); document.getElementById('loginPinEmail').focus(); return; }
+  /* sem campo de e-mail: usa o guardado no aparelho; aparelho que nunca entrou vai para e-mail e senha uma vez */
+  const email = pinEmailDoAparelho() || (document.getElementById('loginEmail').value || '').trim();
+  if(!/\S+@\S+\.\S+/.test(email)){ pinLogin.limpar(); loginModoPin(false); document.getElementById('loginErro').textContent = 'Primeira vez neste aparelho: entre com e-mail e senha'; return; }
   sub.textContent = 'Entrando…'; erro.textContent = '';
   const r = await window.SiloSupabase.entrar(email, pin);
   sub.textContent = 'Digite seu PIN';

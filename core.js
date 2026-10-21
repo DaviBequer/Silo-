@@ -462,7 +462,7 @@ function mostrarLogin(){
   fecharSplash(true);
   document.getElementById('loginTela')?.classList.add('show');
   /* aparelho que já usa PIN: abre direto no teclado do PIN */
-  if(typeof loginModoPin==='function' && (pinEmailDoAparelho() || pinLigadoNoAparelho())){ loginModoPin(true); return; }
+  if(typeof loginModoPin==='function' && pinEmailDoAparelho() && pinLigadoNoAparelho()){ loginModoPin(true); return; }
   if(typeof loginModoPin==='function') loginModoPin(false);
   setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
 }
@@ -489,6 +489,7 @@ async function entrarNoApp(){
   const r = await window.SiloSupabase.entrar(email, senha);
   btn.disabled = false; btn.textContent = 'Entrar';
   if(!r.ok){ erro.textContent = r.erro; return; }
+  if(typeof pinGuardarEmail==='function') pinGuardarEmail(email);   // o PIN deste aparelho passa a saber o e-mail
   document.getElementById('loginSenha').value = '';
   alternarVerSenha(false);
   aposEntrar();
