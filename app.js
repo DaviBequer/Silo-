@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v7.9', itens: [
+    'Versículo de Finanças com visual novo: caixa branca, aspas verdes, letra mais leve'
+  ]},
   { versao: 'v7.8', itens: [
     'Comando e Ajustes agora são abas na barra de baixo (Ajustes = o antigo Dados do App)'
   ]},
