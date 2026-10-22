@@ -151,6 +151,7 @@ function jgFrase(tipo, n){
 function jgOrdemDoSargento(){
   const c = state.comando, ords = cmdOrdensHoje(), faltam = ords.filter(o=>!o.feito).length;
   if(c.revisao) return 'Antes de tudo: revise ontem. Seja honesto.';
+  if(!(c.juramento && c.juramentoDia === diaKeyHoje()) && !c.diaFechado) return 'Assine o juramento de hoje. Palavra dada é palavra cumprida.';
   if(c.diaFechado) return jgFrase('fechado');
   if(cmdEhFolga(diaKeyHoje())) return 'Folga autorizada. Descansa e volta amanhã.';
   if(!ords.length) return jgFrase('vazio');
@@ -169,6 +170,7 @@ function jgRelatorioHtml(){
       <div class="jg-rel-total"><span>Saldo do dia</span><b class="${r.total < 0 ? 'neg' : 'pos'}">${r.total > 0 ? '+' : ''}${r.total} XP</b></div>
       <div class="jg-rel-frase">${r.total < 0 ? 'Inaceitável. Hoje você recupera.' : 'Bom trabalho. Repete hoje.'}</div>
       <button type="button" class="btn btn-block" onclick="jgFecharRelatorio()">Entendido</button>
+      ${cmdPodeRevisarDeNovo() ? `<button type="button" class="cmd-rev-denovo" onclick="cmdReabrirRevisao()">Esqueceu de marcar algo? Revisar ontem de novo</button>` : ''}
     </div>`;
 }
 /* dia perdido: um escudo segura a sequência */

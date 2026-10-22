@@ -83,6 +83,10 @@ function cmdVirarOrdens(dia, hoje){
 let cmdSimulando = false;
 function cmdAplicarDia(rev){
   const c = state.comando;
+  /* como estava antes de contar: permite "revisar ontem de novo" desfazendo tudo */
+  const jj = typeof jgEstado === 'function' ? jgEstado() : null;
+  const antes = jj ? JSON.parse(JSON.stringify({ streak: c.streak, recorde: c.recorde, diasFechados: c.diasFechados || [], escudos: jj.escudos, tot: jj.tot, semana: jj.semana })) : null;
+  const revCopia = JSON.parse(JSON.stringify(rev));
   const contaveis = rev.ordens.filter(o=>o.escolha !== 'imprevisto');
   const tudoImprevisto = rev.ordens.length > 0 && !contaveis.length;
   const livre = rev.folga || tudoImprevisto;   // folga ou só imprevistos: nada conta, a sequência fica parada
@@ -96,9 +100,14 @@ function cmdAplicarDia(rev){
   if(!falhas) c.rupturaHoje = false;
   else if(c.streak > 0 && typeof jgEstado === 'function' && jgEstado().escudos >= falhas){ jgEstado().escudos -= falhas; c.rupturaHoje = 'escudo'; }
   else { perdeuSeq = c.streak > 0; c.streak = 0; c.rupturaHoje = true; }
-  if(typeof jgAplicarDia === 'function') jgAplicarDia(rev, { fechou, livre, perdeuSeq, seqAntes });
+  if(typeof jgAplicarDia === 'function'){
+    jgAplicarDia(rev, { fechou, livre, perdeuSeq, seqAntes });
+    if(jj.relatorio){ jj.relatorio.rev = revCopia; jj.relatorio.antes = antes; jj.relatorio.reaberta = !!rev.reaberta; }
+  }
   /* tarefa de uma vez que ele disse que fez: sai da lista */
   rev.ordens.forEach(f=>{ if(f.escolha === 'fiz' && !f.repete) c.ordens = c.ordens.filter(o=>o.id !== f.id); });
+  /* revisão refeita: tarefa que tinha saído como "Fiz" e agora é "Não fiz" ou "Imprevisto" volta para a lista */
+  if(rev.reaberta) rev.ordens.forEach(f=>{ if(f.escolha !== 'fiz' && !f.repete && !cmdOrdem(f.id)) c.ordens.push(Object.assign({ id: f.id, texto: f.texto, repete: false, feito: false, desde: rev.dia }, f.prio ? { prio: f.prio } : {})); });
 }
 
 /* ---------- revisão de ontem ---------- */
@@ -156,6 +165,38 @@ function cmdRevisaoHtml(){
       <div class="jg-rel-total"><span>Resultado</span><b class="${prev.total < 0 ? 'neg' : 'pos'}">${prev.total > 0 ? '+' : ''}${prev.total} XP${prev.ruptura === true ? ' · sequência zera' : prev.ruptura === 'escudo' ? ' · usa escudo' : ''}</b></div>
       <button type="button" class="btn btn-block" onclick="cmdConcluirRevisao()">Concluir revisão</button>
     </div>`;
+}
+
+/* ---------- revisar ontem de novo (uma vez): esqueceu de marcar algo, ou o dia já tinha virado antes da revisão existir ---------- */
+function cmdPodeRevisarDeNovo(){
+  const c = state.comando, r = typeof jgEstado === 'function' ? jgEstado().relatorio : null;
+  return !!(r && r.dia === cmdDiaMais(-1) && !r.reaberta && !c.revisao);
+}
+async function cmdReabrirRevisao(){
+  const c = state.comando, j = jgEstado(), r = j.relatorio;
+  if(!cmdPodeRevisarDeNovo()) return;
+  if(!(await iosConfirm('Revisar ontem de novo? O que foi contado ontem é desfeito e você marca de novo o que fez. Só dá para fazer isso uma vez.'))) return;
+  /* desfaz o que o relatório contou */
+  j.xp = Math.max(0, j.xp - (r.total || 0));
+  j.dias[r.dia] = (j.dias[r.dia] || 0) - (r.total || 0);
+  if(r.antes){
+    c.streak = r.antes.streak; c.recorde = r.antes.recorde; c.diasFechados = r.antes.diasFechados;
+    j.escudos = r.antes.escudos; j.tot = r.antes.tot; j.semana = r.antes.semana;
+  } else {
+    /* relatório da versão antiga: recupera a sequência pela linha "Sequência de N dias perdida" */
+    const linha = (r.linhas || []).find(l=>/^Sequência de (\d+)/.test(l[0]));
+    if(linha) c.streak = Number(linha[0].match(/^Sequência de (\d+)/)[1]);
+    if(c.rupturaHoje === 'escudo') j.escudos = Math.min(JG_ESCUDOS_MAX, j.escudos + 1);
+  }
+  c.rupturaHoje = false;
+  /* as ordens daquele dia: a foto guardada, ou (versão antiga) a lista de hoje, tudo como "não fiz" */
+  let ordens;
+  if(r.rev) ordens = r.rev.ordens.map(o=>Object.assign({}, o));   // volta com as escolhas de antes: só ajusta o que esqueceu
+  else ordens = cmdOrdensHoje().map(o=>({ id: o.id, texto: o.texto, prio: o.prio || 0, repete: !!o.repete, frac: 0, fracXp: 0, sub: (o.sub || []).length ? `0/${o.sub.length}` : '', escolha: 'nao' }));
+  c.revisao = { dia: r.dia, ordens, diasSemAbrir: r.rev ? r.rev.diasSemAbrir : 0, fechou: false, folga: r.rev ? !!r.rev.folga : false, perdoarAusencia: r.rev ? !!r.rev.perdoarAusencia : false, reaberta: true };
+  if(c.revisao.folga) c.folgas = (c.folgas || []).filter(f=>f !== r.dia);   // a folga volta a ser escolha da revisão
+  j.relatorio = null;
+  persist(); renderComando();
 }
 
 /* ---------- imprevisto e folga ---------- */
@@ -363,12 +404,16 @@ function renderComando(){
           </div>`).join('')}
         </div>` : '';
 
-  const juramentoHtml = c.juramento ? `
+  /* juramento é de cada dia: o de ontem não vale hoje */
+  const juramentoHoje = c.juramento && c.juramentoDia === diaKeyHoje();
+  const anterior = (c.juramentos || []).filter(x=>x.dia !== diaKeyHoje()).slice(-1)[0];
+  const juramentoHtml = juramentoHoje ? `
       <blockquote class="cmd-juramento">${cmdEsc(c.juramento).replace(/\n/g,'<br>')}</blockquote>
-      <div class="cmd-juramento-rodape"><span>Assinado</span><button type="button" class="cmd-link" onclick="editarJuramentoComando()">Reescrever</button></div>` : `
-      <div class="cmd-desc">O compromisso que você assume com você mesmo. Sem meio-termo.</div>
-      <textarea id="juramentoInput" class="cmd-campo cmd-juramento-input" placeholder="Eu me comprometo a…"></textarea>
-      <button type="button" class="btn btn-block" style="margin-top:10px" onclick="assinarJuramentoComando()">Assinar</button>`;
+      <div class="cmd-juramento-rodape"><span>Assinado hoje</span><button type="button" class="cmd-link" onclick="editarJuramentoComando()">Reescrever</button></div>` : `
+      <div class="cmd-desc">O compromisso de hoje. Cada dia, um juramento novo. Sem meio-termo. <b>+${CMD_XP_JURAMENTO} XP</b></div>
+      <textarea id="juramentoInput" class="cmd-campo cmd-juramento-input" placeholder="Hoje eu me comprometo a…"></textarea>
+      ${anterior ? `<div class="cmd-jur-ontem"><span>Ontem: “${cmdEsc(anterior.texto)}”</span><button type="button" class="cmd-link" onclick="document.getElementById('juramentoInput').value=${cmdEsc(JSON.stringify(anterior.texto))}">Repetir</button></div>` : ''}
+      <button type="button" class="btn btn-block" style="margin-top:10px" onclick="assinarJuramentoComando()">Assinar o de hoje</button>`;
 
   const sabotagensHtml = c.sabotagens.slice(-5).reverse().map(s=>`
       <div class="cmd-sab">
@@ -383,6 +428,8 @@ function renderComando(){
       <div class="cmd-sub">${c.recorde > 0 ? `Recorde: ${c.recorde} dia${c.recorde===1?'':'s'}` : 'Feche o dia cumprindo todas as ordens'}</div>
       <div class="cmd-semana">${cmdSemanaHtml(c)}</div>
       ${c.rupturaHoje === 'escudo' ? `<div class="cmd-ruptura escudo">Ontem você falhou. O escudo salvou a sequência — não conte com isso de novo.</div>` : c.rupturaHoje ? `<div class="cmd-ruptura">Ontem você falhou. Sequência zerada. Levanta e cumpre.</div>` : ''}
+      ${cmdPodeRevisarDeNovo() && !(jgEstado().relatorio && !jgEstado().relatorio.visto) ? `<button type="button" class="cmd-rev-denovo" onclick="cmdReabrirRevisao()">Esqueceu de marcar algo ontem? Revisar ontem</button>` : ''}
+      ${typeof versiculoAtual !== 'undefined' ? `<div class="versiculo cmd-versiculo"><p class="vs-texto">${versiculoAtual[0]}</p><span class="vs-ref">${versiculoAtual[1]}</span></div>` : ''}
       ${typeof jgJogadorHtml === 'function' ? jgJogadorHtml() : ''}
     </div>
 
@@ -635,10 +682,15 @@ function fecharDiaComando(){
   persist();
   renderComando();
 }
+const CMD_XP_JURAMENTO = 10;
 function assinarJuramentoComando(){
+  const c = state.comando, hoje = diaKeyHoje();
   const texto = (document.getElementById('juramentoInput').value||'').trim();
   if(!texto) return;
-  state.comando.juramento = texto;
+  const primeiraHoje = c.juramentoDia !== hoje;
+  c.juramento = texto; c.juramentoDia = hoje;
+  c.juramentos = (c.juramentos || []).filter(x=>x.dia !== hoje).concat({ dia: hoje, texto }).slice(-30);
+  if(primeiraHoje && typeof jgGanhar === 'function'){ jgGanhar(CMD_XP_JURAMENTO); showToast(`Juramento de hoje assinado: +${CMD_XP_JURAMENTO} XP`); }
   persist();
   renderComando();
 }
