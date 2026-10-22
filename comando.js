@@ -30,37 +30,171 @@ function garantirEstadoComando(){
     state.comando.ordens.forEach(o=>{ delete o.tarefaId; delete o.sincEm; delete o.mudouEm; });
     persist();
   }
-  const hoje = diaKeyHoje();
-  if(state.comando.ultimoDia !== hoje){
-    const eraPrimeiraVez = !state.comando.ultimoDia;
-    /* com meta do dia: ontem conta se bateu o % até a hora, mesmo sem ter tocado em Fechar */
-    if(!eraPrimeiraVez && !state.comando.diaFechado && cmdDiaProdutivo(state.comando.ultimoDia)) cmdMarcarDiaFechado();
-    if(!eraPrimeiraVez && typeof jgFecharDia === 'function') jgFecharDia(state.comando.ultimoDia);   // XP de ontem fica garantido
-    const quebrou = !eraPrimeiraVez && !state.comando.diaFechado;
-    const seqAntes = state.comando.streak;
-    let usouEscudo = false;
-    if(quebrou && typeof jgUsarEscudo === 'function' && state.comando.streak > 0 && jgUsarEscudo()){
-      usouEscudo = true;
-      state.comando.rupturaHoje = 'escudo';   // o escudo segurou a sequência
-    } else if(quebrou){
-      state.comando.streak = 0;
-      state.comando.rupturaHoje = true;
-    } else {
-      state.comando.rupturaHoje = false;
+  const hoje = diaKeyHoje(), c = state.comando;
+  if(!c.folgas) c.folgas = [];
+  /* tipo da ordem: todo dia (hábito) ou uma vez só (tarefa). As 4 ordens padrão são de todo dia; as outras antigas, de uma vez */
+  c.ordens.forEach(o=>{ if(o.repete === undefined){ o.repete = /^o\d$/.test(o.id); o.semCusto = hoje; } });   // no dia da mudança, apagar ordem antiga é de graça
+  if(c.ultimoDia !== hoje){
+    if(c.revisao) cmdConcluirRevisao(true);   // a revisão de anteontem ficou esquecida: vale como estava
+    if(c.ultimoDia){
+      const dia = c.ultimoDia;
+      /* com meta do dia: ontem conta se bateu o % até a hora, mesmo sem ter tocado em Fechar */
+      if(!c.diaFechado && cmdDiaProdutivo(dia)) cmdMarcarDiaFechado(dia);
+      const rev = { dia, ordens: cmdFotoDoDia(dia), diasSemAbrir: Math.max(0, cmdDiasEntre(dia, hoje) - 1), fechou: c.diaFechado, folga: cmdEhFolga(dia), perdoarAusencia: false };
+      /* ficou algo sem marcar (e o dia não foi fechado nem era folga): o Davi revisa antes de contar.
+         Ele pode ter feito e esquecido de anotar, ou ter tido um imprevisto. */
+      const precisaRevisar = rev.diasSemAbrir > 0 || (!rev.fechou && !rev.folga && rev.ordens.some(o=>o.escolha !== 'fiz'));
+      if(precisaRevisar) c.revisao = rev;
+      else cmdAplicarDia(rev);
+      cmdVirarOrdens(dia, hoje);
     }
-    /* modo bruto: dia não fechado, sequência perdida e dias sem abrir custam XP (relatório do sargento) */
-    if(!eraPrimeiraVez && typeof jgPunirDia === 'function'){
-      const diasSemAbrir = Math.max(0, Math.round((new Date(hoje + 'T12:00:00') - new Date(state.comando.ultimoDia + 'T12:00:00')) / 864e5) - 1);
-      jgPunirDia({ fechou: !quebrou, perdeuSeq: quebrou && !usouEscudo && seqAntes > 0, seqAntes, diasSemAbrir });
-    }
-    state.comando.ordens.forEach(o=>{
-      o.feito = false; delete o.feitoEm; (o.sub||[]).forEach(s=>{ s.feito = false; delete s.feitoEm; });
-      if(o.adiadaAte && o.adiadaAte <= hoje) delete o.adiadaAte;   // chegou o dia: volta para a lista
-    });
-    state.comando.diaFechado = false;
-    state.comando.ultimoDia = hoje;
+    if(c.revisao) c.rupturaHoje = false;
+    c.diaFechado = false;
+    c.ultimoDia = hoje;
     persist();
   }
+}
+
+/* ---------- virada do dia: foto, revisão e contas ---------- */
+function cmdDiasEntre(a, b){ return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5); }
+/* como estavam as ordens daquele dia (antes de zerar). frac = quanto ficou pronto; fracXp = quanto foi feito NAQUELE dia
+   (subtarefas feitas em dias anteriores já renderam XP) */
+function cmdFotoDoDia(dia){
+  const ini = new Date(dia + 'T00:00:00').getTime();
+  return cmdOrdensHoje(dia).map(o=>{
+    const subs = o.sub || [], feitas = subs.filter(s=>s.feito);
+    const frac = subs.length ? feitas.length / subs.length : (o.feito ? 1 : 0);
+    const fracXp = subs.length ? feitas.filter(s=>!(s.feitoEm < ini)).length / subs.length : frac;
+    return { id: o.id, texto: o.texto, prio: o.prio || 0, repete: !!o.repete, frac, fracXp, sub: subs.length ? `${feitas.length}/${subs.length}` : '', escolha: frac >= 1 ? 'fiz' : 'nao' };
+  });
+}
+/* zera para o dia novo: hábitos desmarcam; tarefa de uma vez concluída sai; tarefa pendente continua (com a data de quando ficou para trás) */
+function cmdVirarOrdens(dia, hoje){
+  const c = state.comando;
+  c.ordens = c.ordens.filter(o=>o.repete || !o.feito);
+  c.ordens.forEach(o=>{
+    if(o.repete){ o.feito = false; delete o.feitoEm; (o.sub||[]).forEach(s=>{ s.feito = false; delete s.feitoEm; }); }
+    else if(!o.desde && !(o.adiadaAte && o.adiadaAte > dia) && o.imprevisto !== dia) o.desde = dia;
+    if(o.adiadaAte && o.adiadaAte <= hoje) delete o.adiadaAte;   // chegou o dia: volta para a lista
+    if(o.imprevisto && o.imprevisto < hoje) delete o.imprevisto;
+  });
+}
+/* conta o dia (na hora da virada ou quando a revisão termina): XP, multas, sequência, escudo, relatório */
+let cmdSimulando = false;
+function cmdAplicarDia(rev){
+  const c = state.comando;
+  const contaveis = rev.ordens.filter(o=>o.escolha !== 'imprevisto');
+  const tudoImprevisto = rev.ordens.length > 0 && !contaveis.length;
+  const livre = rev.folga || tudoImprevisto;   // folga ou só imprevistos: nada conta, a sequência fica parada
+  let fechou = rev.fechou || (c.diasFechados || []).includes(rev.dia);
+  /* fez tudo (marcando na hora ou na revisão) e só esqueceu de tocar em Fechar: o dia fecha */
+  if(!fechou && !livre && contaveis.length && contaveis.every(o=>o.escolha === 'fiz')){ cmdMarcarDiaFechado(rev.dia); fechou = true; rev.fechouNaRevisao = true; }
+  /* sequência: dia não cumprido e cada dia sem abrir o app precisam de um escudo cada; sem escudo, zera */
+  const seqAntes = c.streak;
+  const falhas = (fechou || livre ? 0 : 1) + rev.diasSemAbrir;
+  let perdeuSeq = false;
+  if(!falhas) c.rupturaHoje = false;
+  else if(c.streak > 0 && typeof jgEstado === 'function' && jgEstado().escudos >= falhas){ jgEstado().escudos -= falhas; c.rupturaHoje = 'escudo'; }
+  else { perdeuSeq = c.streak > 0; c.streak = 0; c.rupturaHoje = true; }
+  if(typeof jgAplicarDia === 'function') jgAplicarDia(rev, { fechou, livre, perdeuSeq, seqAntes });
+  /* tarefa de uma vez que ele disse que fez: sai da lista */
+  rev.ordens.forEach(f=>{ if(f.escolha === 'fiz' && !f.repete) c.ordens = c.ordens.filter(o=>o.id !== f.id); });
+}
+
+/* ---------- revisão de ontem ---------- */
+function cmdRevisaoEscolher(id, escolha){
+  const r = state.comando.revisao, o = r && r.ordens.find(x=>x.id === id); if(!o) return;
+  if(escolha === 'imprevisto' && o.escolha !== 'imprevisto' && cmdImprevistosRestantes(r.dia) <= 0){ showToast(`Os ${JG_IMPREVISTOS_SEMANA} imprevistos desta semana já foram usados`); return; }
+  o.escolha = escolha;
+  persist(); renderComando();
+}
+function cmdRevisaoFolga(){
+  const r = state.comando.revisao; if(!r) return;
+  if(!r.folga && !cmdFolgaLivre(r.dia)){ showToast('A folga desta semana já foi usada'); return; }
+  r.folga = !r.folga;
+  persist(); renderComando();
+}
+function cmdRevisaoAusencia(){ const r = state.comando.revisao; if(!r) return; r.perdoarAusencia = !r.perdoarAusencia; persist(); renderComando(); }
+function cmdConcluirRevisao(auto){
+  const c = state.comando, r = c.revisao; if(!r) return;
+  c.revisao = null;
+  if(r.folga) cmdMarcarFolga(r.dia);
+  r.ordens.filter(o=>o.escolha === 'imprevisto').forEach(()=>jgUsarImprevisto(r.dia));
+  cmdAplicarDia(r);
+  persist();
+  if(!auto) renderComando();
+}
+/* quanto a revisão vai dar, antes de confirmar (roda numa cópia e desfaz) */
+function cmdPreverRevisao(){
+  const c = state.comando, r = c.revisao; if(!r) return null;
+  const copia = JSON.stringify(c);
+  cmdSimulando = true;
+  try{ c.revisao = null; if(r.folga) cmdMarcarFolga(r.dia); cmdAplicarDia(JSON.parse(JSON.stringify(r))); return { total: c.jogo.relatorio ? c.jogo.relatorio.total : 0, streak: c.streak, ruptura: c.rupturaHoje }; }
+  finally{ Object.keys(c).forEach(k=>delete c[k]); Object.assign(c, JSON.parse(copia)); cmdSimulando = false; }   // volta no MESMO objeto
+}
+function cmdRevisaoHtml(){
+  const c = state.comando, r = c.revisao; if(!r) return '';
+  const dia = new Date(r.dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' });
+  const prev = cmdPreverRevisao() || { total: 0 };
+  const restam = cmdImprevistosRestantes(r.dia);
+  const pend = r.fechou ? [] : r.ordens.filter(o=>o.frac < 1);   // dia fechado: só falta explicar os dias fora
+  const chip = (o, v, txt)=>`<button type="button" class="cmd-chip${o.escolha === v ? ' ativo ' + v : ''}" onclick="cmdRevisaoEscolher('${o.id}','${v}')">${txt}</button>`;
+  return `
+    <div class="cmd-revisao">
+      <div class="jg-rel-topo"><span>Revisão de ontem</span><small>${dia}</small></div>
+      <div class="cmd-rev-desc">${pend.length ? 'Fez alguma coisa e não marcou? Teve imprevisto? Corrija antes de contar.' : 'Você ficou dias sem abrir o Comando.'}</div>
+      ${r.folga ? '' : pend.map(o=>`
+        <div class="cmd-rev-ordem">
+          <div class="cmd-rev-texto">${cmdEsc(o.texto)}${o.prio ? `<span class="cmd-prio-tag p${o.prio}">${CMD_PRIO[o.prio]}</span>` : ''}${o.sub ? `<small> · ${o.sub}</small>` : ''}</div>
+          <div class="cmd-chips">${chip(o, 'fiz', 'Fiz')}${chip(o, 'nao', 'Não fiz')}${chip(o, 'imprevisto', 'Imprevisto')}</div>
+        </div>`).join('')}
+      ${r.diasSemAbrir ? `<label class="cmd-rev-check"><input type="checkbox" ${r.perdoarAusencia ? 'checked' : ''} onchange="cmdRevisaoAusencia()"> Fiquei ${r.diasSemAbrir} dia${r.diasSemAbrir > 1 ? 's' : ''} sem abrir porque estava impossibilitado (doença, viagem) — sem multa, mas a sequência para</label>` : ''}
+      <div class="cmd-rev-rodape">
+        <button type="button" class="cmd-chip${r.folga ? ' ativo' : ''}" onclick="cmdRevisaoFolga()">${r.folga ? '✓ Ontem foi folga' : 'Ontem foi folga'}</button>
+        <span class="cmd-rev-restam">Imprevistos: ${restam} de ${JG_IMPREVISTOS_SEMANA} · folga: ${cmdFolgaLivre(r.dia) || r.folga ? '1' : '0'} de 1 na semana</span>
+      </div>
+      <div class="jg-rel-total"><span>Resultado</span><b class="${prev.total < 0 ? 'neg' : 'pos'}">${prev.total > 0 ? '+' : ''}${prev.total} XP${prev.ruptura === true ? ' · sequência zera' : prev.ruptura === 'escudo' ? ' · usa escudo' : ''}</b></div>
+      <button type="button" class="btn btn-block" onclick="cmdConcluirRevisao()">Concluir revisão</button>
+    </div>`;
+}
+
+/* ---------- imprevisto e folga ---------- */
+function cmdEhFolga(dia){ return (state.comando.folgas || []).includes(dia); }
+function cmdFolgaLivre(dia){ const ch = jgSemanaChave(dia); return !(state.comando.folgas || []).some(f=>f !== dia && jgSemanaChave(f) === ch); }
+function cmdMarcarFolga(dia){ const c = state.comando; if(!c.folgas.includes(dia)) c.folgas = c.folgas.concat(dia).slice(-20); }
+function cmdImprevistosRestantes(dia){
+  const j = jgEstado(), ch = jgSemanaChave(dia);
+  const usados = j.imprevistos && j.imprevistos.chave === ch ? j.imprevistos.n : 0;
+  const r = state.comando.revisao;
+  const naRevisao = r && jgSemanaChave(r.dia) === ch ? r.ordens.filter(o=>o.escolha === 'imprevisto').length : 0;
+  return Math.max(0, JG_IMPREVISTOS_SEMANA - usados - naRevisao);
+}
+function jgUsarImprevisto(dia){
+  const j = jgEstado(), ch = jgSemanaChave(dia);
+  if(!j.imprevistos || j.imprevistos.chave !== ch) j.imprevistos = { chave: ch, n: 0 };
+  j.imprevistos.n++;
+}
+/* hoje: "não vai dar" — a ordem sai de hoje sem multa (hábito volta amanhã; tarefa continua amanhã) */
+function cmdImprevisto(id){
+  const o = cmdOrdem(id), hoje = diaKeyHoje(); if(!o) return;
+  if(cmdImprevistosRestantes(hoje) <= 0){ showToast(`Os ${JG_IMPREVISTOS_SEMANA} imprevistos desta semana já foram usados. Adie ou cumpra.`); return; }
+  cmdAcoesAberta = null;
+  comDesfazer(`Imprevisto: sai de hoje sem multa (restam ${cmdImprevistosRestantes(hoje) - 1})`, ()=>{
+    o.imprevisto = hoje; cmdMarcar(o, false); jgUsarImprevisto(hoje);
+    persist(); cmdChecarMeta(); renderComando();
+  }, ()=>{ if(document.getElementById('aba-comando')?.classList.contains('active')) renderComando(); });
+}
+async function cmdFolgaHoje(){
+  const c = state.comando, hoje = diaKeyHoje();
+  if(cmdEhFolga(hoje)){ c.folgas = c.folgas.filter(f=>f !== hoje); persist(); renderComando(); showToast('Folga cancelada'); return; }
+  if(!cmdFolgaLivre(hoje)){ showToast('A folga desta semana já foi usada'); return; }
+  if(!(await iosConfirm('Hoje é folga? Nada conta hoje: sem multa, e a sequência fica parada (não sobe nem zera). Só 1 por semana.'))) return;
+  cmdMarcarFolga(hoje); persist(); renderComando();
+}
+function cmdDefinirRepete(id, repete){
+  const o = cmdOrdem(id); if(!o) return;
+  o.repete = repete; if(repete) delete o.desde;
+  cmdAcoesAberta = null; persist(); renderComando();
 }
 
 function abrirComando(){ switchAba('comando'); }
@@ -100,13 +234,13 @@ function cmdOrdensHoje(diaKey){
   const hoje = diaKey || diaKeyHoje();   // diaKey: a lista como estava naquele dia (usado na virada)
   return state.comando.ordens
     .map((o, i)=>({ o, i }))
-    .filter(x=>!x.o.adiadaAte || x.o.adiadaAte <= hoje)
+    .filter(x=>(!x.o.adiadaAte || x.o.adiadaAte <= hoje) && x.o.imprevisto !== hoje)
     .sort((a, b)=>(a.o.prio || 9) - (b.o.prio || 9) || a.i - b.i)
     .map(x=>x.o);
 }
 function cmdOrdensAdiadas(){
   const hoje = diaKeyHoje();
-  return state.comando.ordens.filter(o=>o.adiadaAte && o.adiadaAte > hoje).sort((a, b)=>a.adiadaAte.localeCompare(b.adiadaAte));
+  return state.comando.ordens.filter(o=>(o.adiadaAte && o.adiadaAte > hoje) || o.imprevisto === hoje).sort((a, b)=>(a.adiadaAte || '').localeCompare(b.adiadaAte || ''));
 }
 function cmdDiaMais(n){ const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function cmdNomeDia(iso){
@@ -118,6 +252,13 @@ function cmdAcoesHtml(o){
   return `
     <div class="cmd-acoes">
       <div class="cmd-acoes-linha"><span>Prioridade</span><div class="cmd-chips">${prio}</div></div>
+      <div class="cmd-acoes-linha"><span>Repetir</span><div class="cmd-chips">
+        <button type="button" class="cmd-chip${o.repete ? '' : ' ativo'}" onclick="cmdDefinirRepete('${o.id}',false)">Só uma vez</button>
+        <button type="button" class="cmd-chip${o.repete ? ' ativo' : ''}" onclick="cmdDefinirRepete('${o.id}',true)">Todo dia</button>
+      </div></div>
+      <div class="cmd-acoes-linha"><span>Não vai dar hoje</span><div class="cmd-chips">
+        <button type="button" class="cmd-chip" onclick="cmdImprevisto('${o.id}')">Imprevisto · sem multa (restam ${cmdImprevistosRestantes(diaKeyHoje())})</button>
+      </div></div>
       <div class="cmd-acoes-linha"><span>Jogar para</span><div class="cmd-chips">
         <button type="button" class="cmd-chip" onclick="cmdAdiar('${o.id}','${cmdDiaMais(1)}')">Amanhã</button>
         <button type="button" class="cmd-chip" onclick="cmdAdiar('${o.id}','${cmdDiaMais(2)}')">${cmdNomeDia(cmdDiaMais(2))}</button>
@@ -183,7 +324,7 @@ function renderComando(){
     return `
     <div class="cmd-ordem${o.feito?' feita':''}${o.prio?' p'+o.prio:''}">
       <button type="button" class="cmd-check" onclick="toggleOrdemComando('${o.id}')" aria-label="${o.feito?'Desmarcar':'Marcar como feita'}">${o.feito?CMD_CHECK:''}</button>
-      <div class="cmd-ordem-texto" id="ordemTexto-${o.id}" onclick="editarOrdemComando('${o.id}')">${cmdEsc(o.texto)}${o.prio ? `<span class="cmd-prio-tag p${o.prio}">${CMD_PRIO[o.prio]}</span>` : ''}</div>
+      <div class="cmd-ordem-texto" id="ordemTexto-${o.id}" onclick="editarOrdemComando('${o.id}')">${cmdEsc(o.texto)}${o.prio ? `<span class="cmd-prio-tag p${o.prio}">${CMD_PRIO[o.prio]}</span>` : ''}${cmdEtiquetaTipo(o)}</div>
       <button type="button" class="cmd-sub-btn${aberta?' aberta':''}${subs.length?' tem':''}" onclick="event.stopPropagation();cmdAbrirSub('${o.id}')" aria-label="Subtarefas" title="Subtarefas">${subs.length ? `${subFeitas}/${subs.length}` : CMD_SUB}</button>
       <button type="button" class="btn-icon-sm cmd-ordem-del${acoes?' aberta':''}" onclick="event.stopPropagation();cmdAbrirAcoes('${o.id}')" aria-label="Prioridade, adiar, remover" title="Prioridade, adiar, remover">${CMD_MAIS_OPCOES}</button>
     </div>${acoes ? cmdAcoesHtml(o) : ''}${aberta ? `
@@ -216,7 +357,7 @@ function renderComando(){
           <div class="cmd-adiadas-titulo">Para outros dias</div>
           ${adiadas.map(o=>`
           <div class="cmd-adiada">
-            <span class="cmd-adiada-dia">${cmdNomeDia(o.adiadaAte)}</span>
+            <span class="cmd-adiada-dia">${o.imprevisto === diaKeyHoje() ? 'imprevisto' : cmdNomeDia(o.adiadaAte)}</span>
             <span class="cmd-adiada-texto">${cmdEsc(o.texto)}${o.prio ? `<span class="cmd-prio-tag p${o.prio}">${CMD_PRIO[o.prio]}</span>` : ''}</span>
             <button type="button" class="btn-icon-sm" onclick="cmdTrazerHoje('${o.id}')" aria-label="Trazer para hoje" title="Trazer para hoje">${CMD_VOLTAR}</button>
           </div>`).join('')}
@@ -258,6 +399,7 @@ function renderComando(){
           <button type="submit" class="cmd-btn-icone escuro" aria-label="Adicionar ordem" title="Adicionar">${CMD_MAIS}</button>
         </form>
         ${botaoFechar}
+        <button type="button" class="cmd-folga-btn${cmdEhFolga(diaKeyHoje()) ? ' ativa' : ''}" onclick="cmdFolgaHoje()">${cmdEhFolga(diaKeyHoje()) ? 'Hoje é folga · cancelar' : cmdFolgaLivre(diaKeyHoje()) ? 'Hoje é folga? (1 por semana)' : 'Folga da semana já usada'}</button>
         ${adiadasHtml}
       </div>
 
@@ -369,14 +511,14 @@ function cmdChecarMeta(){
     showToast(`Meta batida: dia produtivo! ${c.streak} dia${c.streak===1?'':'s'} seguido${c.streak===1?'':'s'}`);
   }
 }
-function cmdMarcarDiaFechado(){
-  const c = state.comando;
-  c.diaFechado = true;
-  c.diasFechados = (c.diasFechados || []).filter(d=>d !== c.ultimoDia).concat(c.ultimoDia).slice(-60);   // bolinhas da semana
+function cmdMarcarDiaFechado(dia){
+  const c = state.comando; dia = dia || c.ultimoDia;
+  if(dia === c.ultimoDia) c.diaFechado = true;
+  c.diasFechados = (c.diasFechados || []).filter(d=>d !== dia).concat(dia).sort().slice(-60);   // bolinhas da semana
   c.streak += 1;
   c.recorde = Math.max(c.recorde, c.streak);
   c.rupturaHoje = false;
-  if(typeof jgDiaFechado === 'function') jgDiaFechado();
+  if(typeof jgDiaFechado === 'function') jgDiaFechado(dia);
 }
 let cmdMetaEditando = false;
 function cmdEditarMeta(v){ cmdMetaEditando = v; renderComando(); }
@@ -477,7 +619,7 @@ function cmdOrdemDeHoje(o){
 function excluirOrdemComando(id){
   cmdAcoesAberta = null;
   const o = cmdOrdem(id);
-  const custo = o && !o.feito && !cmdOrdemDeHoje(o) && typeof JG_MULTA_ADIAR !== 'undefined' ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
+  const custo = o && !o.feito && !cmdOrdemDeHoje(o) && o.semCusto !== diaKeyHoje() && typeof JG_MULTA_ADIAR !== 'undefined' ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
   comDesfazer(custo ? `Ordem removida · −${custo} XP (desistência)` : 'Ordem removida', ()=>{
     if(custo) jgPerder(custo);
     state.comando.ordens = state.comando.ordens.filter(x=>x.id!==id);
@@ -518,4 +660,10 @@ function registrarSabotagemComando(){
   input.value = '';
   persist();
   renderComando();
+}
+/* etiqueta do tipo: hábito de todo dia (↻) ou tarefa que ficou para trás (atrasada N dias) */
+function cmdEtiquetaTipo(o){
+  if(o.repete) return `<span class="cmd-tipo-tag" title="Todo dia">↻ todo dia</span>`;
+  if(o.desde){ const n = cmdDiasEntre(o.desde, diaKeyHoje()); if(n > 0) return `<span class="cmd-tipo-tag atrasada">atrasada ${n} dia${n > 1 ? 's' : ''}</span>`; }
+  return '';
 }

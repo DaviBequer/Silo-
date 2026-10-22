@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v8.3', itens: [
+    'Revisão de ontem: fez e não marcou? Marque Fiz, Não fiz ou Imprevisto antes de contar',
+    'Ordem de uma vez só (tarefa) ou todo dia (hábito): tarefa feita sai da lista; pendente continua como atrasada',
+    'Imprevisto sem multa (3 por semana) e folga (1 por semana, a sequência fica parada)',
+    'Fez tudo e esqueceu de fechar: o dia fecha sozinho; dias sem abrir agora contam e dá para dizer que estava impossibilitado'
+  ]},
   { versao: 'v8.2', itens: [
     'Comando revisado: dia fechado não leva multa (nem por ordem criada depois de fechar)',
     'Apagar ordem antiga não cumprida custa XP (desistência); as criadas hoje saem de graça',

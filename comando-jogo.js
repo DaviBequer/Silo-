@@ -55,18 +55,21 @@ function jgSemanaChave(diaKey){   // segunda-feira da semana
 /* ---------- XP de hoje (vem das ordens marcadas) ---------- */
 function jgValorOrdem(o){ return JG_XP_PRIO[o.prio] || 10; }
 const JG_XP_ORDENS_MAX = 200;   // teto de XP das ordens por dia (criar 50 ordens bobas não vira patente)
+const JG_IMPREVISTOS_SEMANA = 3;   // "não deu": tira a ordem do dia sem multa
 function jgHoje(){
   let xp = 0, ordens = 0, alta = 0;
+  const ini = new Date().setHours(0,0,0,0);
   (state.comando.ordens || []).forEach(o=>{
     const subs = o.sub || [];
-    const frac = subs.length ? subs.filter(s=>s.feito).length / subs.length : (o.feito ? 1 : 0);
+    /* subtarefa feita em outro dia (tarefa que ficou para trás) já rendeu: só conta a de hoje */
+    const frac = subs.length ? subs.filter(s=>s.feito && !(s.feitoEm < ini)).length / subs.length : (o.feito ? 1 : 0);
     xp += Math.round(jgValorOrdem(o) * frac);
     if(o.feito){ ordens++; if(o.prio === 1) alta++; }
   });
   return { xp: Math.min(xp, JG_XP_ORDENS_MAX), ordens, alta };
 }
 function jgXpTotal(){ return jgEstado().xp + jgHoje().xp; }
-function jgGanhar(n){ const j = jgEstado(); j.xp += n; const k = diaKeyHoje(); j.dias[k] = (j.dias[k] || 0) + n; }
+function jgGanhar(n, dia){ const j = jgEstado(); j.xp += n; const k = dia || diaKeyHoje(); j.dias[k] = (j.dias[k] || 0) + n; }
 
 /* ---------- nível e patente ---------- */
 function jgNivel(xp){
@@ -76,30 +79,44 @@ function jgNivel(xp){
 }
 function jgPatente(nivel){ let p = JG_PATENTES[0][1]; JG_PATENTES.forEach(([n, t])=>{ if(nivel >= n) p = t; }); return p; }
 
-/* ---------- virada do dia (chamado por garantirEstadoComando ANTES de zerar as ordens) ---------- */
-function jgFecharDia(diaKey){
-  const j = jgEstado(), h = jgHoje();
-  const outros = j.dias[diaKey] || 0;   // o que já tinha entrado no dia: fechar o dia, medalhas, sabotagens, adiamentos
-  j.xp += h.xp;
-  j.dias[diaKey] = outros + h.xp;
-  /* modo bruto: cada ordem não cumprida naquele dia custa XP (Alta 25, Média 15, outras 10; subtarefas = a parte que faltou).
-     Dia fechado não tem multa: fechou cumprindo tudo (ou a meta do dia) e o que entrou depois fica para o dia seguinte. */
-  j.relatorio = { dia: diaKey, linhas: [], visto: false };
-  if(h.xp) j.relatorio.linhas.push(['Ordens cumpridas', h.xp]);
-  if(outros) j.relatorio.linhas.push([outros > 0 ? 'Dia fechado, medalhas e bônus' : 'Adiamentos e desistências', outros]);
-  let multa = 0, falhas = 0;
-  const doDia = (state.comando.ordens || []).filter(o=>!(o.adiadaAte && o.adiadaAte > diaKey));
-  if(!state.comando.diaFechado) doDia.forEach(o=>{
-    const subs = o.sub || [];
-    const falta = subs.length ? subs.filter(s=>!s.feito).length / subs.length : (o.feito ? 0 : 1);
-    if(falta > 0){ multa += Math.round((JG_MULTA[o.prio] || 10) * falta); falhas++; }
-  });
-  if(multa){ jgPerder(multa, diaKey); j.relatorio.linhas.push([`${falhas} orde${falhas > 1 ? 'ns' : 'm'} descumprida${falhas > 1 ? 's' : ''}`, -multa]); }
-  j.tot.ordens += h.ordens; j.tot.alta += h.alta;
-  const ch = jgSemanaChave(diaKey);
+/* ---------- contar um dia (virada ou fim da revisão) ----------
+   rev = foto do dia (ordens com escolha fiz / não / imprevisto); st = { fechou, livre, perdeuSeq, seqAntes } */
+function jgAplicarDia(rev, st){
+  const j = jgEstado(), dia = rev.dia;
+  const outros = j.dias[dia] || 0;   // o que já tinha entrado no dia: fechar o dia, medalhas, sabotagens, adiamentos
+  /* "fiz" marcado na revisão vale a ordem inteira (menos o que já rendeu em outros dias) */
+  const fezXp = o=>o.escolha === 'fiz' ? 1 - (o.frac - o.fracXp) : o.fracXp;
+  const xp = Math.min(JG_XP_ORDENS_MAX, Math.round(rev.ordens.reduce((s, o)=>s + jgValorOrdem(o) * fezXp(o), 0)));
+  j.xp += xp;
+  j.dias[dia] = outros + xp;
+  const r = j.relatorio = { dia, linhas: [], visto: false };
+  if(xp) r.linhas.push(['Ordens cumpridas', xp]);
+  if(outros) r.linhas.push([outros > 0 ? (rev.fechouNaRevisao ? 'Dia fechado na revisão' : 'Dia fechado, medalhas e bônus') : 'Adiamentos e desistências', outros]);
+  const imp = rev.ordens.filter(o=>o.escolha === 'imprevisto').length;
+  if(imp) r.linhas.push([`${imp} imprevisto${imp > 1 ? 's' : ''} (sem multa)`, 0]);
+  const contaveis = rev.ordens.filter(o=>o.escolha !== 'imprevisto');
+  if(st.livre) r.linhas.push([rev.folga ? 'Folga: nada contou' : 'Só imprevistos: nada contou', 0]);
+  else if(!st.fechou){
+    /* modo bruto: ordem não cumprida custa (Alta 25, Média 15, outras 10; com subtarefas, a parte que faltou) */
+    let multa = 0, falhas = 0;
+    contaveis.forEach(o=>{ const falta = o.escolha === 'fiz' ? 0 : 1 - o.frac; if(falta > 0){ multa += Math.round((JG_MULTA[o.prio] || 10) * falta); falhas++; } });
+    if(multa){ jgPerder(multa, dia); r.linhas.push([`${falhas} orde${falhas > 1 ? 'ns' : 'm'} descumprida${falhas > 1 ? 's' : ''}`, -multa]); }
+    jgPerder(JG_MULTA_DIA, dia); r.linhas.push(['Dia não fechado', -JG_MULTA_DIA]);
+  }
+  if(rev.diasSemAbrir > 0){
+    if(rev.perdoarAusencia) r.linhas.push([`${rev.diasSemAbrir} dia${rev.diasSemAbrir > 1 ? 's' : ''} fora (impossibilitado): sem multa`, 0]);
+    else { const m = Math.min(rev.diasSemAbrir, 5) * JG_MULTA_DIA; jgPerder(m, dia); r.linhas.push([`${rev.diasSemAbrir} dia${rev.diasSemAbrir > 1 ? 's' : ''} sem aparecer (desertor)`, -m]); }
+  }
+  if(st.perdeuSeq && !rev.perdoarAusencia){ const m = Math.min(150, JG_MULTA_SEQ + st.seqAntes * 5); jgPerder(m, dia); r.linhas.push([`Sequência de ${st.seqAntes} dia${st.seqAntes > 1 ? 's' : ''} perdida`, -m]); }
+  /* contadores (medalhas e missão da semana) */
+  const feitas = rev.ordens.filter(o=>o.escolha === 'fiz');
+  j.tot.ordens += feitas.length; j.tot.alta += feitas.filter(o=>o.prio === 1).length;
+  const ch = jgSemanaChave(dia);
   if(!j.semana || j.semana.chave !== ch) j.semana = { chave: ch, ordens:0, alta:0, perfeitos:0, ganhou:false };
-  j.semana.ordens += h.ordens; j.semana.alta += h.alta;
-  if(doDia.length && doDia.every(o=>o.feito)) j.semana.perfeitos = (j.semana.perfeitos || 0) + 1;
+  j.semana.ordens += feitas.length; j.semana.alta += feitas.filter(o=>o.prio === 1).length;
+  if(contaveis.length && contaveis.every(o=>o.escolha === 'fiz')) j.semana.perfeitos = (j.semana.perfeitos || 0) + 1;
+  r.total = r.linhas.reduce((s, l)=>s + l[1], 0);
+  if(!r.linhas.length) j.relatorio = null;
   /* guarda só os últimos 60 dias de histórico */
   const chaves = Object.keys(j.dias).sort(); if(chaves.length > 60) chaves.slice(0, chaves.length - 60).forEach(k=>delete j.dias[k]);
 }
@@ -111,16 +128,6 @@ function jgPerder(n, diaKey){
   if(tira) j.rebaixar = true;
   const k = diaKey || diaKeyHoje(); j.dias[k] = (j.dias[k] || 0) - tira;
   return tira;
-}
-/* depois da virada: dia não fechado, sequência perdida, dias sem abrir o app */
-function jgPunirDia({ fechou, perdeuSeq, seqAntes, diasSemAbrir }){
-  const dia = state.comando.ultimoDia;   // a multa fica no dia que falhou (o "hoje" começa limpo)
-  const j = jgEstado(), r = j.relatorio || (j.relatorio = { dia, linhas: [], visto: false });
-  if(!fechou){ jgPerder(JG_MULTA_DIA, dia); r.linhas.push(['Dia não fechado', -JG_MULTA_DIA]); }
-  if(perdeuSeq){ const m = Math.min(150, JG_MULTA_SEQ + seqAntes * 5); jgPerder(m, dia); r.linhas.push([`Sequência de ${seqAntes} dia${seqAntes > 1 ? 's' : ''} perdida`, -m]); }
-  if(diasSemAbrir > 0){ const d = Math.min(diasSemAbrir, 5), m = d * JG_MULTA_DIA; jgPerder(m, dia); r.linhas.push([`${diasSemAbrir} dia${diasSemAbrir > 1 ? 's' : ''} sem aparecer (desertor)`, -m]); }
-  r.total = r.linhas.reduce((s, l)=>s + l[1], 0);
-  if(!r.linhas.length) j.relatorio = null;
 }
 /* jogar uma ordem para outro dia também custa (é adiar) */
 function jgMultaAdiar(o){
@@ -143,19 +150,22 @@ function jgFrase(tipo, n){
 }
 function jgOrdemDoSargento(){
   const c = state.comando, ords = cmdOrdensHoje(), faltam = ords.filter(o=>!o.feito).length;
+  if(c.revisao) return 'Antes de tudo: revise ontem. Seja honesto.';
   if(c.diaFechado) return jgFrase('fechado');
+  if(cmdEhFolga(diaKeyHoje())) return 'Folga autorizada. Descansa e volta amanhã.';
   if(!ords.length) return jgFrase('vazio');
   if(!faltam) return jgFrase('tudo');
   return jgFrase(new Date().getHours() >= 18 ? 'tarde' : 'falta', faltam);
 }
 function jgRelatorioHtml(){
   const r = jgEstado().relatorio;
+  if(state.comando.revisao) return cmdRevisaoHtml();   // primeiro a revisão; o relatório vem depois dela
   if(!r || r.visto) return '';
   const dia = new Date(r.dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' });
   return `
     <div class="jg-relatorio${r.total < 0 ? ' ruim' : ''}">
       <div class="jg-rel-topo"><span>Relatório do sargento</span><small>${dia}</small></div>
-      ${r.linhas.map(([t, v])=>`<div class="jg-rel-linha"><span>${cmdEsc(t)}</span><b class="${v < 0 ? 'neg' : 'pos'}">${v > 0 ? '+' : ''}${v} XP</b></div>`).join('')}
+      ${r.linhas.map(([t, v])=>`<div class="jg-rel-linha"><span>${cmdEsc(t)}</span><b class="${v < 0 ? 'neg' : 'pos'}">${v > 0 ? '+' : ''}${v ? v + ' XP' : '—'}</b></div>`).join('')}
       <div class="jg-rel-total"><span>Saldo do dia</span><b class="${r.total < 0 ? 'neg' : 'pos'}">${r.total > 0 ? '+' : ''}${r.total} XP</b></div>
       <div class="jg-rel-frase">${r.total < 0 ? 'Inaceitável. Hoje você recupera.' : 'Bom trabalho. Repete hoje.'}</div>
       <button type="button" class="btn btn-block" onclick="jgFecharRelatorio()">Entendido</button>
@@ -168,13 +178,13 @@ function jgUsarEscudo(){
   return false;
 }
 /* chamado em cmdMarcarDiaFechado (depois de somar a sequência) */
-function jgDiaFechado(){
+function jgDiaFechado(dia){
   const j = jgEstado(), c = state.comando;
   j.tot.dias++;
   const xp = JG_XP_DIA + Math.min(50, c.streak * 5);
-  jgGanhar(xp);
-  if(c.streak > 0 && c.streak % 7 === 0 && j.escudos < JG_ESCUDOS_MAX){ j.escudos++; setTimeout(()=>showToast('Ganhou um escudo: ele protege a sequência num dia perdido'), 1600); }
-  if(c.ultimoDia === diaKeyHoje()){
+  jgGanhar(xp, dia);
+  if(c.streak > 0 && c.streak % 7 === 0 && j.escudos < JG_ESCUDOS_MAX){ j.escudos++; if(!cmdSimulando) setTimeout(()=>showToast('Ganhou um escudo: ele protege a sequência num dia perdido'), 1600); }
+  if(dia === diaKeyHoje() && !cmdSimulando){
     if(new Date().getHours() < 12) j.madrugou = true;
     setTimeout(()=>showToast(`Dia fechado: +${xp} XP`), 300);
   }

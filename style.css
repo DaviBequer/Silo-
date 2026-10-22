@@ -2293,3 +2293,22 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .jg-conq-ico{border-radius:4px}
 .jg-conq b{font-family:var(--font-display);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:12.5px}
 .cmd-fechar.perdido{color:var(--danger);border-color:var(--danger-tint)}
+/* Comando — vida real: revisão de ontem, imprevisto, folga, tipo da ordem */
+.cmd-revisao{margin-top:18px;padding:16px;border-radius:var(--radius-md);background:var(--card);box-shadow:var(--sombra-card);border-top:4px solid var(--latao);animation:surgir .4s var(--mola)}
+.cmd-rev-desc{margin:-2px 0 10px;font-size:13px;color:var(--text-dim)}
+.cmd-rev-ordem{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px dashed var(--line)}
+.cmd-rev-texto{font-size:14px;font-weight:600;color:var(--text)}
+.cmd-rev-texto small{font-weight:500;color:var(--text-faint)}
+.cmd-chip.ativo.fiz{background:var(--success);color:#fff}
+.cmd-chip.ativo.nao{background:var(--danger);color:#fff}
+.cmd-chip.ativo.imprevisto{background:#3b7dd8;color:#fff}
+.cmd-rev-check{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px dashed var(--line);font-size:13px;line-height:1.4;color:var(--text-dim)}
+.cmd-rev-check input{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:var(--gold)}
+.cmd-rev-rodape{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 0;border-top:1px dashed var(--line)}
+.cmd-rev-restam{font-size:11.5px;color:var(--text-faint)}
+.cmd-revisao .jg-rel-total{margin-bottom:12px;border-top:1px solid var(--line)}
+.cmd-revisao .pos{color:var(--success)} .cmd-revisao .neg{color:var(--danger)}
+.cmd-tipo-tag{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--card-2);font-size:10.5px;font-weight:700;color:var(--text-faint);vertical-align:2px;text-decoration:none}
+.cmd-tipo-tag.atrasada{background:var(--danger-tint);color:var(--danger)}
+.cmd-folga-btn{display:block;margin:10px auto 0;padding:6px 10px;border:none;background:none;font:600 12px/1.3 var(--font-body);color:var(--text-faint);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.cmd-folga-btn.ativa{color:#2a62b0}
