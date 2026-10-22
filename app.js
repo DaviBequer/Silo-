@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v8.2', itens: [
+    'Comando revisado: dia fechado não leva multa (nem por ordem criada depois de fechar)',
+    'Apagar ordem antiga não cumprida custa XP (desistência); as criadas hoje saem de graça',
+    'Teto de 200 XP por dia nas ordens; nova missão: 100% das ordens em 3 dias',
+    'Virada do dia funciona com o app aberto de um dia para o outro; aviso quando a meta do dia foi perdida'
+  ]},
   { versao: 'v8.1', itens: [
     'Visual militar no app inteiro: cáqui e oliva, latão, títulos retos em caixa alta, números em estêncil',
     'Comando bruto: ordem não cumprida, dia não fechado, sequência perdida, dias sem abrir e adiar custam XP — e pode ser rebaixado de patente',

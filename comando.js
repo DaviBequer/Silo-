@@ -96,8 +96,8 @@ const CMD_MAIS_OPCOES = '<svg width="16" height="16" viewBox="0 0 24 24" fill="c
 const CMD_VOLTAR = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
 let cmdAcoesAberta = null;   // ordem com as opções abertas (só na tela)
 let cmdNovaPrio = 0;         // prioridade da próxima ordem
-function cmdOrdensHoje(){
-  const hoje = diaKeyHoje();
+function cmdOrdensHoje(diaKey){
+  const hoje = diaKey || diaKeyHoje();   // diaKey: a lista como estava naquele dia (usado na virada)
   return state.comando.ordens
     .map((o, i)=>({ o, i }))
     .filter(x=>!x.o.adiadaAte || x.o.adiadaAte <= hoje)
@@ -169,6 +169,7 @@ function cmdTrazerHoje(id){
 }
 
 function renderComando(){
+  garantirEstadoComando();   // app aberto de um dia para o outro: a virada acontece aqui também
   const c = state.comando;
   if(typeof jgChecar === 'function') jgChecar();   // desafio vencido, conquistas, subiu de nível
   const ordensHoje = cmdOrdensHoje();
@@ -203,7 +204,8 @@ function renderComando(){
   const faltam = total - feitas;
   const botaoFechar = c.diaFechado
     ? `<button type="button" class="cmd-fechar fechado" disabled>${CMD_CHECK} ${cmdMeta() ? 'Dia produtivo' : 'Dia fechado'}</button>`
-    : cmdMeta() ? ''   // com meta, o dia fecha sozinho ao bater o %
+    : cmdMeta()   // com meta, o dia fecha sozinho ao bater o % até a hora; passou da hora = não fecha mais
+      ? `<button type="button" class="cmd-fechar${Date.now() > cmdLimite(c.ultimoDia) ? ' perdido' : ''}" disabled>${Date.now() > cmdLimite(c.ultimoDia) ? `Meta perdida: hoje o dia não fecha mais` : `Fecha sozinho ao chegar em ${cmdMeta().pct}% até ${cmdMeta().hora}`}</button>`
     : todasFeitas
       ? `<button type="button" class="btn btn-block cmd-fechar" onclick="fecharDiaComando()">Fechar o dia</button>`
       : `<button type="button" class="cmd-fechar" disabled>${total ? `Falta${faltam>1?'m':''} ${faltam} orde${faltam>1?'ns':'m'} para fechar o dia` : 'Adicione uma ordem para começar'}</button>`;
@@ -349,14 +351,14 @@ function cmdMarcar(x, feito){ x.feito = feito; if(feito) x.feitoEm = Date.now();
    Cada ordem vale 1; com subtarefas, vale a fração feita (2 de 4 = 0,5). Só conta o que foi marcado até a hora. */
 function cmdMeta(){ const m = state.comando.metaDia; return m && m.hora && m.pct ? m : null; }
 function cmdLimite(diaKey){ const m = cmdMeta(); return m ? new Date(diaKey + 'T' + m.hora + ':00').getTime() : null; }
-function cmdProgresso(ate){
-  const ords = cmdOrdensHoje(); if(!ords.length) return 0;
+function cmdProgresso(ate, diaKey){
+  const ords = cmdOrdensHoje(diaKey); if(!ords.length) return 0;
   const vale = x=>x.feito && !(ate && x.feitoEm > ate);
   return ords.reduce((s, o)=>s + ((o.sub||[]).length ? o.sub.filter(vale).length / o.sub.length : (vale(o) ? 1 : 0)), 0) / ords.length;
 }
 function cmdDiaProdutivo(diaKey){
   const m = cmdMeta(); if(!m) return false;
-  return cmdProgresso(cmdLimite(diaKey)) * 100 >= m.pct - 0.001;
+  return cmdProgresso(cmdLimite(diaKey), diaKey) * 100 >= m.pct - 0.001;
 }
 function cmdChecarMeta(){
   const c = state.comando, m = cmdMeta();
@@ -467,9 +469,17 @@ function adicionarOrdemComando(){
   renderComando();
   document.getElementById('cmdNovaOrdem')?.focus();
 }
+/* ordem de dias anteriores, não cumprida e apagada = desistência: custa igual a adiar (as criadas hoje saem de graça) */
+function cmdOrdemDeHoje(o){
+  const t = Number(String(o.id).slice(1));
+  return t > 1e12 && t >= new Date().setHours(0,0,0,0);
+}
 function excluirOrdemComando(id){
   cmdAcoesAberta = null;
-  comDesfazer('Ordem removida', ()=>{
+  const o = cmdOrdem(id);
+  const custo = o && !o.feito && !cmdOrdemDeHoje(o) && typeof JG_MULTA_ADIAR !== 'undefined' ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
+  comDesfazer(custo ? `Ordem removida · −${custo} XP (desistência)` : 'Ordem removida', ()=>{
+    if(custo) jgPerder(custo);
     state.comando.ordens = state.comando.ordens.filter(x=>x.id!==id);
     persist();
     cmdChecarMeta();
