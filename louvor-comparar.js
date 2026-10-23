@@ -58,6 +58,7 @@ async function lvCompararAbrir(){
 /* o que ficou no app: o texto com as linhas para conferir em amarelo */
 function lvCompararRenderApp(l){
   const el = document.getElementById('lvcmpApp');
+  if(!(l.conteudo || '').trim()){ el.innerHTML = `<div class="lvcmp-tit"><b>No app</b><small>${l.origem && l.origem.tipo === 'drive' ? 'só o arquivo do Drive (o texto não foi tirado)' : 'sem letra ainda'}</small></div>`; return; }
   const olhar = new Set((l.revisar || []).map(t=>t.trim()));
   const linhas = (l.conteudo || '').split('\n').map(x=>{
     const t = x.trim();

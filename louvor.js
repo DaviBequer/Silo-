@@ -205,6 +205,8 @@ function abrirLouvorDetalhe(id){
   lvAtualizarEditor();
   if(typeof lvAtualizarBtnOrganizar==='function') lvAtualizarBtnOrganizar();
   window.scrollTo(0,0);
+  /* música que veio do Drive só com o arquivo (roteiro colado): abre direto o PDF */
+  if(l.origem && l.origem.soArquivo && !(l.conteudo||'').trim() && typeof lvCompararAbrir==='function') lvCompararAbrir();
 }
 function renderLvStatusBtn(){
   const l = getLouvorAtual(); if(!l) return;
@@ -505,6 +507,17 @@ function lvTomGridEscolher(nota, modoMenor){
   renderLouvorPdfPreview();
   closeModal('modalLvTom');
   if(typeof driveTomMudou === 'function') driveTomMudou(l);   // já estava no Drive: troca o arquivo pelo do tom novo
+}
+/* muda o tom de uma música sem abrir a tela (roteiro colado do WhatsApp): sobe/desce a cifra e escreve no tom novo */
+function lvAplicarTom(l, nota, modoMenor){
+  if(!l || !nota || l.medley) return;
+  ensureLouvorConfig(l);
+  const pcNota = lvPc(nota), pcAntes = lvPc(lvTomMaiorAtual(l));
+  const delta = (pcAntes===-1 || pcNota===-1) ? 0 : ((pcNota - pcAntes)%12+12)%12;
+  if(l.conteudo) l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, nota, lvTomMaiorAtual(l));
+  l.tomOriginal = nota;
+  l.transpose = 0;
+  l.tomModoMenor = !!modoMenor;
 }
 
 /* ---------- Motor de cifras: detecção automática, seções e marcadores ----------

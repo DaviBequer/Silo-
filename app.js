@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.2', itens: [
+    'Sem caixas: os blocos viraram divisórias finas no app inteiro',
+    'Culto: colar o roteiro do WhatsApp (ícone de prancheta) — lê parte, música, cantor e tom; usa a do app, senão o PDF do Drive (só o arquivo) ou cria pelo Cifra Club; acerta o tom pedido',
+    'Música que veio do Drive só com o arquivo abre direto o PDF'
+  ]},
   { versao: 'v9.1', itens: [
     'Visual "papel calmo" (o estilo 2 escolhido): fundo creme, tinta marrom-escura, números e títulos em letra de livro (Lora), linhas finas no lugar das caixas; próximas contas em lista'
   ]},

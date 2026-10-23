@@ -1130,8 +1130,35 @@ async function ccImportar(url){
   /* cada passo aparece na tela (Cifra Club, Letras, junção) e o resumo fica na música depois */
   const passos = [];
   const passo = (txt, tipo)=>{ passos.push({ txt, tipo: tipo || '' }); el.innerHTML = passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join(''); };
-  passo('Lendo a cifra no Cifra Club…');
   try{
+    const r = await ccMontar(url, passo, ()=>passos.pop());
+    closeModal('modalCifraClub');
+    const l = lvCriarDireto(r.dados);
+    ccGuardarOrigem(l, r, url);
+    lvAtualizarBtnComparar(l);
+    const st = document.getElementById('lvEdicaoImportStatus');
+    if(st){
+      st.classList.remove('erro');
+      st.innerHTML = `<div class="cc-passos">${passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
+        <div class="cc-passos-acoes"><button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button></div></div>`;
+    }
+    showToast(r.comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club');
+  }catch(e){ passo(e.message, 'erro'); }
+}
+/* o original (texto do Cifra Club e a letra do Letras) fica guardado para comparar */
+function ccGuardarOrigem(l, r, url){
+  const textos = new Set((l.conteudo || '').split('\n').map(x=>x.trim()));
+  l.revisar = lviCorrigirTextos(r.revisar).filter(t=>textos.has(t));
+  if(!l.revisar.length) delete l.revisar;
+  l.origem = { tipo:'cifraclub', url, texto: r.c.texto, letras: r.lt.achou ? { url: r.lt.url, titulo: r.lt.titulo, estrofes: r.lt.estrofes } : null, quando: Date.now() };
+  persist();
+}
+/* lê a cifra (Cifra Club + Letras) e devolve os dados da música, sem criar nada.
+   passo(texto, tipo) mostra o andamento; tirar() apaga a última linha de "carregando" */
+async function ccMontar(url, passo, tirar){
+  passo = passo || (()=>{}); tirar = tirar || (()=>{});
+  passo('Lendo a cifra no Cifra Club…');
+  {
     const c = await ccChamar({ url });
     if(!c || !(c.texto||'').trim()) throw new Error('a página não tem cifra');
     /* hino da Harpa: o Cifra Club põe o número no lugar do cantor → "Harpa Cristã - 525" */
@@ -1139,7 +1166,7 @@ async function ccImportar(url){
       const num = (/(\d+)/.exec(c.artista || '') || /\/(\d+)-/.exec(url) || [])[1];
       c.artista = 'Harpa Cristã' + (num ? ' - ' + num : '');
     }
-    passos.pop(); passo(`✓ Cifra Club: "${c.titulo}" · ${c.artista}${c.tom ? ' · tom ' + c.tom : ''}`, 'ok');
+    tirar(); passo(`✓ Cifra Club: "${c.titulo}" · ${c.artista}${c.tom ? ' · tom ' + c.tom : ''}`, 'ok');
     /* "[Intro] F#m  E5" → "[Intro]" + linha de acordes; tablaturas (E|---3---|) e "Parte 1 de 4" saem */
     let texto = c.texto.split('\n').flatMap(l=>{
       if(/^\s*[eEBGDAb]\|[-\d|hpbrvx\/\~().\s]*$/.test(l) || /^\s*Parte \d+ de \d+\s*$/i.test(l)) return [];
@@ -1149,7 +1176,7 @@ async function ccImportar(url){
     passo('Buscando a letra no Letras…');
     let revisar = [], comLetras = false;
     const lt = await lviLetrasDe(c.titulo, c.artista);
-    passos.pop();
+    tirar();
     if(lt.achou){
       passo(`✓ Letras: "${lt.titulo}" · ${lt.artista} · ${lt.estrofes.length} estrofes`, 'ok');
       const j = lviJuntarComLetras(texto, lt.estrofes);
@@ -1166,30 +1193,15 @@ async function ccImportar(url){
     passo(`✓ ${doc.secoes.filter(s=>!s.repeatOf).length} partes · texto arrumado (maiúsculas, pontos, versos)`, 'ok');
     const m = /^([A-G](?:#|b)?)(m?)$/.exec(c.tom || '');
     const tom = m ? lviTomSiloe(m[1], !!m[2]) : null;
-    closeModal('modalCifraClub');
-    const l = lvCriarDireto({
+    return { c, lt, revisar, comLetras, dados: {
       titulo: c.titulo || '', artista: c.artista || '', categoria: harpa ? 'Harpa Cristã' : 'Louvor',
       tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false,
       conteudo
-    });
-    const textos = new Set(conteudo.split('\n').map(x=>x.trim()));
-    l.revisar = lviCorrigirTextos(revisar).filter(t=>textos.has(t));
-    if(!l.revisar.length) delete l.revisar;
-    /* o original (texto do Cifra Club e a letra do Letras) fica guardado para comparar */
-    l.origem = { tipo:'cifraclub', url, texto: c.texto, letras: lt.achou ? { url: lt.url, titulo: lt.titulo, estrofes: lt.estrofes } : null, quando: Date.now() };
-    persist();
-    lvAtualizarBtnComparar(l);
-    const st = document.getElementById('lvEdicaoImportStatus');
-    if(st){
-      st.classList.remove('erro');
-      st.innerHTML = `<div class="cc-passos">${passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
-        <div class="cc-passos-acoes"><button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button></div></div>`;
-    }
-    showToast(comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club');
-  }catch(e){ passo(e.message, 'erro'); }
+    } };
+  }
 }
-/* cria a música já com os dados e abre a tela dela (Cifra Club e Drive) */
-function lvCriarDireto(d){
+/* cria a música já com os dados e abre a tela dela (Cifra Club e Drive); abrir:false = só cria (roteiro colado do WhatsApp) */
+function lvCriarDireto(d, abrir){
   const novo = {
     id: 'lv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
     titulo: d.titulo || '', artista: d.artista || '', categoria: d.categoria || 'Louvor',
@@ -1199,7 +1211,7 @@ function lvCriarDireto(d){
   state.louvores.push(novo);
   persist();
   renderLouvor();
-  abrirLouvorDetalhe(novo.id);
+  if(abrir !== false) abrirLouvorDetalhe(novo.id);
   return novo;
 }
 

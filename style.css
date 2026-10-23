@@ -1297,7 +1297,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cmd-ordem.feita .cmd-check{background:var(--gold);border-color:var(--gold)}
 .cmd-ordem-texto{flex:1;min-width:0;font-size:14px;font-weight:500;line-height:1.35;color:var(--text);cursor:text}
 .cmd-ordem.feita .cmd-ordem-texto{color:var(--text-faint);text-decoration:line-through}
-.cmd-ordem-del{flex-shrink:0;color:var(--text-faint)}
+.cmd-ordem-del{flex-shrink:0;min-width:36px;overflow:hidden;color:var(--text-faint)}
 .cmd-ordem-del.aberta{color:var(--text)}
 /* prioridade: cor no círculo + etiqueta; 1 alta (vermelho) · 2 média (âmbar) · 3 baixa (azul) */
 .cmd-ordem.p1 .cmd-check{border-color:var(--danger);border-width:2px}
@@ -2323,3 +2323,20 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cmd-ck-feito b.sim{color:var(--success)} .cmd-ck-feito b.nao{color:var(--danger)}
 .cmd-ck-nota{margin-top:8px;font-size:13.5px;line-height:1.45;color:var(--text-dim)}
 .cmd-tipo-tag.habito{color:var(--text-dim)}
+/* ===== Sem caixas (v9.2, pedido do Davi): os blocos viram divisórias finas — fundo do papel, sem canto, linha em cima ===== */
+.card,.section,.cmd-card,.resumo-stats,.cp-resumo,.cp-bloco,.lv-config,.cu-parte-corpo,.lm-musica,.jg-relatorio,.cmd-revisao,.lvi-rel,.lvcmp-texto{background:none!important;border:none!important;border-top:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important}
+.card,.section,.cmd-card,.resumo-stats,.cp-bloco{padding-left:0!important;padding-right:0!important}
+.resumo-card,.atalho-card{border-top:none!important}
+.lv-card{background:none!important;border:none!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important;padding-left:2px!important;padding-right:2px!important}
+.cart-banco{box-shadow:none}
+/* Culto: colar o roteiro do WhatsApp */
+.cu-colar-texto{width:100%;min-height:120px;resize:vertical;font:inherit;font-size:14px;line-height:1.5}
+.cu-colar-lista{margin-top:10px}
+.cu-colar-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 0;border-top:1px solid var(--line)}
+.cu-colar-musica{grid-column:1;min-width:0}
+.cu-colar-musica b{display:block;font-size:14.5px;font-weight:600;color:var(--text)}
+.cu-colar-musica small{display:block;font-size:12.5px;color:var(--text-faint)}
+.cu-colar-parte{grid-column:2;grid-row:1/span 2;align-self:center;max-width:140px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:none;color:var(--text-dim);font:inherit;font-size:12.5px}
+.cu-colar-st{grid-column:1;font-size:12px;color:var(--text-faint)}
+.cu-colar-st.app,.cu-colar-st.drive,.cu-colar-st.cifra{color:var(--success)}
+.cu-colar-st.erro,.cu-colar-st.vazia{color:var(--danger)}
