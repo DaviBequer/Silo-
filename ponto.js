@@ -420,11 +420,13 @@ function renderPontoMetaDiaria(mKey, r){
 
 /* ================= PONTO PJ: CONFIGURAÇÃO E EXPORTAÇÃO PDF ================= */
 function openPontoConfigModal(){
-  document.getElementById('pontoConfigNome').value = state.ponto.nomeUsuario || '';
   document.getElementById('modalPontoConfig').classList.add('active');
 }
+/* nome no PDF: vem do aparelho (Davi/Cris), sem campo para preencher */
+function pontoNomeDoPdf(){
+  return usuarioDoAparelho() === 'cris' ? 'Cris' : 'Davi';
+}
 function salvarPontoConfig(){
-  state.ponto.nomeUsuario = document.getElementById('pontoConfigNome').value.trim();
   persist();
   closeModal('modalPontoConfig');
   showToast('Configuração salva');
@@ -687,7 +689,7 @@ function gerarPdfPonto(){
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'pt', format:'a4' });
-  const nome = state.ponto.nomeUsuario || '';
+  const nome = pontoNomeDoPdf();
   const pageW = 595, pageH = 842;
   const marginX = 48, direita = pageW - marginX;
   const tinta = [17,24,39], suave = [107,114,128], claro = [156,163,175], linha = [229,231,235], linhaSemana = [203,208,216], azul = [37,99,235];

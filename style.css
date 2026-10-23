@@ -1016,11 +1016,12 @@ body:has(.modal-overlay.active){overflow:hidden}
 .busca-cifraclub>svg{flex-shrink:0;color:var(--text-faint)}
 
 /* ===== PONTO ===== */
-#aba-ponto .resumo-topo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center}
-#aba-ponto .resumo-topo .ponto-mes-nav{grid-column:2;grid-row:1;justify-content:center;gap:8px;margin:0}
-#aba-ponto .resumo-topo > div:last-child{grid-column:3;grid-row:1;justify-self:end}
-#aba-ponto .resumo-topo .mes-label{min-width:0;font-size:13px;font-weight:700;text-align:center}
-#aba-ponto .resumo-topo .ponto-mes-nav button{width:34px;height:34px}
+#aba-ponto .resumo-topo{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#aba-ponto .resumo-topo .ponto-mes-nav{flex:1;min-width:0;justify-content:flex-start;gap:6px;margin:0}
+#aba-ponto .resumo-topo .mes-label{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:13px;font-weight:700;text-align:center}
+#aba-ponto .resumo-topo .ponto-mes-nav button{flex-shrink:0;width:34px;height:34px}
+.ponto-topo-acoes{display:flex;align-items:center;gap:2px;flex-shrink:0;color:var(--text-dim)}
+.ponto-topo-acoes .ico-btn{min-width:38px;height:38px}
 .ponto-mes-nav.fechado .mes-label{color:var(--success)}
 .ponto-fechado-ico{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:4px;border-radius:50%;background:var(--success);color:#fff;font-size:12px;font-weight:900;vertical-align:middle}
 .ponto-valor-grande{margin-top:2px;font-family:var(--font-display);font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1.05;color:var(--text);font-variant-numeric:tabular-nums}
