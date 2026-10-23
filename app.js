@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v8.5', itens: [
+    'Ponto: segurar no horário avança (ou volta) rápido, em 2 velocidades; tocar no nome (Entrada, Almoço…) apaga o horário'
+  ]},
   { versao: 'v8.4', itens: [
     'Revisar ontem de novo (1 vez): desfaz o que foi contado e você marca o que fez — vale também para o dia que virou antes da revisão existir',
     'Juramento de cada dia: o de ontem não vale hoje (+10 XP ao assinar; botão Repetir)',

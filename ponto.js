@@ -44,10 +44,7 @@ function toggleDiaConcluido(dia){
   persist();
   if(navigator.vibrate) navigator.vibrate(10);
 }
-function ajustarTempo(dia, campo, isRight){
-  const mKey = pontoMonthKeyAtual();
-  const d = getDia(mKey, dia);
-  if(d.concluido) return;
+function tempoPasso(mKey, dia, d, campo, isRight){
   if(!d[campo]){
     d[campo] = campo==='saida' ? tempoPadraoSaida(mKey, dia) : TEMPO_PADRAO[campo];
   } else {
@@ -56,40 +53,65 @@ function ajustarTempo(dia, campo, isRight){
     d[campo] = minToTime(min);
   }
   d.confirmado[campo] = true;
-  renderPonto();
-  persist();
-  if(navigator.vibrate) navigator.vibrate(6);
 }
-let tempoPressTimer = null;
+/* toque no lado direito/esquerdo = +1/−1 min; segurar = repete de 1 em 1:
+   depois de TEMPO_SEGURAR ms na velocidade 1, depois de TEMPO_ACELERAR ms na velocidade 2 (limite) */
+const TEMPO_SEGURAR = 400, TEMPO_ACELERAR = 1500, TEMPO_VEL1 = 100, TEMPO_VEL2 = 30;
+let tempoSegurando = null;
 function tempoTapStart(e, dia, campo){
   if(e.cancelable) e.preventDefault();
-  if(tempoPressTimer) clearTimeout(tempoPressTimer);
-  tempoPressTimer = setTimeout(()=>{
-    tempoPressTimer = null;
-    const mKey = pontoMonthKeyAtual();
-    const d = getDia(mKey, dia);
-    if(d.concluido) return;
-    d[campo] = null;
-    d.confirmado[campo] = false;
-    renderPonto();
-    persist();
-    if(navigator.vibrate) navigator.vibrate(20);
-  }, 550);
+  tempoTapCancel();
+  const mKey = pontoMonthKeyAtual();
+  const d = getDia(mKey, dia);
+  if(d.concluido) return;
+  const el = e.currentTarget;
+  const rect = el.getBoundingClientRect();
+  const isRight = (e.clientX - rect.left) > rect.width/2;
+  try{ el.setPointerCapture(e.pointerId); }catch(_){}
+  const passo = ()=>{
+    tempoPasso(mKey, dia, d, campo, isRight);
+    el.textContent = d[campo];
+    el.classList.remove('ph-atrasado');
+    el.classList.add('ph-confirmado');
+  };
+  // o 1º passo só vale ao soltar (toque rápido) ou ao começar a segurar — rolar a tela por cima não muda nada
+  const s = tempoSegurando = { timer:null, passo, mudou:false };
+  const repetir = (vel)=>{ s.timer = setInterval(passo, vel); };
+  s.timer = setTimeout(()=>{
+    s.mudou = true;
+    passo();
+    if(navigator.vibrate) navigator.vibrate(6);
+    repetir(TEMPO_VEL1);
+    s.acelerar = setTimeout(()=>{ clearInterval(s.timer); repetir(TEMPO_VEL2); if(navigator.vibrate) navigator.vibrate(10); }, TEMPO_ACELERAR);
+  }, TEMPO_SEGURAR);
 }
-function tempoTapEnd(e, dia, campo){
-  if(e.cancelable) e.preventDefault();
-  if(tempoPressTimer){
-    clearTimeout(tempoPressTimer);
-    tempoPressTimer = null;
-    const el = e.currentTarget;
-    const rect = el.getBoundingClientRect();
-    const clientX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
-    const isRight = (clientX - rect.left) > rect.width/2;
-    ajustarTempo(dia, campo, isRight);
-  }
+function tempoTapEnd(e){
+  const s = tempoSegurando;
+  if(!s) return;
+  if(e && e.cancelable) e.preventDefault();
+  const toque = e && e.type === 'pointerup' && !s.mudou;
+  tempoTapCancel();
+  if(toque){ s.passo(); if(navigator.vibrate) navigator.vibrate(6); }
+  else if(!s.mudou) return;
+  renderPonto();
+  persist();
 }
 function tempoTapCancel(){
-  if(tempoPressTimer){ clearTimeout(tempoPressTimer); tempoPressTimer = null; }
+  const s = tempoSegurando;
+  if(!s) return;
+  clearTimeout(s.timer); clearInterval(s.timer); clearTimeout(s.acelerar);
+  tempoSegurando = null;
+}
+/* apagar um horário: toque no nome (Entrada, Almoço…) */
+async function tempoApagar(dia, campo, nome){
+  const mKey = pontoMonthKeyAtual();
+  const d = getDia(mKey, dia);
+  if(d.concluido || !d[campo]) return;
+  if(!(await iosConfirm(`Apagar o horário d${nome}?`))) return;
+  d[campo] = null;
+  d.confirmado[campo] = false;
+  renderPonto();
+  persist();
 }
 /* hora extra: digita só números (teclado numérico não tem ":") e vira H:MM — "130" → 1:30, "45" → 0:45 */
 function maskHoraInput(el){
@@ -238,7 +260,7 @@ function renderPonto(){
       const atencao = pontoDiaPrecisaAtencao(d, dateObj, hoje, isHoje, isWeekend);
       if(atencao) semanaAtencao = true;
       const diaAberto = chaveDia in pontoDiaAberto ? pontoDiaAberto[chaveDia] : atencao;
-      const tapAttrs = (campo)=> travado ? '' : `onpointerdown="tempoTapStart(event,${dia},'${campo}')" onpointerup="tempoTapEnd(event,${dia},'${campo}')" onpointercancel="tempoTapCancel()" onpointerleave="tempoTapCancel()" oncontextmenu="return false"`;
+      const tapAttrs = (campo)=> travado ? '' : `onpointerdown="tempoTapStart(event,${dia},'${campo}')" onpointerup="tempoTapEnd(event)" onpointercancel="tempoTapEnd()" onpointerleave="tempoTapEnd()" oncontextmenu="return false"`;
       const statusClasse = (campo)=>{
         if(d.confirmado && d.confirmado[campo]) return 'ph-confirmado';
         if(isHoje && d[campo] && nowMin > timeToMin(d[campo])) return 'ph-atrasado';
@@ -254,10 +276,10 @@ function renderPonto(){
           </div>
         </div>
         <div class="ponto-horarios-grid">
-          <div class="ph-item"><div class="ph-lbl">Entrada</div><div class="ph-tempo-tap ${statusClasse('entrada')}" ${tapAttrs('entrada')}>${d.entrada||'--:--'}</div></div>
-          <div class="ph-item"><div class="ph-lbl">Almoço</div><div class="ph-tempo-tap ${statusClasse('almocoSaida')}" ${tapAttrs('almocoSaida')}>${d.almocoSaida||'--:--'}</div></div>
-          <div class="ph-item"><div class="ph-lbl">Volta</div><div class="ph-tempo-tap ${statusClasse('almocoVolta')}" ${tapAttrs('almocoVolta')}>${d.almocoVolta||'--:--'}</div></div>
-          <div class="ph-item"><div class="ph-lbl">Saída</div><div class="ph-tempo-tap ${statusClasse('saida')}" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
+          <div class="ph-item"><div class="ph-lbl" ${travado?'':`onclick="tempoApagar(${dia},'entrada','a entrada')"`}>Entrada</div><div class="ph-tempo-tap ${statusClasse('entrada')}" ${tapAttrs('entrada')}>${d.entrada||'--:--'}</div></div>
+          <div class="ph-item"><div class="ph-lbl" ${travado?'':`onclick="tempoApagar(${dia},'almocoSaida','o almoço')"`}>Almoço</div><div class="ph-tempo-tap ${statusClasse('almocoSaida')}" ${tapAttrs('almocoSaida')}>${d.almocoSaida||'--:--'}</div></div>
+          <div class="ph-item"><div class="ph-lbl" ${travado?'':`onclick="tempoApagar(${dia},'almocoVolta','a volta')"`}>Volta</div><div class="ph-tempo-tap ${statusClasse('almocoVolta')}" ${tapAttrs('almocoVolta')}>${d.almocoVolta||'--:--'}</div></div>
+          <div class="ph-item"><div class="ph-lbl" ${travado?'':`onclick="tempoApagar(${dia},'saida','a saída')"`}>Saída</div><div class="ph-tempo-tap ${statusClasse('saida')}" ${tapAttrs('saida')}>${d.saida||'--:--'}</div></div>
         </div>
         <div class="ponto-extra-row">
           <div class="ph-item"><div class="ph-lbl">Hora extra</div><input type="text" inputmode="numeric" value="${extraVal}" placeholder="0:00" oninput="maskHoraInput(this)" onchange="setExtra(${dia}, this.value)" ${travado?'disabled':''}></div>
