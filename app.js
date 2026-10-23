@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.1', itens: [
+    'Visual "papel calmo" (o estilo 2 escolhido): fundo creme, tinta marrom-escura, números e títulos em letra de livro (Lora), linhas finas no lugar das caixas; próximas contas em lista'
+  ]},
   { versao: 'v9.0', itens: [
     'Visual novo: minimalista preto e branco, uma letra só (Inter), sem sombras e sem foto de fundo; o visual militar saiu',
     'Aba Trabalho: Ponto e Vendas juntos (5 abas na barra)',
