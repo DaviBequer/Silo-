@@ -439,7 +439,7 @@ function fecharSplash(imediato){
   const el = document.getElementById('splash');
   const sair = ()=>{
     document.body.classList.remove('carregando');
-    document.getElementById('metaCorTema')?.setAttribute('content', '#262b1a');   // barra de status oliva, igual ao cabeçalho militar
+    document.getElementById('metaCorTema')?.setAttribute('content', '#000000');   // barra de status preta, igual ao app
     if(!el) return;
     el.classList.add('saindo');
     setTimeout(()=>el.classList.add('oculta'), 1450);
@@ -787,7 +787,11 @@ const ICO_D = {
 const ICON_TREND ='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
 
 /* ================= NAVEGAÇÃO DE ABAS ================= */
+/* aba Trabalho = Ponto + Vendas (v9.0); abre na última das duas usada neste aparelho */
+const CHAVE_TRABALHO = 'siloe-trabalho';
 function switchAba(aba){
+  if(aba==='trabalho'){ try{ aba = localStorage.getItem(CHAVE_TRABALHO)==='vendas' ? 'vendas' : 'ponto'; }catch(e){ aba = 'ponto'; } }
+  if(aba==='ponto' || aba==='vendas'){ try{ localStorage.setItem(CHAVE_TRABALHO, aba); }catch(e){} }
   document.querySelectorAll('.aba').forEach(el=>el.classList.remove('active'));
   document.getElementById('aba-'+aba).classList.add('active');
   document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
@@ -795,7 +799,7 @@ function switchAba(aba){
   document.getElementById('pageLouvorMedley')?.classList.remove('active');
   document.getElementById('pageCulto')?.classList.remove('active');
   document.body.style.overflow = '';
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba || (el.dataset.aba==='trabalho' && (aba==='ponto' || aba==='vendas'))));
   window.scrollTo(0,0);
   if(aba==='ponto') renderPonto();
   if(aba==='planner'){ renderPlanner(); renderPanorama(); }

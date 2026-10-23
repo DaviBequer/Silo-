@@ -12,8 +12,8 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&family=Saira+Stencil+One&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8.8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=9.0">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 88</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 90</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -200,6 +200,7 @@
 
 <!-- PONTO PJ -->
 <div class="aba" id="aba-ponto">
+  <div class="dash-tabs trabalho-tabs"><button type="button" class="dash-tab active">Ponto</button><button type="button" class="dash-tab" onclick="switchAba('vendas')">Vendas</button></div>
 
   <!-- RESUMO DO MÊS DO PONTO -->
   <div class="card resumo-card">
@@ -249,7 +250,6 @@
     <div class="ajustes-titulo">Ajustes</div>
     <div class="dash-tabs dd-abas" id="ddAbas">
       <button type="button" class="dash-tab active" data-dd="geral" onclick="ddAba('geral')">Geral</button>
-      <button type="button" class="dash-tab" data-dd="visual" onclick="ddAba('visual')">Visual</button>
       <button type="button" class="dash-tab" data-dd="recursos" onclick="ddAba('recursos')">Recursos</button>
       <button type="button" class="dash-tab" data-dd="conta" onclick="ddAba('conta')">Segurança</button>
     </div>
@@ -274,21 +274,6 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="btn" onclick="exportarDadosApp()">Exportar</button>
       <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
-    </div>
-    </div>
-    <div class="dd-painel" data-dd="visual">
-    <div class="ia-config fundo-config">
-      <div class="ia-topo"><span class="ia-titulo">Imagem de fundo</span><span class="ia-status" id="fundoStatus">Sem imagem</span></div>
-      <div class="ia-desc">Uma foto sua atrás do app. Ela fica clarinha para o texto continuar fácil de ler.</div>
-      <div class="fundo-forca" id="fundoForca" style="display:none">
-        <div class="fundo-forca-topo"><span>Quanto a imagem aparece</span><b id="fundoForcaValor">22%</b></div>
-        <input type="range" id="fundoForcaBarra" class="fundo-barra" min="0" max="100" step="1" value="22" oninput="setVisivelFundo(this.value, false)" onchange="setVisivelFundo(this.value, true)">
-        <div class="fundo-forca-pontas"><span>Clarinha</span><span>Forte</span></div>
-      </div>
-      <div class="fundo-acoes">
-        <label class="btn btn-sm">Escolher imagem<input type="file" accept="image/*" style="display:none" onchange="escolherFundoApp(event)"></label>
-        <button type="button" class="ia-remover" id="fundoRemover" style="display:none" onclick="removerFundoApp()">Remover</button>
-      </div>
     </div>
     </div>
     <div class="dd-painel" data-dd="recursos">
@@ -363,6 +348,7 @@
 </div>
 
 <div class="aba" id="aba-vendas">
+  <div class="dash-tabs trabalho-tabs"><button type="button" class="dash-tab" onclick="switchAba('ponto')">Ponto</button><button type="button" class="dash-tab active">Vendas</button></div>
   <div id="vendasConteudo"></div>
 </div>
 
@@ -407,8 +393,7 @@
 
 <nav class="bottom-nav">
   <button class="nav-item active" onclick="switchAba('planner')" data-aba="planner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg><span>Finanças</span></button>
-  <button class="nav-item" onclick="switchAba('ponto')" data-aba="ponto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6l4 2"/><path d="M22 12a10 10 0 1 0-11 9.95"/><path d="m16 19 2 2 4-4"/></svg><span>Ponto</span></button>
-  <button class="nav-item" onclick="switchAba('vendas')" data-aba="vendas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><span>Vendas</span></button>
+  <button class="nav-item" onclick="switchAba('trabalho')" data-aba="trabalho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg><span>Trabalho</span></button>
   <button class="nav-item" onclick="switchAba('louvor')" data-aba="louvor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="18" r="3.5"/><path d="M11.5 18V3l7 3.5"/></svg><span>Louvor</span></button>
   <button class="nav-item" onclick="switchAba('comando')" data-aba="comando"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg><span>Comando</span></button>
   <button class="nav-item" onclick="switchAba('ajustes')" data-aba="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></button>
@@ -1892,24 +1877,24 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=8.8"></script>
-<script src="core.js?v=8.8"></script>
-<script src="comando.js?v=8.8"></script>
-<script src="comando-jogo.js?v=8.8"></script>
-<script src="layout.js?v=8.8"></script>
-<script src="app.js?v=8.8"></script>
-<script src="panorama.js?v=8.8"></script>
-<script src="planner.js?v=8.8"></script>
-<script src="ponto.js?v=8.8"></script>
-<script src="louvor.js?v=8.8"></script>
-<script src="louvor-extra.js?v=8.8"></script>
-<script src="louvor-medley.js?v=8.8"></script>
-<script src="louvor-culto.js?v=8.8"></script>
-<script src="louvor-drive.js?v=8.8"></script>
-<script src="louvor-comparar.js?v=8.8"></script>
-<script src="fatura-pdf.js?v=8.8"></script>
-<script src="emprestimo.js?v=8.8"></script>
-<script src="vendas.js?v=8.8"></script>
+<script src="supabase.js?v=9.0"></script>
+<script src="core.js?v=9.0"></script>
+<script src="comando.js?v=9.0"></script>
+<script src="comando-jogo.js?v=9.0"></script>
+<script src="layout.js?v=9.0"></script>
+<script src="app.js?v=9.0"></script>
+<script src="panorama.js?v=9.0"></script>
+<script src="planner.js?v=9.0"></script>
+<script src="ponto.js?v=9.0"></script>
+<script src="louvor.js?v=9.0"></script>
+<script src="louvor-extra.js?v=9.0"></script>
+<script src="louvor-medley.js?v=9.0"></script>
+<script src="louvor-culto.js?v=9.0"></script>
+<script src="louvor-drive.js?v=9.0"></script>
+<script src="louvor-comparar.js?v=9.0"></script>
+<script src="fatura-pdf.js?v=9.0"></script>
+<script src="emprestimo.js?v=9.0"></script>
+<script src="vendas.js?v=9.0"></script>
 <script>carregar();</script>
 </body>
 </html>

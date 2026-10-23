@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.0', itens: [
+    'Visual novo: minimalista preto e branco, uma letra só (Inter), sem sombras e sem foto de fundo; o visual militar saiu',
+    'Aba Trabalho: Ponto e Vendas juntos (5 abas na barra)',
+    'Comando calmo: sem multas, sem sargento e sem rebaixar; hábitos mostram os dias seguidos; check-in do dia (3 perguntas) e Diário'
+  ]},
   { versao: 'v8.8', itens: [
     'Finanças: mais atalhos redondos embaixo do saldo (Empréstimo, Bancos, Simular, Histórico), arrastando para o lado; os ícones pequenos do topo saíram'
   ]},
@@ -1302,7 +1307,7 @@ function fundoVisivel(f){ return f && f.visivel != null ? Number(f.visivel) : (F
 function fundoVeu(v){ return Math.max(.6, Math.min(.97, .97 - v * .0037)); }   // véu da cor do papel por cima da foto (nunca deixa o texto ilegível)
 function fundoForca(el, v){ el.style.setProperty('--veu', fundoVeu(v)); el.style.setProperty('--desfoque', Math.max(10, 30 - v * .2).toFixed(1) + 'px'); }
 function aplicarFundoApp(){
-  const f = state && state.fundoApp;
+  const f = null;   // v9.0: visual preto e branco, sem foto de fundo (state.fundoApp fica guardado, só não aparece)
   let el = document.getElementById('fundoApp');
   if(!f || !f.img){ document.documentElement.classList.remove('tem-fundo'); if(el) el.remove(); atualizarStatusFundo(); return; }
   if(!el){ el = document.createElement('div'); el.id = 'fundoApp'; el.setAttribute('aria-hidden', 'true'); document.body.prepend(el); }

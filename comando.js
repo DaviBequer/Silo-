@@ -85,7 +85,7 @@ function cmdAplicarDia(rev){
   const c = state.comando;
   /* como estava antes de contar: permite "revisar ontem de novo" desfazendo tudo */
   const jj = typeof jgEstado === 'function' ? jgEstado() : null;
-  const antes = jj ? JSON.parse(JSON.stringify({ streak: c.streak, recorde: c.recorde, diasFechados: c.diasFechados || [], escudos: jj.escudos, tot: jj.tot, semana: jj.semana })) : null;
+  const antes = jj ? JSON.parse(JSON.stringify({ streak: c.streak, recorde: c.recorde, diasFechados: c.diasFechados || [], escudos: jj.escudos, tot: jj.tot, semana: jj.semana, seqs: Object.fromEntries(c.ordens.filter(o=>o.repete).map(o=>[o.id, o.seq || 0])) })) : null;
   const revCopia = JSON.parse(JSON.stringify(rev));
   const contaveis = rev.ordens.filter(o=>o.escolha !== 'imprevisto');
   const tudoImprevisto = rev.ordens.length > 0 && !contaveis.length;
@@ -104,6 +104,8 @@ function cmdAplicarDia(rev){
     jgAplicarDia(rev, { fechou, livre, perdeuSeq, seqAntes });
     if(jj.relatorio){ jj.relatorio.rev = revCopia; jj.relatorio.antes = antes; jj.relatorio.reaberta = !!rev.reaberta; }
   }
+  /* hábito (todo dia): feito soma 1 na sequência dele; não feito zera; imprevisto e folga deixam como está */
+  if(!livre) rev.ordens.forEach(f=>{ const o = f.repete && cmdOrdem(f.id); if(!o) return; if(f.escolha === 'fiz') o.seq = (o.seq || 0) + 1; else if(f.escolha === 'nao') o.seq = 0; });
   /* tarefa de uma vez que ele disse que fez: sai da lista */
   rev.ordens.forEach(f=>{ if(f.escolha === 'fiz' && !f.repete) c.ordens = c.ordens.filter(o=>o.id !== f.id); });
   /* revisão refeita: tarefa que tinha saído como "Fiz" e agora é "Não fiz" ou "Imprevisto" volta para a lista */
@@ -182,6 +184,7 @@ async function cmdReabrirRevisao(){
   if(r.antes){
     c.streak = r.antes.streak; c.recorde = r.antes.recorde; c.diasFechados = r.antes.diasFechados;
     j.escudos = r.antes.escudos; j.tot = r.antes.tot; j.semana = r.antes.semana;
+    if(r.antes.seqs) c.ordens.forEach(o=>{ if(o.id in r.antes.seqs) o.seq = r.antes.seqs[o.id]; });
   } else {
     /* relatório da versão antiga: recupera a sequência pela linha "Sequência de N dias perdida" */
     const linha = (r.linhas || []).find(l=>/^Sequência de (\d+)/.test(l[0]));
@@ -333,7 +336,7 @@ function cmdAdiar(id, dia){
   const o = cmdOrdem(id); if(!o || !dia) return;
   if(dia <= diaKeyHoje()){ showToast('Escolha um dia depois de hoje'); return; }
   cmdAcoesAberta = null;
-  const custo = typeof JG_MULTA_ADIAR !== 'undefined' ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
+  const custo = typeof JG_MULTA_ADIAR !== 'undefined' && jgBruto() ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
   comDesfazer(`Adiada para ${cmdNomeDia(dia)}${custo ? ` · −${custo} XP` : ''}`, ()=>{
     if(typeof jgMultaAdiar === 'function') jgMultaAdiar(o);   // modo bruto: adiar custa
     o.adiadaAte = dia;
@@ -381,7 +384,7 @@ function renderComando(){
         <button type="submit" class="cmd-btn-icone" aria-label="Adicionar subtarefa" title="Adicionar">${CMD_MAIS}</button>
       </form>
     </div>` : ''}`;
-  }).join('') || `<div class="cmd-vazio">Nenhuma ordem. Escreva ou dite a primeira abaixo.</div>`;
+  }).join('') || `<div class="cmd-vazio">${jgBruto() ? 'Nenhuma ordem. Escreva ou dite a primeira abaixo.' : 'Nada para hoje ainda. Escreva ou dite abaixo.'}</div>`;
 
   const faltam = total - feitas;
   const botaoFechar = c.diaFechado
@@ -390,7 +393,7 @@ function renderComando(){
       ? `<button type="button" class="cmd-fechar${Date.now() > cmdLimite(c.ultimoDia) ? ' perdido' : ''}" disabled>${Date.now() > cmdLimite(c.ultimoDia) ? `Meta perdida: hoje o dia não fecha mais` : `Fecha sozinho ao chegar em ${cmdMeta().pct}% até ${cmdMeta().hora}`}</button>`
     : todasFeitas
       ? `<button type="button" class="btn btn-block cmd-fechar" onclick="fecharDiaComando()">Fechar o dia</button>`
-      : `<button type="button" class="cmd-fechar" disabled>${total ? `Falta${faltam>1?'m':''} ${faltam} orde${faltam>1?'ns':'m'} para fechar o dia` : 'Adicione uma ordem para começar'}</button>`;
+      : `<button type="button" class="cmd-fechar" disabled>${total ? `Falta${faltam>1?'m':''} ${faltam}${jgBruto() ? ` orde${faltam>1?'ns':'m'}` : ''} para fechar o dia` : jgBruto() ? 'Adicione uma ordem para começar' : 'Escreva a primeira tarefa do dia'}</button>`;
 
   const adiadas = cmdOrdensAdiadas();
   const adiadasHtml = adiadas.length ? `
@@ -405,15 +408,16 @@ function renderComando(){
         </div>` : '';
 
   /* juramento é de cada dia: o de ontem não vale hoje */
+  const bruto = jgBruto();
   const juramentoHoje = c.juramento && c.juramentoDia === diaKeyHoje();
   const anterior = (c.juramentos || []).filter(x=>x.dia !== diaKeyHoje()).slice(-1)[0];
   const juramentoHtml = juramentoHoje ? `
       <blockquote class="cmd-juramento">${cmdEsc(c.juramento).replace(/\n/g,'<br>')}</blockquote>
-      <div class="cmd-juramento-rodape"><span>Assinado hoje</span><button type="button" class="cmd-link" onclick="editarJuramentoComando()">Reescrever</button></div>` : `
-      <div class="cmd-desc">O compromisso de hoje. Cada dia, um juramento novo. Sem meio-termo. <b>+${CMD_XP_JURAMENTO} XP</b></div>
-      <textarea id="juramentoInput" class="cmd-campo cmd-juramento-input" placeholder="Hoje eu me comprometo a…"></textarea>
+      <div class="cmd-juramento-rodape"><span>${bruto ? 'Assinado hoje' : 'Hoje'}</span><button type="button" class="cmd-link" onclick="editarJuramentoComando()">Reescrever</button></div>` : `
+      <div class="cmd-desc">${bruto ? `O compromisso de hoje. Cada dia, um juramento novo. Sem meio-termo. <b>+${CMD_XP_JURAMENTO} XP</b>` : 'Uma frase para guiar o dia.'}</div>
+      <textarea id="juramentoInput" class="cmd-campo cmd-juramento-input" placeholder="${bruto ? 'Hoje eu me comprometo a…' : 'Hoje eu quero…'}"></textarea>
       ${anterior ? `<div class="cmd-jur-ontem"><span>Ontem: “${cmdEsc(anterior.texto)}”</span><button type="button" class="cmd-link" onclick="document.getElementById('juramentoInput').value=${cmdEsc(JSON.stringify(anterior.texto))}">Repetir</button></div>` : ''}
-      <button type="button" class="btn btn-block" style="margin-top:10px" onclick="assinarJuramentoComando()">Assinar o de hoje</button>`;
+      <button type="button" class="btn btn-block" style="margin-top:10px" onclick="assinarJuramentoComando()">${bruto ? 'Assinar o de hoje' : 'Guardar'}</button>`;
 
   const sabotagensHtml = c.sabotagens.slice(-5).reverse().map(s=>`
       <div class="cmd-sab">
@@ -423,11 +427,11 @@ function renderComando(){
 
   document.getElementById('comandoConteudo').innerHTML = `
     <div class="cmd-topo">
-      <div class="cmd-rotulo">Disciplina</div>
+      <div class="cmd-rotulo">${bruto ? 'Disciplina' : 'Hoje · ' + new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' })}</div>
       <div class="cmd-numero">${c.streak}<span>${c.streak===1?'dia seguido':'dias seguidos'}</span></div>
       <div class="cmd-sub">${c.recorde > 0 ? `Recorde: ${c.recorde} dia${c.recorde===1?'':'s'}` : 'Feche o dia cumprindo todas as ordens'}</div>
       <div class="cmd-semana">${cmdSemanaHtml(c)}</div>
-      ${c.rupturaHoje === 'escudo' ? `<div class="cmd-ruptura escudo">Ontem você falhou. O escudo salvou a sequência — não conte com isso de novo.</div>` : c.rupturaHoje ? `<div class="cmd-ruptura">Ontem você falhou. Sequência zerada. Levanta e cumpre.</div>` : ''}
+      ${c.rupturaHoje === 'escudo' ? `<div class="cmd-ruptura escudo">${bruto ? 'Ontem você falhou. O escudo salvou a sequência — não conte com isso de novo.' : 'Ontem não fechou, mas o escudo guardou a sua sequência.'}</div>` : c.rupturaHoje ? `<div class="cmd-ruptura">${bruto ? 'Ontem você falhou. Sequência zerada. Levanta e cumpre.' : 'Ontem não fechou. Tudo bem — recomeça hoje.'}</div>` : ''}
       ${cmdPodeRevisarDeNovo() && !(jgEstado().relatorio && !jgEstado().relatorio.visto) ? `<button type="button" class="cmd-rev-denovo" onclick="cmdReabrirRevisao()">Esqueceu de marcar algo ontem? Revisar ontem</button>` : ''}
       ${typeof versiculoAtual !== 'undefined' ? `<div class="versiculo cmd-versiculo"><p class="vs-texto">${versiculoAtual[0]}</p><span class="vs-ref">${versiculoAtual[1]}</span></div>` : ''}
       ${typeof jgJogadorHtml === 'function' ? jgJogadorHtml() : ''}
@@ -435,12 +439,12 @@ function renderComando(){
 
     <div class="cmd-grade">
       <div class="cmd-card cmd-card-ordens">
-        <div class="cmd-card-topo"><span class="cmd-card-titulo">Ordens de hoje</span><span class="cmd-card-conta">${feitas} de ${total}</span></div>
+        <div class="cmd-card-topo"><span class="cmd-card-titulo">${bruto ? 'Ordens de hoje' : 'Tarefas e hábitos'}</span><span class="cmd-card-conta">${feitas} de ${total}</span></div>
         <div class="cmd-barra"><div style="width:${cmdMeta() ? Math.round(cmdProgresso()*100) : pct}%"></div>${cmdMeta() ? `<i class="cmd-barra-meta" style="left:${cmdMeta().pct}%"></i>` : ''}</div>
         ${cmdMetaHtml()}
         <div class="cmd-ordens">${ordensHtml}</div>
         <form class="cmd-nova" onsubmit="event.preventDefault();adicionarOrdemComando()">
-          <input type="text" id="cmdNovaOrdem" class="cmd-campo" placeholder="Nova ordem" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();adicionarOrdemComando()}">
+          <input type="text" id="cmdNovaOrdem" class="cmd-campo" placeholder="${bruto ? 'Nova ordem' : 'Nova tarefa'}" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();adicionarOrdemComando()}">
           <button type="button" class="cmd-btn-icone cmd-prio-btn${cmdNovaPrio?' p'+cmdNovaPrio:''}" id="cmdNovaPrioBtn" onclick="cmdCiclarNovaPrio()" aria-label="Prioridade: ${CMD_PRIO[cmdNovaPrio]||'sem'}" title="Prioridade: ${CMD_PRIO[cmdNovaPrio]||'sem'}">${cmdNovaPrio?CMD_BANDEIRA:CMD_BANDEIRA_VAZIA}</button>
           <button type="button" class="cmd-btn-icone" id="cmdMic" onclick="cmdDitar('cmdNovaOrdem', this)" aria-label="Ditar por voz" title="Ditar por voz">${CMD_MIC}</button>
           <button type="submit" class="cmd-btn-icone escuro" aria-label="Adicionar ordem" title="Adicionar">${CMD_MAIS}</button>
@@ -451,26 +455,76 @@ function renderComando(){
       </div>
 
       <div class="cmd-coluna">
-        ${typeof jgDesafioHtml === 'function' ? jgDesafioHtml() : ''}
+        ${bruto && typeof jgDesafioHtml === 'function' ? jgDesafioHtml() : ''}
         <div class="cmd-card">
-          <div class="cmd-card-topo"><span class="cmd-card-titulo">Juramento</span></div>
+          <div class="cmd-card-topo"><span class="cmd-card-titulo">${bruto ? 'Juramento' : 'Intenção do dia'}</span></div>
           ${juramentoHtml}
         </div>
+        ${bruto ? '' : cmdCheckinHtml()}
         <div class="cmd-card">
-          <div class="cmd-card-topo"><span class="cmd-card-titulo">Peguei-me sabotando</span></div>
-          <div class="cmd-desc">Anote na hora o que quase te derrubou.</div>
+          <div class="cmd-card-topo"><span class="cmd-card-titulo">${bruto ? 'Peguei-me sabotando' : 'Diário'}</span></div>
+          <div class="cmd-desc">${bruto ? 'Anote na hora o que quase te derrubou.' : 'Anote o que está sentindo ou o que te atrapalhou.'}</div>
           <form class="cmd-nova" onsubmit="event.preventDefault();registrarSabotagemComando()">
-            <input type="text" id="sabotagemInput" class="cmd-campo" placeholder="O que aconteceu agora?" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();registrarSabotagemComando()}">
+            <input type="text" id="sabotagemInput" class="cmd-campo" placeholder="${bruto ? 'O que aconteceu agora?' : 'Escreva uma linha…'}" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();registrarSabotagemComando()}">
             <button type="button" class="cmd-btn-icone" onclick="cmdDitar('sabotagemInput', this)" aria-label="Ditar por voz" title="Ditar por voz">${CMD_MIC}</button>
             <button type="submit" class="cmd-btn-icone escuro" aria-label="Registrar" title="Registrar">${CMD_MAIS}</button>
           </form>
           ${sabotagensHtml ? `<div class="cmd-sabs">${sabotagensHtml}</div>` : ''}
         </div>
+        ${!bruto && typeof jgDesafioHtml === 'function' ? jgDesafioHtml() : ''}
         ${typeof jgConquistasHtml === 'function' ? jgConquistasHtml() : ''}
       </div>
     </div>
   `;
 }
+
+/* Check-in do fim do dia (modo calmo, inspirado no Antídoto): 3 perguntas rápidas + uma linha. Guarda 30 dias em c.checkins */
+const CMD_CHECKIN_PERGUNTAS = [['prod', 'Fui produtivo?'], ['sono', 'Dormi bem?'], ['cumpri', 'Cumpri o que prometi?']];
+const CMD_CHECKIN_RESP = [['sim', 'Sim'], ['meio', 'Mais ou menos'], ['nao', 'Não']];
+let cmdCheckinEditando = false;
+function cmdCheckinHtml(){
+  const c = state.comando, hoje = diaKeyHoje(), ck = (c.checkins || {})[hoje];
+  const pronto = ck && CMD_CHECKIN_PERGUNTAS.every(([k])=>ck[k]);
+  if(pronto && !cmdCheckinEditando){
+    const nome = v=>(CMD_CHECKIN_RESP.find(r=>r[0]===v) || [,''])[1];
+    return `
+        <div class="cmd-card cmd-checkin">
+          <div class="cmd-card-topo"><span class="cmd-card-titulo">Check-in do dia</span><button type="button" class="cmd-link" onclick="cmdCheckinEditando=true;renderComando()">Editar</button></div>
+          ${CMD_CHECKIN_PERGUNTAS.map(([k, t])=>`<div class="cmd-ck-feito"><span>${t}</span><b class="${ck[k]}">${nome(ck[k])}</b></div>`).join('')}
+          ${ck.nota ? `<div class="cmd-ck-nota">“${cmdEsc(ck.nota)}”</div>` : ''}
+        </div>`;
+  }
+  if(!ck && !cmdCheckinEditando && new Date().getHours() < 17) return `
+        <div class="cmd-card cmd-checkin fechado">
+          <div class="cmd-card-topo"><span class="cmd-card-titulo">Check-in do dia</span><button type="button" class="cmd-link" onclick="cmdCheckinEditando=true;renderComando()">Fazer agora</button></div>
+          <div class="cmd-desc">Fica aberto a partir das 17h: três perguntas para fechar o dia com calma.</div>
+        </div>`;
+  const v = ck || {};
+  return `
+        <div class="cmd-card cmd-checkin">
+          <div class="cmd-card-topo"><span class="cmd-card-titulo">Check-in do dia</span></div>
+          ${CMD_CHECKIN_PERGUNTAS.map(([k, t])=>`
+          <div class="cmd-ck-pergunta"><span>${t}</span>
+            <div class="cmd-ck-resps">${CMD_CHECKIN_RESP.map(([r, n])=>`<button type="button" class="cmd-chip${v[k]===r ? ' ativo ck-' + r : ''}" onclick="cmdCheckinResp('${k}','${r}')">${n}</button>`).join('')}</div>
+          </div>`).join('')}
+          <input type="text" id="cmdCheckinNota" class="cmd-campo" placeholder="Uma linha sobre hoje (opcional)" value="${cmdEsc(v.nota || '')}" autocomplete="off" enterkeyhint="done" onchange="cmdCheckinNota(this.value)" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();this.blur()}">
+          ${CMD_CHECKIN_PERGUNTAS.every(([k])=>v[k]) ? `<button type="button" class="btn btn-block" style="margin-top:10px" onclick="cmdCheckinNota(document.getElementById('cmdCheckinNota').value);cmdCheckinEditando=false;renderComando()">Concluir check-in</button>` : ''}
+        </div>`;
+}
+function cmdCheckinDoDia(){
+  const c = state.comando, hoje = diaKeyHoje();
+  if(!c.checkins) c.checkins = {};
+  if(!c.checkins[hoje]) c.checkins[hoje] = {};
+  const chaves = Object.keys(c.checkins).sort(); if(chaves.length > 30) chaves.slice(0, chaves.length - 30).forEach(k=>delete c.checkins[k]);
+  return c.checkins[hoje];
+}
+function cmdCheckinResp(k, r){
+  const ck = cmdCheckinDoDia();
+  const nota = document.getElementById('cmdCheckinNota'); if(nota) ck.nota = nota.value.trim();
+  ck[k] = r; cmdCheckinEditando = true;
+  persist(); renderComando();
+}
+function cmdCheckinNota(t){ cmdCheckinDoDia().nota = String(t || '').trim(); persist(); }
 
 /* Ditado por voz (reconhecimento de fala do navegador, em português). Na nova ordem, ao parar de falar já adiciona.
    Onde o navegador não tem isso (alguns iPhones no app instalado), o microfone do próprio teclado continua funcionando. */
@@ -666,7 +720,7 @@ function cmdOrdemDeHoje(o){
 function excluirOrdemComando(id){
   cmdAcoesAberta = null;
   const o = cmdOrdem(id);
-  const custo = o && !o.feito && !cmdOrdemDeHoje(o) && o.semCusto !== diaKeyHoje() && typeof JG_MULTA_ADIAR !== 'undefined' ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
+  const custo = o && !o.feito && !cmdOrdemDeHoje(o) && o.semCusto !== diaKeyHoje() && typeof JG_MULTA_ADIAR !== 'undefined' && jgBruto() ? (JG_MULTA_ADIAR[o.prio] || 5) : 0;
   comDesfazer(custo ? `Ordem removida · −${custo} XP (desistência)` : 'Ordem removida', ()=>{
     if(custo) jgPerder(custo);
     state.comando.ordens = state.comando.ordens.filter(x=>x.id!==id);
@@ -715,7 +769,7 @@ function registrarSabotagemComando(){
 }
 /* etiqueta do tipo: hábito de todo dia (↻) ou tarefa que ficou para trás (atrasada N dias) */
 function cmdEtiquetaTipo(o){
-  if(o.repete) return `<span class="cmd-tipo-tag" title="Todo dia">↻ todo dia</span>`;
+  if(o.repete){ const n = (o.seq || 0) + (o.feito ? 1 : 0); return `<span class="cmd-tipo-tag habito" title="Hábito de todo dia: dias seguidos">↻ ${n ? `${n} dia${n > 1 ? 's' : ''} seguido${n > 1 ? 's' : ''}` : 'todo dia'}</span>`; }
   if(o.desde){ const n = cmdDiasEntre(o.desde, diaKeyHoje()); if(n > 0) return `<span class="cmd-tipo-tag atrasada">atrasada ${n} dia${n > 1 ? 's' : ''}</span>`; }
   return '';
 }
