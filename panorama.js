@@ -29,11 +29,18 @@ function renderPanorama(){
   if(cp && cp.classList.contains('active')) renderContasPagar();
 }
 
+/* atalhos redondos: o esmaecido da direita some quando chega ao fim (ou quando cabe tudo) */
+function atalhosFim(el){
+  if(!el) return;
+  el.classList.toggle('no-fim', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+}
+
 /* Resumo do mês atual no topo do Dashboard: o que entra, o que falta pagar e quanto sobra */
 function renderResumoMes(){
   const elMes = document.getElementById('resumoMesLabel');
   if(!elMes || !state.users) return;
   if(typeof renderHeaderHoje==='function') renderHeaderHoje();   // "falta pagar" do cabeçalho acompanha
+  requestAnimationFrame(()=> atalhosFim(document.getElementById('resumoAtalhos')));
   const u = userDash(), mKey = mesFinanceiroAtual();
   const saldo = state.users[u].saldoAtual || 0;
   const entra = incomeForMonth(u, mKey) - saldo;

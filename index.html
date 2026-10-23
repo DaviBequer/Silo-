@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&family=Saira+Stencil+One&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8.7">
+<link rel="stylesheet" href="style.css?v=8.8">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 87</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 88</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -55,11 +55,6 @@
   <div class="card dg resumo-card" id="cardResumo" data-span="12" data-col="esq">
     <div class="resumo-topo">
       <div class="resumo-mes" id="resumoMesLabel"></div>
-      <div class="resumo-links">
-        <button type="button" class="ico-btn" onclick="abrirHistoricoMeses()" title="Histórico de meses" aria-label="Histórico de meses"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></button>
-        <button type="button" class="ico-btn" onclick="abrirBancosModal()" title="Bancos" aria-label="Bancos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M9 21v-7"/><path d="M15 21v-7"/><path d="m12 3 9 5H3z"/></svg></button>
-        <button type="button" class="ico-btn" onclick="openReservaModal()" title="Metas de economia" aria-label="Metas de economia"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></button>
-      </div>
     </div>
     <div class="resumo-label resumo-label-voz">Saldo em conta
       <button type="button" class="voz-btn" onclick="const i=document.getElementById('saldoAtualInput');i.focus();i.select()" title="Digitar o saldo" aria-label="Digitar o saldo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
@@ -79,12 +74,16 @@
         <button type="button" class="prev-lin neg" onclick="abrirDetalheResumo('sai')">falta pagar <b id="resumoSai">—</b></button>
       </div>
     </div>
-    <!-- atalhos redondos -->
-    <div class="atalhos">
+    <!-- atalhos redondos (arrastar para o lado mostra o resto) -->
+    <div class="atalhos" id="resumoAtalhos" onscroll="atalhosFim(this)">
       <button type="button" class="atalho escuro" onclick="vozAbrir()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11z"/></svg></span>Falar</button>
       <button type="button" class="atalho" onclick="abrirContasPagar()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7z"/></svg></span>Pagar</button>
       <button type="button" class="atalho" onclick="switchDashTab('cartao')"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 7a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v1H2V7zm0 4h20v6a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-6zm3 4v2h5v-2H5z"/></svg></span>Cartões</button>
+      <button type="button" class="atalho" onclick="switchDashTab('emprestimo')"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 2 7v2h20V7L12 2zM4 11v7h3v-7H4zm6.5 0v7h3v-7h-3zM17 11v7h3v-7h-3zM2 20v2h20v-2H2z"/></svg></span>Empréstimo</button>
       <button type="button" class="atalho" onclick="openReservaModal()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></span>Metas</button>
+      <button type="button" class="atalho" onclick="abrirBancosModal()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6a3 3 0 0 1 3-3h11a2 2 0 0 1 2 2v2h-1H6a1 1 0 0 0 0 2h13a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V6zm14 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg></span>Bancos</button>
+      <button type="button" class="atalho" onclick="openSimuladorModal()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1z"/></svg></span>Simular</button>
+      <button type="button" class="atalho" onclick="abrirHistoricoMeses()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 3a9 9 0 0 0-9 9H1l3.9 3.9L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12z"/></svg></span>Histórico</button>
     </div>
     <!-- curva do saldo: hoje → fim do mês → próximos meses (toque num mês abre o detalhe) -->
     <div class="curva" id="resumoProximos"></div>
@@ -1893,24 +1892,24 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=8.7"></script>
-<script src="core.js?v=8.7"></script>
-<script src="comando.js?v=8.7"></script>
-<script src="comando-jogo.js?v=8.7"></script>
-<script src="layout.js?v=8.7"></script>
-<script src="app.js?v=8.7"></script>
-<script src="panorama.js?v=8.7"></script>
-<script src="planner.js?v=8.7"></script>
-<script src="ponto.js?v=8.7"></script>
-<script src="louvor.js?v=8.7"></script>
-<script src="louvor-extra.js?v=8.7"></script>
-<script src="louvor-medley.js?v=8.7"></script>
-<script src="louvor-culto.js?v=8.7"></script>
-<script src="louvor-drive.js?v=8.7"></script>
-<script src="louvor-comparar.js?v=8.7"></script>
-<script src="fatura-pdf.js?v=8.7"></script>
-<script src="emprestimo.js?v=8.7"></script>
-<script src="vendas.js?v=8.7"></script>
+<script src="supabase.js?v=8.8"></script>
+<script src="core.js?v=8.8"></script>
+<script src="comando.js?v=8.8"></script>
+<script src="comando-jogo.js?v=8.8"></script>
+<script src="layout.js?v=8.8"></script>
+<script src="app.js?v=8.8"></script>
+<script src="panorama.js?v=8.8"></script>
+<script src="planner.js?v=8.8"></script>
+<script src="ponto.js?v=8.8"></script>
+<script src="louvor.js?v=8.8"></script>
+<script src="louvor-extra.js?v=8.8"></script>
+<script src="louvor-medley.js?v=8.8"></script>
+<script src="louvor-culto.js?v=8.8"></script>
+<script src="louvor-drive.js?v=8.8"></script>
+<script src="louvor-comparar.js?v=8.8"></script>
+<script src="fatura-pdf.js?v=8.8"></script>
+<script src="emprestimo.js?v=8.8"></script>
+<script src="vendas.js?v=8.8"></script>
 <script>carregar();</script>
 </body>
 </html>

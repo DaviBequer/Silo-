@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v8.8', itens: [
+    'Finanças: mais atalhos redondos embaixo do saldo (Empréstimo, Bancos, Simular, Histórico), arrastando para o lado; os ícones pequenos do topo saíram'
+  ]},
   { versao: 'v8.7', itens: [
     'Ponto: topo arrumado (mês à esquerda, ícones à direita), ícone de PDF no exportar; nome do PDF automático (Davi), sem campo para preencher'
   ]},
