@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.3', itens: [
+    'Colar do WhatsApp: botão "Colar o que copiei"; barrinha de carregamento em cada música com o passo (Drive, Cifra Club, Letras); sem cantor, pergunta qual é; não achou o certo, mostra as opções para escolher'
+  ]},
   { versao: 'v9.2', itens: [
     'Sem caixas: os blocos viraram divisórias finas no app inteiro',
     'Culto: colar o roteiro do WhatsApp (ícone de prancheta) — lê parte, música, cantor e tom; usa a do app, senão o PDF do Drive (só o arquivo) ou cria pelo Cifra Club; acerta o tom pedido',
