@@ -68,21 +68,23 @@ function tempoTapStart(e, dia, campo){
   const rect = el.getBoundingClientRect();
   const isRight = (e.clientX - rect.left) > rect.width/2;
   try{ el.setPointerCapture(e.pointerId); }catch(_){}
+  const antes = d[campo] ? timeToMin(d[campo]) : null;
   const passo = ()=>{
     tempoPasso(mKey, dia, d, campo, isRight);
     el.textContent = d[campo];
     el.classList.remove('ph-atrasado');
     el.classList.add('ph-confirmado');
+    tempoBalao(rect, campo, d[campo], antes, s.rapido);
   };
   // o 1º passo só vale ao soltar (toque rápido) ou ao começar a segurar — rolar a tela por cima não muda nada
-  const s = tempoSegurando = { timer:null, passo, mudou:false };
+  const s = tempoSegurando = { timer:null, passo, mudou:false, rapido:false };
   const repetir = (vel)=>{ s.timer = setInterval(passo, vel); };
   s.timer = setTimeout(()=>{
     s.mudou = true;
     passo();
     if(navigator.vibrate) navigator.vibrate(6);
     repetir(TEMPO_VEL1);
-    s.acelerar = setTimeout(()=>{ clearInterval(s.timer); repetir(TEMPO_VEL2); if(navigator.vibrate) navigator.vibrate(10); }, TEMPO_ACELERAR);
+    s.acelerar = setTimeout(()=>{ s.rapido = true; clearInterval(s.timer); repetir(TEMPO_VEL2); if(navigator.vibrate) navigator.vibrate(10); }, TEMPO_ACELERAR);
   }, TEMPO_SEGURAR);
 }
 function tempoTapEnd(e){
@@ -92,9 +94,42 @@ function tempoTapEnd(e){
   const toque = e && e.type === 'pointerup' && !s.mudou;
   tempoTapCancel();
   if(toque){ s.passo(); if(navigator.vibrate) navigator.vibrate(6); }
-  else if(!s.mudou) return;
+  else if(!s.mudou){ tempoBalaoFechar(0); return; }
+  tempoBalaoFechar(toque ? 700 : 500);
   renderPonto();
   persist();
+}
+/* balão acima do horário enquanto ajusta (o dedo cobre o número) */
+const TEMPO_NOMES = { entrada:'Entrada', almocoSaida:'Almoço', almocoVolta:'Volta', saida:'Saída' };
+let tempoBalaoTimer = null;
+function tempoBalao(rect, campo, valor, antes, rapido){
+  clearTimeout(tempoBalaoTimer);
+  let b = document.getElementById('phBalao');
+  if(!b){
+    b = document.createElement('div');
+    b.id = 'phBalao'; b.className = 'ph-balao';
+    b.innerHTML = '<div class="ph-balao-lbl"></div><div class="ph-balao-valor"></div><div class="ph-balao-dif"></div>';
+    document.body.appendChild(b);
+  }
+  b.querySelector('.ph-balao-lbl').textContent = TEMPO_NOMES[campo] || '';
+  b.querySelector('.ph-balao-valor').textContent = valor;
+  let dif = antes === null ? 0 : timeToMin(valor) - antes;
+  if(dif > 720) dif -= 1440; else if(dif < -720) dif += 1440;
+  const abs = Math.abs(dif), txt = abs >= 60 ? `${Math.floor(abs/60)}h${String(abs%60).padStart(2,'0')}` : `${abs} min`;
+  b.querySelector('.ph-balao-dif').textContent = dif ? `${dif > 0 ? '+' : '−'}${txt}${rapido ? ' · rápido' : ''}` : (rapido ? 'rápido' : '');
+  b.classList.toggle('rapido', !!rapido);
+  const larg = 132;
+  const x = Math.min(window.innerWidth - larg/2 - 8, Math.max(larg/2 + 8, rect.left + rect.width/2));
+  b.style.left = x + 'px';
+  b.style.top = Math.max(96, rect.top - 12) + 'px';
+  requestAnimationFrame(()=> b.classList.add('aberto'));
+}
+function tempoBalaoFechar(espera){
+  clearTimeout(tempoBalaoTimer);
+  tempoBalaoTimer = setTimeout(()=>{
+    const b = document.getElementById('phBalao');
+    if(b) b.classList.remove('aberto');
+  }, espera);
 }
 function tempoTapCancel(){
   const s = tempoSegurando;

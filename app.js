@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v8.6', itens: [
+    'Ponto: ao segurar o horário aparece um balão em cima mostrando o número mudando (o dedo não esconde mais)'
+  ]},
   { versao: 'v8.5', itens: [
     'Ponto: segurar no horário avança (ou volta) rápido, em 2 velocidades; tocar no nome (Entrada, Almoço…) apaga o horário'
   ]},
