@@ -2353,3 +2353,4 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-colar-opcoes{margin:8px 0}
 .cu-perg-pular{display:block;margin-top:10px}
 @media (prefers-reduced-motion:reduce){.cu-colar-barra i{animation:none;width:100%}}
+.lv-limpar-tudo{display:block;margin:28px auto 90px;color:var(--danger);text-decoration-color:var(--danger-tint)}

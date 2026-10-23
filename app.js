@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.4', itens: [
+    'Louvor: botão temporário "Limpar todas as músicas" no fim da lista (para testar a importação; com Desfazer)'
+  ]},
   { versao: 'v9.3', itens: [
     'Colar do WhatsApp: botão "Colar o que copiei"; barrinha de carregamento em cada música com o passo (Drive, Cifra Club, Letras); sem cantor, pergunta qual é; não achou o certo, mostra as opções para escolher'
   ]},

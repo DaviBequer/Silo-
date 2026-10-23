@@ -1289,3 +1289,17 @@ async function lvMontarSlides(l){
   return { pres, nome: `${nomeArquivoSlides}.pptx` };
 }
 
+
+/* TEMPORÁRIO (pedido do Davi, até terminar de testar o app): apaga todas as músicas e tira elas dos roteiros do Culto.
+   Tem "Desfazer" por alguns segundos; o banco também guarda cópias por hora (app_state_historico). Remover quando ele disser. */
+async function lvLimparTudo(){
+  const n = (state.louvores || []).length;
+  if(!n){ showToast('Não há músicas para apagar'); return; }
+  if(!(await iosConfirm(`Apagar as ${n} músicas do Louvor? Elas saem também dos roteiros do Culto. (Opção temporária para testes)`))) return;
+  comDesfazer(`${n} músicas apagadas`, ()=>{
+    state.louvores = [];
+    (state.cultos || []).forEach(c=>{ c.partes.forEach(p=>{ p.musicas = []; }); delete c.ordemWhats; });
+    persist();
+    renderLouvor();
+  }, ()=>renderLouvor());
+}
