@@ -104,19 +104,37 @@ async function lvCompararRenderOriginal(l){
   const link = o.link ? `<a href="${lvEsc(o.link)}" target="_blank" rel="noopener">abrir no Drive</a>` : '';
   /* veio do Drive só com o arquivo: o ícone ⇄ passa para o padrão do app (o PDF continua aqui para comparar) */
   const converter = o.soArquivo ? `<button type="button" class="ico-btn lvcmp-converter-btn" onclick="lvConverterDoDrive()" title="Passar para o padrão do app" aria-label="Passar para o padrão do app"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/></svg></button>` : '';
-  if(o.soArquivo && typeof drivePreparar === 'function') drivePreparar();   // o ⇄ pode precisar pedir o acesso ao Drive direto do toque
+  if(o.tipo === 'drive' && typeof drivePreparar === 'function') drivePreparar();   // o acesso ao Drive pode precisar ser pedido direto do toque
   el.innerHTML = `<div class="lvcmp-tit"><b>${lvEsc(o.nome || 'Arquivo')}</b>${link}${converter}</div><div id="lvcmpPdf" class="lvcmp-pdf"><div class="voz-carregando">Abrindo o original…</div></div>`;
   const guardado = await lvOriginalLer(l.id), blob = guardado && guardado.blob;
   const caixa = document.getElementById('lvcmpPdf');
-  /* do Drive e não guardado aqui: prévia do próprio Google pelo link (sem baixar o arquivo) */
-  if(!blob && o.tipo === 'drive' && o.id){
-    caixa.innerHTML = `<iframe class="lvcmp-drive" src="https://drive.google.com/file/d/${encodeURIComponent(o.id)}/preview" allow="autoplay" title="PDF do Drive"></iframe>`;
+  if(blob){ await lvcmpDesenhar(caixa, blob); return; }
+  /* do Drive e não guardado aqui: o app lê o PDF com o acesso do Drive só para mostrar (não guarda cópia).
+     A prévia do Google dentro do app não serve: pede o login do Google no navegador e o Brave bloqueia. */
+  if(o.tipo === 'drive' && o.id){
+    if(typeof driveToken !== 'undefined' && driveToken && Date.now() < driveTokenVence){ await lvcmpVerDoDrive(); return; }
+    caixa.innerHTML = `<button type="button" class="btn btn-outline lvcmp-ver-drive" onclick="lvcmpVerDoDrive()">${typeof LOGO_DRIVE !== 'undefined' ? LOGO_DRIVE : ''}Ver o PDF do Drive</button>`;
     return;
   }
-  if(!blob){
-    caixa.innerHTML = `<div class="gm-vazio">O arquivo original não está neste aparelho.${o.tipo === 'drive' ? ' Toque em "abrir no Drive" ou importe de novo pelo Drive.' : ''}</div>`;
-    return;
+  caixa.innerHTML = '<div class="gm-vazio">O arquivo original não está neste aparelho.</div>';
+}
+/* lê o PDF do Drive (pede o acesso se precisar, ainda dentro do toque) e mostra; não guarda no aparelho */
+async function lvcmpVerDoDrive(){
+  const l = getLouvorAtual(), caixa = document.getElementById('lvcmpPdf');
+  if(!l || !l.origem || !l.origem.id || !caixa) return;
+  const acesso = typeof driveTokenCliente !== 'undefined' && driveTokenCliente ? drivePedirToken() : Promise.reject(new Error(typeof driveClienteId === 'function' && driveClienteId() ? 'o Drive ainda está carregando: toque de novo' : 'o Drive não está ligado (Ajustes → Recursos)'));
+  caixa.innerHTML = '<div class="voz-carregando">Abrindo o PDF do Drive…</div>';
+  try{
+    await acesso;
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(l.origem.id)}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
+    if(!res.ok) throw new Error('Drive ' + res.status);
+    await lvcmpDesenhar(caixa, await res.blob());
+  }catch(e){
+    caixa.innerHTML = `<div class="gm-vazio">Não consegui abrir o PDF do Drive (${lvEsc((e && e.message) || 'erro')}).</div><button type="button" class="btn btn-outline lvcmp-ver-drive" onclick="lvcmpVerDoDrive()">Tentar de novo</button>`;
   }
+}
+/* desenha o original (foto ou PDF, página por página) */
+async function lvcmpDesenhar(caixa, blob){
   if(/^image\//.test(blob.type || '')){
     caixa.innerHTML = `<img class="lvcmp-img" src="${URL.createObjectURL(blob)}" alt="">`;
     return;

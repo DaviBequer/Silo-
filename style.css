@@ -2162,7 +2162,6 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-sug-drive{font-style:normal;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--card-2);color:var(--text-dim);font-size:10.5px;font-weight:600;vertical-align:1px}
 .lvcmp-converter-btn{color:var(--text)}
 .lvcmp-converter-btn.girando svg{animation:cuGira 1s linear infinite}
-.lvcmp-drive{display:block;width:100%;height:min(78vh,900px);border:1px solid var(--line);border-radius:6px;background:#fff}
 /* medley: ver as partes de cada música (letra com os acordes); tocar numa parte também a coloca na sequência */
 .lm-ver-btn{flex-shrink:0;color:var(--text-faint)}
 .lm-ver-btn.ativo{color:var(--text)}
@@ -2175,3 +2174,4 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 /* janelas de busca: abrem altas no celular, para os resultados aparecerem acima do teclado */
 @media(max-width:1023px){ .modal.modal-alto{min-height:min(88dvh,92%)} }
 input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:none}
+.lvcmp-ver-drive{display:inline-flex;align-items:center;gap:8px;margin:8px 0}

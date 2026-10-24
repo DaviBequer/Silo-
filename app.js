@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.2', itens: [
+    'Comparar: o PDF do Drive aparece direto no app (pelo acesso do Drive, sem guardar cópia), sem a tela de login do Google'
+  ] },
   { versao: 'v10.1', itens: [
     'Cifra Club + Letras: o verso fica escrito como no Letras (uma linha só) com cada acorde na palavra certa; nenhum acorde se perde',
     'Busca do Cifra Club sem lupa: busca sozinha enquanto digita (ou no ✓ do teclado); janelas de busca mais altas',
