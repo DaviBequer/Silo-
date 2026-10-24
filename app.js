@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.8', itens: [
+    'Atualizar no computador: números grandes no topo, três colunas (contas e bancos, cartões, histórico) e a conversa com a lista ao lado',
+    'Drive: música que veio do Drive e foi passada para o app, quando está como Pronto, apaga o PDF antigo ao enviar (em produção o antigo fica para comparar)'
+  ] },
   { versao: 'v10.7', itens: [
     'Drive: música só com o arquivo do Drive não gera PDF novo; o próprio arquivo é movido para a pasta atual (Som de Adoradores)'
   ] },

@@ -80,40 +80,64 @@ function atzRenderResumo(){
     const assin = (c.assinaturas || []).reduce((s, a)=>s + assinaturaValorNoMes(a, m), 0);
     return { c, m, total: faturaCartaoNoMes(c, m), vista, parcelas, assin };
   });
+  const totalFaturas = cartoes.reduce((s, x)=>s + x.total, 0);
+  const mesAtual = mesFinanceiroAtual();
+  const pixMes = (state.lancamentos || []).filter(la=>la.mKey === mesAtual && (la.usuario || 'davi') === state.currentUser).reduce((s, la)=>s + (Number(la.valor) || 0), 0);
+  const parte = (v, t)=>t > 0 ? Math.max(0, Math.min(100, v / t * 100)) : 0;
   el.innerHTML = `
     <div class="atz-ultima${q && q.dias >= ATZ_DIAS_AVISO ? ' velha' : ''}">
       <span>Última atualização</span><b>${q ? q.texto : 'ainda não atualizou por aqui'}</b>
       ${q && q.dias >= ATZ_DIAS_AVISO ? `<small>Faz ${q.dias} dias: fale o que gastou desde então</small>` : ''}
     </div>
 
-    <div class="atz-sec"><span>Contas a pagar</span>${contas.length ? `<b>${fmtMoney(totalContas)}</b>` : ''}</div>
-    ${contas.length ? `<div class="atz-lista">${contas.map(c=>`<div class="atz-linha"><span>${escBanco(c.desc)}</span><b>${fmtMoney(c.valor)}</b></div>`).join('')}</div>
-      <button type="button" class="link-txt atz-mais" onclick="abrirContasPagar()">Marcar contas pagas</button>`
-      : '<div class="atz-vazio">Tudo pago neste mês.</div>'}
+    <div class="atz-kpis">
+      <div class="atz-kpi"><span>Contas a pagar</span><b>${fmtMoney(totalContas)}</b><small>${contas.length ? contas.length + (contas.length === 1 ? ' conta aberta' : ' contas abertas') : 'tudo pago'}</small></div>
+      <div class="atz-kpi"><span>Faturas abertas</span><b>${fmtMoney(totalFaturas)}</b><small>${cartoes.length} ${cartoes.length === 1 ? 'cartão' : 'cartões'}</small></div>
+      <div class="atz-kpi"><span>Nos bancos</span><b>${fmtMoney(totalBancos(bancos))}</b><small>${bancos.length} ${bancos.length === 1 ? 'banco' : 'bancos'}</small></div>
+      <div class="atz-kpi"><span>Pix e débito</span><b>${fmtMoney(pixMes)}</b><small>em ${monthLabel(mesAtual)}</small></div>
+    </div>
 
-    <div class="atz-sec"><span>Cartões</span><small>fatura aberta</small></div>
-    ${cartoes.length ? cartoes.map(x=>`
-      <div class="atz-cartao">
-        <div class="atz-cartao-topo"><b>${escBanco(x.c.nome)}</b><small>${monthLabel(x.m)}</small><b class="atz-valor">${fmtMoney(x.total)}</b>
-          <button type="button" class="ico-btn" title="Conferir com a fatura em PDF" aria-label="Conferir com a fatura em PDF" onclick="fpdfEscolher('${x.c.id}')">${ICO(ICO_D.baixar, 18)}</button></div>
-        <div class="atz-cartao-partes"><span>à vista ${fmtMoney(x.vista)}</span><span>parcelas ${fmtMoney(x.parcelas)}</span>${x.assin ? `<span>assinaturas ${fmtMoney(x.assin)}</span>` : ''}</div>
-      </div>`).join('') : '<div class="atz-vazio">Nenhum cartão cadastrado.</div>'}
+    <div class="atz-grade">
+      <section class="atz-bloco atz-b-contas">
+        <div class="atz-sec"><span>Contas a pagar</span>${contas.length ? `<b>${fmtMoney(totalContas)}</b>` : ''}</div>
+        ${contas.length ? `<div class="atz-lista">${contas.map(c=>`<div class="atz-linha"><span>${escBanco(c.desc)}</span><b>${fmtMoney(c.valor)}</b></div>`).join('')}</div>
+          <button type="button" class="link-txt atz-mais" onclick="abrirContasPagar()">Marcar contas pagas</button>`
+          : '<div class="atz-vazio">Tudo pago neste mês.</div>'}
+      </section>
 
-    <div class="atz-sec"><span>Bancos</span>${bancos.length ? `<b>${fmtMoney(totalBancos(bancos))}</b>` : ''}</div>
-    ${bancos.length ? `<div class="atz-lista">${bancos.map(b=>`<div class="atz-linha"><span>${escBanco(b.nome)}</span><b>${fmtMoney(b.valor)}</b></div>`).join('')}</div>` : '<div class="atz-vazio">Nenhum banco cadastrado.</div>'}
+      <section class="atz-bloco atz-b-cartoes">
+        <div class="atz-sec"><span>Cartões</span><small>fatura aberta</small></div>
+        ${cartoes.length ? cartoes.map(x=>`
+          <div class="atz-cartao">
+            <div class="atz-cartao-topo"><b>${escBanco(x.c.nome)}</b><small>${monthLabel(x.m)}</small><b class="atz-valor">${fmtMoney(x.total)}</b>
+              <button type="button" class="ico-btn" title="Conferir com a fatura em PDF" aria-label="Conferir com a fatura em PDF" onclick="fpdfEscolher('${x.c.id}')">${ICO(ICO_D.baixar, 18)}</button></div>
+            <div class="atz-cartao-barra" aria-hidden="true"><i style="width:${parte(x.vista, x.total)}%"></i><i style="width:${parte(x.parcelas, x.total)}%"></i><i style="width:${parte(x.assin, x.total)}%"></i></div>
+            <div class="atz-cartao-partes"><span><em class="c1"></em>à vista ${fmtMoney(x.vista)}</span><span><em class="c2"></em>parcelas ${fmtMoney(x.parcelas)}</span>${x.assin ? `<span><em class="c3"></em>assinaturas ${fmtMoney(x.assin)}</span>` : ''}</div>
+          </div>`).join('') : '<div class="atz-vazio">Nenhum cartão cadastrado.</div>'}
+      </section>
 
-    <div class="atz-sec"><span>Histórico de gastos</span><small>${hist.length} lançamentos</small></div>
-    ${hist.length ? `<div class="atz-hist">${hist.slice(0, atzHistMostrar).map((h, i)=>{
-      const q2 = atzQuandoTexto(h.quando);
-      return `<div class="atz-hist-item${i === 0 ? ' ultima' : ''}">
-        <div><b>${escBanco(h.desc)}</b><small>${ATZ_TIPO_NOME[h.tipo]} · ${escBanco(h.onde)}${h.tipo === 'parcelada' ? ` · ${h.parcelas}x` : ''}${h.tipo !== 'parcelada' ? ' · ' + escBanco(h.cat) : ''} · ${q2.texto}</small></div>
-        <b class="atz-valor">${fmtMoney(h.valor)}</b>
-      </div>`; }).join('')}</div>
-      ${hist.length > atzHistMostrar ? `<button type="button" class="link-txt atz-mais" onclick="atzHistMostrar+=30;atzRenderResumo()">Ver mais</button>` : ''}`
-      : '<div class="atz-vazio">Ainda não há gastos lançados. Toque no microfone e fale o que gastou.</div>'}
+      <section class="atz-bloco atz-b-bancos">
+        <div class="atz-sec"><span>Bancos</span>${bancos.length ? `<b>${fmtMoney(totalBancos(bancos))}</b>` : ''}</div>
+        ${bancos.length ? `<div class="atz-lista">${bancos.map(b=>`<div class="atz-linha"><span>${escBanco(b.nome)}</span><b>${fmtMoney(b.valor)}</b></div>`).join('')}</div>` : '<div class="atz-vazio">Nenhum banco cadastrado.</div>'}
+      </section>
 
-    <div class="atz-sec"><span>Onde cortar?</span><button type="button" class="link-txt" onclick="atzOndeCortar()">${atzCortar ? 'Analisar de novo' : 'Analisar com a IA'}</button></div>
-    <div id="atzCortar">${atzCortarHtml()}</div>`;
+      <section class="atz-bloco atz-b-hist">
+        <div class="atz-sec"><span>Histórico de gastos</span><small>${hist.length} lançamentos</small></div>
+        ${hist.length ? `<div class="atz-hist">${hist.slice(0, atzHistMostrar).map((h, i)=>{
+          const q2 = atzQuandoTexto(h.quando);
+          return `<div class="atz-hist-item${i === 0 ? ' ultima' : ''}">
+            <div><b>${escBanco(h.desc)}</b><small>${ATZ_TIPO_NOME[h.tipo]} · ${escBanco(h.onde)}${h.tipo === 'parcelada' ? ` · ${h.parcelas}x` : ''}${h.tipo !== 'parcelada' ? ' · ' + escBanco(h.cat) : ''} · ${q2.texto}</small></div>
+            <b class="atz-valor">${fmtMoney(h.valor)}</b>
+          </div>`; }).join('')}</div>
+          ${hist.length > atzHistMostrar ? `<button type="button" class="link-txt atz-mais" onclick="atzHistMostrar+=30;atzRenderResumo()">Ver mais</button>` : ''}`
+          : '<div class="atz-vazio">Ainda não há gastos lançados. Toque no microfone e fale o que gastou.</div>'}
+      </section>
+
+      <section class="atz-bloco atz-b-cortar">
+        <div class="atz-sec"><span>Onde cortar?</span><button type="button" class="link-txt" onclick="atzOndeCortar()">${atzCortar ? 'Analisar de novo' : 'Analisar com a IA'}</button></div>
+        <div id="atzCortar">${atzCortarHtml()}</div>
+      </section>
+    </div>`;
 }
 let atzHistMostrar = 30;
 const ATZ_DIAS_AVISO = 5;
@@ -300,13 +324,15 @@ function atzRenderConversa(pensando){
         : `<div class="atz-linha atz-total"><span>Entrou a mais</span><b>${fmtMoney(x.dif)}</b></div>`}
     </div>`; }).join('');
   const prontos = atzItens.length && !atzItens.some(atzFaltaNoItem);
-  el.innerHTML = `
-    <div class="atz-msgs">${msgs || `<div class="atz-msg ia">Fale ou escreva tudo de uma vez, em texto corrido. Por exemplo: "a fatura do Nubank está 1.850. No Nubank à vista mercado 120 e farmácia 45; em duas vezes um tênis de 300 que foi para a próxima fatura. No Pix do Inter padaria 18. Paguei a luz. O Inter está com 2.300."</div>`}
-      ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div>
-    ${confFat || confBan ? `<div class="atz-confs">${confFat}${confBan}</div>` : ''}
+  const lado = `${confFat || confBan ? `<div class="atz-confs">${confFat}${confBan}</div>` : ''}
     ${grupos ? `<div class="atz-sec"><span>Vai entrar</span><small>${atzItens.length} ${atzItens.length === 1 ? 'item' : 'itens'}</small></div>${grupos}
       <div class="atz-acoes"><button type="button" class="link-txt" onclick="atzLimpar()">Começar de novo</button>
         <button type="button" class="btn" ${prontos ? '' : 'disabled'} onclick="atzGravar()">${prontos ? 'Gravar tudo' : 'Falta responder'}</button></div>` : ''}`;
+  el.classList.toggle('com-lado', !!lado.trim());
+  el.innerHTML = `
+    <div class="atz-chat"><div class="atz-msgs">${msgs || `<div class="atz-msg ia">Fale ou escreva tudo de uma vez, em texto corrido. Por exemplo: "a fatura do Nubank está 1.850. No Nubank à vista mercado 120 e farmácia 45; em duas vezes um tênis de 300 que foi para a próxima fatura. No Pix do Inter padaria 18. Paguei a luz. O Inter está com 2.300."</div>`}
+      ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div></div>
+    ${lado.trim() ? `<div class="atz-lado">${lado}</div>` : ''}`;
   const m = el.querySelector('.atz-msgs'); if(m) setTimeout(()=>{ const ult = m.lastElementChild; if(ult) ult.scrollIntoView({ block:'nearest', behavior:'smooth' }); }, 30);
 }
 function atzTirarItem(k){ atzItens.splice(k, 1); renderAtualizar(); }

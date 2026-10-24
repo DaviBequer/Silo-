@@ -187,16 +187,29 @@ async function drivePastasBase(){
 }
 /* envia um arquivo: se a música já tem arquivo solto (mesmo com outro tom no nome), troca o conteúdo e o nome;
    se tiver mais de um da mesma música, os extras vão para a lixeira; senão cria */
+/* música que veio de um PDF do Drive e foi passada para o padrão do app: o PDF original continua no Drive (para comparar)
+   enquanto ela está "Em produção"; marcada como Pronto (finalizada), o envio apaga o original e fica só o novo */
+function driveOriginalDoDrive(l){ return l && l.origem && l.origem.tipo === 'drive' && l.origem.id && !driveSoArquivo(l) ? l.origem.id : ''; }
 async function driveEnviarArquivo(x, base){
   const pai = x.tipo === 'pdf' ? base.raiz : base.slide;
   const soltos = x.tipo === 'pdf' ? base.pdfsSoltos : base.slidesSoltos;
-  const daMusica = soltos.filter(f=>driveEhDaMusica(f, x));
+  const original = x.tipo === 'pdf' ? driveOriginalDoDrive(x.l) : '', pronta = x.l.status === 'finalizada';
+  const daMusica = soltos.filter(f=>driveEhDaMusica(f, x) && !(original && !pronta && f.id === original))   // em produção: o original não é sobrescrito
+    .sort((a, b)=>(b.id === (x.l.drive || {})[x.tipo]) - (a.id === (x.l.drive || {})[x.tipo]));   // o arquivo que o app já criou é o que fica
   const ja = daMusica[0];
-  for(const extra of daMusica.slice(1)){ await driveLixeira(extra.id); driveLog(`Removido (repetido): ${extra.name}`); }
+  for(const extra of daMusica.slice(1)){
+    await driveLixeira(extra.id); driveLog(`Removido (repetido): ${extra.name}`);
+    if(extra.id === original) x.l.origem.apagadoNoDrive = Date.now();
+  }
   const r = await driveSubir(x.blob, x.nome, x.mime, pai, ja && ja.id);
   if(ja && ja.name !== x.nome) await driveApi(`files/${ja.id}?fields=id`, { method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name: x.nome }) });
   x.l.drive = { ...(x.l.drive || {}), [x.tipo]: (ja && ja.id) || r.id };
   driveLog(`${ja ? (ja.name !== x.nome ? 'Trocado (' + ja.name + ' → ' + x.nome + ')' : 'Atualizado') : 'Enviado'}: ${x.nome}`, 'ok');
+  /* pronta: o PDF antigo do Drive (onde quer que esteja) vai para a lixeira, se não for o mesmo arquivo que acabou de ser atualizado */
+  if(original && pronta && original !== x.l.drive.pdf && !x.l.origem.apagadoNoDrive){
+    try{ await driveLixeira(original); x.l.origem.apagadoNoDrive = Date.now(); driveLog(`PDF antigo do Drive apagado (a música está como Pronto): ${x.l.origem.nome || ''}`, 'ok'); }
+    catch(e){ driveLog(`Não consegui apagar o PDF antigo: ${(e && e.message) || 'erro'}`, 'erro'); }
+  } else if(original && !pronta && original !== x.l.drive.pdf) driveLog('O PDF antigo do Drive continua lá para comparar: marque a música como Pronto e envie de novo para ele sair', '');
 }
 /* música que está só com o arquivo do Drive (colar do WhatsApp/sugestão, não passada para o padrão do app):
    não gera PDF novo — o próprio arquivo é movido para a pasta atual (Som de Adoradores) */

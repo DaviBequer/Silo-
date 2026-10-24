@@ -111,6 +111,7 @@ async function lvCompararRenderOriginal(l){
   if(blob){ await lvcmpDesenhar(caixa, blob); return; }
   /* do Drive e não guardado aqui: o app lê o PDF com o acesso do Drive só para mostrar (não guarda cópia).
      A prévia do Google dentro do app não serve: pede o login do Google no navegador e o Brave bloqueia. */
+  if(o.tipo === 'drive' && o.id && o.apagadoNoDrive){ caixa.innerHTML = '<div class="gm-vazio">O PDF antigo foi apagado do Drive quando a música, já como Pronto, foi enviada: agora vale a versão do app.</div>'; return; }
   if(o.tipo === 'drive' && o.id){
     if(typeof driveToken !== 'undefined' && driveToken && Date.now() < driveTokenVence){ await lvcmpVerDoDrive(); return; }
     caixa.innerHTML = `<button type="button" class="btn btn-outline lvcmp-ver-drive" onclick="lvcmpVerDoDrive()">${typeof LOGO_DRIVE !== 'undefined' ? LOGO_DRIVE : ''}Ver o PDF do Drive</button>`;
