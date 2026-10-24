@@ -794,10 +794,9 @@ function switchAba(aba){
   if(aba==='ponto' || aba==='vendas'){ try{ localStorage.setItem(CHAVE_TRABALHO, aba); }catch(e){} }
   document.querySelectorAll('.aba').forEach(el=>el.classList.remove('active'));
   document.getElementById('aba-'+aba).classList.add('active');
-  document.getElementById('pageLouvorDetalhe')?.classList.remove('active');
-  document.getElementById('pageLouvorForm')?.classList.remove('active');
-  document.getElementById('pageLouvorMedley')?.classList.remove('active');
-  document.getElementById('pageCulto')?.classList.remove('active');
+  /* trocar de aba fecha todas as telas cheias (música, Comparar, medley, Culto, contas...) */
+  document.querySelectorAll('.fullpage.active').forEach(p=>p.classList.remove('active'));
+  if(typeof lmEdit !== 'undefined') lmEdit = null;
   document.body.style.overflow = '';
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba || (el.dataset.aba==='trabalho' && (aba==='ponto' || aba==='vendas'))));
   window.scrollTo(0,0);

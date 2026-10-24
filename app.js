@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.1', itens: [
+    'Cifra Club + Letras: o verso fica escrito como no Letras (uma linha só) com cada acorde na palavra certa; nenhum acorde se perde',
+    'Busca do Cifra Club sem lupa: busca sozinha enquanto digita (ou no ✓ do teclado); janelas de busca mais altas',
+    'Trocar de aba fecha a música, o Comparar e as outras telas cheias'
+  ] },
   { versao: 'v10.0', itens: [
     'Comparar: botão ⇄ para passar o PDF do Drive para o padrão do app (agora funciona) e prévia do Drive pelo link, sem baixar',
     'Medley: olho para ver a letra e a cifra de cada parte, Salvar no topo, tela cabendo no celular; ordem só no editor',

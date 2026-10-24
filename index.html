@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10.0">
+<link rel="stylesheet" href="style.css?v=10.1">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 100</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 101</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1437,14 +1437,13 @@
 <input type="file" id="fpdfArquivo" accept="application/pdf" style="display:none" onchange="fpdfArquivoEscolhido(event)">
 
 <div class="modal-overlay" id="modalCifraClub">
-  <div class="modal">
+  <div class="modal modal-alto">
     <div class="modal-header">
       <h3>Cifra Club</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCifraClub')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
-    <form class="voz-escrever" onsubmit="event.preventDefault();ccBuscar()">
-      <input type="text" id="ccBusca" class="voz-campo" placeholder="Nome da música ou link do Cifra Club" autocomplete="off" enterkeyhint="search">
-      <button type="submit" class="ico-btn" title="Buscar" aria-label="Buscar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+    <form class="voz-escrever" onsubmit="event.preventDefault();this.querySelector('input').blur();ccBuscar()">
+      <input type="search" id="ccBusca" class="voz-campo" placeholder="Nome da música ou link do Cifra Club" autocomplete="off" enterkeyhint="search" oninput="ccBuscarAoDigitar()">
     </form>
     <div class="cu-escolher" id="ccLista"></div>
   </div>
@@ -1466,7 +1465,7 @@
   </div>
 </div>
 <div class="modal-overlay" id="modalCultoSugestao">
-  <div class="modal">
+  <div class="modal modal-alto">
     <div class="modal-header">
       <h3>Sugerir repertório</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCultoSugestao')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
@@ -1483,7 +1482,7 @@
     </div>
   </div>
 </div>
-<div class="modal-overlay" id="modalCultoEscolher">  <div class="modal">
+<div class="modal-overlay" id="modalCultoEscolher">  <div class="modal modal-alto">
     <div class="modal-header">
       <h3 id="cultoEscolherTitulo">Música</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCultoEscolher')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
@@ -1494,7 +1493,7 @@
 </div>
 
 <div class="modal-overlay" id="modalDrivePdf">
-  <div class="modal">
+  <div class="modal modal-alto">
     <div class="modal-header">
       <h3 id="drivePdfTitulo">PDF do Drive</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalDrivePdf')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
@@ -1518,7 +1517,7 @@
 
 <!-- MODAL: escolher música para o medley -->
 <div class="modal-overlay" id="modalLmEscolher">
-  <div class="modal">
+  <div class="modal modal-alto">
     <div class="modal-header">
       <h3>Adicionar música</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalLmEscolher')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
@@ -1890,22 +1889,22 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=10.0"></script>
-<script src="core.js?v=10.0"></script>
-<script src="layout.js?v=10.0"></script>
-<script src="app.js?v=10.0"></script>
-<script src="panorama.js?v=10.0"></script>
-<script src="planner.js?v=10.0"></script>
-<script src="ponto.js?v=10.0"></script>
-<script src="louvor.js?v=10.0"></script>
-<script src="louvor-extra.js?v=10.0"></script>
-<script src="louvor-medley.js?v=10.0"></script>
-<script src="louvor-culto.js?v=10.0"></script>
-<script src="louvor-drive.js?v=10.0"></script>
-<script src="louvor-comparar.js?v=10.0"></script>
-<script src="fatura-pdf.js?v=10.0"></script>
-<script src="emprestimo.js?v=10.0"></script>
-<script src="vendas.js?v=10.0"></script>
+<script src="supabase.js?v=10.1"></script>
+<script src="core.js?v=10.1"></script>
+<script src="layout.js?v=10.1"></script>
+<script src="app.js?v=10.1"></script>
+<script src="panorama.js?v=10.1"></script>
+<script src="planner.js?v=10.1"></script>
+<script src="ponto.js?v=10.1"></script>
+<script src="louvor.js?v=10.1"></script>
+<script src="louvor-extra.js?v=10.1"></script>
+<script src="louvor-medley.js?v=10.1"></script>
+<script src="louvor-culto.js?v=10.1"></script>
+<script src="louvor-drive.js?v=10.1"></script>
+<script src="louvor-comparar.js?v=10.1"></script>
+<script src="fatura-pdf.js?v=10.1"></script>
+<script src="emprestimo.js?v=10.1"></script>
+<script src="vendas.js?v=10.1"></script>
 <script>carregar();</script>
 </body>
 </html>

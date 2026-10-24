@@ -2172,3 +2172,6 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .lm-ver-parte b{display:block;margin-bottom:4px;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}
 .lm-ver-parte pre{margin:0;font-family:'Courier New',ui-monospace,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word}
 .lm-salvar-topo{flex-shrink:0;padding:6px 4px;border:none;background:none;color:var(--text);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+/* janelas de busca: abrem altas no celular, para os resultados aparecerem acima do teclado */
+@media(max-width:1023px){ .modal.modal-alto{min-height:min(88dvh,92%)} }
+input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:none}

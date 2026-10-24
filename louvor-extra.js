@@ -1149,19 +1149,31 @@ async function ccChamar(corpo){
   if(data && data.erro) throw new Error(data.erro);
   return data;
 }
+/* busca sozinha enquanto digita (espera parar de digitar); o ✓/Enter do teclado busca na hora e fecha o teclado */
+let ccDigitando = 0, ccBuscaN = 0;
+function ccBuscarAoDigitar(){
+  clearTimeout(ccDigitando);
+  const t = document.getElementById('ccBusca').value.trim();
+  if(t.length < 3 || /^https?:\/\//i.test(t)) return;
+  ccDigitando = setTimeout(ccBuscar, 650);
+}
 async function ccBuscar(){
+  clearTimeout(ccDigitando);
   const termo = document.getElementById('ccBusca').value.trim(), el = document.getElementById('ccLista');
   if(!termo) return;
   if(/^https?:\/\//i.test(termo)){ ccImportar(termo); return; }
+  const n = ++ccBuscaN;   // só a última busca aparece (as respostas podem chegar fora de ordem)
   el.innerHTML = '<div class="voz-carregando">Buscando no Cifra Club…</div>';
   try{
-    ccResultados = (await ccChamar({ busca: termo })).musicas || [];
+    const lista = (await ccChamar({ busca: termo })).musicas || [];
+    if(n !== ccBuscaN) return;
+    ccResultados = lista;
     el.innerHTML = ccResultados.length ? ccResultados.map((m, i)=>`
       <button type="button" class="cu-escolher-item" onclick="ccImportar(ccResultados[${i}].url)">
         <span class="cu-escolher-nome">${lvEsc(m.titulo)}<small>${lvEsc(m.artista)}</small></span>
         <span class="cu-escolher-tom">${ICO(ICO_D.baixar, 18)}</span>
       </button>`).join('') : '<div class="gm-vazio">Nada encontrado no Cifra Club.</div>';
-  }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
+  }catch(e){ if(n === ccBuscaN) el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
 }
 /* Cifra Club → cria a música direto (sem a tela Nova música) e abre ela.
    Se a música estiver no Letras, a letra de lá é a base (ordem das partes, frases, partes que faltam)
@@ -1332,7 +1344,7 @@ function lviJuntarComLetras(textoCifra, estrofes){
     let melhor = null;
     for(let j = 0; j < Wn.length; j++){
       if(Wn[j] !== ln[0] && Wn[j] !== ln[1]) continue;
-      const pares = lviLcsPares(ln, Wn.slice(j, j + ln.length * 2 + 2));
+      const pares = lviLcsPares(ln, Wn.slice(j, j < ptr ? Math.min(j + ln.length * 2 + 2, ptr) : j + ln.length * 2 + 2));   // voltando (refrão repetido): não invade o que vem depois
       const nota = pares.length - (j < ptr ? 0.5 : 0) - Math.abs(j - ptr) / 100000;
       if(!melhor || nota > melhor.nota) melhor = { j, pares, nota };
     }
@@ -1340,28 +1352,30 @@ function lviJuntarComLetras(textoCifra, estrofes){
     if(melhor && melhor.pares.length >= Math.max(1, ln.length * 0.5)){
       achadas += melhor.pares.length;
       let ult = -1;
+      const naPalavra = (i, c)=>chords.push({ name: c.name, idx: pal[i].ini + Math.min(c.off, Math.max(0, pal[i].fim - pal[i].ini - 1)) });
       melhor.pares.forEach(([i, k])=>{
-        const w = W[melhor.j + k]; ult = melhor.j + k;
+        const w = W[melhor.j + k]; ult = melhor.j + k; w.usada = true;
         refraoVotos[e] = (refraoVotos[e] || 0) + (/^(refr|coro)/i.test(w.rotulo || '') ? 1 : -1);
-        w.chords.forEach(c=>chords.push({ name: c.name, idx: pal[i].ini + Math.min(c.off, pal[i].fim - pal[i].ini) }));
+        w.chords.forEach(c=>naPalavra(i, c));
       });
+      /* acorde numa palavra da cifra que não bateu (escrita diferente: "pra"/"para", "Tô"/"Estou"): vai para a palavra
+         do Letras que está no mesmo lugar entre as que bateram — nenhum acorde se perde */
+      const P = melhor.pares, k0 = Math.max(0, P[0][1] - P[0][0]), k9 = P[P.length-1][1] + (ln.length - 1 - P[P.length-1][0]);
+      for(let k = k0; k <= k9 && melhor.j + k < W.length; k++){
+        const w = W[melhor.j + k];
+        if(w.usada || !w.chords.length || melhor.j + k < ptr) continue;
+        const ant = [...P].reverse().find(p=>p[1] < k), dep = P.find(p=>p[1] > k);
+        let i = ant && dep ? ant[0] + Math.round((k - ant[1]) * (dep[0] - ant[0]) / (dep[1] - ant[1])) : ant ? ant[0] + (k - ant[1]) : dep[0] - (dep[1] - k);
+        i = Math.max(0, Math.min(pal.length - 1, i));
+        w.usada = true; ult = Math.max(ult, melhor.j + k);
+        w.chords.forEach(c=>naPalavra(i, c));
+      }
       ptr = ult + 1;
       fimDaEstrofe[e] = Math.max(fimDaEstrofe[e] ?? -1, ult);
-      /* verso que no Cifra Club está em duas linhas: quebra no mesmo lugar */
-      const cortes = [];
-      for(let x = 1; x < melhor.pares.length; x++){
-        const [, k1] = melhor.pares[x-1], [i2, k2] = melhor.pares[x];
-        if(k2 === k1 + 1 && W[melhor.j + k2].linha !== W[melhor.j + k1].linha) cortes.push(pal[i2].ini);   // só onde a cifra segue direto para a linha de baixo
-      }
-      const partes = [];
-      let ini = 0;
-      cortes.concat([linha.length]).forEach(fim=>{
-        const t = linha.slice(ini, fim), sem = t.length - t.trimStart().length;
-        partes.push({ text: t.trim(), chords: chords.filter(c=>c.idx >= ini && (c.idx < fim || fim === linha.length)).map(c=>({ name:c.name, idx: Math.max(0, c.idx - ini - sem) })) });
-        ini = fim;
-      });
-      if(melhor.pares.length < ln.length * 0.8) partes.forEach(p=>revisar.push(p.text));
-      return partes.filter(p=>p.text);
+      /* o verso fica escrito como no Letras (uma linha só), mesmo que no Cifra Club esteja quebrado em duas */
+      chords.sort((a, b)=>a.idx - b.idx);
+      if(melhor.pares.length < ln.length * 0.8) revisar.push(linha.trim());
+      return [{ text: linha.trim(), chords: chords.map(c=>({ name: c.name, idx: Math.max(0, c.idx - (linha.length - linha.trimStart().length)) })) }];
     }
     revisar.push(linha.trim());
     return [{ text: linha, chords }];
@@ -1389,7 +1403,7 @@ function lviJuntarComLetras(textoCifra, estrofes){
     });
   });
   soAcordes.filter(s=>s.pos >= W.length && s.pos > 0).forEach(s=>out.push('[' + (s.rotulo || 'Final') + ']', acordesTxt(s), ''));
-  return { texto: out.join('\n').trim(), revisar };
+  return { texto: out.join('\n').replace(/^\n+|\s+$/g, ''), revisar };   // sem trim no começo: a 1ª linha de acordes começa com espaços
 }
 
 /* ---------- Harpa Cristã: Parte → Refrão → Parte → Repete - Refrão → … ---------- */
