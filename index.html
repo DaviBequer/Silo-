@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10.5">
+<link rel="stylesheet" href="style.css?v=10.6">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 105</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 106</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -76,8 +76,7 @@
     </div>
     <!-- atalhos redondos (arrastar para o lado mostra o resto) -->
     <div class="atalhos" id="resumoAtalhos" onscroll="atalhosFim(this)">
-      <button type="button" class="atalho escuro" onclick="vozAbrir()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11z"/></svg></span>Falar</button>
-      <button type="button" class="atalho" onclick="abrirContasPagar()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1.2 14.2-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7z"/></svg></span>Pagar</button>
+      <button type="button" class="atalho escuro" onclick="abrirAtualizar()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm4 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm4 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/></svg></span>Atualizar</button>
       <button type="button" class="atalho" onclick="switchDashTab('cartao')"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 7a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v1H2V7zm0 4h20v6a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-6zm3 4v2h5v-2H5z"/></svg></span>Cartões</button>
       <button type="button" class="atalho" onclick="switchDashTab('emprestimo')"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 2 7v2h20V7L12 2zM4 11v7h3v-7H4zm6.5 0v7h3v-7h-3zM17 11v7h3v-7h-3zM2 20v2h20v-2H2z"/></svg></span>Empréstimo</button>
       <button type="button" class="atalho" onclick="openReservaModal()"><span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></span>Metas</button>
@@ -1136,6 +1135,28 @@
 </div>
 
 <!-- FULLPAGE: Contas a pagar do mês -->
+<!-- ATUALIZAR (atualizar.js): resumão das Finanças + conversa com a IA para lançar tudo de uma vez -->
+<div class="fullpage" id="pageAtualizar">
+  <div class="fullpage-header">
+    <button class="header-btn" aria-label="Voltar" onclick="fecharAtualizar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="fullpage-title">Atualizar</div>
+    <span style="width:36px;flex-shrink:0"></span>
+  </div>
+  <div class="dash-tabs atz-abas" id="atzAbas">
+    <button type="button" class="dash-tab active" data-aba="resumo" onclick="atzTrocarAba('resumo')">Resumo</button>
+    <button type="button" class="dash-tab" data-aba="conversa" onclick="atzTrocarAba('conversa')">Conversa <small id="atzAbaConversaN"></small></button>
+  </div>
+  <div class="fullpage-content atz" id="atzConteudo">
+    <div id="atzResumo"></div>
+    <div id="atzConversa" style="display:none"></div>
+  </div>
+  <form class="atz-barra" onsubmit="event.preventDefault();atzEnviar(document.getElementById('atzTexto').value)">
+    <button type="button" class="atz-mic" id="atzMic" onclick="atzMicrofone()" title="Falar" aria-label="Falar"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11z"/></svg></button>
+    <textarea id="atzTexto" rows="1" placeholder="O que você gastou…" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();atzEnviar(this.value)}"></textarea>
+    <button type="submit" class="atz-enviar" title="Enviar" aria-label="Enviar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+  </form>
+</div>
+
 <div class="fullpage" id="pageContasPagar">
   <div class="fullpage-header">
     <button class="header-btn" aria-label="Voltar" onclick="fecharContasPagar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
@@ -1887,22 +1908,23 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=10.5"></script>
-<script src="core.js?v=10.5"></script>
-<script src="layout.js?v=10.5"></script>
-<script src="app.js?v=10.5"></script>
-<script src="panorama.js?v=10.5"></script>
-<script src="planner.js?v=10.5"></script>
-<script src="ponto.js?v=10.5"></script>
-<script src="louvor.js?v=10.5"></script>
-<script src="louvor-extra.js?v=10.5"></script>
-<script src="louvor-medley.js?v=10.5"></script>
-<script src="louvor-culto.js?v=10.5"></script>
-<script src="louvor-drive.js?v=10.5"></script>
-<script src="louvor-comparar.js?v=10.5"></script>
-<script src="fatura-pdf.js?v=10.5"></script>
-<script src="emprestimo.js?v=10.5"></script>
-<script src="vendas.js?v=10.5"></script>
+<script src="supabase.js?v=10.6"></script>
+<script src="core.js?v=10.6"></script>
+<script src="layout.js?v=10.6"></script>
+<script src="app.js?v=10.6"></script>
+<script src="panorama.js?v=10.6"></script>
+<script src="planner.js?v=10.6"></script>
+<script src="ponto.js?v=10.6"></script>
+<script src="louvor.js?v=10.6"></script>
+<script src="louvor-extra.js?v=10.6"></script>
+<script src="louvor-medley.js?v=10.6"></script>
+<script src="louvor-culto.js?v=10.6"></script>
+<script src="louvor-drive.js?v=10.6"></script>
+<script src="atualizar.js?v=10.6"></script>
+<script src="louvor-comparar.js?v=10.6"></script>
+<script src="fatura-pdf.js?v=10.6"></script>
+<script src="emprestimo.js?v=10.6"></script>
+<script src="vendas.js?v=10.6"></script>
 <script>carregar();</script>
 </body>
 </html>

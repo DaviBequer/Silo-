@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.6', itens: [
+    'Finanças: botão Atualizar (no lugar de Falar e Pagar) com resumão: última atualização, contas, cartões, bancos e histórico de gastos',
+    'Conversa com a IA: fale tudo de uma vez (cartão à vista, parcelado, próxima fatura, Pix por banco, contas, saldos); ela pergunta o que faltar e o app mostra quanto falta para bater a fatura e o saldo',
+    'Saldo que não bate vira Gasto não identificado; aviso no sino depois de 5 dias; Onde cortar? com a IA'
+  ] },
   { versao: 'v10.5', itens: [
     'Música: botão Refazer pelo Cifra Club (cifra nova com a junção de hoje, mantém nome, data, roteiros e o tom; dá para desfazer)'
   ] },
@@ -1080,6 +1085,12 @@ function sinoAvisos(){
       out.push({ id:'vendas-'+v.mes+'-'+Math.round(v.falta*100), tipo:'vendas', titulo:'Vendas do mês', corpo:`Faltam ${fmtMoney(v.falta)} para a meta de ${v.mesNome}${planos ? ' — ' + planos : ''}.`, quando:'hoje', ir:{ aba:'vendas' } });
     }
   }catch(e){}
+  /* FINANÇAS: faz dias que nada é lançado (Atualizar) */
+  try{
+    const ult = typeof atzUltimaAtualizacao === 'function' ? atzUltimaAtualizacao() : 0;
+    const dias = ult ? Math.floor((Date.now() - ult) / 864e5) : 0;
+    if(dias >= ATZ_DIAS_AVISO) out.push({ id:'financas-'+hojeTxt, tipo:'financas', titulo:'Atualizar as finanças', corpo:`Faz ${dias} dias que nada é lançado. Fale o que gastou desde então.`, quando:'hoje', ir:{ aba:'atualizar' } });
+  }catch(e){}
   return out;
 }
 let sinoAtuais = [];
@@ -1097,7 +1108,8 @@ function atualizarSino(semLista){
 }
 const SINO_ICONES = {
   ponto: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-  vendas: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>'
+  vendas: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+  financas: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H9l-5 4z"/></svg>'
 };
 function sinoRenderLista(){
   const vistos = new Set(sinoVistos());
@@ -1128,6 +1140,9 @@ function sinoIr(i){
   } else if(a.ir.aba === 'vendas'){
     switchAba('vendas');
     setTimeout(()=>sinoDestacar(document.querySelector('#vendasConteudo .vd-meta-linha') || document.getElementById('vendasConteudo')), 120);
+  } else if(a.ir.aba === 'atualizar'){
+    switchAba('planner');
+    abrirAtualizar('conversa');
   }
 }
 function sinoDestacar(el){

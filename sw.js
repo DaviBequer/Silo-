@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v105';
-const APP_VERSION = '10.5';
+const CACHE_NAME = 'siloe-cache-v106';
+const APP_VERSION = '10.6';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -21,6 +21,7 @@ const ARQUIVOS = [
   `./fatura-pdf.js?v=${APP_VERSION}`,
   `./emprestimo.js?v=${APP_VERSION}`,
   `./vendas.js?v=${APP_VERSION}`,
+  `./atualizar.js?v=${APP_VERSION}`,
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
