@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.8', itens: [
+    'Dados do Comando apagados do banco (ao abrir o app)'
+  ]},
   { versao: 'v9.7', itens: [
     'Comando removido do app (aba, telas e código); a barra ficou com 4 abas: Finanças, Trabalho, Louvor e Ajustes'
   ]},

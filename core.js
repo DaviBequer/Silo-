@@ -358,8 +358,8 @@ async function carregarDaNuvem(){
       (state.cartoesTracker||[]).forEach(c=>{ if(!c.credoVista) c.credoVista=[]; if(!c.assinaturas) c.assinaturas=[]; });
       (state.comprasTracker||[]).forEach(cp=>{ if(cp.pago === undefined) cp.pago=false; });
       delete state.config;
-      /* restos de recursos que saíram do app (receitas, mercado, estoque...): só ocupavam espaço no banco */
-      ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','louvorRoteiro','configTema','metaPJ','tarefas','tarefaCategorias','semanaAgenda','semanaOffset','layoutPrefs','layoutV3'].forEach(k=>{
+      /* restos de recursos que saíram do app (receitas, mercado, estoque, Comando...): só ocupavam espaço no banco */
+      ['receitas','receitaCategorias','estoque','listaCompras','preListaCompras','mercadoMeta','mercadoCategoriasCustom','louvorRoteiro','configTema','metaPJ','tarefas','tarefaCategorias','semanaAgenda','semanaOffset','layoutPrefs','layoutV3','comando'].forEach(k=>{
         if(k in state){ delete state[k]; precisaSalvar = true; }
       });
       mesFinanceiroAtrasoRef = state.mesFinanceiroAtraso ? 1 : 0;
