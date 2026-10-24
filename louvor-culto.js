@@ -405,7 +405,7 @@ function cultoColarPerguntarOpcao(it, titulo, opcoes, nenhuma, comCantor){
     <div class="cu-perg-tit">${titulo}</div>
     ${opcoes.length ? `<div class="cu-colar-opcoes">${opcoes.map((o, i)=>`<button type="button" class="cu-opcao" style="--i:${i}" data-op="${i}"><span class="cu-opcao-nome">${lvEsc(o.nome)}<small>${lvEsc(o.sub || '')}</small></span><span class="cu-opcao-seta">${ICO(ICO_D.baixar, 17)}</span></button>`).join('')}</div>` : '<div class="cu-perg-desc">Não achei nenhuma opção com esse nome.</div>'}
     ${comCantor ? `<form class="voz-escrever cu-perg-cantor"${opcoes.length ? ' hidden' : ''}><input type="text" class="voz-campo" placeholder="Nome do cantor (ex.: Aline Barros)" autocomplete="off" enterkeyhint="search"><button type="submit" class="btn">Buscar</button></form>` : ''}
-    <div class="cu-perg-links">${comCantor && opcoes.length ? '<button type="button" class="cmd-link cu-perg-digitar">Não é nenhuma: digitar o cantor</button>' : ''}<button type="button" class="cmd-link cu-perg-pular">${lvEsc(nenhuma)}</button></div>`, (fim, el)=>{
+    <div class="cu-perg-links">${comCantor && opcoes.length ? '<button type="button" class="link-txt cu-perg-digitar">Não é nenhuma: digitar o cantor</button>' : ''}<button type="button" class="link-txt cu-perg-pular">${lvEsc(nenhuma)}</button></div>`, (fim, el)=>{
     el.querySelectorAll('[data-op]').forEach(b=>b.onclick = ()=>{ b.classList.add('escolhida'); setTimeout(()=>fim({ i: Number(b.dataset.op) }), 180); });
     el.querySelector('.cu-perg-pular').onclick = ()=>fim({ nenhuma: true });
     const form = el.querySelector('.cu-perg-cantor');

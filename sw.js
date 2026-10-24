@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v96';
-const APP_VERSION = '9.6';
+const CACHE_NAME = 'siloe-cache-v97';
+const APP_VERSION = '9.7';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -7,8 +7,6 @@ const ARQUIVOS = [
   `./style.css?v=${APP_VERSION}`,
   `./supabase.js?v=${APP_VERSION}`,
   `./core.js?v=${APP_VERSION}`,
-  `./comando.js?v=${APP_VERSION}`,
-  `./comando-jogo.js?v=${APP_VERSION}`,
   `./layout.js?v=${APP_VERSION}`,
   `./app.js?v=${APP_VERSION}`,
   `./panorama.js?v=${APP_VERSION}`,

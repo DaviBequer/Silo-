@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.7', itens: [
+    'Comando removido do app (aba, telas e código); a barra ficou com 4 abas: Finanças, Trabalho, Louvor e Ajustes'
+  ]},
   { versao: 'v9.6', itens: [
     'Colar do WhatsApp: as opções aparecem dentro da própria música; medley sempre puxa a cifra das músicas e monta junto, com setas para a ordem e botão "Ordem das partes" depois de montar',
     'Painel da IA novo (papel): documento sendo lido, etapa atual, passos com ✓ ou girando e o registro ao vivo'
@@ -935,8 +938,8 @@ if('serviceWorker' in navigator && !/^(localhost|127\.0\.0\.1)$/.test(location.h
 const efeitosLigados = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 function efeitoEntradaCartoes(raiz){
   if(!efeitosLigados || !raiz) return;
-  const itens = [...raiz.querySelectorAll('.card, .section, .lv-card, .cmd-card, .lv-roteiro, .cmd-topo')]
-    .filter(el=>el.offsetParent !== null && !el.parentElement.closest('.card, .section, .cmd-card'))
+  const itens = [...raiz.querySelectorAll('.card, .section, .lv-card, .lv-roteiro')]
+    .filter(el=>el.offsetParent !== null && !el.parentElement.closest('.card, .section'))
     .slice(0, 14);
   itens.forEach((el, i)=>{
     el.classList.remove('efeito-entra');
@@ -987,7 +990,7 @@ function efeitoAoTrocarAba(aba){
   efeitoContarNumeros(raiz);
 }
 /* "feito": qualquer toque nos controles de marcar (conta paga, batida/dia do ponto, ordem, roteiro, salário, dízimo, fatura...) */
-const EFEITO_FEITO = /togglePaid|contaTapEnd|toggleDiaConcluido|toggleOrdemComando|toggleCompraPago|toggleExtraRecebido|cpToggleSalario|cpToggleExtra|cpToggleDizimo|toggleFaturaMes/;
+const EFEITO_FEITO = /togglePaid|contaTapEnd|toggleDiaConcluido|toggleCompraPago|toggleExtraRecebido|cpToggleSalario|cpToggleExtra|cpToggleDizimo|toggleFaturaMes/;
 document.addEventListener('pointerup', ev=>{
   if(!efeitosLigados) return;
   const alvo = ev.target.closest('[onclick], [onpointerup]');
