@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.3', itens: [
+    'Cifra Club: acordes voltaram (o site passou a pôr um espaço invisível nas linhas) e as partes mantêm o nome da cifra (Pré-Refrão, Segunda Parte...)',
+    'Música: abas Música (editor de texto inteiro, como Word), Visualizar (a folha do PDF) e Slides; sem edição linha por linha',
+    'Editor: nome das partes [Refrão] mais visível e seleção mais forte'
+  ] },
   { versao: 'v10.2', itens: [
     'Comparar: o PDF do Drive aparece direto no app (pelo acesso do Drive, sem guardar cópia), sem a tela de login do Google'
   ] },

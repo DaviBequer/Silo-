@@ -484,13 +484,14 @@ async function lviNomearPartesIA(secoes, titulo, artista, passo){
   if(!lviChaveIA()) return false;
   const blocos = secoes.filter(s=>!s.repeatOf && s.lines.length);
   if(blocos.length < 2) return false;
-  const txt = blocos.map((s, i)=>`#${i}\n` + (s.lines.filter(l=>l.type==='lyric').map(l=>l.text).join('\n') || '(só acordes)')).join('\n\n');
+  const txt = blocos.map((s, i)=>`#${i}${s.name ? ` (na cifra: ${s.name})` : ''}\n` + (s.lines.filter(l=>l.type==='lyric').map(l=>l.text).join('\n') || '(só acordes)')).join('\n\n');
   try{
     const j = await lviPerguntarIA([{ type:'text', text:
       `Música de louvor: "${titulo}"${artista ? ' de ' + artista : ''}. Abaixo estão os blocos da letra, na ordem em que são cantados.\n` +
       `Dê o nome de cada bloco pela função na música: Intro, Primeira Parte, Segunda Parte, Terceira Parte (estrofes com letras diferentes), ` +
       `Pré-Refrão (o trecho que prepara o refrão), Refrão (o que volta várias vezes, o centro da música), Ponte (trecho diferente, geralmente perto do fim), Instrumental, Solo ou Final.\n` +
       `Uma música costuma ter só 3 a 5 partes que se repetem: o bloco que repete a letra de um anterior (mesmo com pequenas diferenças) tem o MESMO nome e mesmaDe = número do anterior. ` +
+      `Quando o bloco já tem o nome que veio da cifra, mantenha esse nome se ele estiver certo. ` +
       `Use o que você sabe dessa música (por exemplo pelo site Letras) para acertar. Não invente partes.\n\n` + txt }],
       t=>passo && passo(t), LVI_PARTES_ESQUEMA);
     const r = (j && j.partes) || [];
@@ -939,7 +940,7 @@ function lviFecharRelatorio(){ const l = getLouvorAtual(); const el = document.g
 
 /* ---------- organizar blocos no texto que já existe ---------- */
 function lviTextoParaLinhas(conteudo){
-  const { items } = lvParseContent(conteudo);
+  const { items } = lvParseContent(String(conteudo || '').replace(/[​-‍⁠﻿]/g, ''));   // espaços invisíveis (texto colado do Cifra Club)
   const rows = [];
   items.forEach(it=>{
     if(it.type==='section'){ rows.push({ type:'label', text:it.label }); return; }
@@ -1018,7 +1019,7 @@ async function lvOrganizarBlocos(){
 
 /* ---------- edição direto na folha (aba Visualizar) ----------
    Edição e Visualizar viraram a aba Música: a folha fica editável (toque numa palavra, acorde, nome de parte, título). */
-window.lvEditandoFolha = true;   // a folha da aba Música é editável (desliga na tela cheia e na impressão)
+window.lvEditandoFolha = false;   // a folha (aba Visualizar) é só para ver; editar é na aba Música (editor de texto)
 function lvAplicarEdicaoFolha(){
   const el = document.getElementById('lvPdfPreview'); if(!el) return;
   const on = !!window.lvEditandoFolha;
@@ -1221,6 +1222,8 @@ async function ccMontar(url, passo, tirar){
     }
     tirar(); passo(`✓ Cifra Club: "${c.titulo}" · ${c.artista}${c.tom ? ' · tom ' + c.tom : ''}`, 'ok');
     /* "[Intro] F#m  E5" → "[Intro]" + linha de acordes; tablaturas (E|---3---|) e "Parte 1 de 4" saem */
+    /* desde out/2026 o Cifra Club põe um espaço invisível (​) no começo de cada linha: sem tirar, nenhuma linha de acordes é reconhecida */
+    c.texto = c.texto.replace(/[​-‍⁠﻿]/g, '');
     let texto = c.texto.split('\n').flatMap(l=>{
       if(/^\s*[eEBGDAb]\|[-\d|hpbrvx\/\~().\s]*$/.test(l) || /^\s*Parte \d+ de \d+\s*$/i.test(l)) return [];
       const m = /^\s*(\[[^\]]+\])\s+(\S.*)$/.exec(l);
@@ -1334,7 +1337,7 @@ function lviJuntarComLetras(textoCifra, estrofes){
   if(!W.length) return null;
   const Wn = W.map(w=>w.n);
   let ptr = 0, total = 0, achadas = 0;
-  const revisar = [], fimDaEstrofe = [], refraoVotos = [];   // estrofe que na cifra estava em [Refrão]/[Coro]
+  const revisar = [], fimDaEstrofe = [], rotVotos = [];   // nome que a parte tinha na cifra (Refrão, Pré-Refrão, Segunda Parte…), por estrofe
   const saida = estrofes.map((est, e)=>est.map(linha=>{
     const pal = []; const re = /\S+/g; let m;
     while((m = re.exec(linha))) pal.push({ n: lviNormPalavra(m[0]), ini: m.index, fim: m.index + m[0].length });
@@ -1355,7 +1358,7 @@ function lviJuntarComLetras(textoCifra, estrofes){
       const naPalavra = (i, c)=>chords.push({ name: c.name, idx: pal[i].ini + Math.min(c.off, Math.max(0, pal[i].fim - pal[i].ini - 1)) });
       melhor.pares.forEach(([i, k])=>{
         const w = W[melhor.j + k]; ult = melhor.j + k; w.usada = true;
-        refraoVotos[e] = (refraoVotos[e] || 0) + (/^(refr|coro)/i.test(w.rotulo || '') ? 1 : -1);
+        const vt = rotVotos[e] = rotVotos[e] || {}; vt[w.rotulo || ''] = (vt[w.rotulo || ''] || 0) + 1;
         w.chords.forEach(c=>naPalavra(i, c));
       });
       /* acorde numa palavra da cifra que não bateu (escrita diferente: "pra"/"para", "Tô"/"Estou"): vai para a palavra
@@ -1393,7 +1396,9 @@ function lviJuntarComLetras(textoCifra, estrofes){
   if(out.length) out.push('--');
   const meio = soAcordes.filter(s=>s.pos > 0 && s.pos < W.length), usados = new Set();
   saida.forEach((est, e)=>{
-    if(refraoVotos[e] > 0) out.push('[Refrão]');
+    /* a estrofe leva o nome que tinha na cifra (o mais comum entre as palavras dela) */
+    const vt = rotVotos[e] || {}, top = Object.keys(vt).sort((a, b)=>vt[b] - vt[a])[0];
+    if(top && !/^(intro|introdu|solo|instrumental|interl|tab)/i.test(top) && vt[top] * 2 > Object.values(vt).reduce((s, n)=>s + n, 0)) out.push('[' + top + ']');
     est.forEach(r=>out.push(...linhaTxt(r)));
     out.push('--');   // estrofe do Letras = uma parte (a linha divisória fecha a parte; linha em branco não fecharia numa cifra com nomes)
     const ate = fimDaEstrofe[e] ?? -1;
@@ -1432,7 +1437,7 @@ const LVI_DEUS = { jesus:'Jesus', deus:'Deus', senhor:'Senhor', cristo:'Cristo',
 /* nomes próprios e títulos que podem ou não vir com maiúscula: ficam como vieram */
 const LVI_MANTER = new Set(('israel sião siao jerusalém jerusalem belém belem calvário calvario gólgota golgota jordão jordao canaã canaa egito galileia nazaré nazare betel sinai horebe moriá jericó jerico babilônia ' +
   'maria josé jose davi abraão abraao isaque jacó jaco moisés moises elias eliseu paulo pedro joão joao saulo daniel josué josue gideão gideao sansão sansao salomão salomao ezequiel isaías isaias jó rute ester noé noe adão adao eva lázaro lazaro golias faraó farao ' +
-  'rei reis pai filho cordeiro salvador santo santíssimo criador redentor consolador verbo leão leao rocha noivo amado mestre pastor aleluia hosana amém amem glória gloria majestade soberano onipotente juiz seu sua seus suas lhe céu ceu').split(' '));
+  'judá juda tribo rei reis pai filho cordeiro salvador santo santíssimo criador redentor consolador verbo leão leao rocha noivo amado mestre pastor aleluia hosana amém amem glória gloria majestade soberano onipotente juiz seu sua seus suas lhe céu ceu').split(' '));
 const LVI_VERSO_MAX = 48;
 function lviCorrigirLinha(r){
   let text = String(r.text || ''), chords = (r.chords || []).map(c=>({ name:c.name, idx:c.idx }));

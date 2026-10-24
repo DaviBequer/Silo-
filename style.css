@@ -1644,9 +1644,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-editor-textarea:focus{outline:none}
 .lv-editor-wrap .lv-editor-textarea{position:relative;z-index:1;display:block;width:100%;min-height:420px;overflow:hidden;resize:none;background:transparent;color:transparent;caret-color:var(--text);-webkit-text-fill-color:transparent}
 .lv-editor-wrap .lv-editor-textarea::placeholder{color:var(--text-faint);-webkit-text-fill-color:var(--text-faint)}
-.lv-editor-wrap .lv-editor-textarea::selection{background:rgba(47,93,70,.22)}
+.lv-editor-wrap .lv-editor-textarea::selection{background:rgba(43,38,32,.28)}
 .rl-acorde{color:#e8711a}
-.rl-bloco{border-radius:4px;background:var(--gold-tint);color:var(--gold-dim)}
+.rl-bloco{border-radius:4px;background:#e4d8c4;color:var(--text);font-weight:700}
 .rl-marca{border-radius:4px;background:var(--card-2);color:var(--text-faint)}
 .rl-olhar{border-radius:3px;background:rgba(250,204,21,.38);box-shadow:0 0 0 2px rgba(250,204,21,.38)}
 /* seletor de tom */
@@ -1739,7 +1739,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 #lvPanelEdicao[data-modo="texto"] .lv-config{display:none !important}
 #lvPanelEdicao .lv-barra{justify-content:flex-start}
 #lvPanelEdicao .lv-barra-dir{margin-left:auto}
-.lv-btn-texto[aria-pressed="true"]{border-color:var(--text);color:var(--text)}
 /* nome de cada música dentro do medley, na folha */
 .lv-sheet-musica{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 0 10px;padding-bottom:4px;border-bottom:1.5px solid #1d1d1f;break-after:avoid}
 .lv-sheet-musica b{font-family:'Nunito','Inter',sans-serif;font-size:calc(var(--lv-fs,11pt) * 1.15);font-weight:800;color:#1d1d1f}

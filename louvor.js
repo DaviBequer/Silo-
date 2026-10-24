@@ -198,9 +198,10 @@ function abrirLouvorDetalhe(id){
   renderLvCategoriaChips();
   atualizarLvTomBox();
   renderLvStatusBtn();
-  const pEd = document.getElementById('lvPanelEdicao'); if(pEd) pEd.dataset.modo = (l.conteudo||'').trim() ? 'folha' : 'texto';   // sem letra ainda: abre no texto para colar
-  switchLouvorSubtab('edicao');
-  lvModoTexto(pEd ? pEd.dataset.modo === 'texto' : false);
+  /* abre na última aba usada neste aparelho (Música = editor de texto, Visualizar = folha); sem letra ainda: Música, para colar */
+  let aba = 'edicao'; try{ aba = localStorage.getItem('siloe-lv-aba') || 'edicao'; }catch(e){}
+  if(!(l.conteudo||'').trim() || !['edicao','visualizar','slides'].includes(aba)) aba = 'edicao';
+  switchLouvorSubtab(aba);
   document.getElementById('pageLouvorDetalhe').classList.add('active');
   lvAtualizarEditor();
   if(typeof lvAtualizarBtnOrganizar==='function') lvAtualizarBtnOrganizar();
@@ -292,25 +293,24 @@ function excluirLouvorAtual(){
 
 /* aba Música = a folha (igual ao Visualizar), editável com um toque; o ícone de texto troca para o editor completo
    (criar/apagar linhas, mexer nos acordes, "-", "--"). Música sem letra abre direto no texto. */
+/* Música = o texto inteiro num editor (como Word: [Parte] vira seção); Visualizar = a folha como vai sair no PDF (só para ver).
+   Os dois usam o mesmo painel (#lvPanelEdicao), com data-modo texto/folha. */
 function lvModoTexto(ligar){
   const p = document.getElementById('lvPanelEdicao'); if(!p) return;
   if(ligar === undefined) ligar = p.dataset.modo !== 'texto';
   p.dataset.modo = ligar ? 'texto' : 'folha';
-  const b = document.getElementById('lvBtnModoTexto');
-  if(b){ const nome = ligar ? 'Voltar para a folha' : 'Editar como texto'; b.title = nome; b.setAttribute('aria-label', nome); b.setAttribute('aria-pressed', String(!!ligar)); }
   if(ligar) lvAtualizarEditor(); else renderLouvorPdfPreview();
 }
 function switchLouvorSubtab(tab){
-  if(tab === 'pdf') tab = 'edicao';   // Visualizar e Edição viraram uma aba só
+  if(tab === 'pdf') tab = 'visualizar';
+  try{ localStorage.setItem('siloe-lv-aba', tab); }catch(e){}
   document.querySelectorAll('.lv-subtab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
   document.querySelectorAll('.lv-panel').forEach(el=>el.classList.remove('active'));
   const conteudo = document.getElementById('louvorDetalheConteudo');
   if(conteudo) conteudo.scrollTop = 0;
-  if(tab==='edicao'){
-    const p = document.getElementById('lvPanelEdicao');
-    p.classList.add('active');
-    lvAtualizarEditor();
-    if(p.dataset.modo !== 'texto') renderLouvorPdfPreview();
+  if(tab==='edicao' || tab==='visualizar'){
+    document.getElementById('lvPanelEdicao').classList.add('active');
+    lvModoTexto(tab === 'edicao');
   }
   if(tab==='slides'){
     document.getElementById('lvPanelSlides').classList.add('active');
@@ -987,7 +987,7 @@ function lvTelaCheia(ligar){
   const wrap = document.getElementById('lvPdfWrap');
   if(!wrap) return;
   wrap.classList.toggle('lv-tela-cheia', !!ligar);
-  if(window.lvEditandoFolha === !!ligar){ window.lvEditandoFolha = !ligar; renderLouvorPdfPreview(); }   // tela cheia = só ler (sem teclado ao tocar)
+  if(ligar && window.lvEditandoFolha){ window.lvEditandoFolha = false; renderLouvorPdfPreview(); }   // tela cheia = só ler (a folha não é mais editável: editar é na aba Música)
   document.body.style.overflow = ligar ? 'hidden' : '';
   try{
     if(ligar && wrap.requestFullscreen && !document.fullscreenElement) wrap.requestFullscreen().catch(()=>{});
