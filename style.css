@@ -1475,7 +1475,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cu-estado:empty{display:none}
 /* partes: linha do tempo (número na bolinha, linha fina ligando as partes) */
 .cu-partes{position:relative}
-.cu-parte{position:relative;display:flex;gap:12px;padding:10px 0 12px;animation:surgir .35s var(--mola) both}
+.cu-parte{position:relative;display:flex;gap:12px;padding:10px 0 12px;}
 .cu-parte::before{content:'';position:absolute;left:13px;top:38px;bottom:-8px;width:1px;background:var(--line)}
 .cu-parte:last-child::before{display:none}
 .cu-parte-num{display:flex;align-items:center;justify-content:center;width:27px;height:27px;flex-shrink:0;border-radius:50%;background:var(--noite);color:var(--brilho);font-size:12px;font-weight:700}
@@ -2157,3 +2157,10 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-md-setas{grid-column:3;grid-row:1/span 2;display:flex;gap:2px}
 .cu-md-txt{min-width:0}
 .cu-md-ordem{flex-shrink:0;min-height:36px;padding:6px 12px;font-size:12.5px}
+
+/* Culto (v9.9): cada parte num bloco de cor pastel; entra com animação só ao abrir/trocar a data */
+.cu-parte.entra{animation:surgir .35s var(--mola) both;animation-delay:calc(var(--i,0) * 40ms)}
+.cu-parte{will-change:transform}
+.cu-partes .cu-parte-corpo{background:var(--tinta,var(--card-2))!important;border:none!important;border-radius:14px!important;padding:10px 12px 8px 14px}
+.cu-partes .cu-parte-corpo .cu-musica{border-color:rgba(43,38,32,.1)}
+.cu-sug-drive{font-style:normal;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--card-2);color:var(--text-dim);font-size:10.5px;font-weight:600;vertical-align:1px}

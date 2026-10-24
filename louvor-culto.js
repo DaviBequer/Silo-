@@ -45,6 +45,7 @@ function cultoGravar(){
 function abrirCulto(){
   cultoData = cultoData || cultoProximaData();
   cultoAba = 'roteiro';
+  cuPartesEntrar = true;
   cultoLimparPartesVazias();
   document.getElementById('pageCulto').classList.add('active');
   document.getElementById('cultoConteudo').scrollTop = 0;
@@ -63,7 +64,7 @@ function cultoLimparPartesVazias(){
 }
 function fecharCulto(){ document.getElementById('pageCulto').classList.remove('active'); cultoRascunho = null; }
 function cultoTrocarAba(a){ cultoAba = a; renderCulto(); }
-function cultoMudarData(v){ if(!v) return; cultoData = v; cultoRascunho = null; renderCulto(); }
+function cultoMudarData(v){ if(!v) return; cultoData = v; cultoRascunho = null; cuPartesEntrar = true; renderCulto(); }
 function cultoPularData(dias){ const d = calParse(cultoData) || new Date(); d.setDate(d.getDate() + dias); cultoMudarData(calISO(d)); }
 function cultoEscolherData(){ document.querySelector('#cultoRoteiro .cu-data .data-btn')?.click(); }
 
@@ -72,6 +73,10 @@ const CU_ICO = {
   desce:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
   x:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
 };
+/* cor pastel de cada parte (segue a parte quando ela muda de lugar) */
+const CU_TINTAS = ['#f1e1d2','#e2ead8','#dce6ec','#efdfe6','#ece5cc','#e4e0ef','#d9ebe6'];
+function cultoTinta(id, partes){ const ids = partes.map(p=>p.id).sort(); return CU_TINTAS[Math.max(0, ids.indexOf(id)) % CU_TINTAS.length]; }
+let cuPartesEntrar = true;   // as partes entram com animação só ao abrir ou trocar a data
 function renderCulto(){
   document.querySelectorAll('#cultoAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.aba === cultoAba));
   document.getElementById('cultoRoteiro').style.display = cultoAba === 'roteiro' ? '' : 'none';
@@ -88,7 +93,7 @@ function renderCulto(){
   document.getElementById('cultoPartesConta').textContent = c.partes.length ? `${c.partes.length} parte${c.partes.length === 1 ? '' : 's'}` : '';
   document.getElementById('cultoPartes').innerHTML = c.partes.map((p, i)=>{
     const musicas = p.musicas.map(id=>(state.louvores||[]).find(l=>l.id === id)).filter(Boolean);
-    return `<div class="cu-parte">
+    return `<div class="cu-parte${cuPartesEntrar ? ' entra' : ''}" data-id="${p.id}" style="--tinta:${cultoTinta(p.id, c.partes)};--i:${i}">
       <span class="cu-parte-num">${i + 1}</span>
       <div class="cu-parte-corpo">
         <div class="cu-parte-topo">
@@ -108,6 +113,7 @@ function renderCulto(){
       </div>
     </div>`;
   }).join('') || `<div class="gm-vazio">Nenhuma parte. Toque em "Adicionar parte".</div>`;
+  cuPartesEntrar = false;
   /* ordem dos louvores no texto do WhatsApp (não mexe nas partes) */
   const ordem = cultoMusicasOrdem(c).map(id=>(state.louvores||[]).find(l=>l.id === id)).filter(Boolean);
   document.getElementById('cultoOrdem').innerHTML = ordem.length ? `
@@ -141,7 +147,17 @@ function cultoMoverParte(id, d){
   const ps = cultoAtual().partes, i = ps.findIndex(p=>p.id === id), j = i + d;
   if(i < 0 || j < 0 || j >= ps.length) return;
   [ps[i], ps[j]] = [ps[j], ps[i]];
+  /* as duas partes deslizam devagar até o lugar novo (guarda onde estavam, desenha e anima a diferença) */
+  const lista = document.getElementById('cultoPartes'), antes = {};
+  lista.querySelectorAll('.cu-parte').forEach(el=>antes[el.dataset.id] = el.getBoundingClientRect().top);
   cultoGravar(); renderCulto();
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  lista.querySelectorAll('.cu-parte').forEach(el=>{
+    const dy = (antes[el.dataset.id] ?? 0) - el.getBoundingClientRect().top;
+    if(!dy) return;
+    el.animate([{ transform:`translateY(${dy}px)` }, { transform:'none' }], { duration: 650, easing:'cubic-bezier(.45,0,.2,1)' });
+    if(el.dataset.id === id) el.animate([{ boxShadow:'0 0 0 0 transparent' }, { boxShadow:'0 10px 26px -12px rgba(43,38,32,.35)' }, { boxShadow:'0 0 0 0 transparent' }], { duration: 650 });
+  });
 }
 function cultoTirarParte(id){
   comDesfazer('Parte removida', ()=>{ const c = cultoAtual(); c.partes = c.partes.filter(p=>p.id !== id); cultoGravar(); renderCulto(); },
@@ -254,7 +270,7 @@ function renderCultoBotao(){
 const CU_SUGESTAO_ESQUEMA = { type:'object', properties:{ musicas:{ type:'array', items:{ type:'object', properties:{
   id:{ type:'string', description:'id exato de uma música da lista' }, motivo:{ type:'string', description:'por que combina, curto' }
 }, required:['id','motivo'] } } }, required:['musicas'] };
-let cuSugestoes = [];
+let cuSugestoes = [], cuSugDrive = null;   // PDFs do Drive (lidos uma vez por abertura do app)
 function cultoAbrirSugestao(){
   if(typeof lviChaveIA !== 'function' || !lviChaveIA()){ showToast('Precisa da chave da IA (Dados do App → Recursos)'); return; }
   if(!(state.louvores||[]).length){ showToast('Cadastre músicas no Louvor primeiro'); return; }
@@ -269,30 +285,58 @@ async function cultoSugerir(){
   const tema = document.getElementById('cuSugTema').value.trim(), qtd = Number(document.getElementById('cuSugQtd').value) || 5;
   const el = document.getElementById('cuSugLista');
   if(!tema){ document.getElementById('cuSugTema').focus(); return; }
-  el.innerHTML = '<div class="voz-carregando">Pensando no repertório…</div>';
+  /* Drive primeiro: o pedido de acesso sai ainda dentro do toque (sem await antes) */
+  const pedidoDrive = cuSugDrive ? Promise.resolve(cuSugDrive)
+    : (typeof driveClienteId === 'function' && driveClienteId() && driveTokenCliente) ? drivePedirToken().then(driveListarPdfs).catch(()=>null) : Promise.resolve(null);
+  el.innerHTML = '<div class="voz-carregando">Olhando as músicas do app e do Drive…</div>';
+  const pdfs = await pedidoDrive;
+  if(pdfs) cuSugDrive = pdfs;
   const hoje = calParse(cultoHojeISO()), ultimas = {};
   cultoHistoricoDados().forEach(h=>{ ultimas[h.l.id] = Math.round((hoje - calParse(h.ultima)) / 864e5); });
   const ja = new Set(cultoAtual().partes.flatMap(p=>p.musicas));
-  const lista = (state.louvores||[]).filter(l=>!ja.has(l.id)).map(l=>({ id:l.id, titulo:l.titulo, artista:l.artista||'', categoria:l.categoria||'', tom: lvTomAtual(l), tocadaHaDias: ultimas[l.id] ?? null,
+  const lista = (state.louvores||[]).filter(l=>!ja.has(l.id)).map(l=>({ id:l.id, onde:'app', titulo:l.titulo, artista:l.artista||'', categoria:l.categoria||'', tom: lvTomAtual(l), tocadaHaDias: ultimas[l.id] ?? null,
     letra: (l.conteudo||'').split('\n').filter(x=>x.trim() && !isChordLine(x.trim()) && !/^\[.*\]$/.test(x.trim()) && !/^-+$/.test(x.trim())).slice(0, 8).join(' / ').slice(0, 300) }));
+  /* PDFs do Drive que ainda não estão no app (só o nome; a IA usa o que conhece da música) */
+  const noApp = new Set((state.louvores||[]).map(l=>cuNorm(l.titulo)));
+  const vistos = new Set();
+  (pdfs || []).forEach(f=>{
+    const fi = lviNomeDoArquivo(f.name) || {}, titulo = fi.titulo || f.name.replace(/\.pdf$/i, ''), k = cuNorm(titulo);
+    if(!k || noApp.has(k) || vistos.has(k)) return;
+    vistos.add(k);
+    lista.push({ id:'drive:' + f.id, onde:'drive', titulo, artista: fi.artista || '', categoria: driveTipoDoPdf(f) });
+  });
+  el.innerHTML = '<div class="voz-carregando">Pensando no repertório…</div>';
   try{
     const j = await lviPerguntarIA([{ type:'text', text:
       `Você ajuda o ministério de louvor de uma igreja evangélica a montar o repertório do culto. Tema da pregação: "${tema}".\n` +
-      `Escolha até ${qtd} músicas DA LISTA abaixo que combinam com o tema (pela letra), em uma boa ordem para o culto. ` +
+      `Escolha até ${qtd} músicas DA LISTA abaixo que combinam com o tema, em uma boa ordem para o culto. ` +
+      `A lista tem as músicas do app (onde:"app", com um trecho da letra) e os PDFs do Drive da igreja (onde:"drive", só o nome: use o que você conhece da letra dessa música). ` +
+      `São todas músicas que o grupo sabe tocar; NÃO sugira nada fora da lista. ` +
       `Evite as tocadas há menos de 21 dias (tocadaHaDias), a não ser que não haja outra opção. Use só ids da lista.\n` +
       JSON.stringify(lista) }], t=>{ el.innerHTML = `<div class="voz-carregando">${lvEsc(t)}</div>`; }, CU_SUGESTAO_ESQUEMA);
-    cuSugestoes = (j.musicas||[]).map(m=>({ ...m, l: (state.louvores||[]).find(l=>l.id === m.id), marcado: true })).filter(m=>m.l);
+    cuSugestoes = (j.musicas||[]).map(m=>{
+      if(String(m.id).startsWith('drive:')){
+        const f = (pdfs || []).find(f=>'drive:' + f.id === m.id), d = lista.find(x=>x.id === m.id);
+        return f && d ? { ...m, f, titulo: d.titulo, artista: d.artista, marcado: true } : null;
+      }
+      const l = (state.louvores||[]).find(l=>l.id === m.id);
+      return l ? { ...m, l, titulo: l.titulo, marcado: true } : null;
+    }).filter(Boolean);
     el.innerHTML = cuSugestoes.length ? cuSugestoes.map((m, i)=>`
       <label class="cu-sug-item">
         <input type="checkbox" checked onchange="cuSugestoes[${i}].marcado=this.checked">
-        <span class="cu-escolher-nome">${lvEsc(m.l.titulo)}${lvTomAtual(m.l) ? ` <i class="cu-tom">${lvEsc(lvTomAtual(m.l))}</i>` : ''}<small>${lvEsc(m.motivo)}${ultimas[m.id] != null ? ` · tocada há ${ultimas[m.id]} dias` : ''}</small></span>
+        <span class="cu-escolher-nome">${lvEsc(m.titulo)}${m.l && lvTomAtual(m.l) ? ` <i class="cu-tom">${lvEsc(lvTomAtual(m.l))}</i>` : ''}${m.f ? ` <i class="cu-sug-drive">Drive</i>` : ''}<small>${lvEsc(m.motivo)}${ultimas[m.id] != null ? ` · tocada há ${ultimas[m.id]} dias` : ''}</small></span>
       </label>`).join('') : '<div class="gm-vazio">A IA não achou músicas que combinem. Tente outro tema.</div>';
     document.getElementById('cuSugAcoes').style.display = cuSugestoes.length ? '' : 'none';
   }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(String(e && e.message || e))}</div>`; }
 }
-function cultoUsarSugestao(){
+async function cultoUsarSugestao(){
   const p = cultoParte(document.getElementById('cuSugParte').value); if(!p) return;
-  const novas = cuSugestoes.filter(m=>m.marcado && !p.musicas.includes(m.id)).map(m=>m.id);
+  /* as do Drive viram música no app (só com o arquivo, como no colar do WhatsApp) */
+  for(const m of cuSugestoes.filter(m=>m.marcado && m.f && !m.l)){
+    try{ m.l = await cultoCriarDoDrive(m.f, m.titulo, m.artista); m.id = m.l.id; }catch(e){ m.marcado = false; }
+  }
+  const novas = cuSugestoes.filter(m=>m.marcado && m.l && !p.musicas.includes(m.l.id)).map(m=>m.l.id);
   p.musicas.push(...novas);
   cultoGravar();
   closeModal('modalCultoSugestao');
@@ -565,9 +609,15 @@ async function cultoColarDoDrive(it, pdfs){
     f = cands[r.i];
   }
   cultoColarPasso(it, 'Baixando o PDF do Drive…');
+  const l = await cultoCriarDoDrive(f, it.titulo, it.artista);
+  it.status = 'drive';
+  return l;
+}
+/* música nova só com o arquivo do Drive (sem tirar o texto); o PDF fica guardado no aparelho */
+async function cultoCriarDoDrive(f, titulo, artista){
   const fi = lviNomeDoArquivo(f.name) || {};
   const tom = fi.tom ? lviTomSiloe(fi.tom, fi.menor) : null;
-  const l = lvCriarDireto({ titulo: fi.titulo || it.titulo, artista: fi.artista || it.artista,
+  const l = lvCriarDireto({ titulo: fi.titulo || titulo, artista: fi.artista || artista || '',
     categoria: lviEhHarpa(f.pasta + ' ' + f.name) ? 'Harpa Cristã' : /corinho/i.test(f.pasta + ' ' + f.name) ? 'Corinhos' : 'Louvor',
     tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false }, false);
   l.origem = { tipo:'drive', id: f.id, nome: f.name, link: f.webViewLink || '', pasta: f.pasta || '', soArquivo: true };
@@ -576,7 +626,6 @@ async function cultoColarDoDrive(it, pdfs){
     if(res.ok) lvOriginalGuardar(l.id, new File([await res.blob()], f.name, { type:'application/pdf' }));
   }catch(e){}
   persist();
-  it.status = 'drive';
   return l;
 }
 /* Cifra Club: pega sozinho só quando o nome E o cantor batem; senão mostra as opções primeiro.

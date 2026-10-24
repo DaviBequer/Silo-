@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.9', itens: [
+    'Culto: data sem "trocar data" (toque no nome), partes em cores e deslizando devagar ao mudar a ordem',
+    'Sugestão da IA olha as músicas do app e os PDFs do Drive (nada de fora)',
+    'Colar roteiro do WhatsApp foi para o + do Louvor'
+  ] },
   { versao: 'v9.8', itens: [
     'Dados do Comando apagados do banco (ao abrir o app)'
   ]},
