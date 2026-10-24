@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.0', itens: [
+    'Comparar: botão ⇄ para passar o PDF do Drive para o padrão do app (agora funciona) e prévia do Drive pelo link, sem baixar',
+    'Medley: olho para ver a letra e a cifra de cada parte, Salvar no topo, tela cabendo no celular; ordem só no editor',
+    'Cifra Club: a IA dá nome às partes (Pré-Refrão, Refrão, Ponte...) e a cifra é obrigatória'
+  ] },
   { versao: 'v9.9', itens: [
     'Culto: data sem "trocar data" (toque no nome), partes em cores e deslizando devagar ao mudar a ordem',
     'Sugestão da IA olha as músicas do app e os PDFs do Drive (nada de fora)',

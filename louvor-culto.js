@@ -471,14 +471,6 @@ function cultoColarLer(){
   cuColar.forEach(it=>{ const l = cultoColarNoApp(it); const serve = l && !(it.grupo && !(l.conteudo || '').trim()); it.id = serve ? l.id : ''; it.status = serve ? 'app' : ''; });
   cultoColarRender(true);
 }
-/* ordem das músicas dentro do medley (antes de montar) */
-function cultoColarMoverMedley(i, d){
-  const it = cuColar[i], grupo = cuColar.map((x, k)=>x.grupo === it.grupo ? k : -1).filter(k=>k >= 0);
-  const pos = grupo.indexOf(i), alvo = grupo[pos + d];
-  if(alvo === undefined) return;
-  [cuColar[i], cuColar[alvo]] = [cuColar[alvo], cuColar[i]];
-  cultoColarRender();
-}
 const CU_COLAR_ST = { app:'já está no app', drive:'do Drive (só o arquivo)', cifra:'criada pelo Cifra Club', vazia:'criada só com o nome', pulada:'não entrou' };
 const CU_COLAR_ICO = {
   ok:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
@@ -504,7 +496,7 @@ function cultoColarRender(entrar){
       <span class="cu-colar-ico ${feito(it.status) ? 'ok' : ruim(it.status) ? 'erro' : it.status === 'buscando' ? 'gira' : ''}">${feito(it.status) ? CU_COLAR_ICO.ok : ruim(it.status) ? CU_COLAR_ICO.erro : it.grupo ? posNoGrupo + 1 : ''}</span>
       <div class="cu-colar-musica"><b>${it.harpaNum ? 'Harpa ' + lvEsc(it.harpaNum) : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
       ${it.grupo
-        ? (cuColarMontando ? '' : `<span class="cu-md-setas"><button type="button" class="btn-icon-sm" aria-label="Subir no medley" title="Subir no medley" ${posNoGrupo === 0 ? 'disabled' : ''} onclick="cultoColarMoverMedley(${i},-1)">${CU_ICO.sobe}</button><button type="button" class="btn-icon-sm" aria-label="Descer no medley" title="Descer no medley" ${posNoGrupo === doGrupo.length - 1 ? 'disabled' : ''} onclick="cultoColarMoverMedley(${i},1)">${CU_ICO.desce}</button></span>`)
+        ? ''
         : `<select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${opcoesParte(it.parte)}</select>`}
       <span class="cu-colar-st ${it.status}">${lvEsc(it.status === 'erro' ? it.erro : it.status === 'buscando' ? (it.passo || 'buscando…') : (CU_COLAR_ST[it.status] || (it.grupo ? 'vai buscar a cifra' : 'vai buscar no Drive ou no Cifra Club')))}</span>
       ${it.status === 'buscando' && !it.pergunta ? '<div class="cu-colar-barra"><i></i></div>' : ''}
@@ -608,12 +600,12 @@ async function cultoColarDoDrive(it, pdfs){
     if(r.i === undefined) return null;
     f = cands[r.i];
   }
-  cultoColarPasso(it, 'Baixando o PDF do Drive…');
+  cultoColarPasso(it, 'Ligando ao PDF do Drive…');
   const l = await cultoCriarDoDrive(f, it.titulo, it.artista);
   it.status = 'drive';
   return l;
 }
-/* música nova só com o arquivo do Drive (sem tirar o texto); o PDF fica guardado no aparelho */
+/* música nova só com o arquivo do Drive (sem tirar o texto nem baixar o PDF) */
 async function cultoCriarDoDrive(f, titulo, artista){
   const fi = lviNomeDoArquivo(f.name) || {};
   const tom = fi.tom ? lviTomSiloe(fi.tom, fi.menor) : null;
@@ -621,11 +613,7 @@ async function cultoCriarDoDrive(f, titulo, artista){
     categoria: lviEhHarpa(f.pasta + ' ' + f.name) ? 'Harpa Cristã' : /corinho/i.test(f.pasta + ' ' + f.name) ? 'Corinhos' : 'Louvor',
     tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false }, false);
   l.origem = { tipo:'drive', id: f.id, nome: f.name, link: f.webViewLink || '', pasta: f.pasta || '', soArquivo: true };
-  try{
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
-    if(res.ok) lvOriginalGuardar(l.id, new File([await res.blob()], f.name, { type:'application/pdf' }));
-  }catch(e){}
-  persist();
+  persist();   // o PDF não é baixado: o Comparar mostra a prévia do Drive pelo link
   return l;
 }
 /* Cifra Club: pega sozinho só quando o nome E o cantor batem; senão mostra as opções primeiro.

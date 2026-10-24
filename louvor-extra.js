@@ -441,13 +441,16 @@ function lviMontaBlocos(rows){
     const k = lviAssinatura(s);
     const igual = vistos.find(v=>v.k===k);
     if(igual){ s.repeatOf = igual.s; if(s.name && !igual.s.name) igual.s.name = s.name; return; }
+    /* quase a mesma letra (uma palavra ou outra muda): é a mesma parte, mas fica com a letra dela */
+    const parecida = !s.name && vistos.find(v=>lviLetraParecida(v.s, s));
+    if(parecida){ s.mesmaDe = parecida.s; return; }
     vistos.push({ k, s });
   });
   /* a parte sem nome que volta igual (vira "Repete") é o Refrão; as outras são Primeira Parte, Segunda Parte… */
-  const voltam = new Set(secoes.filter(s=>s.repeatOf).map(s=>s.repeatOf));
+  const voltam = new Set(secoes.filter(s=>s.repeatOf || s.mesmaDe).map(s=>s.repeatOf || s.mesmaDe));
   let temRefrao = secoes.some(s=>/^(refr|coro)/i.test(s.name||''));
   secoes.forEach((s,i)=>{
-    if(s.name || s.repeatOf) return;
+    if(s.name || s.repeatOf || s.mesmaDe) return;
     const temLetra = s.lines.some(l=>l.type==='lyric');
     if(!temLetra){ s.name = i===0 ? 'Intro' : 'Instrumental'; return; }
     /* mesma letra de uma parte já nomeada (só os acordes mudam um pouco): mesmo nome */
@@ -460,7 +463,45 @@ function lviMontaBlocos(rows){
     s.name = n < LVI_ORD.length ? LVI_ORD[n] : 'Parte '+(n+1);
     n++;
   });
+  secoes.forEach(s=>{ if(s.mesmaDe){ s.name = s.mesmaDe.name; delete s.mesmaDe; } });
   return { titulo:nome, artista, secoes, tom, menor, temCabecalho: !!artistaCab };
+}
+/* duas partes com quase a mesma letra (80% das palavras na mesma ordem) */
+function lviLetraParecida(a, b){
+  const pal = s=>s.lines.filter(l=>l.type==='lyric').flatMap(l=>String(l.text||'').split(/\s+/).map(lviNormPalavra)).filter(Boolean);
+  const x = pal(a), y = pal(b);
+  if(x.length < 4 || y.length < 4) return false;
+  return 2 * lviLcsPares(x, y).length / (x.length + y.length) >= .8;
+}
+/* IA dá o nome de cada parte (Intro, Primeira Parte, Pré-Refrão, Refrão, Ponte…) e diz quais são a mesma parte cantada de novo.
+   Sem chave ou com erro: ficam os nomes da leitura simples. */
+const LVI_PARTES_ESQUEMA = { type:'object', properties:{ partes:{ type:'array', items:{ type:'object', properties:{
+  i:{ type:'integer', description:'número do bloco' },
+  nome:{ type:'string', description:'Intro, Primeira Parte, Segunda Parte, Terceira Parte, Pré-Refrão, Refrão, Ponte, Instrumental, Solo ou Final' },
+  mesmaDe:{ type:'integer', description:'número de um bloco ANTERIOR com a mesma letra (pequenas diferenças valem), ou -1' }
+}, required:['i','nome','mesmaDe'] } } }, required:['partes'] };
+async function lviNomearPartesIA(secoes, titulo, artista, passo){
+  if(!lviChaveIA()) return false;
+  const blocos = secoes.filter(s=>!s.repeatOf && s.lines.length);
+  if(blocos.length < 2) return false;
+  const txt = blocos.map((s, i)=>`#${i}\n` + (s.lines.filter(l=>l.type==='lyric').map(l=>l.text).join('\n') || '(só acordes)')).join('\n\n');
+  try{
+    const j = await lviPerguntarIA([{ type:'text', text:
+      `Música de louvor: "${titulo}"${artista ? ' de ' + artista : ''}. Abaixo estão os blocos da letra, na ordem em que são cantados.\n` +
+      `Dê o nome de cada bloco pela função na música: Intro, Primeira Parte, Segunda Parte, Terceira Parte (estrofes com letras diferentes), ` +
+      `Pré-Refrão (o trecho que prepara o refrão), Refrão (o que volta várias vezes, o centro da música), Ponte (trecho diferente, geralmente perto do fim), Instrumental, Solo ou Final.\n` +
+      `Uma música costuma ter só 3 a 5 partes que se repetem: o bloco que repete a letra de um anterior (mesmo com pequenas diferenças) tem o MESMO nome e mesmaDe = número do anterior. ` +
+      `Use o que você sabe dessa música (por exemplo pelo site Letras) para acertar. Não invente partes.\n\n` + txt }],
+      t=>passo && passo(t), LVI_PARTES_ESQUEMA);
+    const r = (j && j.partes) || [];
+    if(r.length !== blocos.length) return false;
+    r.slice().sort((a, b)=>a.i - b.i).forEach(p=>{
+      const s = blocos[p.i]; if(!s) return;
+      const ant = p.mesmaDe >= 0 && p.mesmaDe < p.i ? blocos[p.mesmaDe] : null;
+      s.name = ant ? ant.name : String(p.nome || s.name || '').trim() || s.name;
+    });
+    return true;
+  }catch(e){ return false; }
 }
 /* nome do arquivo "Cantor - Música - Tom" */
 function lviNomeDoArquivo(nome){
@@ -1180,7 +1221,10 @@ async function ccMontar(url, passo, tirar){
     if(lt.achou){
       passo(`✓ Letras: "${lt.titulo}" · ${lt.artista} · ${lt.estrofes.length} estrofes`, 'ok');
       const j = lviJuntarComLetras(texto, lt.estrofes);
-      if(j){
+      /* a cifra é obrigatória: se a letra do Letras perdeu os acordes, fica só o Cifra Club */
+      const acordes = t=>t.split('\n').filter(x=>x.trim() && isChordLine(x.trim())).length;
+      if(j && acordes(j.texto) < acordes(texto) * .6){ passo('A letra do Letras perdia os acordes: fiquei com a cifra do Cifra Club', 'erro'); }
+      else if(j){
         texto = j.texto; revisar = j.revisar; comLetras = true;
         const versos = lt.estrofes.reduce((s, e)=>s + e.length, 0);
         passo(`✓ Letra do Letras com os acordes do Cifra Club · ${versos - j.revisar.length} de ${versos} versos batidos${j.revisar.length ? ' · ' + j.revisar.length + ' para conferir (amarelo)' : ''}`, 'ok');
@@ -1189,6 +1233,12 @@ async function ccMontar(url, passo, tirar){
     const doc = lviMontaBlocos(lviTextoParaLinhas(texto));
     const harpa = lviEhHarpa(c.artista + ' ' + c.titulo);
     if(harpa){ lviPadraoHarpa(doc.secoes); passo('✓ Hino da Harpa: Refrão depois de cada parte', 'ok'); }
+    else if(lviChaveIA()){
+      passo('A IA está dando nome às partes (Primeira Parte, Pré-Refrão, Refrão, Ponte…)');
+      const ok = await lviNomearPartesIA(doc.secoes, c.titulo, c.artista, ()=>{});
+      tirar();
+      passo(ok ? '✓ Partes nomeadas pela IA' : 'A IA não respondeu: ficaram os nomes da leitura simples', ok ? 'ok' : 'erro');
+    }
     const conteudo = lvQuebrarSlides(lviBlocosParaTexto(doc.secoes));
     passo(`✓ ${doc.secoes.filter(s=>!s.repeatOf).length} partes · texto arrumado (maiúsculas, pontos, versos)`, 'ok');
     const m = /^([A-G](?:#|b)?)(m?)$/.exec(c.tom || '');

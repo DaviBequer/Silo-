@@ -72,11 +72,14 @@ function lvCompararRenderApp(l){
 /* música só com o PDF do Drive → lê o PDF e monta no padrão do app (como importar); daí em diante abre primeiro o app */
 async function lvConverterDoDrive(){
   const l = getLouvorAtual(); if(!l || !l.origem) return;
+  /* o pedido de acesso ao Drive sai ainda dentro do toque (sem await antes) */
+  const acesso = l.origem.id && typeof drivePedirToken === 'function' && typeof driveTokenCliente !== 'undefined' && driveTokenCliente ? drivePedirToken().catch(()=>null) : Promise.resolve(null);
+  const btn = document.querySelector('.lvcmp-converter-btn'); if(btn){ btn.disabled = true; btn.classList.add('girando'); }
   let guardado = await lvOriginalLer(l.id), blob = guardado && guardado.blob;
-  if(!blob && l.origem.id && typeof driveToken !== 'undefined' && driveToken){
+  if(!blob && l.origem.id && await acesso){
     try{ const res = await fetch(`https://www.googleapis.com/drive/v3/files/${l.origem.id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } }); if(res.ok) blob = await res.blob(); }catch(e){}
   }
-  if(!blob){ showToast('O PDF não está neste aparelho: abra o Drive (Puxar do Drive) e tente de novo'); return; }
+  if(!blob){ if(btn){ btn.disabled = false; btn.classList.remove('girando'); } showToast('Não consegui baixar o PDF do Drive: confira o acesso ao Google e tente de novo'); return; }
   const file = blob instanceof File ? blob : new File([blob], l.origem.nome || 'original.pdf', { type:'application/pdf' });
   lvCompararFechar();
   const origem = Object.assign({}, l.origem); delete origem.soArquivo;
@@ -99,17 +102,17 @@ async function lvCompararRenderOriginal(l){
   }
   /* PDF ou foto: deste aparelho; o do Drive pode ser baixado de novo */
   const link = o.link ? `<a href="${lvEsc(o.link)}" target="_blank" rel="noopener">abrir no Drive</a>` : '';
-  /* veio do Drive só com o arquivo (padrão antigo): dá para passar para o padrão do app; o PDF continua aqui para comparar */
-  const converter = o.soArquivo ? `<div class="lvcmp-converter"><div><b>PDF do Drive, como está</b><small>Quer no padrão do app? O app lê o PDF e monta a cifra; este PDF continua aqui para comparar.</small></div><button type="button" class="btn" onclick="lvConverterDoDrive()">Passar para o padrão do app</button></div>` : '';
-  el.innerHTML = `${converter}<div class="lvcmp-tit"><b>${lvEsc(o.nome || 'Arquivo')}</b>${link}</div><div id="lvcmpPdf" class="lvcmp-pdf"><div class="voz-carregando">Abrindo o original…</div></div>`;
-  let guardado = await lvOriginalLer(l.id), blob = guardado && guardado.blob;
-  if(!blob && o.tipo === 'drive' && o.id && typeof driveToken !== 'undefined' && driveToken){
-    try{
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${o.id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
-      if(res.ok){ blob = await res.blob(); lvOriginalGuardar(l.id, new File([blob], o.nome || 'original.pdf', { type: blob.type || 'application/pdf' })); }
-    }catch(e){}
-  }
+  /* veio do Drive só com o arquivo: o ícone ⇄ passa para o padrão do app (o PDF continua aqui para comparar) */
+  const converter = o.soArquivo ? `<button type="button" class="ico-btn lvcmp-converter-btn" onclick="lvConverterDoDrive()" title="Passar para o padrão do app" aria-label="Passar para o padrão do app"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/></svg></button>` : '';
+  if(o.soArquivo && typeof drivePreparar === 'function') drivePreparar();   // o ⇄ pode precisar pedir o acesso ao Drive direto do toque
+  el.innerHTML = `<div class="lvcmp-tit"><b>${lvEsc(o.nome || 'Arquivo')}</b>${link}${converter}</div><div id="lvcmpPdf" class="lvcmp-pdf"><div class="voz-carregando">Abrindo o original…</div></div>`;
+  const guardado = await lvOriginalLer(l.id), blob = guardado && guardado.blob;
   const caixa = document.getElementById('lvcmpPdf');
+  /* do Drive e não guardado aqui: prévia do próprio Google pelo link (sem baixar o arquivo) */
+  if(!blob && o.tipo === 'drive' && o.id){
+    caixa.innerHTML = `<iframe class="lvcmp-drive" src="https://drive.google.com/file/d/${encodeURIComponent(o.id)}/preview" allow="autoplay" title="PDF do Drive"></iframe>`;
+    return;
+  }
   if(!blob){
     caixa.innerHTML = `<div class="gm-vazio">O arquivo original não está neste aparelho.${o.tipo === 'drive' ? ' Toque em "abrir no Drive" ou importe de novo pelo Drive.' : ''}</div>`;
     return;

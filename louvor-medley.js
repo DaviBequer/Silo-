@@ -124,6 +124,9 @@ async function fecharMedley(){
   lmEdit = null;
 }
 function lmCor(id){ const i = lmEdit.musicas.findIndex(m=>m.id===id); return 'lm-cor' + ((i < 0 ? 0 : i) % 5); }
+/* músicas com as partes abertas (para ver o que é cada parte antes de tocar nela) */
+const lmVer = new Set();
+function lmVerAlternar(id){ lmVer.has(id) ? lmVer.delete(id) : lmVer.add(id); lmRender(); }
 function lmRender(){
   if(!lmEdit) return;
   const nums = {};
@@ -138,6 +141,7 @@ function lmRender(){
       <div class="lm-musica-topo">
         <span class="lm-musica-num">${mi+1}</span>
         <div class="lm-musica-nome"><b>${lvEsc(src.titulo||'Sem título')}</b><small>${lvEsc(src.artista||'')}</small></div>
+        ${partes.length && !semPartes ? `<button type="button" class="ico-btn lm-ver-btn${lmVer.has(m.id) ? ' ativo' : ''}" onclick="lmVerAlternar('${m.id}')" title="Ver as partes" aria-label="Ver as partes">${ICO(ICO_D.olho, 18)}</button>` : ''}
         <button type="button" class="lm-tom" onclick="lmAbrirTom(${mi})" ${src.tomOriginal?'':'disabled'} title="Tom desta música no medley"><span>TOM</span><b>${lmTomTexto(m) || '—'}</b></button>
         <button type="button" class="lm-x" onclick="lmTirarMusica(${mi})" aria-label="Tirar a música">${icoX}</button>
       </div>
@@ -145,6 +149,7 @@ function lmRender(){
         const usados = nums[m.id + '|' + p.nome] || [];
         return `<button type="button" class="lm-parte${usados.length?' usada':''}" onclick="lmAddParte(${mi},${pi})">${lvEsc(p.nome)}${usados.map(n=>`<i>${n}</i>`).join('')}</button>`;
       }).join('')}</div>
+      ${lmVer.has(m.id) && !semPartes ? `<div class="lm-ver">${partes.map((p, pi)=>`<button type="button" class="lm-ver-parte" onclick="lmAddParte(${mi},${pi})"><b>${lvEsc(p.nome)}${p.vezes > 1 ? ' · ' + p.vezes + 'x' : ''}</b><pre>${p.linhas.map(x=>x.trim() && isChordLine(x.trim()) ? `<span class="rl-acorde">${lvEsc(x)}</span>` : lvEsc(x)).join('\n')}</pre></button>`).join('')}</div>` : ''}
       ${!partes.length ? '<div class="lm-dica">Essa música ainda está sem letra.</div>'
         : semPartes ? `<div class="lm-dica">Sem partes separadas. <a onclick="lmOrganizarOriginal('${m.id}')">Abrir e organizar</a> para escolher Refrão, Estrofes…</div>` : ''}
     </div>`;
@@ -171,7 +176,7 @@ function lmRender(){
     if(t && isChordLine(t)) return `<span class="rl-acorde">${esc}</span>`;
     return esc;
   }).join('\n') : '<span class="lm-pv-vazio">A prévia aparece aqui enquanto você monta.</span>';
-  document.getElementById('lmSalvarBtn').textContent = lmEdit.id ? 'Salvar medley' : 'Criar medley';
+  document.getElementById('lmSalvarBtn').textContent = lmEdit.id ? 'Salvar' : 'Criar';
 }
 function lmAddParte(mi, pi){
   const m = lmEdit.musicas[mi]; const p = lmPartes(lmLouvor(m.id))[pi]; if(!p) return;
@@ -319,7 +324,7 @@ function lviProgresso(id){
     const p = q('.lvc-passos'); if(!p) return;
     p.innerHTML = passos.map(x=>`<span class="lvc-p ${x.estado}">${x.estado==='ok'?'✓':x.estado==='aviso'||x.estado==='falhou'?'!':''}<em>${lvEsc(x.curto)}</em></span>`).join('');
     const a = passos[passos.length-1];
-    if(a){ q('.lvc-etapa b').textContent = a.titulo; q('.lvc-etapa small').textContent = a.sub || ''; }
+    if(a && q('.lvc-etapa b')){ q('.lvc-etapa b').textContent = a.titulo; q('.lvc-etapa small').textContent = a.sub || ''; }
   };
   const fn = (texto, passo)=>{
     if(!rodando) return;
@@ -364,7 +369,7 @@ function lviProgresso(id){
   fn.fim = relatorio=>{
     passos.forEach(p=>{ if(p.estado==='ativo') p.estado = 'ok'; });
     pct = 100; barra(); desenhaPassos();
-    q('.lvc-etapa b').textContent = 'Pronto'; q('.lvc-etapa small').textContent = 'em ' + mmss(Date.now() - inicio).replace(/^00:/, '') + (Date.now() - inicio < 60000 ? ' s' : '');
+    if(q('.lvc-etapa b')) q('.lvc-etapa b').textContent = 'Pronto'; if(q('.lvc-etapa small')) q('.lvc-etapa small').textContent = 'em ' + mmss(Date.now() - inicio).replace(/^00:/, '') + (Date.now() - inicio < 60000 ? ' s' : '');
     fn.log('Concluído', 'ok');
     parar();
     if(el && relatorio) el.insertAdjacentHTML('beforeend', relatorio);

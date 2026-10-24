@@ -1885,9 +1885,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 @media (prefers-reduced-motion:reduce){.lvc-folha i,.lvc-scan,.lvc-barra::after,.lvc-ia i{animation:none}}
 
 /* medley */
-.lm{display:grid;align-content:start;gap:0 28px}
+.lm{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:0 28px}
 .lm-sec-titulo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 10px}
-.lm-sec-titulo span{font-family:var(--font-display);font-weight:800;font-size:22px;line-height:1;color:var(--text)}
+.lm-sec-titulo span{font-family:var(--font-display);font-weight:800;font-size:22px;line-height:1;color:var(--text);white-space:nowrap;flex-shrink:0}
 .lm-sec-titulo small{font-size:12px;color:var(--text-faint);text-align:right}
 .lm-musica{--lm-cor:var(--gold);margin-bottom:10px;padding:14px 14px 12px;border:none;border-left:3px solid var(--lm-cor);border-radius:var(--radius-sm);background:var(--card);box-shadow:var(--sombra-card)}
 .lm-cor0{--lm-cor:#2f5d46}.lm-cor1{--lm-cor:#a0522d}.lm-cor2{--lm-cor:#3b5b8c}.lm-cor3{--lm-cor:#7a4f8f}.lm-cor4{--lm-cor:#8a7a22}
@@ -2148,13 +2148,9 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-opcao-seta{flex-shrink:0;color:var(--text-faint)}
 .cu-perg-cantor{margin-top:10px}
 .cu-perg-cantor[hidden]{display:none!important}
-.lvcmp-converter{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 14px;padding:14px 0;border-top:2px solid var(--text);border-bottom:1px solid var(--line);animation:cuEntra .4s var(--mola) both}
-.lvcmp-converter b{display:block;font-size:14.5px;color:var(--text)}
-.lvcmp-converter small{display:block;max-width:420px;font-size:12.5px;line-height:1.4;color:var(--text-faint)}
-@media (prefers-reduced-motion:reduce){.cu-colar-item.entra,.cu-colar-medley.entra,.cu-opcao,.cu-colar-pergunta.entra,.lvcmp-converter{animation:none}.cu-colar-ico.gira{animation-duration:2.4s}}
+@media (prefers-reduced-motion:reduce){.cu-colar-item.entra,.cu-colar-medley.entra,.cu-opcao,.cu-colar-pergunta.entra{animation:none}.cu-colar-ico.gira{animation-duration:2.4s}}
 .cu-colar-item.perguntando{background:none}
 .cu-colar-item.no-medley .cu-colar-ico:not(.ok):not(.erro):not(.gira){font-size:11px;font-weight:700;color:var(--text-dim)}
-.cu-md-setas{grid-column:3;grid-row:1/span 2;display:flex;gap:2px}
 .cu-md-txt{min-width:0}
 .cu-md-ordem{flex-shrink:0;min-height:36px;padding:6px 12px;font-size:12.5px}
 
@@ -2164,3 +2160,15 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-partes .cu-parte-corpo{background:var(--tinta,var(--card-2))!important;border:none!important;border-radius:14px!important;padding:10px 12px 8px 14px}
 .cu-partes .cu-parte-corpo .cu-musica{border-color:rgba(43,38,32,.1)}
 .cu-sug-drive{font-style:normal;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--card-2);color:var(--text-dim);font-size:10.5px;font-weight:600;vertical-align:1px}
+.lvcmp-converter-btn{color:var(--text)}
+.lvcmp-converter-btn.girando svg{animation:cuGira 1s linear infinite}
+.lvcmp-drive{display:block;width:100%;height:min(78vh,900px);border:1px solid var(--line);border-radius:6px;background:#fff}
+/* medley: ver as partes de cada música (letra com os acordes); tocar numa parte também a coloca na sequência */
+.lm-ver-btn{flex-shrink:0;color:var(--text-faint)}
+.lm-ver-btn.ativo{color:var(--text)}
+.lm-ver{display:flex;flex-direction:column;gap:8px;margin-top:12px;animation:cuEntra .3s var(--mola) both}
+.lm-ver-parte{display:block;width:100%;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--lm-cor);border-radius:10px;background:#fff;color:#1d1d1f;font:inherit;text-align:left;cursor:pointer}
+.lm-ver-parte:active{transform:scale(.99)}
+.lm-ver-parte b{display:block;margin-bottom:4px;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}
+.lm-ver-parte pre{margin:0;font-family:'Courier New',ui-monospace,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word}
+.lm-salvar-topo{flex-shrink:0;padding:6px 4px;border:none;background:none;color:var(--text);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
