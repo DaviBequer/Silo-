@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.5', itens: [
+    'Música: botão Refazer pelo Cifra Club (cifra nova com a junção de hoje, mantém nome, data, roteiros e o tom; dá para desfazer)'
+  ] },
   { versao: 'v10.4', itens: [
     'PDF no jeito do modelo: letra em Inconsolata, acordes laranja em negrito, etiquetas pequenas e cinza; encolhe para caber numa folha',
     'Slides: até 4 linhas; 5 curtas ficam juntas (compridas: 3+2); 6 ou mais dividem por igual; vale também para as músicas antigas',

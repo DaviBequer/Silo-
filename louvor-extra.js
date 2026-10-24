@@ -1129,8 +1129,10 @@ function imprimirLouvorPdf(){
    Quem lê o Cifra Club é a função "cifra" do Supabase (o site não deixa o navegador ler direto).
    O texto vem com [Partes] e acordes em cima da letra: passa pelo Organizar simples + "-" dos slides. */
 let ccResultados = [];
-function ccAbrir(termo){
+function ccAbrir(termo, refazerId){
   if(typeof lvFabMenu === 'function') lvFabMenu(false);
+  ccRefazerId = refazerId || null;   // com id: o escolhido substitui a cifra dessa música (não cria outra)
+  document.querySelector('#modalCifraClub .modal-header h3').textContent = 'Cifra Club';
   const inp = document.getElementById('ccBusca');
   inp.value = String(termo || '').trim();
   document.getElementById('ccLista').innerHTML = '';
@@ -1187,6 +1189,7 @@ async function ccImportar(url){
   try{
     const r = await ccMontar(url, passo, ()=>passos.pop());
     closeModal('modalCifraClub');
+    if(ccRefazerId){ ccAplicarRefazer(ccRefazerId, r, url, passos); return; }
     const l = lvCriarDireto(r.dados);
     ccGuardarOrigem(l, r, url);
     lvAtualizarBtnComparar(l);
@@ -1198,6 +1201,40 @@ async function ccImportar(url){
     }
     showToast(r.comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club');
   }catch(e){ passo(e.message, 'erro'); }
+}
+/* ---------- Refazer pelo Cifra Club: a música que já existe ganha a cifra nova (com a junção Letras + acordes de hoje),
+   mas continua a mesma: nome, cantor, categoria, data, status e lugar nos roteiros do Culto ficam; o tom em que ela
+   estava é mantido (a cifra nova é transposta para ele). Desfazer volta como era. ---------- */
+let ccRefazerId = null;
+function lvRefazerCifraClub(){
+  const l = getLouvorAtual(); if(!l) return;
+  if(l.medley){ showToast('Medley se refaz pelas músicas dele (Montar o medley)'); return; }
+  const url = l.origem && l.origem.tipo === 'cifraclub' && l.origem.url;
+  ccAbrir(url ? '' : [l.titulo, (l.artista || '').replace(/^Harpa Cristã.*$/i, '')].filter(Boolean).join(' '), l.id);   // sem a origem: busca pelo nome e você escolhe
+  document.querySelector('#modalCifraClub .modal-header h3').textContent = 'Refazer pelo Cifra Club';
+  if(url) ccImportar(url);   // já sabe de onde veio: vai direto (os passos aparecem na janela)
+}
+function ccAplicarRefazer(id, r, url, passos){
+  const l = state.louvores.find(x=>x.id === id); if(!l) return;
+  const antes = { maior: lvTomMaiorAtual(l), menor: !!l.tomModoMenor };
+  comDesfazer('Cifra refeita pelo Cifra Club', ()=>{
+    l.conteudo = r.dados.conteudo;
+    delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado; delete l.medleyEditado;
+    l.tomOriginal = r.dados.tomOriginal || ''; l.tomModoMenor = !!r.dados.tomModoMenor; l.transpose = 0;
+    if(antes.maior && l.tomOriginal) lvAplicarTom(l, antes.maior, antes.menor);   // continua no tom em que estava
+    ccGuardarOrigem(l, r, url);
+    persist();
+  }, ()=>{ if(louvorAtualId === id) abrirLouvorDetalhe(id); });
+  ccRefazerId = null;
+  renderLouvor();
+  abrirLouvorDetalhe(id);
+  const st = document.getElementById('lvEdicaoImportStatus');
+  if(st){
+    st.classList.remove('erro');
+    st.innerHTML = `<div class="cc-passos">${passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
+      ${antes.maior && !r.dados.tomOriginal ? '<div class="drive-linha erro">O Cifra Club não disse o tom: confira o tom da música</div>' : ''}
+      <div class="cc-passos-acoes"><button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button></div></div>`;
+  }
 }
 /* o original (texto do Cifra Club e a letra do Letras) fica guardado para comparar */
 function ccGuardarOrigem(l, r, url){
