@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v9.6', itens: [
+    'Colar do WhatsApp: as opções aparecem dentro da própria música; medley sempre puxa a cifra das músicas e monta junto, com setas para a ordem e botão "Ordem das partes" depois de montar',
+    'Painel da IA novo (papel): documento sendo lido, etapa atual, passos com ✓ ou girando e o registro ao vivo'
+  ]},
   { versao: 'v9.5', itens: [
     'Colar do WhatsApp: medley vira uma música só no roteiro (as músicas sozinhas também ficam no app; o Drive recebe só o medley); opções do Cifra Club aparecem primeiro e só depois "digitar o cantor"; ícone de estado e animações em cada música',
     'Música só com o PDF do Drive: botão "Passar para o padrão do app" (o PDF continua para comparar; depois abre primeiro o app)'
