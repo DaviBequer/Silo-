@@ -922,6 +922,8 @@ function renderLouvorPdfPreview(){
       blocoHtml += `<div class="lv-sheet-section-wrap${rep?' rep':''}"><span class="lv-sheet-section" data-si="${it.idx}">${lvEsc(it.label)}</span></div>`;
     }else if(it.type==='divider'){
       abre(); blocoHtml += `<div class="lv-sheet-divider"></div>`;
+    }else if(it.type==='slidebreak'){
+      if(aberta) blocoHtml += `<div class="lv-sheet-slide"></div>`;   // "-": próximo slide; na folha, um respiro com meia linha
     }else if(it.type==='colbreak'){
       fecha(); bodyHtml += `<div class="lv-colbreak"></div>`;
     }else if(it.type==='blank'){
@@ -1157,6 +1159,12 @@ function lvMontarPdf(l){
         return;
       }
       if(it.type==='blank'){ ensureSpace(lineH*0.6); y += lineH*0.6; return; }
+      if(it.type==='slidebreak'){   // "-": meia linha centralizada, mais clara que a do "--"
+        ensureSpace(lineH*0.8);
+        if(desenhar){ const cx = colX[colIdx] + colWidth/2; doc.setDrawColor(207,207,214); doc.setLineWidth(0.7); doc.line(cx - colWidth/4, y - lineH*0.4, cx + colWidth/4, y - lineH*0.4); }
+        y += lineH*0.45;
+        return;
+      }
       if(it.type==='section'){
         ensureSpace(lineH*3.2);   // a etiqueta não fica sozinha no fim da coluna (cabe ela + a 1ª linha com acordes)
         if(desenhar){

@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v11.0', itens: [
+    'Visualizar e PDF: o "-" (próximo slide) mostra um respiro com meia linha no meio da parte'
+  ] },
   { versao: 'v10.9', itens: [
     'Colar do WhatsApp: medley procura primeiro no Drive e vira um arquivo só (sem criar uma música para cada parte)',
     'Música: logo do Cifra Club abre no navegador a página de onde a cifra veio',
