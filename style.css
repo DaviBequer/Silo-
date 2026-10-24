@@ -1713,7 +1713,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-pdf-preview .lv-sheet-cols{column-gap:30px;column-fill:balance}
 .lv-pdf-preview .lv-sheet-divider{margin:12px 0;border-top:1px solid #dcdce0}
 .lv-pdf-preview .lv-sheet-divider:last-child{margin-bottom:0}
-.lv-pdf-preview .lv-sheet-slide{width:50%;margin:calc(var(--lv-fs,11pt) * .55) auto;border-top:1px solid #cfcfd6}
+.lv-pdf-preview .lv-sheet-slide{width:35%;margin:calc(var(--lv-fs,11pt) * .55) 0 calc(var(--lv-fs,11pt) * .55) 14px;border-top:1px solid #cfcfd6}
 .lv-pdf-preview .lv-sheet-section-wrap{margin:0 0 12px}
 .lv-pdf-preview .lv-sheet-section-wrap.rep{margin:0}
 .lv-pdf-preview .lv-sheet-section{padding:7px 16px;border-radius:999px;background:#6c6f7a;font:700 7.5pt/1 'Inter',sans-serif;letter-spacing:.12em}

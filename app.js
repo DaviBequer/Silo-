@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v11.1', itens: [
+    'Linha do "-" à esquerda, junto do texto, com 35% da largura'
+  ] },
   { versao: 'v11.0', itens: [
     'Visualizar e PDF: o "-" (próximo slide) mostra um respiro com meia linha no meio da parte'
   ] },
