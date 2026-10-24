@@ -43,6 +43,7 @@ function cultoGravar(){
 }
 
 function abrirCulto(){
+  if(typeof lvPdfCarregarFonte === 'function') lvPdfCarregarFonte();
   cultoData = cultoData || cultoProximaData();
   cultoAba = 'roteiro';
   cuPartesEntrar = true;

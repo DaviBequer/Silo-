@@ -186,6 +186,7 @@ function abrirLouvorDetalhe(id){
   louvorAtualId = id;
   const l = getLouvorAtual();
   if(!l) return;
+  lvPdfCarregarFonte();   // fonte do PDF já pronta quando tocar em PDF, Drive ou WhatsApp
   if(typeof lvAtualizarBtnDrive === 'function') setTimeout(lvAtualizarBtnDrive, 0);
   if(typeof lvAtualizarBtnComparar === 'function') lvAtualizarBtnComparar(l);
   ensureLouvorConfig(l);
@@ -651,17 +652,25 @@ function lvTransposeChordLine(line, delta, tom, tomAntes){
 /* Slides do tamanho certo: numa parte com mais de LV_SLIDE_MAX linhas de letra, entra "-" (próximo slide)
    dividindo por igual (6 → 3+3, 9 → 3+3+3). Os "-", "--" e "---" que já existem continuam e contam como divisão.
    Usado ao importar e ao organizar. */
-const LV_SLIDE_MAX = 4;
+const LV_SLIDE_MAX = 4, LV_SLIDE_CURTA = 28;
+/* regra do Davi: até 4 linhas = 1 slide; 5 linhas curtas (até LV_SLIDE_CURTA letras cada) = 1 slide, 5 compridas = 3 + 2;
+   6 ou mais = divide por igual (6 → 3+3, 7 → 4+3, 8 → 4+4, 9 → 3+3+3). Devolve quantas linhas vão em cada slide */
+function lvDivisaoSlides(linhas){
+  const n = linhas.length;
+  if(n <= LV_SLIDE_MAX) return [n];
+  if(n === 5) return linhas.every(t=>String(t).trim().length <= LV_SLIDE_CURTA) ? [5] : [3, 2];
+  const k = Math.ceil(n / LV_SLIDE_MAX), base = Math.floor(n / k), resto = n % k;
+  return Array.from({ length:k }, (_, i)=>base + (i < resto ? 1 : 0));
+}
 function lvQuebrarSlides(texto){
   const linhas = String(texto||'').split('\n'), out = [];
   let seg = [];
   const fecha = ()=>{
     const letra = seg.map((l, i)=>({ l, i })).filter(x=>x.l.trim() && !isChordLine(x.l.trim()));
-    const n = letra.length;
-    if(n > LV_SLIDE_MAX){
-      const por = Math.ceil(n / Math.ceil(n / LV_SLIDE_MAX));
+    const tam = lvDivisaoSlides(letra.map(x=>x.l));
+    if(tam.length > 1){
       const cortes = new Set();
-      for(let k = por; k < n; k += por){
+      for(let k = tam[0], s = 1; s < tam.length; k += tam[s], s++){
         let pos = letra[k].i;
         if(pos > 0 && seg[pos-1].trim() && isChordLine(seg[pos-1].trim())) pos--;   // o acorde vai junto com a letra
         cortes.add(pos);
@@ -784,7 +793,14 @@ function lvParseContent(conteudo){
     originais.push(s);
     expandidos.push(s);
   });
-  return { items, slides: expandidos.filter(s=>s.lines.length>0) };
+  /* parte grande sem "-" (escrita à mão ou importada antes): divide na hora pela mesma regra (lvDivisaoSlides) */
+  const prontos = expandidos.filter(s=>s.lines.length>0).flatMap(s=>{
+    const tam = lvDivisaoSlides(s.lines);
+    if(tam.length === 1) return [s];
+    let ini = 0;
+    return tam.map(t=>{ const p = { ...s, lines: s.lines.slice(ini, ini + t) }; ini += t; return p; });
+  });
+  return { items, slides: prontos };
 }
 
 /* ---------- PDF ---------- */
@@ -1039,8 +1055,23 @@ document.addEventListener('keydown', e=>{
 /* a folha se ajusta à largura sempre que o espaço muda (abrir a música, girar o celular, trocar de modo) */
 if(window.ResizeObserver){ const _w = document.getElementById('lvPdfWrap'); let _larg = 0; if(_w) new ResizeObserver(()=>{ if(_w.clientWidth && _w.clientWidth !== _larg){ _larg = _w.clientWidth; lvAjustarZoomFolha(); } }).observe(_w); }   // só quando a largura muda
 window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelEdicao')?.classList.contains('active')) lvAjustarZoomFolha(); });
-function exportarLouvorPdf(){
+/* fonte da letra no PDF (fonts/Inconsolata, licença OFL): carregada uma vez (ao abrir uma música ou o Culto) e guardada em base64 */
+let lvPdfFonte = null, lvPdfFontePedido = null;
+function lvPdfCarregarFonte(){
+  if(lvPdfFonte) return Promise.resolve(lvPdfFonte);
+  if(lvPdfFontePedido) return lvPdfFontePedido;
+  const b64 = async f=>{
+    const u = new Uint8Array(await (await fetch('fonts/' + f)).arrayBuffer());
+    let s = ''; for(let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+    return btoa(s);
+  };
+  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf')])
+    .then(([r, b])=>(lvPdfFonte = { r, b })).catch(()=>{ lvPdfFontePedido = null; return null; });
+  return lvPdfFontePedido;
+}
+async function exportarLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;
+  await lvPdfCarregarFonte();
   const r = lvMontarPdf(l);
   if(r) r.doc.save(r.nome);
 }
@@ -1062,7 +1093,7 @@ function lvMontarPdf(l){
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const marginX = l.pdfMargem;
-  const orange = [219,139,24];
+  const orange = [240,122,20];
   const delta = l.transpose || 0;
   const tomAtual = lvTomAtual(l);
 
@@ -1093,77 +1124,85 @@ function lvMontarPdf(l){
   doc.setLineWidth(1);
   doc.line(marginX, 70, pageW-marginX, 70);
 
+  /* letra e acordes em Inconsolata (como o modelo do Davi); sem a fonte carregada, Courier */
+  let mono = 'courier';
+  if(lvPdfFonte){
+    try{
+      doc.addFileToVFS('Inconsolata-Regular.ttf', lvPdfFonte.r); doc.addFont('Inconsolata-Regular.ttf', 'Inconsolata', 'normal');
+      doc.addFileToVFS('Inconsolata-Bold.ttf', lvPdfFonte.b); doc.addFont('Inconsolata-Bold.ttf', 'Inconsolata', 'bold');
+      mono = 'Inconsolata';
+    }catch(e){ mono = 'courier'; }
+  }
   const { items } = lvParseContent(l.conteudo);
   const cols = lvColunasEfetivas(l);
   const colWidth = cols===2 ? (pageW - marginX*2 - 20)/2 : (pageW - marginX*2);
   const colX = [marginX, marginX + colWidth + 20];
   const startY = 96;
-  let colIdx = 0, y = startY;
-  const fontSize = l.pdfTamanhoTexto;
-  const lineH = fontSize * l.pdfAlturaLinha;
-  doc.setFont('courier','normal');
-  doc.setFontSize(fontSize);
-  if(doc.setCharSpace) doc.setCharSpace(l.pdfEspacamento);
 
-  function nextColumnOrPage(){
-    if(cols===2 && colIdx===0){ colIdx = 1; y = startY; }
-    else { doc.addPage(); colIdx = 0; y = startY; }
-  }
-  function ensureSpace(need){
-    if(y + need > pageH - marginX) nextColumnOrPage();
-  }
-
-  items.forEach(it=>{
-    if(it.type==='colbreak'){ nextColumnOrPage(); return; }
-    if(it.type==='divider'){
-      ensureSpace(lineH);
-      doc.setDrawColor(210,210,214);
-      doc.line(colX[colIdx], y-4, colX[colIdx]+colWidth, y-4);
-      y += lineH*0.7;
-      return;
-    }
-    if(it.type==='blank'){ ensureSpace(lineH*0.7); y += lineH*0.7; return; }
-    if(it.type==='section'){
-      ensureSpace(lineH*1.6);
-      if(doc.setCharSpace) doc.setCharSpace(0);
-      doc.setFillColor(118,124,133);
-      const rv = lvVezesDoRotulo(it.label), label = rv.nome.toUpperCase() + (rv.vezes > 1 ? ' | ' + rv.vezes + 'x' : '');
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(fontSize-2);
-      const textW = doc.getTextWidth(label);
-      const pillW = textW + 20, pillH = fontSize+6, pillX = colX[colIdx]+colWidth/2-pillW/2;
-      doc.roundedRect(pillX, y-fontSize+2, pillW, pillH, pillH/2, pillH/2, 'F');
-      doc.setTextColor(255,255,255);
-      doc.text(label, colX[colIdx]+colWidth/2, y+2, { align:'center' });
-      y += lineH*1.3;
-      doc.setFont('courier','normal');
-      doc.setFontSize(fontSize);
-      if(doc.setCharSpace) doc.setCharSpace(l.pdfEspacamento);
-      return;
-    }
-    if(it.type==='pair'){
-      const chordLine = lvTransposeChordLine(it.chordLine||'', delta);
-      const lyricLine = it.lyricLine || ' ';
-      ensureSpace(lineH*2);
-      doc.setFontSize(fontSize);
-      const chordW = chordLine.trim() ? doc.getTextWidth(chordLine) : 0;
-      const lyricW = doc.getTextWidth(lyricLine);
-      const maiorLargura = Math.max(chordW, lyricW);
-      const escala = maiorLargura > colWidth ? Math.max(0.5, colWidth / maiorLargura) : 1;
-      const tamanhoDesenho = fontSize * escala;
-      if(chordLine.trim()){
-        doc.setFontSize(tamanhoDesenho);
-        doc.setTextColor(...orange);
-        doc.text(chordLine, colX[colIdx], y);
-        y += lineH*0.85;
+  /* desenha tudo com a letra em "fontSize"; desenhar=false só conta quantas páginas precisaria */
+  function layout(fontSize, desenhar){
+    let colIdx = 0, y = startY, paginas = 1;
+    const lineH = fontSize * l.pdfAlturaLinha;
+    const nextColumnOrPage = ()=>{
+      if(cols===2 && colIdx===0){ colIdx = 1; y = startY; }
+      else { paginas++; if(desenhar) doc.addPage(); colIdx = 0; y = startY; }
+    };
+    const ensureSpace = need=>{ if(y + need > pageH - marginX) nextColumnOrPage(); };
+    items.forEach(it=>{
+      if(it.type==='colbreak'){ nextColumnOrPage(); return; }
+      if(it.type==='divider'){
+        ensureSpace(lineH*0.7);
+        if(desenhar){ doc.setDrawColor(224,224,228); doc.setLineWidth(0.8); doc.line(colX[colIdx] - 6, y - lineH*0.35, colX[colIdx] + colWidth + 6, y - lineH*0.35); }
+        y += lineH*0.5;
+        return;
       }
-      doc.setFontSize(tamanhoDesenho);
-      doc.setTextColor(40,40,40);
-      doc.text(lyricLine, colX[colIdx], y);
-      doc.setFontSize(fontSize);
-      y += lineH;
-    }
-  });
+      if(it.type==='blank'){ ensureSpace(lineH*0.6); y += lineH*0.6; return; }
+      if(it.type==='section'){
+        ensureSpace(lineH*3.2);   // a etiqueta não fica sozinha no fim da coluna (cabe ela + a 1ª linha com acordes)
+        if(desenhar){
+          /* etiqueta pequena e cinza, letras espaçadas (como no modelo) */
+          const rv = lvVezesDoRotulo(it.label), label = rv.nome.toUpperCase() + (rv.vezes > 1 ? ' | ' + rv.vezes + 'X' : '');
+          doc.setFont('helvetica','bold'); doc.setFontSize(6.6);
+          if(doc.setCharSpace) doc.setCharSpace(0.9);
+          const textW = doc.getTextWidth(label) + label.length * 0.9;
+          const pillW = textW + 22, pillH = 12.5, cx = colX[colIdx] + colWidth/2;
+          doc.setFillColor(116,118,128);
+          doc.roundedRect(cx - pillW/2, y - 9.5, pillW, pillH, 4, 4, 'F');
+          doc.setTextColor(255,255,255);
+          doc.text(label, cx - textW/2, y - 0.6);
+          if(doc.setCharSpace) doc.setCharSpace(0);
+        }
+        y += lineH*1.15;
+        return;
+      }
+      if(it.type==='pair'){
+        const chordLine = lvTransposeChordLine(it.chordLine||'', delta);
+        const lyricLine = it.lyricLine || ' ';
+        ensureSpace(lineH*(chordLine.trim() ? 1.85 : 1));
+        doc.setFont(mono,'normal'); doc.setFontSize(fontSize);
+        if(doc.setCharSpace) doc.setCharSpace(l.pdfEspacamento);
+        const largura = Math.max(chordLine.trim() ? doc.getTextWidth(chordLine) : 0, doc.getTextWidth(lyricLine));
+        const tamanho = largura > colWidth ? fontSize * Math.max(0.5, colWidth / largura) : fontSize;   // linha comprida encolhe só ela
+        if(chordLine.trim()){
+          if(desenhar){ doc.setFont(mono,'bold'); doc.setFontSize(tamanho); doc.setTextColor(...orange); doc.text(chordLine, colX[colIdx], y); }
+          y += lineH*0.85;
+        }
+        if(desenhar){ doc.setFont(mono,'normal'); doc.setFontSize(tamanho); doc.setTextColor(32,32,36); doc.text(lyricLine, colX[colIdx], y); }
+        y += lineH;
+        if(doc.setCharSpace) doc.setCharSpace(0);
+      }
+    });
+    return paginas;
+  }
+  /* cabe numa folha só? encolhe a letra até 78% (mín. 9pt), como a folha da tela; se nem assim couber, fica no tamanho normal */
+  let fs = l.pdfTamanhoTexto;
+  if(layout(fs, false) > 1){
+    const minimo = Math.max(9, l.pdfTamanhoTexto * 0.78);
+    let f = fs;
+    while(f - 0.5 >= minimo && layout(f, false) > 1) f -= 0.5;
+    if(layout(f, false) === 1) fs = f;
+  }
+  layout(fs, true);
 
   const tomRaiz = lvTomAtual(l);
   const nomePartes = [l.artista, l.titulo||'Sem título', tomRaiz].filter(Boolean);

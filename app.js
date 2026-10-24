@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.4', itens: [
+    'PDF no jeito do modelo: letra em Inconsolata, acordes laranja em negrito, etiquetas pequenas e cinza; encolhe para caber numa folha',
+    'Slides: até 4 linhas; 5 curtas ficam juntas (compridas: 3+2); 6 ou mais dividem por igual; vale também para as músicas antigas',
+    'Música: saíram Importar PDF, Atualizar pelo Drive e Imprimir (fica só o Baixar PDF)'
+  ] },
   { versao: 'v10.3', itens: [
     'Cifra Club: acordes voltaram (o site passou a pôr um espaço invisível nas linhas) e as partes mantêm o nome da cifra (Pré-Refrão, Segunda Parte...)',
     'Música: abas Música (editor de texto inteiro, como Word), Visualizar (a folha do PDF) e Slides; sem edição linha por linha',

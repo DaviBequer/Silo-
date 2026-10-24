@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v103';
-const APP_VERSION = '10.3';
+const CACHE_NAME = 'siloe-cache-v104';
+const APP_VERSION = '10.4';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -25,7 +25,9 @@ const ARQUIVOS = [
   './icon-192.png',
   './icon-512.png',
   './splash-cordeiro.png',
-  './logo-cifraclub.png'
+  './logo-cifraclub.png',
+  './fonts/Inconsolata-Regular.ttf',
+  './fonts/Inconsolata-Bold.ttf'
 ];
 /* bibliotecas de fora que o app precisa para abrir (banco e PDF do ponto) */
 const EXTERNOS = [

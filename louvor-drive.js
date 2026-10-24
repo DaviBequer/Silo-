@@ -162,6 +162,7 @@ function driveBotaoWhats(){
    "Artista - Título - G.pdf" e "Artista - Título - A.pdf" são a mesma música → o novo substitui o antigo */
 async function driveArquivosDaMusica(l){
   const out = [];
+  if(typeof lvPdfCarregarFonte === 'function') await lvPdfCarregarFonte();
   const pdf = lvMontarPdf(l);
   if(pdf) out.push({ l, tipo:'pdf', nome: pdf.nome, blob: pdf.doc.output('blob'), mime:'application/pdf' });
   const sl = await lvMontarSlides(l);
@@ -274,6 +275,7 @@ function lvAtualizarBtnDrive(){
 /* manda o PDF desta música pelo WhatsApp (menu Compartilhar do celular) */
 async function lvMandarWhatsMusica(){
   const l = getLouvorAtual(); if(!l) return;
+  if(!lvPdfFonte) await lvPdfCarregarFonte();
   const pdf = lvMontarPdf(l); if(!pdf) return;
   const file = new File([pdf.doc.output('blob')], pdf.nome, { type:'application/pdf' });
   if(navigator.canShare && navigator.canShare({ files:[file] })){
