@@ -334,7 +334,8 @@ function cultoColarParse(texto){
     const mt = /\(\s*([^()]*?)\s*\)\s*$/.exec(s);
     if(mt && cultoColarTom(mt[1])){ tom = cultoColarTom(mt[1]); s = s.slice(0, mt.index).trim(); }
     else { const md = /\s[-–]\s*([A-G](?:#|b)?)(m?)\s*$/.exec(s); if(md){ tom = { raiz: md[1], menor: !!md[2] }; s = s.slice(0, md.index).trim(); } }
-    const medley = /^medley\b/i.test(s);
+    const medley = /^medley\b/i.test(s) || /\s\+\s/.test(s);   // "Medley- A + B" (ou só "A + B"): as músicas viram um medley
+    const grupo = medley ? 'md' + itens.length : '';
     s = s.replace(/^medley\s*[-–:]?\s*/i, '');
     const nomeParte = parte || cabecalho || 'Hinos';
     s.split(/\s+\+\s+/).forEach(peca=>{
@@ -345,7 +346,7 @@ function cultoColarParse(texto){
       titulo = titulo.replace(/\s+/g, ' ').trim();
       if(!titulo) return;
       const harpaNum = /harpa/.test(vozSemAcento(nomeParte)) && /^\d{1,3}$/.test(titulo) ? titulo : '';
-      itens.push({ parte: nomeParte, titulo, artista: artista.trim(), tom, medley, harpaNum, status:'', id:'' });
+      itens.push({ parte: nomeParte, titulo, artista: artista.trim(), tom, medley, grupo, harpaNum, status:'', id:'' });
     });
   });
   return itens;
@@ -388,35 +389,36 @@ async function cultoColarDaAreaDeTransferencia(){
     document.getElementById('cuColarTexto').focus();
   }
 }
-/* pergunta dentro da janela (cantor, qual das opções): devolve uma promessa com a resposta */
+/* pergunta dentro da janela (qual das opções, cantor): devolve uma promessa com a resposta */
 function cultoColarPerguntar(html, montar){
   const el = document.getElementById('cuColarPergunta');
   return new Promise(ok=>{
     el.innerHTML = html;
     el.style.display = '';
+    el.classList.remove('entra'); void el.offsetWidth; el.classList.add('entra');
     el.scrollIntoView({ block:'nearest', behavior:'smooth' });
     montar(v=>{ el.style.display = 'none'; el.innerHTML = ''; ok(v); }, el);
   });
 }
-function cultoColarPerguntarCantor(it){
-  return cultoColarPerguntar(`
-    <div class="cu-perg-tit">Qual o cantor de <b>${lvEsc(it.titulo)}</b>?</div>
-    <div class="cu-perg-desc">Tem música com o mesmo nome de cantores diferentes (e letras diferentes).</div>
-    <form class="voz-escrever"><input type="text" class="voz-campo" placeholder="Ex.: Aline Barros" autocomplete="off" enterkeyhint="search"><button type="submit" class="btn">Buscar</button></form>
-    <button type="button" class="cmd-link cu-perg-pular">Não sei: me mostre as opções</button>`, (fim, el)=>{
-    const inp = el.querySelector('input');
-    setTimeout(()=>inp.focus(), 60);
-    el.querySelector('form').onsubmit = e=>{ e.preventDefault(); fim(inp.value.trim()); };
-    el.querySelector('.cu-perg-pular').onclick = ()=>fim('');
-  });
-}
-/* opções: [{ nome, sub }] → índice escolhido, ou -1 (nenhuma) */
-function cultoColarPerguntarOpcao(it, titulo, opcoes, nenhuma){
+/* opções primeiro; se nenhuma for a certa, "Digitar o cantor" (busca de novo) ou "criar só com o nome".
+   → { i } escolheu a opção i · { cantor } quer buscar com esse cantor · { nenhuma:true } */
+function cultoColarPerguntarOpcao(titulo, opcoes, nenhuma, comCantor){
   return cultoColarPerguntar(`
     <div class="cu-perg-tit">${titulo}</div>
-    <div class="cu-colar-opcoes">${opcoes.map((o, i)=>`<button type="button" class="cu-escolher-item" data-i="${i}"><span class="cu-escolher-nome">${lvEsc(o.nome)}<small>${lvEsc(o.sub || '')}</small></span></button>`).join('')}</div>
-    <button type="button" class="cmd-link cu-perg-pular" data-i="-1">${lvEsc(nenhuma)}</button>`, (fim, el)=>{
-    el.querySelectorAll('[data-i]').forEach(b=>b.onclick = ()=>fim(Number(b.dataset.i)));
+    ${opcoes.length ? `<div class="cu-colar-opcoes">${opcoes.map((o, i)=>`<button type="button" class="cu-escolher-item cu-opcao" style="--i:${i}" data-i="${i}"><span class="cu-escolher-nome">${lvEsc(o.nome)}<small>${lvEsc(o.sub || '')}</small></span><span class="cu-opcao-seta">${ICO(ICO_D.baixar, 17)}</span></button>`).join('')}</div>` : '<div class="cu-perg-desc">Não achei nenhuma opção com esse nome.</div>'}
+    ${comCantor ? `<form class="voz-escrever cu-perg-cantor"${opcoes.length ? ' hidden' : ''}><input type="text" class="voz-campo" placeholder="Nome do cantor (ex.: Aline Barros)" autocomplete="off" enterkeyhint="search"><button type="submit" class="btn">Buscar</button></form>
+    ${opcoes.length ? '<button type="button" class="cmd-link cu-perg-digitar">Não é nenhuma: digitar o cantor</button>' : ''}` : ''}
+    <button type="button" class="cmd-link cu-perg-pular">${lvEsc(nenhuma)}</button>`, (fim, el)=>{
+    el.querySelectorAll('[data-i]').forEach(b=>b.onclick = ()=>fim({ i: Number(b.dataset.i) }));
+    el.querySelector('.cu-perg-pular').onclick = ()=>fim({ nenhuma: true });
+    const form = el.querySelector('.cu-perg-cantor');
+    if(form){
+      const inp = form.querySelector('input');
+      form.onsubmit = e=>{ e.preventDefault(); if(inp.value.trim()) fim({ cantor: inp.value.trim() }); };
+      const dig = el.querySelector('.cu-perg-digitar');
+      if(dig) dig.onclick = ()=>{ form.hidden = false; dig.remove(); inp.focus(); };
+      else setTimeout(()=>inp.focus(), 60);
+    }
   });
 }
 function cultoColarLer(){
@@ -425,18 +427,29 @@ function cultoColarLer(){
   const existentes = cultoAtual().partes;
   cuColar.forEach(it=>{ const p = existentes.find(x=>cuNorm(x.nome) === cuNorm(it.parte)); it.parte = p ? p.nome : it.parte.replace(/ŕ/g, 'r'); });
   cuColar.forEach(it=>{ const l = cultoColarNoApp(it); it.id = l ? l.id : ''; it.status = l ? 'app' : ''; });
-  cultoColarRender();
+  cultoColarRender(true);
 }
-const CU_COLAR_ST = { app:'já está no app', drive:'✓ do Drive (só o arquivo)', cifra:'✓ criada pelo Cifra Club', vazia:'criada só com o nome', pulada:'não entrou' };
-function cultoColarRender(){
+const CU_COLAR_ST = { app:'já está no app', drive:'do Drive (só o arquivo)', cifra:'criada pelo Cifra Club', vazia:'criada só com o nome', pulada:'não entrou' };
+const CU_COLAR_ICO = {
+  ok:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  erro:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 7v6"/><path d="M12 17h.01"/></svg>'
+};
+function cultoColarRender(entrar){
   const partes = [...new Set([...cultoAtual().partes.map(p=>p.nome).filter(Boolean), ...cuColar.map(it=>it.parte)])];
-  document.getElementById('cuColarLista').innerHTML = cuColar.length ? cuColar.map((it, i)=>`
-    <div class="cu-colar-item${it.status === 'buscando' ? ' ativo' : ''}">
-      <select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${partes.map(p=>`<option${p === it.parte ? ' selected' : ''}>${lvEsc(p)}</option>`).join('')}</select>
-      <div class="cu-colar-musica"><b>${it.harpaNum ? 'Harpa ' + lvEsc(it.harpaNum) : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b><small>${lvEsc([it.artista, it.medley ? 'medley' : ''].filter(Boolean).join(' · '))}</small></div>
+  const feito = s=>['app','drive','cifra'].includes(s);
+  let grupoVisto = {};
+  document.getElementById('cuColarLista').innerHTML = cuColar.length ? cuColar.map((it, i)=>{
+    const primeiroDoMedley = it.grupo && !grupoVisto[it.grupo]; if(it.grupo) grupoVisto[it.grupo] = true;
+    const n = it.grupo ? cuColar.filter(x=>x.grupo === it.grupo).length : 0;
+    return `${primeiroDoMedley ? `<div class="cu-colar-medley${entrar ? ' entra' : ''}" style="--i:${i}"><div><span>Medley</span><small>${n} músicas · vira uma música só no roteiro</small></div><select class="cu-colar-parte" aria-label="Parte do medley" onchange="cuColar.filter(x=>x.grupo==='${it.grupo}').forEach(x=>x.parte=this.value)">${partes.map(p=>`<option${p === it.parte ? ' selected' : ''}>${lvEsc(p)}</option>`).join('')}</select></div>` : ''}
+    <div class="cu-colar-item${it.status === 'buscando' ? ' ativo' : ''}${it.grupo ? ' no-medley' : ''}${entrar ? ' entra' : ''}" style="--i:${i}">
+      <span class="cu-colar-ico ${feito(it.status) ? 'ok' : it.status === 'erro' || it.status === 'vazia' || it.status === 'pulada' ? 'erro' : it.status === 'buscando' ? 'gira' : ''}">${feito(it.status) ? CU_COLAR_ICO.ok : it.status === 'erro' || it.status === 'vazia' || it.status === 'pulada' ? CU_COLAR_ICO.erro : ''}</span>
+      <div class="cu-colar-musica"><b>${it.harpaNum ? 'Harpa ' + lvEsc(it.harpaNum) : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
+      ${it.grupo ? '' : `<select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${partes.map(p=>`<option${p === it.parte ? ' selected' : ''}>${lvEsc(p)}</option>`).join('')}</select>`}
       <span class="cu-colar-st ${it.status}">${lvEsc(it.status === 'erro' ? it.erro : it.status === 'buscando' ? (it.passo || 'buscando…') : (CU_COLAR_ST[it.status] || 'vai buscar no Drive ou no Cifra Club'))}</span>
       ${it.status === 'buscando' ? '<div class="cu-colar-barra"><i></i></div>' : ''}
-    </div>`).join('') : '<div class="gm-vazio">Toque em "Colar o que copiei" (ou cole no campo): cada linha vira uma música no roteiro.</div>';
+    </div>`;
+  }).join('') : '<div class="gm-vazio">Toque em "Colar o que copiei" (ou cole no campo): cada linha vira uma música no roteiro.</div>';
   document.getElementById('cuColarAcoes').style.display = cuColar.length ? '' : 'none';
 }
 /* andamento de uma música (aparece na linha dela com a barrinha correndo) */
@@ -457,22 +470,29 @@ async function cultoColarMontar(){
     it.status = 'buscando'; cultoColarRender();
     document.querySelectorAll('.cu-colar-item')[cuColar.indexOf(it)]?.scrollIntoView({ block:'nearest', behavior:'smooth' });
     try{
-      /* sem cantor: pergunta antes de buscar (mesmo nome, cantor diferente = letra diferente) */
-      if(!it.artista && !it.harpaNum){
-        cultoColarPasso(it, 'esperando você dizer o cantor…');
-        it.artista = await cultoColarPerguntarCantor(it);
-      }
       const l = (pdfs && await cultoColarDoDrive(it, pdfs)) || await cultoColarDoCifraClub(it);
       it.id = l ? l.id : '';
       if(!l) it.status = 'pulada';
     }catch(e){ it.status = 'erro'; it.erro = 'erro: ' + ((e && e.message) || e); }
     cultoColarRender();
   }
-  /* põe no roteiro (cria a parte se não existir, antes do "Final") e acerta o tom pedido */
-  const c = cultoAtual();
+  /* tom pedido em cada música */
+  const L = id=>(state.louvores || []).find(x=>x.id === id);
   cuColar.forEach(it=>{
-    const l = it.id && (state.louvores || []).find(x=>x.id === it.id); if(!l) return;
-    if(it.tom){ const ts = lviTomSiloe(it.tom.raiz, it.tom.menor); if(ts.tomOriginal && (ts.tomOriginal !== l.tomOriginal || ts.tomModoMenor !== !!l.tomModoMenor)) lvAplicarTom(l, ts.tomOriginal, ts.tomModoMenor); }
+    const l = it.id && L(it.id); if(!l || !it.tom) return;
+    const ts = lviTomSiloe(it.tom.raiz, it.tom.menor);
+    if(ts.tomOriginal && (ts.tomOriginal !== l.tomOriginal || ts.tomModoMenor !== !!l.tomModoMenor)) lvAplicarTom(l, ts.tomOriginal, ts.tomModoMenor);
+  });
+  /* põe no roteiro (cria a parte se não existir, antes do "Final"); medley entra como UMA música (a do medley) */
+  const c = cultoAtual(), feitos = {};
+  cuColar.forEach(it=>{
+    let id = it.id;
+    if(it.grupo){
+      if(feitos[it.grupo] !== undefined) return;
+      const juntas = cuColar.filter(x=>x.grupo === it.grupo && x.id && L(x.id));
+      id = feitos[it.grupo] = juntas.length ? cultoColarMedley(juntas) : '';
+    }
+    const l = id && L(id); if(!l) return;
     let p = c.partes.find(x=>cuNorm(x.nome) === cuNorm(it.parte));
     if(!p){
       p = { id: cultoId('cp'), nome: it.parte, quem:'', musicas:[] };
@@ -483,7 +503,26 @@ async function cultoColarMontar(){
   });
   cultoGravar(); renderCulto(); renderLouvor();
   btn.disabled = false; btn.textContent = 'Pronto'; btn.onclick = ()=>closeModal('modalCultoColar');
-  showToast(`✓ Roteiro montado · ${cuColar.filter(it=>it.id).length} músicas`);
+  const n = c.partes.reduce((s, p)=>s + p.musicas.length, 0);
+  showToast(`✓ Roteiro montado · ${n} ${n === 1 ? 'música' : 'músicas'}`);
+}
+/* medley: as músicas continuam sozinhas no app, e nasce (ou é reaproveitado) um louvor de medley com todas as partes delas.
+   É ele que entra no roteiro, então o Drive recebe um arquivo só. */
+function cultoColarMedley(juntas){
+  const L = id=>(state.louvores || []).find(x=>x.id === id);
+  const musicas = juntas.map(it=>{ const l = L(it.id); return { id: l.id, tom: l.tomOriginal || '', menor: !!l.tomModoMenor }; });
+  const chave = musicas.map(m=>m.id).join('|');
+  const ja = (state.louvores || []).find(l=>l.medley && l.medley.musicas.map(m=>m.id).join('|') === chave);
+  const seq = [];
+  musicas.forEach(m=>{ const partes = lmPartes(L(m.id)); (partes.length ? partes : [{ nome:'Música inteira' }]).forEach(p=>seq.push({ id: m.id, parte: p.nome })); });
+  const medley = { musicas, seq };
+  const titulos = musicas.map(m=>L(m.id).titulo).filter(Boolean);
+  const l = ja || lvCriarDireto({ titulo: 'Medley ' + titulos.join(' + '), artista: titulos.join(' · '), categoria: L(musicas[0].id).categoria || 'Louvor' }, false);
+  Object.assign(l, { medley, tomOriginal: musicas[0].tom, tomModoMenor: musicas[0].menor, transpose: 0 });
+  delete l.medleyEditado;
+  l.conteudo = lmGerarTexto(medley);
+  persist();
+  return l.id;
 }
 /* Drive: PDF com o nome da música (Harpa: o número num PDF da Harpa) → música só com o arquivo, sem tirar o texto.
    Mais de um PDF possível (cantores diferentes) → pergunta qual. */
@@ -498,10 +537,10 @@ async function cultoColarDoDrive(it, pdfs){
   let f = cands[0];
   if(cands.length > 1){
     cultoColarPasso(it, 'esperando você escolher o arquivo…');
-    const i = await cultoColarPerguntarOpcao(it, `Achei ${cands.length} PDFs de <b>${lvEsc(it.harpaNum ? 'Harpa ' + it.harpaNum : it.titulo)}</b> no Drive. Qual é?`,
-      cands.slice(0, 8).map(f=>({ nome: f.name.replace(/\.pdf$/i, ''), sub: f.pasta })), 'Nenhum: buscar no Cifra Club');
-    if(i < 0) return null;
-    f = cands[i];
+    const r = await cultoColarPerguntarOpcao(`Achei ${cands.length} PDFs de <b>${lvEsc(it.harpaNum ? 'Harpa ' + it.harpaNum : it.titulo)}</b> no Drive. Qual é?`,
+      cands.slice(0, 8).map(f=>({ nome: f.name.replace(/\.pdf$/i, ''), sub: f.pasta })), 'Nenhum: buscar no Cifra Club', false);
+    if(r.i === undefined) return null;
+    f = cands[r.i];
   }
   cultoColarPasso(it, 'Baixando o PDF do Drive…');
   const fi = lviNomeDoArquivo(f.name) || {};
@@ -518,22 +557,27 @@ async function cultoColarDoDrive(it, pdfs){
   it.status = 'drive';
   return l;
 }
-/* Cifra Club: busca pelo nome + cantor. Só pega sozinho quando o nome E o cantor batem;
-   senão mostra as opções para você escolher (ou criar só com o nome). */
+/* Cifra Club: pega sozinho só quando o nome E o cantor batem; senão mostra as opções primeiro.
+   Nenhuma é a certa → digitar o cantor e buscar de novo (ou criar só com o nome). */
 async function cultoColarDoCifraClub(it){
-  cultoColarPasso(it, 'Buscando no Cifra Club…');
-  const busca = it.harpaNum ? 'harpa cristã ' + it.harpaNum : (it.titulo + ' ' + it.artista).trim();
-  const lista = (await ccChamar({ busca })).musicas || [];
-  const t = cuNorm(it.titulo), a = cuNorm(it.artista);
-  const bate = m=>cuNorm(m.titulo) === t && (!a || cuNorm(m.artista).includes(a) || a.includes(cuNorm(m.artista)));
-  let m = it.harpaNum
-    ? lista.find(m=>/harpa-crista/i.test(m.url) && new RegExp('(^|\\D)' + it.harpaNum + '(\\D|$)').test(m.titulo + ' ' + m.artista + ' ' + m.url))
-    : (a ? lista.find(bate) : null);
-  if(!m && lista.length){
+  const t = cuNorm(it.titulo);
+  let m = null;
+  for(let volta = 0; volta < 4 && !m; volta++){
+    cultoColarPasso(it, 'Buscando no Cifra Club…');
+    const a = cuNorm(it.artista);
+    const busca = it.harpaNum ? 'harpa cristã ' + it.harpaNum : (it.titulo + ' ' + it.artista).trim();
+    const lista = (await ccChamar({ busca })).musicas || [];
+    const bate = m=>cuNorm(m.titulo) === t && (cuNorm(m.artista).includes(a) || a.includes(cuNorm(m.artista)));
+    m = it.harpaNum
+      ? lista.find(m=>/harpa-crista/i.test(m.url) && new RegExp('(^|\\D)' + it.harpaNum + '(\\D|$)').test(m.titulo + ' ' + m.artista + ' ' + m.url))
+      : (a ? lista.find(bate) : null);
+    if(m) break;
     cultoColarPasso(it, 'esperando você escolher…');
-    const i = await cultoColarPerguntarOpcao(it, `Qual destas é <b>${lvEsc(it.harpaNum ? 'Harpa ' + it.harpaNum : it.titulo)}</b>${it.artista ? ' (' + lvEsc(it.artista) + ')' : ''}?`,
-      lista.slice(0, 8).map(m=>({ nome: m.titulo, sub: m.artista })), 'Nenhuma: criar só com o nome');
-    m = i >= 0 ? lista[i] : null;
+    const r = await cultoColarPerguntarOpcao(`Qual destas é <b>${lvEsc(it.harpaNum ? 'Harpa ' + it.harpaNum : it.titulo)}</b>${it.artista ? ' (' + lvEsc(it.artista) + ')' : ''}?`,
+      lista.slice(0, 8).map(m=>({ nome: m.titulo, sub: m.artista })), 'Nenhuma: criar só com o nome', !it.harpaNum);
+    if(r.i !== undefined){ m = lista[r.i]; break; }
+    if(r.cantor){ it.artista = r.cantor; cultoColarRender(); continue; }
+    break;   // nenhuma
   }
   if(!m){
     const l = lvCriarDireto({ titulo: it.titulo, artista: it.harpaNum ? 'Harpa Cristã - ' + it.harpaNum : it.artista, categoria: it.harpaNum ? 'Harpa Cristã' : 'Louvor' }, false);

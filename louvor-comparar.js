@@ -69,6 +69,21 @@ function lvCompararRenderApp(l){
   el.innerHTML = `<div class="lvcmp-tit"><b>No app</b>${n ? `<small>${n} linha${n > 1 ? 's' : ''} em amarelo para conferir</small><button type="button" class="lvi-rel-ok" onclick="lvJaConferi();lvCompararRenderApp(getLouvorAtual())">Já conferi</button>` : '<small>tudo conferido</small>'}</div>
     <div class="lvcmp-texto">${linhas}</div>`;
 }
+/* música só com o PDF do Drive → lê o PDF e monta no padrão do app (como importar); daí em diante abre primeiro o app */
+async function lvConverterDoDrive(){
+  const l = getLouvorAtual(); if(!l || !l.origem) return;
+  let guardado = await lvOriginalLer(l.id), blob = guardado && guardado.blob;
+  if(!blob && l.origem.id && typeof driveToken !== 'undefined' && driveToken){
+    try{ const res = await fetch(`https://www.googleapis.com/drive/v3/files/${l.origem.id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } }); if(res.ok) blob = await res.blob(); }catch(e){}
+  }
+  if(!blob){ showToast('O PDF não está neste aparelho: abra o Drive (Puxar do Drive) e tente de novo'); return; }
+  const file = blob instanceof File ? blob : new File([blob], l.origem.nome || 'original.pdf', { type:'application/pdf' });
+  lvCompararFechar();
+  const origem = Object.assign({}, l.origem); delete origem.soArquivo;
+  await lvImportarNoAtual({ target:{ files:[file], value:'' }, semConfirmar: true, origem });
+  const lv = getLouvorAtual(); if(lv && lv.origem) delete lv.origem.soArquivo;
+  persist();
+}
 /* o original */
 async function lvCompararRenderOriginal(l){
   const el = document.getElementById('lvcmpOriginal');
@@ -84,7 +99,9 @@ async function lvCompararRenderOriginal(l){
   }
   /* PDF ou foto: deste aparelho; o do Drive pode ser baixado de novo */
   const link = o.link ? `<a href="${lvEsc(o.link)}" target="_blank" rel="noopener">abrir no Drive</a>` : '';
-  el.innerHTML = `<div class="lvcmp-tit"><b>${lvEsc(o.nome || 'Arquivo')}</b>${link}</div><div id="lvcmpPdf" class="lvcmp-pdf"><div class="voz-carregando">Abrindo o original…</div></div>`;
+  /* veio do Drive só com o arquivo (padrão antigo): dá para passar para o padrão do app; o PDF continua aqui para comparar */
+  const converter = o.soArquivo ? `<div class="lvcmp-converter"><div><b>PDF do Drive, como está</b><small>Quer no padrão do app? O app lê o PDF e monta a cifra; este PDF continua aqui para comparar.</small></div><button type="button" class="btn" onclick="lvConverterDoDrive()">Passar para o padrão do app</button></div>` : '';
+  el.innerHTML = `${converter}<div class="lvcmp-tit"><b>${lvEsc(o.nome || 'Arquivo')}</b>${link}</div><div id="lvcmpPdf" class="lvcmp-pdf"><div class="voz-carregando">Abrindo o original…</div></div>`;
   let guardado = await lvOriginalLer(l.id), blob = guardado && guardado.blob;
   if(!blob && o.tipo === 'drive' && o.id && typeof driveToken !== 'undefined' && driveToken){
     try{
