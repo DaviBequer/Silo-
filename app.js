@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.7', itens: [
+    'Drive: música só com o arquivo do Drive não gera PDF novo; o próprio arquivo é movido para a pasta atual (Som de Adoradores)'
+  ] },
   { versao: 'v10.6', itens: [
     'Finanças: botão Atualizar (no lugar de Falar e Pagar) com resumão: última atualização, contas, cartões, bancos e histórico de gastos',
     'Conversa com a IA: fale tudo de uma vez (cartão à vista, parcelado, próxima fatura, Pix por banco, contas, saldos); ela pergunta o que faltar e o app mostra quanto falta para bater a fatura e o saldo',

@@ -198,11 +198,35 @@ async function driveEnviarArquivo(x, base){
   x.l.drive = { ...(x.l.drive || {}), [x.tipo]: (ja && ja.id) || r.id };
   driveLog(`${ja ? (ja.name !== x.nome ? 'Trocado (' + ja.name + ' → ' + x.nome + ')' : 'Atualizado') : 'Enviado'}: ${x.nome}`, 'ok');
 }
+/* música que está só com o arquivo do Drive (colar do WhatsApp/sugestão, não passada para o padrão do app):
+   não gera PDF novo — o próprio arquivo é movido para a pasta atual (Som de Adoradores) */
+function driveSoArquivo(l){ return !!(l && l.origem && l.origem.tipo === 'drive' && l.origem.soArquivo && l.origem.id && !(l.conteudo || '').trim()); }
+function driveChaveSo(l){ return { l, tipo:'pdf', chave: vozSemAcento([l.artista, l.titulo || 'Sem título'].filter(Boolean).join(' - ').replace(/[\/\\:*?"<>|]/g, '').trim()) }; }
+async function driveMoverOriginal(l, base){
+  const id = l.origem.id;
+  let f;
+  try{ f = await driveApi(`files/${id}?fields=id,name,parents,trashed`); }
+  catch(e){ driveLog(`Não achei o arquivo de "${l.titulo}" no Drive (${(e && e.message) || 'erro'})`, 'erro'); return; }
+  if(f.trashed){ driveLog(`O arquivo de "${l.titulo}" está na lixeira do Drive`, 'erro'); return; }
+  /* o arquivo antigo da mesma música que estiver solto na pasta (outro tom, por exemplo) sai, para não ficar repetido */
+  const x = driveChaveSo(l);
+  for(const outro of base.pdfsSoltos.filter(s=>s.id !== id && driveEhDaMusica(s, x))){ await driveLixeira(outro.id); driveLog(`Removido (repetido): ${outro.name}`); }
+  const pais = f.parents || [];
+  if(pais.includes(base.raiz)) driveLog(`Já está na pasta: ${f.name}`, 'ok');
+  else {
+    await driveApi(`files/${id}?addParents=${base.raiz}${pais.length ? '&removeParents=' + pais.join(',') : ''}&fields=id`, { method:'PATCH' });
+    l.origem.pasta = DRIVE_PASTA_RAIZ;
+    driveLog(`Movido para ${DRIVE_PASTA_RAIZ}: ${f.name}`, 'ok');
+  }
+  l.drive = { ...(l.drive || {}), pdf: id };
+}
 async function driveEnviarLouvores(louvores){
-  /* 1. arquivos novos */
-  driveLog(`Gerando ${louvores.length} PDF${louvores.length > 1 ? 's' : ''} e slides…`);
+  /* 1. arquivos novos (as músicas só com o arquivo do Drive não geram nada: o arquivo delas é movido no passo 4) */
+  const soArquivo = louvores.filter(driveSoArquivo), gerar = louvores.filter(l=>!driveSoArquivo(l));
+  if(gerar.length) driveLog(`Gerando ${gerar.length} PDF${gerar.length > 1 ? 's' : ''} e slides…`);
+  if(soArquivo.length) driveLog(`${soArquivo.length} já ${soArquivo.length > 1 ? 'estão' : 'está'} no Drive só com o arquivo: vai ser movido, sem criar outro`);
   const novos = [];
-  for(const l of louvores) novos.push(...await driveArquivosDaMusica(l));
+  for(const l of gerar) novos.push(...await driveArquivosDaMusica(l));
   /* 2. pastas */
   driveLog('Achando as pastas…');
   const base = await drivePastasBase();
@@ -213,6 +237,7 @@ async function driveEnviarLouvores(louvores){
     const destaData = novos.filter(x=>x.tipo === tipo);
     for(const f of soltos){
       if(destaData.some(x=>driveEhDaMusica(f, x))) continue;
+      if(soArquivo.some(l=>l.origem.id === f.id || driveEhDaMusica(f, driveChaveSo(l)))) continue;   // é de uma música desta data: fica (o repetido vai para a lixeira no passo 4)
       const cat = driveCategoriaDoArquivo(f.name), destino = await pastaCategoria(pai, porCat[cat]);
       const repetidos = await driveListar(`name='${driveAspas(f.name)}' and '${destino}' in parents`);
       for(const r of repetidos) await driveLixeira(r.id);
@@ -224,6 +249,7 @@ async function driveEnviarLouvores(louvores){
   await arquivar(base.slide, base.slidesSoltos, DRIVE_SLIDE_POR_CATEGORIA, 'slide');
   /* 4. envia os da data (o arquivo antigo da mesma música é substituído) */
   for(const x of novos) await driveEnviarArquivo(x, base);
+  for(const l of soArquivo) await driveMoverOriginal(l, base);
   louvores.forEach(l=>{ delete l.driveDesatualizado; });
   persist();
 }
@@ -244,6 +270,7 @@ function driveEnviarMusica(){
     .finally(()=>{ driveMusicaEnviando = false; document.getElementById('driveFechar').disabled = false; });
 }
 async function driveAtualizarMusica(l){
+  if(driveSoArquivo(l)){ await driveMoverOriginal(l, await drivePastasBase()); persist(); lvAtualizarBtnDrive(); return; }
   driveLog('Gerando o PDF e os slides…');
   const arquivos = await driveArquivosDaMusica(l);
   const base = await drivePastasBase();
