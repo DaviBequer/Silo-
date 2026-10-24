@@ -35,6 +35,11 @@ async function lvOriginalLer(id){
 function lvAtualizarBtnComparar(l){
   const b = document.getElementById('lvBtnComparar');
   if(b) b.style.display = l && l.origem ? '' : 'none';
+  /* logo do Cifra Club: abre no navegador a página de onde a cifra veio (medley: uma por música) */
+  const el = document.getElementById('lvLinksCifra'); if(!el) return;
+  const links = l && (l.cifraLinks && l.cifraLinks.length ? l.cifraLinks : l.origem && l.origem.tipo === 'cifraclub' && l.origem.url ? [{ titulo: l.titulo, url: l.origem.url }] : []);
+  el.innerHTML = (links || []).filter(x=>/^https:\/\/(www\.|m\.)?cifraclub\.com\.br\//.test(x.url || '')).slice(0, 4).map(x=>
+    `<a class="lv-icone-btn lv-link-cifra" href="${lvEsc(x.url)}" target="_blank" rel="noopener" title="Abrir no Cifra Club${links.length > 1 ? ': ' + lvEsc(x.titulo || '') : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20"></a>`).join('');
 }
 
 /* ---------- tela ---------- */

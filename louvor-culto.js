@@ -490,8 +490,8 @@ function cultoColarRender(entrar){
     const posNoGrupo = doGrupo.indexOf(it);
     const medleyId = it.grupo && cuColarMedleys[it.grupo];
     return `${primeiro ? `<div class="cu-colar-medley${entrar ? ' entra' : ''}" style="--i:${i}">
-        <div class="cu-md-txt"><span>Medley</span><small>${doGrupo.length} músicas · a cifra das duas vira uma música só no roteiro</small></div>
-        ${medleyId ? `<button type="button" class="btn btn-outline cu-md-ordem" onclick="cultoColarAbrirMedley('${medleyId}')">Ordem das partes</button>` : `<select class="cu-colar-parte" aria-label="Parte do medley" onchange="cuColar.filter(x=>x.grupo==='${it.grupo}').forEach(x=>x.parte=this.value)">${opcoesParte(it.parte)}</select>`}
+        <div class="cu-md-txt"><span>Medley</span><small>${doGrupo.length} músicas · vira um arquivo só: do Drive ou com as cifras juntas</small></div>
+        ${medleyId ? '' : `<select class="cu-colar-parte" aria-label="Parte do medley" onchange="cuColar.filter(x=>x.grupo==='${it.grupo}').forEach(x=>x.parte=this.value)">${opcoesParte(it.parte)}</select>`}
       </div>` : ''}
     <div class="cu-colar-item${it.status === 'buscando' ? ' ativo' : ''}${it.grupo ? ' no-medley' : ''}${it.pergunta ? ' perguntando' : ''}${entrar ? ' entra' : ''}" style="--i:${i}" data-i="${i}">
       <span class="cu-colar-ico ${feito(it.status) ? 'ok' : ruim(it.status) ? 'erro' : it.status === 'buscando' ? 'gira' : ''}">${feito(it.status) ? CU_COLAR_ICO.ok : ruim(it.status) ? CU_COLAR_ICO.erro : it.grupo ? posNoGrupo + 1 : ''}</span>
@@ -507,9 +507,8 @@ function cultoColarRender(entrar){
   cuColar.forEach((it, i)=>{ if(it.pergunta){ const el = lista.querySelector(`.cu-colar-item[data-i="${i}"] .cu-colar-pergunta`); if(el) it.pergunta.montar(it.pergunta.fim, el); } });
   document.getElementById('cuColarAcoes').style.display = cuColar.length ? '' : 'none';
 }
-/* medleys criados nesta montagem (grupo → id), para o botão "Ordem das partes" */
+/* medleys criados nesta montagem (grupo → id da música do medley) */
 let cuColarMedleys = {};
-function cultoColarAbrirMedley(id){ closeModal('modalCultoColar'); if(typeof abrirMedley === 'function') abrirMedley(id); }
 /* andamento de uma música (aparece na linha dela com a barrinha correndo) */
 function cultoColarPasso(it, txt){ it.passo = txt; cultoColarRender(); }
 async function cultoColarMontar(){
@@ -519,25 +518,36 @@ async function cultoColarMontar(){
   document.getElementById('cuColarTexto').style.display = 'none';
   document.querySelector('#modalCultoColar .cu-colar-btn').style.display = 'none';
   /* Drive: o pedido de acesso sai ainda dentro do toque */
-  const faltam = cuColar.filter(it=>!it.id);
+  const faltam = cuColar.filter(it=>!it.id && !it.grupo), grupos = [...new Set(cuColar.filter(it=>it.grupo).map(it=>it.grupo))];
   let pdfs = null;
-  if(faltam.length && typeof driveClienteId === 'function' && driveClienteId() && driveTokenCliente){
-    faltam[0].status = 'buscando'; cultoColarPasso(faltam[0], 'Abrindo o Drive…');
+  if((faltam.length || grupos.length) && typeof driveClienteId === 'function' && driveClienteId() && driveTokenCliente){
+    const primeiro = faltam[0] || cuColar.find(it=>it.grupo);
+    primeiro.status = 'buscando'; cultoColarPasso(primeiro, 'Abrindo o Drive…');
     try{ await drivePedirToken(); pdfs = await driveListarPdfs(); }catch(e){ pdfs = null; }
   }
   for(const it of faltam){
     it.status = 'buscando'; cultoColarRender();
     document.querySelectorAll('.cu-colar-item')[cuColar.indexOf(it)]?.scrollIntoView({ block:'nearest', behavior:'smooth' });
     try{
-      const l = (pdfs && !it.grupo && await cultoColarDoDrive(it, pdfs)) || await cultoColarDoCifraClub(it);   // medley precisa da cifra: vai direto ao Cifra Club
+      const l = (pdfs && await cultoColarDoDrive(it, pdfs)) || await cultoColarDoCifraClub(it);
       it.id = l ? l.id : '';
       if(!l) it.status = 'pulada';
     }catch(e){ it.status = 'erro'; it.erro = 'erro: ' + ((e && e.message) || e); }
     cultoColarRender();
   }
-  /* tom pedido em cada música */
+  /* medley: um arquivo só (do Drive, ou as cifras juntas numa música) */
+  for(const g of grupos){
+    const membros = cuColar.filter(x=>x.grupo === g);
+    try{
+      const l = await cultoColarMedleyMontar(membros, pdfs);
+      cuColarMedleys[g] = l ? l.id : '';
+    }catch(e){ membros.forEach(m=>{ m.status = 'erro'; m.erro = 'erro: ' + ((e && e.message) || e); }); }
+    cultoColarRender();
+  }
+  /* tom pedido em cada música (o do medley já foi aplicado em cada parte dele) */
   const L = id=>(state.louvores || []).find(x=>x.id === id);
   cuColar.forEach(it=>{
+    if(it.grupo) return;
     const l = it.id && L(it.id); if(!l || !it.tom) return;
     const ts = lviTomSiloe(it.tom.raiz, it.tom.menor);
     if(ts.tomOriginal && (ts.tomOriginal !== l.tomOriginal || ts.tomModoMenor !== !!l.tomModoMenor)) lvAplicarTom(l, ts.tomOriginal, ts.tomModoMenor);
@@ -548,8 +558,7 @@ async function cultoColarMontar(){
     let id = it.id;
     if(it.grupo){
       if(feitos[it.grupo] !== undefined) return;
-      const juntas = cuColar.filter(x=>x.grupo === it.grupo && x.id && L(x.id));
-      id = feitos[it.grupo] = cuColarMedleys[it.grupo] = juntas.length ? cultoColarMedley(juntas) : '';
+      id = feitos[it.grupo] = cuColarMedleys[it.grupo] || '';
     }
     const l = id && L(id); if(!l) return;
     let p = c.partes.find(x=>cuNorm(x.nome) === cuNorm(it.parte));
@@ -565,23 +574,67 @@ async function cultoColarMontar(){
   const n = c.partes.reduce((s, p)=>s + p.musicas.length, 0);
   showToast(`✓ Roteiro montado · ${n} ${n === 1 ? 'música' : 'músicas'}`);
 }
-/* medley: as músicas continuam sozinhas no app, e nasce (ou é reaproveitado) um louvor de medley com todas as partes delas.
-   É ele que entra no roteiro, então o Drive recebe um arquivo só. */
-function cultoColarMedley(juntas){
+/* medley = UM arquivo só (pedido do Davi: nada de uma música para cada parte).
+   1º o Drive: PDF com o nome de todas as músicas do medley (ou "Medley" + uma delas) → música só com o arquivo.
+   Senão as cifras (a do app, se já existe com cifra; senão a do Cifra Club, sem criar a música sozinha) viram uma música só:
+   "[♪ Nome — Tom X]" antes de cada uma, cada uma no tom pedido. Os links do Cifra Club ficam em l.cifraLinks. */
+async function cultoColarMedleyMontar(membros, pdfs){
+  const titulos = membros.map(m=>m.titulo).filter(Boolean);
+  const nomeMedley = 'Medley ' + titulos.join(' + ');
+  const artistas = [...new Set(membros.map(m=>m.artista).filter(Boolean))].join(' · ');
+  const passo = (m, t)=>{ m.status = 'buscando'; m.passo = t; cultoColarRender(); };
+  /* 1. Drive */
+  if(pdfs){
+    membros.forEach(m=>passo(m, 'Procurando o medley no Drive…'));
+    const nome = f=>cuNorm(f.name.replace(/\.pdf$/i, ''));
+    const ts = titulos.map(cuNorm).filter(t=>t.length >= 4);
+    let cands = ts.length ? pdfs.filter(f=>ts.every(t=>nome(f).includes(t))) : [];
+    if(!cands.length) cands = pdfs.filter(f=>/medley/.test(nome(f)) && ts.some(t=>nome(f).includes(t)));
+    let f = cands[0];
+    if(cands.length > 1){
+      passo(membros[0], 'esperando você escolher o arquivo…');
+      const r = await cultoColarPerguntarOpcao(membros[0], `Achei ${cands.length} PDFs desse medley no Drive. Qual é?`,
+        cands.slice(0, 8).map(f=>({ nome: f.name.replace(/\.pdf$/i, ''), sub: f.pasta })), 'Nenhum: montar com as cifras', false);
+      f = r.i === undefined ? null : cands[r.i];
+    }
+    if(f){
+      const l = await cultoCriarDoDrive(f, nomeMedley, artistas);
+      membros.forEach(m=>{ m.status = 'drive'; m.id = l.id; });
+      return l;
+    }
+  }
+  /* 2. as cifras juntas numa música só */
   const L = id=>(state.louvores || []).find(x=>x.id === id);
-  const musicas = juntas.map(it=>{ const l = L(it.id); return { id: l.id, tom: l.tomOriginal || '', menor: !!l.tomModoMenor }; });
-  const chave = musicas.map(m=>m.id).join('|');
-  const ja = (state.louvores || []).find(l=>l.medley && l.medley.musicas.map(m=>m.id).join('|') === chave);
-  const seq = [];
-  musicas.forEach(m=>{ const partes = lmPartes(L(m.id)); (partes.length ? partes : [{ nome:'Música inteira' }]).forEach(p=>seq.push({ id: m.id, parte: p.nome })); });
-  const medley = { musicas, seq };
-  const titulos = musicas.map(m=>L(m.id).titulo).filter(Boolean);
-  const l = ja || lvCriarDireto({ titulo: 'Medley ' + titulos.join(' + '), artista: titulos.join(' · '), categoria: L(musicas[0].id).categoria || 'Louvor' }, false);
-  Object.assign(l, { medley, tomOriginal: musicas[0].tom, tomModoMenor: musicas[0].menor, transpose: 0 });
-  delete l.medleyEditado;
-  l.conteudo = lmGerarTexto(medley);
+  const blocos = [], links = [];
+  let tomPrimeira = null;
+  for(const m of membros){
+    let texto = '', tom = '', menor = false;
+    const app = m.id && L(m.id);
+    if(app && (app.conteudo || '').trim()){ texto = app.conteudo; tom = lvTomMaiorAtual(app); menor = !!app.tomModoMenor; m.status = 'app'; }
+    else {
+      const res = await cultoColarDoCifraClub(m, false);
+      if(res){ texto = res.r.dados.conteudo; tom = res.r.dados.tomOriginal; menor = !!res.r.dados.tomModoMenor; links.push({ titulo: m.titulo, url: res.url }); m.status = 'cifra'; }
+    }
+    /* no tom pedido ("Mi maior", "(E)") */
+    const alvo = m.tom ? lviTomSiloe(m.tom.raiz, m.tom.menor) : null;
+    if(texto && alvo && alvo.tomOriginal && tom){
+      const de = lvPc(tom), para = lvPc(alvo.tomOriginal);
+      if(de !== -1 && para !== -1 && de !== para) texto = lvTransposeConteudoTexto(texto, ((para - de) % 12 + 12) % 12, alvo.tomOriginal, tom);
+      tom = alvo.tomOriginal; menor = alvo.tomModoMenor;
+    }
+    if(!tomPrimeira && tom) tomPrimeira = { tom, menor };
+    const tomTxt = tom ? (menor ? lvRelativoMenor(tom) + 'm' : tom) : '';
+    blocos.push(`[♪ ${(m.titulo || 'Música').replace(/[\[\]]/g, '')}${tomTxt ? ' — Tom ' + tomTxt : ''}]` + (texto ? '\n' + texto.trim() : ''));
+    m.id = '';   // a música sozinha não entra no app nem no roteiro
+  }
+  const conteudo = blocos.join('\n--\n');
+  const ja = (state.louvores || []).find(l=>cuNorm(l.titulo) === cuNorm(nomeMedley));
+  const l = ja || lvCriarDireto({ titulo: nomeMedley, artista: artistas, categoria: 'Louvor' }, false);
+  Object.assign(l, { conteudo, tomOriginal: tomPrimeira ? tomPrimeira.tom : '', tomModoMenor: tomPrimeira ? tomPrimeira.menor : false, transpose: 0 });
+  if(links.length){ l.cifraLinks = links; if(!l.origem) l.origem = { tipo:'cifraclub', url: links[0].url, texto:'', letras: null, quando: Date.now() }; }
   persist();
-  return l.id;
+  membros.forEach(m=>{ m.id = l.id; });
+  return l;
 }
 /* Drive: PDF com o nome da música (Harpa: o número num PDF da Harpa) → música só com o arquivo, sem tirar o texto.
    Mais de um PDF possível (cantores diferentes) → pergunta qual. */
@@ -619,7 +672,7 @@ async function cultoCriarDoDrive(f, titulo, artista){
 }
 /* Cifra Club: pega sozinho só quando o nome E o cantor batem; senão mostra as opções primeiro.
    Nenhuma é a certa → digitar o cantor e buscar de novo (ou criar só com o nome). */
-async function cultoColarDoCifraClub(it){
+async function cultoColarDoCifraClub(it, criar){   // criar=false: só lê (medley) → { r, url } ou null
   const t = cuNorm(it.titulo);
   let m = null;
   for(let volta = 0; volta < 4 && !m; volta++){
@@ -640,11 +693,13 @@ async function cultoColarDoCifraClub(it){
     break;   // nenhuma
   }
   if(!m){
+    if(criar === false){ it.status = 'vazia'; return null; }
     const l = lvCriarDireto({ titulo: it.titulo, artista: it.harpaNum ? 'Harpa Cristã - ' + it.harpaNum : it.artista, categoria: it.harpaNum ? 'Harpa Cristã' : 'Louvor' }, false);
     it.status = 'vazia';
     return l;
   }
   const r = await ccMontar(m.url, t=>cultoColarPasso(it, t), ()=>{});
+  if(criar === false) return { r, url: m.url };
   const l = lvCriarDireto(r.dados, false);
   ccGuardarOrigem(l, r, m.url);
   it.status = 'cifra';

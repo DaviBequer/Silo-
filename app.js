@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v10.9', itens: [
+    'Colar do WhatsApp: medley procura primeiro no Drive e vira um arquivo só (sem criar uma música para cada parte)',
+    'Música: logo do Cifra Club abre no navegador a página de onde a cifra veio',
+    'Cores mais fortes: linhas, ícones e textos claros mais escuros'
+  ] },
   { versao: 'v10.8', itens: [
     'Atualizar no computador: números grandes no topo, três colunas (contas e bancos, cartões, histórico) e a conversa com a lista ao lado',
     'Drive: música que veio do Drive e foi passada para o app, quando está como Pronto, apaga o PDF antigo ao enviar (em produção o antigo fica para comparar)'

@@ -8,14 +8,14 @@
 /* ---------- 1. TOKENS ---------- */
 :root{
   /* papel calmo: creme, tinta marrom-escura, linhas finas; verde e vermelho só para dinheiro e certo/errado */
-  --bg:#f4efe6; --card:#f9f5ee; --card-2:#ece5d8; --line:#e2d9c9;
-  --text:#2b2620; --text-dim:#6f665a; --text-faint:#9a8f80;
+  --bg:#f4efe6; --card:#f9f5ee; --card-2:#e8dfce; --line:#d3c6af;
+  --text:#2b2620; --text-dim:#554c41; --text-faint:#776c5d;
   --primary:#2b2620; --primary-dim:#1a1612; --primary-tint:rgba(43,38,32,.06); --on-primary:#f4efe6;
   /* destaque (os nomes --gold* ficaram por compatibilidade): a própria tinta */
   --gold:#2b2620; --gold-dim:#1a1612; --gold-tint:rgba(43,38,32,.07);
   --success:#4f7a4a; --success-tint:rgba(79,122,74,.12);
   --danger:#b0483a; --danger-tint:rgba(176,72,58,.11);
-  --oliva:#2b2620; --oliva-2:#3a332b; --latao:#9a8f80;
+  --oliva:#2b2620; --oliva-2:#3a332b; --latao:#776c5d;
   --warning:#a0661c; --warning-tint:rgba(160,102,28,.12);
   --alerta:#a0661c; --alerta-tint:rgba(160,102,28,.12);
   --lavender:#6e5a8f;
@@ -97,7 +97,7 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 /* barra de abas: embaixo no celular, na lateral esquerda no computador */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;display:flex;gap:2px;padding:12px 24px calc(14px + var(--safe));background:var(--bg);border-top:1px solid var(--line)}
 .nav-item{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px 4px 9px;border:none;background:none;color:var(--text-faint);font:500 10px/1.2 var(--font-body);cursor:pointer;transition:color var(--dur) var(--ease),background var(--dur) var(--ease),transform .12s var(--ease)}
-.nav-item svg{width:22px;height:22px;stroke-width:1.6}
+.nav-item svg{width:22px;height:22px;stroke-width:1.8}
 .nav-item.active{color:var(--gold-dim)}
 .nav-item.active::after{content:'';position:absolute;bottom:0;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--gold)}
 
@@ -557,7 +557,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .atalhos::-webkit-scrollbar{display:none}
 .atalhos.no-fim{mask-image:none;-webkit-mask-image:none}
 .atalho{flex:0 0 auto;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:70px;white-space:nowrap;padding:0;border:none;background:none;color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
-.atalho span{display:flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:50%;background:none;border:1px solid #d6cbb8;box-shadow:none;transition:transform .15s var(--ease)}
+.atalho span{display:flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:50%;background:none;border:1.5px solid #c4b59b;box-shadow:none;transition:transform .15s var(--ease)}
 .atalho.escuro span{background:var(--text);color:var(--bg)}
 .atalho:active span{transform:scale(.92)}
 .curva{margin-top:18px;padding:16px 0 10px;border-radius:0;background:none;border-top:1px solid var(--line)}
@@ -1483,7 +1483,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cu-parte-topo{display:flex;align-items:center;gap:6px}
 .cu-parte-nome{flex:1;min-width:0;padding:2px 0;border:none;border-bottom:1px solid transparent;background:none;color:var(--text);font:inherit;font-size:16px;font-weight:600}
 .cu-parte-nome:focus{outline:none;border-bottom-color:var(--gold)}
-.cu-parte-acoes{display:flex;gap:0;opacity:.7}
+.cu-parte-acoes{display:flex;gap:0;opacity:1}
 .cu-parte-acoes .btn-icon-sm:disabled{opacity:.3}
 .cu-musicas{margin:4px 0 2px;border-top:1px solid var(--line)}
 .cu-musica{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
@@ -2288,3 +2288,5 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
   .atz-grade{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"contas cartoes" "bancos cartoes" "hist hist" "cortar cortar"}
   .atz-b-hist .atz-hist{max-height:none}
 }
+.lv-links-cifra{display:contents}
+.lv-link-cifra img{display:block;width:20px;height:20px;border-radius:5px}
