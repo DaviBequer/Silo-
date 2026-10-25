@@ -614,7 +614,7 @@ function abrirDetalheAcumulado(mKey){
 }
 
 /* Linha do tempo dos meses (usada no acumulado do Geral e no do Cartão) */
-function desenharTimeline(wrapId, months, vals, onclickFn){
+function desenharTimeline(wrapId, months, vals, onclickFn, estilo){
   const wrap = document.getElementById(wrapId);
   if(!wrap) return;
   const hoje = mesFinanceiroAtual();
@@ -646,9 +646,21 @@ function desenharTimeline(wrapId, months, vals, onclickFn){
     const isSelected = p.mKey===state.focusMonth;
     return `<div class="acum-timeline-mes${isSelected?' selected':''}" onclick="${onclickFn(p.mKey)}">${monthLabel(p.mKey)}</div>`;
   }).join('');
+  /* v12: A (saldo) = linha dourada com área e o valor do último mês em cima; C (cartão, estilo 'placa') = número final numa placa grafite com a linha pequena */
+  const ult = pts[pts.length - 1] || { v:0, mKey:hoje };
+  const area = pts.length ? `${pts[0].x.toFixed(1)},${chartBottom} ${line} ${ult.x.toFixed(1)},${chartBottom}` : '';
+  if(estilo === 'placa'){
+    wrap.innerHTML = `
+    <div class="placa tl-placa"><span class="placa-lbl" style="margin-top:0">Em ${monthLabelLong(ult.mKey).toLowerCase()}</span><b class="${ult.v >= 0 ? '' : 'neg'}">${fmtMoneySigned(ult.v)}</b>
+      <svg viewBox="0 0 300 ${chartBottom+6}" width="100%" height="${chartBottom+6}" style="overflow:visible"><polyline points="${line}" fill="none" stroke="#c9a86a" stroke-width="2" vector-effect="non-scaling-stroke"/>${dots}</svg></div>
+    <div class="acum-timeline-meses">${meses}</div>`;
+    return;
+  }
   wrap.innerHTML = `
+    <div class="tl-fim"><span>em ${monthLabelLong(ult.mKey).toLowerCase()}</span><b class="${ult.v >= 0 ? '' : 'neg'}">${fmtMoneySigned(ult.v)}</b></div>
     <svg viewBox="0 0 300 ${chartBottom+6}" width="100%" height="${chartBottom+6}" style="overflow:visible">
-      <polyline points="${line}" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <polygon points="${area}" fill="rgba(201,168,106,.2)"/>
+      <polyline points="${line}" fill="none" stroke="var(--gold)" stroke-width="2"/>
       ${labels}
       ${dots}
     </svg>
@@ -674,7 +686,7 @@ function sobraDoGeralNoMes(mKey){
 function renderAcumCartao(months){
   months = months || getPanoWindowMonths();
   const vals = months.map(mKey=>sobraDoGeralNoMes(mKey) - faturaTotalNoMes(mKey));
-  desenharTimeline('acumCartaoWrap', months, vals, m=>`selectFocusMonth('${m}');abrirDetalheCartaoMes('${m}')`);
+  desenharTimeline('acumCartaoWrap', months, vals, m=>`selectFocusMonth('${m}');abrirDetalheCartaoMes('${m}')`, 'placa');
 }
 function abrirDetalheCartaoMes(mKey){
   const sobra = sobraDoGeralNoMes(mKey);
@@ -826,7 +838,7 @@ const CP_ICON_OK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" 
 function cpItem(o){
   const logo = o.logoUrl
     ? `<img src="${o.logoUrl}" class="cp-logo" alt="">`
-    : `<div class="cp-logo cp-logo-ph">${o.icone || (o.titulo||'?').charAt(0).toUpperCase()}</div>`;
+    : o.dia ? gmCal(o.dia) : `<div class="cp-logo cp-logo-ph">${o.icone || (o.titulo||'?').charAt(0).toUpperCase()}</div>`;
   return `<div class="cp-item${o.feito?' feito':''}${o.parcial?' parcial':''}" ${o.attrs||''}>
     ${logo}
     <div class="cp-item-info">
@@ -915,7 +927,7 @@ function renderContasPagar(){
     const corDia = diasVenc===null ? '' : (diasVenc<0?' atrasada':(diasVenc<=3?' urgente':''));
     const quando = diasVenc===null ? `dia ${it.dia}` : (diasVenc<0 ? `venceu dia ${it.dia}` : (diasVenc===0 ? 'vence hoje' : (diasVenc<=3 ? `vence em ${diasVenc} dia${diasVenc>1?'s':''}` : `dia ${it.dia}`)));
     contasHtml += cpItem({
-      titulo: it.desc, logoUrl: it.logoUrl,
+      titulo: it.desc, logoUrl: it.logoUrl, dia: it.dia,
       sub: `<span class="cp-dia${corDia}">${quando}</span>`,
       tag: it.mesOrigem!==mKey ? `<span class="cp-tag">${monthLabel(it.mesOrigem)}</span>` : '',
       valor: Number(it.valor)||0, valorSub: !isParcial ? '' : [valorPago > 0 ? 'pago '+fmtMoney(valorPago) : '', noCartao > 0 ? fmtMoney(noCartao)+' no cartão' : ''].filter(Boolean).join(' · '),
@@ -958,13 +970,19 @@ function renderContasPagar(){
     <div class="cp-resumo-bar"><div style="width:${pct}%"></div></div>
     <div class="cp-resumo-sub"><span><b>${nFeitos} de ${nItens}</b> pagas · ${fmtMoney(totalPago)}</span>${aReceber>0.004?`<span>a receber <b>${fmtMoney(aReceber)}</b></span>`:''}</div>
   </div>`;
+  /* filtro Todas / Em aberto / Pagas (v12, escolha C do Davi): esconde pelo CSS (data-filtro) */
+  html += `<div class="sec-filtro cp-filtro">${[['todas','Todas'],['aberto','Em aberto'],['pagas','Pagas']].map(([k, t])=>`<button type="button" class="${cpFiltro === k ? 'on' : ''}" onclick="cpFiltrar('${k}')">${t}</button>`).join('')}</div>`;
   if(receb) html += cpBloco('Recebimentos', 'toque quando cair na conta', receb);
   html += cpBloco('Contas', 'toque = paga · ◐ = pagou só uma parte',
     contasHtml || `<div class="empty-state"><div class="title">Nenhuma conta neste mês</div><div class="desc">Adicione gastos no Dashboard</div></div>`);
   if(cartaoHtml) html += cpBloco('Cartão', 'toque para pagar a fatura', cartaoHtml);
   if(empHtml) html += cpBloco('Empréstimo', 'toque para pagar a parcela', empHtml);
-  document.getElementById('contasPagarConteudo').innerHTML = html;
+  const cont = document.getElementById('contasPagarConteudo');
+  cont.innerHTML = html;
+  cont.dataset.filtro = cpFiltro;
 }
+let cpFiltro = 'todas';
+function cpFiltrar(f){ cpFiltro = f; renderContasPagar(); }
 
 let contaTapTimer = null;
 let contaTapClickTimer = null;
@@ -1110,39 +1128,44 @@ function salvarPagamentoConta(){
    Mês atual (em andamento, calculado agora) + cada mês concluído (resumo guardado ao tocar em Finalizar, em Contas do mês).
    Toque num mês para ver para onde foi o dinheiro. */
 const HIST_ROTULOS = [['moradia','Moradia'],['assinatura','Assinaturas'],['fixo','Fixos'],['futuro','Contas futuras'],['dizimo','Dízimo'],['cartao','Cartão'],['emprestimo','Empréstimo']];
+/* Histórico de meses (v12, escolha B do Davi): um cartão por mês deslizando para o lado (o atual em grafite); tocar mostra o detalhe embaixo */
+let hmMeses = [], hmSel = 0;
 function abrirHistoricoMeses(){
   const atual = mesFinanceiroAtual();
   const fechados = Object.entries(state.historicoMeses||{}).filter(([m])=>m!==atual).sort((a,b)=>b[0].localeCompare(a[0]));
-  const meses = [[atual, Object.assign(resumoCompletoDoMes(atual), { andamento:true })], ...fechados];
-  const maior = Math.max(1, ...meses.map(([,r])=>Math.max(r.renda||0, r.gastoTotal||0)));
-  const linhaMes = ([m, r], i)=>{
+  hmMeses = [[atual, Object.assign(resumoCompletoDoMes(atual), { andamento:true })], ...fechados];
+  hmSel = 0;
+  const cartao = ([m, r], i)=>{
     const sobra = (r.renda||0) - (r.gastoTotal||0);
-    const anterior = meses[i+1] ? (meses[i+1][1].renda||0) - (meses[i+1][1].gastoTotal||0) : null;
+    const anterior = hmMeses[i+1] ? (hmMeses[i+1][1].renda||0) - (hmMeses[i+1][1].gastoTotal||0) : null;
     const comp = anterior===null ? '' : `<span class="hm-comp ${sobra>=anterior?'pos':'neg'}">${sobra>=anterior?'▲':'▼'} ${fmtMoney(Math.abs(sobra-anterior))}</span>`;
-    const detalhe = r.v===2 ? HIST_ROTULOS.map(([k, nome])=>{
+    return `<button type="button" class="hm-cartao${i===0?' on':''}" data-i="${i}" onclick="hmEscolher(${i})">
+      <span class="hm-nome">${monthLabelLong(m)}${r.andamento?' · em andamento':''}</span>
+      <b class="hm-sobra ${sobra>=0?'pos':'neg'}">${fmtMoneySigned(sobra)}</b>
+      <span class="hm-legenda">entrou ${fmtMoney(r.renda||0)}<br>saiu ${fmtMoney(r.gastoTotal||0)}</span>${comp}
+    </button>`;
+  };
+  document.getElementById('historicoMesesLista').innerHTML = `<div class="hm-rolo">${hmMeses.map(cartao).join('')}</div><div class="hm-detalhe" id="hmDetalhe"></div>`
+    + (fechados.length ? '' : '<div class="hm-dica">Os meses aparecem aqui quando você toca em Finalizar, em Contas do mês. O resumo fica guardado mesmo depois que os dados do mês são limpos.</div>');
+  hmEscolher(0);
+  document.getElementById('modalHistoricoMeses').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function hmEscolher(i){
+  hmSel = i;
+  document.querySelectorAll('.hm-cartao').forEach(b=>b.classList.toggle('on', Number(b.dataset.i) === i));
+  const [m, r] = hmMeses[i] || []; const el = document.getElementById('hmDetalhe'); if(!el || !r) return;
+  el.innerHTML = `<div class="hm-det-tit">${monthLabelLong(m)}</div>` + (r.v===2 ? HIST_ROTULOS.map(([k, nome])=>{
       const v = k in (r.contas||{}) ? r.contas[k] : (r[k]||0);
       return v > 0.004 ? `<div class="hm-cat"><span>${nome}</span><div class="hm-cat-barra"><div style="width:${Math.round(v/Math.max(1,r.gastoTotal)*100)}%"></div></div><b>${fmtMoney(v)}</b></div>` : '';
     }).join('') + `<div class="hm-cat hm-cat-renda"><span>Salário + extras</span><div></div><b>${fmtMoney(r.salario||0)} + ${fmtMoney(r.extras||0)}</b></div>`
-      : '<div class="gm-vazio">Mês fechado antes do resumo detalhado.</div>';
-    return `<details class="hm-mes"${i===0?' open':''}>
-      <summary>
-        <div class="hm-topo"><span class="hm-nome">${monthLabelLong(m)}${r.andamento?' <small>em andamento</small>':''}</span><span class="hm-sobra ${sobra>=0?'pos':'neg'}">${fmtMoneySigned(sobra)}</span></div>
-        <div class="hm-barras"><div class="hm-barra entra" style="width:${Math.round((r.renda||0)/maior*100)}%"></div><div class="hm-barra sai" style="width:${Math.round((r.gastoTotal||0)/maior*100)}%"></div></div>
-        <div class="hm-legenda"><span>Entrou <b>${fmtMoney(r.renda||0)}</b></span><span>Saiu <b>${fmtMoney(r.gastoTotal||0)}</b></span>${comp}</div>
-      </summary>
-      <div class="hm-detalhe">${detalhe}</div>
-    </details>`;
-  };
-  document.getElementById('historicoMesesLista').innerHTML = meses.map(linhaMes).join('')
-    + (fechados.length ? '' : '<div class="hm-dica">Os meses aparecem aqui quando você toca em Finalizar, em Contas do mês. O resumo fica guardado mesmo depois que os dados do mês são limpos.</div>');
-  document.getElementById('modalHistoricoMeses').classList.add('active');
-  document.body.style.overflow = 'hidden';
+    : '<div class="gm-vazio">Mês fechado antes do resumo detalhado.</div>');
 }
 
 /* ===== PARA ONDE VAI O DINHEIRO: tudo o que sai no mês (pago ou não), por grupo;
    o cartão entra aberto pelas categorias das compras à vista/assinaturas + parcelas ===== */
 let ondeVaiMes = null;
-const ONDE_VAI_CORES = ['#047857','#34d399','#0e7490','#a3a3a3','#c2410c','#7c3aed','#ca8a04','#be185d','#2563eb','#57534e'];
+const ONDE_VAI_CORES = ['#22252a','#c9a86a','#8b8f95','#9a7a3e','#5a6b7a','#d8cbb0','#3f7d5a','#b0483a','#6e5a8f','#4a4e53'];   // v12: grafite, latão e neutros
 function ondeVaiDados(u, mKey){
   const g = {}, vista = {}, pix = {}, envelope = {};
   const soma = (obj, nome, v)=>{ v = Number(v)||0; if(v > 0.004) obj[nome] = (obj[nome]||0) + v; };
@@ -1188,7 +1211,7 @@ function renderOndeVai(){
     if(!(ant > 0.004)) return agora > 0.004 ? '<span class="ov-var novo">novo</span>' : '';
     const p = Math.round((agora - ant) / ant * 100);
     if(Math.abs(p) < 1) return '<span class="ov-var">=</span>';
-    return `<span class="ov-var "> %</span>`;
+    return `<span class="ov-var ${p > 0 ? 'sobe' : 'desce'}">${p > 0 ? '↑' : '↓'} ${Math.abs(p)}%</span>`;   // gasto subiu = vermelho, caiu = verde
   };
 
   if(!total){ el.innerHTML = `<div class="gm-vazio">Nada saindo em ${monthLabelLong(mKey)}.</div>`; return; }
@@ -1197,7 +1220,7 @@ function renderOndeVai(){
     <div class="ov-total"><span>Sai no mês ${varia(total, totalAntes)}</span><b>${fmtMoney(total)}</b></div>
     <div class="ov-barra">${dados.map((d, i)=>`<i style="flex:${d.v};background:${cor(i)}" title="${escBanco(d.nome)}"></i>`).join('')}</div>
     <div class="ov-lista">${dados.map((d, i)=>`
-      <div class="ov-linha${d.nome === 'Pix e débito' ? ' ov-clica' : ''}"${d.nome === 'Pix e débito' ? ` onclick="abrirLancamentos('${mKey}')"` : ''}><span class="ov-ponto" style="background:${cor(i)}"></span><span class="ov-nome">${escBanco(d.nome)} ${varia(d.v, antes[d.nome])}</span><span class="ov-pct">${Math.round(d.v/total*100)}%</span><span class="ov-valor">${fmtMoney(d.v)}</span></div>${(d.sub||[]).map(([n,v,env])=>`
+      <div class="ov-linha${d.nome === 'Pix e débito' ? ' ov-clica' : ''}"${d.nome === 'Pix e débito' ? ` onclick="abrirLancamentos('${mKey}')"` : ''}><span class="ov-ponto" style="background:${cor(i)}"></span><span class="ov-nome">${escBanco(d.nome)} ${varia(d.v, antes[d.nome])}</span><span class="ov-pct">${Math.round(d.v/total*100)}%</span><span class="ov-valor">${fmtMoney(d.v)}</span><i class="ov-barrinha"><i style="width:${Math.max(2, Math.round(d.v/total*100))}%;background:${cor(i)}"></i></i></div>${(d.sub||[]).map(([n,v,env])=>`
       <div class="ov-linha ov-sub"><span></span><span class="ov-nome">${escBanco(n)} ${varia(v, antes[d.nome + '|' + n])}${env ? ` <small>de ${fmtMoney(env)} reservados</small>` : ''}</span><span class="ov-pct"></span><span class="ov-valor">${fmtMoney(v)}</span></div>`).join('')}`).join('')}
     </div>
     ${u === 'davi' && (state.cartoesTracker||[]).length ? `<div class="sf-nota">Dica: no microfone do saldo, fale “no cartão: mercado 120, farmácia 45” e as compras entram aqui por categoria.</div>` : ''}`;

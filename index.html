@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=12.3">
+<link rel="stylesheet" href="style.css?v=12.4">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 123</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 124</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -213,11 +213,11 @@
     <div class="placa-lbl">Horas no mês</div>
     <div class="ponto-valor-grande" id="pontoTotalHoras">00:00</div>
     <div class="placa-prev">a receber <b id="pontoValorReceber">R$ 0,00</b></div>
-    </div>
-    <div class="resumo-stats">
+    <div class="resumo-stats ponto-stats-placa">
       <div class="resumo-stat"><div class="resumo-stat-lbl">Padrão</div><div class="resumo-stat-val" id="pontoPadrao">00:00</div></div>
       <div class="resumo-stat"><div class="resumo-stat-lbl">Diferença</div><div class="resumo-stat-val" id="pontoDiferenca">00:00</div></div>
       <div class="resumo-stat"><div class="resumo-stat-lbl">Impacto</div><div class="resumo-stat-val" id="pontoImpacto">R$ 0,00</div></div>
+    </div>
     </div>
     <div id="pontoMetaDiaria" class="ponto-meta-diaria"></div>
     <div id="pontoBater" class="ponto-bater"></div>
@@ -263,9 +263,10 @@
         <span id="storageTotal">5 MB</span>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn" onclick="exportarDadosApp()">Exportar</button>
-      <button class="btn btn-outline" onclick="triggerImportarDados()">Importar</button>
+    <!-- v12 (escolha C do Davi): as ações em ícones redondos com o nome embaixo, numa linha -->
+    <div class="atalhos aj-acoes">
+      <button type="button" class="atalho escuro" onclick="exportarDadosApp()"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></span>Exportar</button>
+      <button type="button" class="atalho" onclick="triggerImportarDados()"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg></span>Importar</button>
     </div>
     </div>
     <div class="dd-painel" data-dd="recursos">
@@ -1913,23 +1914,23 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=12.3"></script>
-<script src="core.js?v=12.3"></script>
-<script src="layout.js?v=12.3"></script>
-<script src="app.js?v=12.3"></script>
-<script src="panorama.js?v=12.3"></script>
-<script src="planner.js?v=12.3"></script>
-<script src="ponto.js?v=12.3"></script>
-<script src="louvor.js?v=12.3"></script>
-<script src="louvor-extra.js?v=12.3"></script>
-<script src="louvor-medley.js?v=12.3"></script>
-<script src="louvor-culto.js?v=12.3"></script>
-<script src="louvor-drive.js?v=12.3"></script>
-<script src="atualizar.js?v=12.3"></script>
-<script src="louvor-comparar.js?v=12.3"></script>
-<script src="fatura-pdf.js?v=12.3"></script>
-<script src="emprestimo.js?v=12.3"></script>
-<script src="vendas.js?v=12.3"></script>
+<script src="supabase.js?v=12.4"></script>
+<script src="core.js?v=12.4"></script>
+<script src="layout.js?v=12.4"></script>
+<script src="app.js?v=12.4"></script>
+<script src="panorama.js?v=12.4"></script>
+<script src="planner.js?v=12.4"></script>
+<script src="ponto.js?v=12.4"></script>
+<script src="louvor.js?v=12.4"></script>
+<script src="louvor-extra.js?v=12.4"></script>
+<script src="louvor-medley.js?v=12.4"></script>
+<script src="louvor-culto.js?v=12.4"></script>
+<script src="louvor-drive.js?v=12.4"></script>
+<script src="atualizar.js?v=12.4"></script>
+<script src="louvor-comparar.js?v=12.4"></script>
+<script src="fatura-pdf.js?v=12.4"></script>
+<script src="emprestimo.js?v=12.4"></script>
+<script src="vendas.js?v=12.4"></script>
 <script>carregar();</script>
 </body>
 </html>

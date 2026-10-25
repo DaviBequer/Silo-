@@ -684,6 +684,18 @@ body:has(.modal-overlay.active){overflow:hidden}
 .summary-row-clickable:active{background:var(--card-2)}
 
 /* resumo de cada bloco de contas (total / pago / falta) */
+/* seções de contas (v12, mistura do Davi): total dourado no cabeçalho, filtro Todas / Em aberto / Pagas, calendário do dia */
+.sec-head-total{margin-left:auto;margin-right:6px;font-size:13.5px;font-weight:600;color:var(--gold);font-variant-numeric:tabular-nums}
+.sec-head-total:empty{display:none}
+.sec-filtro{display:inline-flex;gap:2px;margin:2px 0 8px;padding:3px;border-radius:999px;background:rgba(29,31,33,.07)}
+.sec-filtro button{padding:5px 12px;border:none;border-radius:999px;background:none;color:var(--text-dim);font:inherit;font-size:12px;cursor:pointer}
+.sec-filtro button.on{background:var(--graf);color:var(--graf-tx)}
+.list-row > .cal{margin-right:2px}
+.lr-paga{color:var(--success)}
+.cp-filtro{display:flex;width:max-content;margin:4px 0 6px}
+#contasPagarConteudo[data-filtro="aberto"] .cp-item.feito,#contasPagarConteudo[data-filtro="pagas"] .cp-item:not(.feito){display:none}
+.cp-item > .cal{margin-right:2px}
+.cp-item.feito .cp-check{color:var(--success)}
 .sec-resumo{margin-bottom:4px;padding:2px 4px 14px;border-bottom:1px solid var(--line)}
 .sec-resumo-linha{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--text-dim)}
 .sec-resumo-linha b{font-size:17px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
@@ -742,6 +754,15 @@ body:has(.modal-overlay.active){overflow:hidden}
 .rd-total{margin-top:2px;font-family:var(--font-display);font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
 .rd-total.pos{color:var(--success)}
 .rd-total.neg{color:var(--danger)}
+/* janelas de lista (v12, escolha C): o total numa placa grafite em cima da lista */
+#resumoDetalheTopo{margin-bottom:12px;padding:14px 16px;border-radius:16px;background:var(--graf);color:var(--graf-tx)}
+#resumoDetalheTopo .rd-rotulo{font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--latao)}
+#resumoDetalheTopo .rd-total{font:300 30px/1.15 var(--font-body);letter-spacing:-.02em;color:var(--graf-tx)}
+#resumoDetalheTopo .rd-total.pos{color:var(--graf-tx)}#resumoDetalheTopo .rd-total.neg{color:#f0a08c}
+.metas-total,.fpdf-resumo{padding:12px 14px!important;margin-bottom:10px;border:none!important;border-radius:16px;background:var(--graf);color:var(--graf-dim)}
+.metas-total b,.fpdf-resumo b{color:var(--graf-tx)!important;font-weight:400!important;font-size:18px!important}
+.fpdf-resumo>div + div{border-left-color:var(--graf-line)!important}
+.fpdf-resumo span{color:var(--latao)!important}
 .rd-sub{margin-top:2px;font-size:12.5px;color:var(--text-faint)}
 
 /* contas do mês (tela cheia) */
@@ -868,8 +889,31 @@ body:has(.modal-overlay.active){overflow:hidden}
 .ct-face.colorida > *{position:relative}
 .cartao-card-item .ct-face.colorida{margin-bottom:16px}
 .emp-card .ct-face.colorida{margin-bottom:12px}
+/* empréstimo (v12, escolha A): placa grafite com o quanto falta para quitar grande e o resto pequeno */
+.emp-card .ct-face{margin-bottom:12px;padding:14px 16px;border-radius:18px}
+.emp-card .ct-face:not(.colorida){background:var(--graf);color:var(--graf-tx)}
+.emp-card .ct-face:not(.colorida) .resumo-mes,.emp-card .ct-face:not(.colorida) .resumo-label{color:var(--latao)}
+.emp-card .ct-face:not(.colorida) .emp-sub,.emp-card .ct-face .ponto-horas-sub{color:var(--graf-dim)}
+.emp-card .ct-face .ponto-valor-grande{font:300 36px/1.1 var(--font-body);letter-spacing:-.02em}
+.emp-card .ct-face:not(.colorida) .ponto-valor-grande{color:var(--graf-tx)}
+.emp-card .ct-face .ponto-horas-sub{margin-top:6px;font-size:12px}
+.emp-card .ct-face:not(.colorida) .emp-progresso div{background:var(--latao)}
 .ct-face.colorida .ct-bar-fill,.ct-face.colorida .emp-progresso div{background:var(--face-tx)}
 .ct-face.colorida .conta-logo-sm{border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+/* cartão (v12, escolha A do Davi): formato de cartão de verdade com a logo redonda, o chip, a fatura aberta e o vencimento dentro */
+.cartao-card-item .ct-face{position:relative;aspect-ratio:1.586;max-width:380px;display:flex;flex-direction:column;justify-content:flex-end;margin:0 0 16px;padding:16px 18px;border-radius:16px;overflow:hidden}
+.cartao-card-item .ct-face:not(.colorida){background:var(--graf);color:var(--graf-tx)}
+
+.cartao-card-item .ct-face .ct-top{position:absolute;left:16px;right:12px;top:14px}
+.cartao-card-item .ct-face .conta-logo-sm{width:30px;height:30px;border-radius:50%!important;object-fit:cover;background:#fff}
+.ct-chip{position:absolute;left:18px;top:56px;width:30px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ecd8a4,#b8913f)}
+.cartao-card-item .ct-disponivel-lbl{font:600 10px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+.cartao-card-item .ct-disponivel-val{font:300 28px/1.1 var(--font-body);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cartao-card-item .ct-foot{display:flex;justify-content:space-between;gap:8px;font-size:11px;opacity:.8}
+.cartao-card-item .ct-bar{margin:6px 0 5px}
+/* compras da fatura (v12, escolha C): o total da fatura numa placa grafite em cima da lista */
+.ct-placa-fatura{margin:4px 0 10px;padding:12px 14px}
+.ct-placa-fatura b{display:block;margin-top:4px;font:300 24px/1.1 var(--font-body);letter-spacing:-.02em;color:var(--graf-tx);font-variant-numeric:tabular-nums}
 
 /* empréstimo */
 .emp-vazio{text-align:center}
@@ -958,10 +1002,11 @@ body:has(.modal-overlay.active){overflow:hidden}
 /* topo de Finanças: este mês e os próximos (sobra + acumulado) */
 .ov-total{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 10px;font-size:12.5px;color:var(--text-dim)}
 .ov-total b{color:var(--text);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
-.ov-barra{display:flex;gap:2px;height:12px;margin-bottom:10px;border-radius:6px;overflow:hidden}
-.ov-barra i{display:block;min-width:3px}
 .ov-lista{border-top:1px solid var(--line)}
-.ov-linha{display:grid;grid-template-columns:10px 1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+/* para onde vai (v12, escolha B): uma barra por categoria, com a porcentagem e o valor */
+.ov-linha{display:grid;grid-template-columns:10px 1fr auto auto;gap:4px 10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--fio);font-size:13px}
+.ov-barrinha{grid-column:2 / -1;display:block;height:5px;border-radius:3px;background:var(--fio);overflow:hidden}
+.ov-barrinha i{display:block;height:100%;border-radius:3px}
 .ov-linha.ov-clica{cursor:pointer}
 .ov-var{margin-left:4px;font-size:11px;font-weight:600;color:var(--text-faint);white-space:nowrap}
 .ov-var.sobe{color:var(--danger)}
@@ -969,7 +1014,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .ov-var.novo{color:var(--text-faint);font-weight:500}
 .ov-ponto{width:10px;height:10px;border-radius:50%}
 .ov-nome{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-.ov-pct{font-size:11.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}
+.ov-pct{font:600 12px/1 var(--font-body);color:var(--gold);font-variant-numeric:tabular-nums}
 .ov-valor{min-width:86px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
 .ov-linha.ov-sub{padding:6px 0;font-size:12px;border-bottom-style:dashed}
 .ov-sub .ov-nome{padding-left:10px;color:var(--text-dim)}
@@ -1018,6 +1063,10 @@ body:has(.modal-overlay.active){overflow:hidden}
 .detalhe-usuario:last-of-type{margin-bottom:0;padding-bottom:0;border-bottom:none}
 .detalhe-usuario-nome{margin-bottom:var(--s1);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-faint)}
 .acum-timeline{margin-top:var(--s2)}
+/* linhas do tempo (v12): saldo = área dourada com o valor final em cima (A); cartão = número final numa placa (C) */
+.tl-fim{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+.tl-fim b{font:600 15px/1.2 var(--font-body);letter-spacing:0;text-transform:none;color:var(--text)}.tl-fim b.neg{color:var(--danger)}
+.tl-placa{margin-bottom:6px}.tl-placa b{display:block;margin:4px 0 6px;font:300 26px/1.1 var(--font-body);letter-spacing:-.02em;color:var(--graf-tx)}.tl-placa b.neg{color:#f0a08c}
 .acum-timeline-meses{display:flex;justify-content:space-between;margin-top:2px}
 .acum-timeline-mes{flex:1;padding:2px 0;font-size:10.5px;font-weight:600;text-align:center;text-transform:uppercase;color:var(--text-faint);cursor:pointer}
 .acum-timeline-mes.selected{color:var(--gold-dim);font-weight:800}
@@ -1031,6 +1080,16 @@ body:has(.modal-overlay.active){overflow:hidden}
 .atalho-seta{flex-shrink:0;color:var(--text-faint)}
 
 /* histórico de meses */
+/* histórico de meses (v12, escolha B): cartões deslizando, o escolhido em grafite; detalhe embaixo */
+.hm-rolo{display:flex;gap:8px;margin:0 -24px 14px;padding:2px 24px 6px;overflow-x:auto;scroll-snap-type:x mandatory}
+.hm-cartao{flex:0 0 62%;max-width:240px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--text);font:inherit;text-align:left;cursor:pointer;scroll-snap-align:start}
+.hm-cartao .hm-nome{font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+.hm-cartao .hm-sobra{font:300 24px/1.1 var(--font-body);letter-spacing:-.02em}
+.hm-cartao .hm-legenda{font-size:12px;color:var(--text-dim)}
+.hm-cartao.on{background:var(--graf);border-color:var(--graf);color:var(--graf-tx)}
+.hm-cartao.on .hm-nome{color:var(--latao)}.hm-cartao.on .hm-legenda{color:var(--graf-dim)}
+.hm-cartao.on .hm-sobra.neg{color:#f0a08c}
+.hm-det-tit{margin-bottom:6px;font-weight:600}
 .hm-mes{border-top:1px solid var(--line)}
 .hm-mes:first-child{border-top:none}
 .hm-mes summary{list-style:none;padding:14px 0;cursor:pointer}
@@ -1088,6 +1147,18 @@ body:has(.modal-overlay.active){overflow:hidden}
 .ponto-placa .placa-lbl{margin-top:8px}
 .ponto-placa .ponto-valor-grande{margin:2px 0 0;font:300 40px/1.1 var(--font-body);letter-spacing:-.02em;color:var(--graf-tx)}
 .ponto-placa .placa-prev{cursor:default}
+/* Ponto (v12): Padrão, Diferença e Impacto pequenos dentro da placa (escolha A); fechar o mês numa placa (A); dias com o calendário (C) */
+.ponto-placa .ponto-stats-placa{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:12px 0 0;padding:10px 0 0;border:none;border-top:1px solid var(--graf-line);border-radius:0;background:none;box-shadow:none}
+.ponto-placa .ponto-stats-placa .resumo-stat-lbl{font:600 9.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--latao)}
+.ponto-placa .ponto-stats-placa .resumo-stat-val{font-size:14px;font-weight:500;color:var(--graf-tx)}
+.ponto-placa .ponto-stats-placa .resumo-stat-val.pos{color:#9fd3b2}.ponto-placa .ponto-stats-placa .resumo-stat-val.neg{color:#f0a08c}
+#pontoFecharBox:not(:empty){padding:12px 14px;border-radius:16px;background:var(--graf);color:var(--graf-tx)}
+#pontoFecharBox:not(:empty) small,#pontoFecharBox:not(:empty) b,#pontoFecharBox:not(:empty) span{color:inherit}
+#pontoFecharBox .btn{background:var(--latao);color:var(--graf)}
+.pd-data .cal{vertical-align:middle;margin:0 2px}
+.vendas-placa .ponto-horas-sub{margin-top:4px;font-size:12px;color:var(--graf-dim)}.vendas-placa .ponto-horas-sub span{color:var(--graf-tx)}
+.ponto-stats-placa .resumo-stat{color:var(--graf-tx);background:none!important;border:none!important;padding:0}
+.ponto-stats-placa .resumo-stat + .resumo-stat{padding-left:10px}
 
 /* ===== PONTO ===== */
 #aba-ponto .resumo-topo{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -1398,6 +1469,10 @@ body:has(.modal-overlay.active){overflow:hidden}
 .sino-txt b{font-size:14px;font-weight:600}
 .sino-txt span{font-size:13px;line-height:1.4;color:var(--text-dim)}
 .sino-quando{flex-shrink:0;padding-top:2px;font-size:11.5px;color:var(--text-faint)}
+/* avisos do sino (v12): ícone num quadrado grafite com o desenho dourado */
+.sino-ico{background:var(--graf)!important;color:var(--latao)!important}
+.sino-item.vendas .sino-ico{background:var(--graf)!important;color:var(--latao)!important}
+.aj-acoes{justify-content:flex-start;gap:14px;mask-image:none;-webkit-mask-image:none}
 .sino-item.novo .sino-txt b::after{content:"";display:inline-block;width:7px;height:7px;margin-left:7px;border-radius:50%;background:var(--alerta);vertical-align:2px;animation:respirar 2s ease-in-out infinite}
 .sino-vazio{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 10px 18px;text-align:center}
 .sino-vazio-ico{width:44px;height:44px;margin-bottom:4px;border-radius:50%;background:var(--success-tint);color:var(--success);font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;animation:pop .5s var(--mola) both}
@@ -1581,6 +1656,20 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cu-ordem-nome{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cu-ordem-nome small{margin-left:6px;color:var(--text-faint);font-size:12px}
 .cu-ordem-item .btn-icon-sm:disabled{opacity:.3}
+/* Culto, ordem no WhatsApp (v12, escolha C): a lista dentro de uma placa grafite; o tom em latão */
+.cu-ordem{padding:6px 14px;border:none;border-radius:16px;background:var(--graf);color:var(--graf-tx)}
+.cu-ordem-item{border-bottom-color:var(--graf-line)}.cu-ordem-item:last-child{border-bottom:none}
+.cu-ordem-num{color:var(--latao)}.cu-ordem-nome small{color:var(--latao)}
+.cu-ordem-item .btn-icon-sm{color:var(--graf-tx)}
+/* Culto, histórico (v12, escolha A): linhas soltas com a posição num círculo dourado e a barrinha em latão */
+.cu-hist-pos{display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--latao);border-radius:50%;color:var(--gold)}
+.cu-hist-barra i{background:var(--latao)}
+/* Comparar (v12, escolha A): o nome de cada lado numa faixa grafite */
+.lvcmp-col .lvcmp-tit:first-child{margin-top:4px;padding:10px 12px;border-radius:12px;background:var(--graf);color:var(--graf-tx)}
+.lvcmp-col .lvcmp-tit:first-child small{color:var(--graf-dim)}.lvcmp-col .lvcmp-tit:first-child a{color:var(--latao)}
+/* Escolher tom (v12, escolha C): janela pequena no meio, sem cobrir a tela */
+#modalLvTom{align-items:center}
+#modalLvTom .modal{max-width:360px;margin:0 16px;border-radius:18px;max-height:80vh}
 /* prévia do texto como mensagem do WhatsApp */
 .cu-bolha{position:relative;margin:0 0 10px 12px;padding:12px 14px;border-radius:4px 14px 14px 14px;background:color-mix(in srgb,var(--brilho) 16%,var(--card));box-shadow:var(--sombra-card)}
 .cu-bolha::before{content:'';position:absolute;left:-8px;top:0;border:8px solid transparent;border-top-color:color-mix(in srgb,var(--brilho) 16%,var(--card));border-right-color:color-mix(in srgb,var(--brilho) 16%,var(--card))}
@@ -1673,9 +1762,10 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-cc-dica{font-size:12.5px;color:var(--text-faint)}
 
 /* música aberta: abas, barra harmônica, editor */
-.lv-subtabs{flex-shrink:0;display:flex;gap:var(--s4);padding:0 var(--s3);border-bottom:1px solid var(--line)}
-.lv-subtab{margin-bottom:-1px;padding:14px 2px;border:none;border-bottom:2px solid transparent;background:none;color:var(--text-faint);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;transition:all var(--dur) var(--ease)}
-.lv-subtab.active{color:var(--text);border-bottom-color:var(--gold-dim)}
+/* abas da música (v12, escolha A): pílula com a aberta em grafite */
+.lv-subtabs{flex-shrink:0;display:flex;gap:2px;width:max-content;max-width:calc(100% - 32px);margin:4px var(--s3) 6px;padding:3px;border:none;border-radius:999px;background:rgba(29,31,33,.07)}
+.lv-subtab{margin:0;padding:7px 16px;border:none;border-radius:999px;background:none;color:var(--text-dim);font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;transition:all var(--dur) var(--ease)}
+.lv-subtab.active{background:var(--graf);color:var(--graf-tx)}
 .lv-panel{display:none}
 .lv-panel.active{display:block;animation:surgir .3s var(--mola)}
 .lv-harmonic-bar{display:flex;gap:6px;padding:var(--s2)}
@@ -1706,9 +1796,10 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-icone-btn.ativo{background:var(--gold);border-color:var(--gold);color:#fff}
 .lv-icone-btn.ativo:hover{background:var(--gold-dim);color:#fff}
 .lv-icone-btn.carregando{opacity:.45;pointer-events:none;animation:respirar 1s ease-in-out infinite alternate}
-.lv-tom-box-header{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:8px 18px;border:1px solid var(--line);border-radius:10px;background:var(--card-2);font:inherit;cursor:pointer}
-.lv-tom-box-lbl{font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-faint)}
-.lv-tom-box-header span:last-child{margin-top:1px;font-size:20px;font-weight:800;color:var(--text)}
+/* topo da música (v12, escolha C): compacto; o tom num quadrado grafite com a letra dourada, igual à capa da lista */
+.lv-tom-box-header{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:46px;height:46px;padding:4px 8px;border:none;border-radius:12px;background:var(--graf);color:var(--latao);font:inherit;cursor:pointer}
+.lv-tom-box-lbl{font:600 8px/1 var(--font-narrow);letter-spacing:.12em;text-transform:uppercase;color:var(--graf-dim)}
+.lv-tom-box-header span:last-child{margin-top:0;font-size:18px;font-weight:700;color:var(--latao)}
 .lv-data-agendamento{width:118px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;background:var(--card-2);color:var(--text-dim);font-size:11.5px}
 .lv-hint{margin-bottom:8px;padding:8px 10px;border-radius:10px;background:var(--card-2);font-size:11.5px;line-height:1.5;color:var(--text-faint)}
 .lv-hint code{padding:1px 5px;border:1px solid var(--line);border-radius:4px;background:var(--card);font-size:11.5px}
@@ -1940,7 +2031,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lm-sec-titulo small{font-size:12px;color:var(--text-faint);text-align:right}
 .lm-musica{--lm-cor:var(--gold);margin-bottom:10px;padding:14px 14px 12px;border:none;border-left:3px solid var(--lm-cor);border-radius:var(--radius-sm);background:var(--card);box-shadow:var(--sombra-card)}
 .lm-cor0{--lm-cor:#2f5d46}.lm-cor1{--lm-cor:#a0522d}.lm-cor2{--lm-cor:#3b5b8c}.lm-cor3{--lm-cor:#7a4f8f}.lm-cor4{--lm-cor:#8a7a22}
-.lm-musica-topo{display:flex;align-items:center;gap:10px}
+/* medley (v12, escolha B): cada música num quadro com o topo numa faixa grafite */
+.lm-musica-topo{display:flex;align-items:center;gap:10px;margin:-14px -14px 10px;padding:10px 14px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;background:var(--graf);color:var(--graf-tx)}
 .lm-musica-num{width:22px;height:22px;flex-shrink:0;border-radius:50%;background:var(--lm-cor);color:#fff;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .lm-musica-nome{flex:1;min-width:0;display:flex;flex-direction:column}
 .lm-musica-nome b{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2264,8 +2356,9 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 /* conversa */
 .atz-msgs{display:flex;flex-direction:column;gap:8px;padding:12px 0}
 .atz-msg{max-width:88%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap;animation:cuEntra .3s var(--mola) both}
-.atz-msg.eu{align-self:flex-end;border-bottom-right-radius:5px;background:var(--text);color:var(--on-primary)}
-.atz-msg.ia{align-self:flex-start;border-bottom-left-radius:5px;background:var(--card-2);color:var(--text)}
+/* Assistente (v12, escolha A): você em grafite, a IA em branco com borda fina; o campo em pílula grafite */
+.atz-msg.eu{align-self:flex-end;border-bottom-right-radius:5px;background:var(--graf);color:var(--graf-tx)}
+.atz-msg.ia{align-self:flex-start;border-bottom-left-radius:5px;background:#fff;border:1px solid var(--fio);color:var(--text)}
 .atz-msg.erro{color:var(--danger)}
 .atz-msg.pensando{display:flex;align-items:center;gap:4px;color:var(--text-faint)}
 .atz-msg.pensando i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:atzPonto 1s infinite ease-in-out}
@@ -2291,8 +2384,9 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 .atz-acoes .btn:disabled{opacity:.45}
 /* barra de baixo: microfone, texto e enviar */
 .atz-barra{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + var(--safe));border-top:1px solid var(--line);background:var(--bg)}
-.atz-barra textarea{flex:1;min-height:44px;max-height:140px;padding:11px 14px;border:1px solid var(--line);border-radius:22px;background:var(--card);color:var(--text);font:inherit;font-size:15px;line-height:1.4;resize:none}
-.atz-barra textarea:focus{outline:none;border-color:var(--text-dim)}
+.atz-barra textarea{flex:1;min-height:44px;max-height:140px;padding:11px 16px;border:1px solid var(--graf);border-radius:22px;background:var(--graf);color:var(--graf-tx);font:inherit;font-size:15px;line-height:1.4;resize:none}
+.atz-barra textarea:focus{outline:none;border-color:var(--latao)}
+.atz-barra textarea::placeholder{color:var(--graf-dim)}
 .atz-mic,.atz-enviar{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0;border:none;border-radius:50%;cursor:pointer}
 .atz-mic{background:var(--text);color:var(--on-primary)}
 .atz-mic.ouvindo{background:var(--danger);animation:atzOuvindo 1.2s infinite}
@@ -2302,10 +2396,11 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 @media (prefers-reduced-motion:reduce){.atz-msg,.atz-mic.ouvindo,.atz-msg.pensando i{animation:none}}
 /* Atualizar: números do topo, barra do cartão e o computador usando a largura toda */
 .atz-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 4px}
-.atz-kpi{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:var(--card-2)}
-.atz-kpi span{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-faint)}
-.atz-kpi b{font-family:var(--font-display);font-size:21px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
-.atz-kpi small{font-size:12px;color:var(--text-faint)}
+/* resumão (v12, escolha A): os números numa placa grafite */
+.atz-kpi{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:var(--graf);color:var(--graf-tx)}
+.atz-kpi span{font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--latao)}
+.atz-kpi b{font-family:var(--font-body);font-size:22px;font-weight:300;letter-spacing:-.02em;color:var(--graf-tx);font-variant-numeric:tabular-nums}
+.atz-kpi small{font-size:12px;color:var(--graf-dim)}
 .atz-cartao-barra{display:flex;height:6px;margin-top:8px;overflow:hidden;border-radius:6px;background:var(--line)}
 .atz-cartao-barra i:nth-child(1){background:#b8865b}.atz-cartao-barra i:nth-child(2){background:#6f8f9e}.atz-cartao-barra i:nth-child(3){background:#9a8fb0}
 .atz-cartao-partes em{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;vertical-align:1px}

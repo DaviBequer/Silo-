@@ -1027,7 +1027,8 @@ function renderLouvorPdfPreview(){
   const gap = 30;
   const fsPara = n => { const colW = (largura - gap*(n-1))/n; return maxW > colW ? Math.max(6, l.pdfTamanhoTexto * colW / maxW * 0.98) : l.pdfTamanhoTexto; };
   let n;
-  if(l.colunas==='auto'){ n = (nSecoes >= 3 && fsPara(2) >= l.pdfTamanhoTexto*0.8) ? 2 : 1; lvColsAuto[l.id] = n; }
+  /* v12 (escolha C do Davi): no automático, duas colunas sempre que a música tem mais de uma parte e a letra não fica pequena demais */
+  if(l.colunas==='auto'){ n = (nSecoes >= 2 && fsPara(2) >= l.pdfTamanhoTexto*0.72) ? 2 : 1; lvColsAuto[l.id] = n; }
   else n = Number(l.colunas)||2;
   cols.style.columnCount = n;
   previewEl.style.setProperty('--lv-fs', fsPara(n).toFixed(2)+'pt');

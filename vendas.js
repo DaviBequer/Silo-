@@ -144,18 +144,21 @@ function renderVendas(){
   const explicaMes = metaMes===null ? '' : (baseMes < 0
     ? `Vender <b>${fmtMoney(alvoMes)}</b> · meta ${fmtMoney(metaMes)} + ${fmtMoney(-baseMes)} que faltam nas contas (sem o cartão)`
     : `Vender <b>${fmtMoney(metaMes)}</b> · as contas já sobram ${fmtMoney(baseMes)} sem contar o cartão`);
+  /* resumo (v12, escolha A do Davi): comissão grande numa placa grafite, os números pequenos dentro dela */
   let html = `<div class="card resumo-card">
+    <div class="placa ponto-placa vendas-placa">
     <div class="resumo-topo">
       <div class="resumo-mes">Vendas · ${monthLabelLong(mAtual)}</div>
       <div style="display:flex;gap:6px"><button type="button" class="ico-btn" title="Simular" aria-label="Simular" onclick="abrirVendasConfig('simulacao')">${ICO(ICO_D.simular)}</button><button type="button" class="ico-btn" title="Configurar" aria-label="Configurar" onclick="abrirVendasConfig()">${ICO(ICO_D.config)}</button></div>
     </div>
-    <div class="resumo-label">Comissão do mês</div>
+    <div class="placa-lbl">Comissão do mês</div>
     <div class="ponto-valor-grande">${fmtMoney(comMes)}</div>
     <div class="ponto-horas-sub"><span>${fmtMoney(vendasSetupNoMes(mAtual))}</span> de setup + <span>${fmtMoney(vendasRecNoMes(mAtual))}</span> de recorrência</div>
-    <div class="resumo-stats">
+    <div class="resumo-stats ponto-stats-placa">
       <div class="resumo-stat"><div class="resumo-stat-lbl">Recorrência/mês</div><div class="resumo-stat-val pos">${fmtMoney(recAcumulada)}</div></div>
       <button type="button" class="resumo-stat resumo-stat-btn" onclick="abrirClientesAtivos()"><div class="resumo-stat-lbl">Clientes ativos <span class="resumo-stat-seta">›</span></div><div class="resumo-stat-val">${ativos.length}</div></button>
       <button type="button" class="resumo-stat resumo-stat-btn" onclick="switchAba('planner');switchDashTab('emprestimo')"><div class="resumo-stat-lbl">Falta do empréstimo <span class="resumo-stat-seta">›</span></div><div class="resumo-stat-val vd-devedor${divida.tem?' neg':''}">${divida.tem?fmtMoney(divida.saldo):'—'}${divida.tem && divida.parcelas ? `<span class="vd-parcelas" title="${divida.parcelas} parcela${divida.parcelas===1?'':'s'} a pagar" aria-label="${divida.parcelas} parcela${divida.parcelas===1?'':'s'} a pagar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>${divida.parcelas} parcela${divida.parcelas===1?'':'s'}</span>` : ''}</div></button>
+    </div>
     </div>
     ${metaMes===null
       ? `<div class="vd-meta-linha"><span>Sem meta para ${monthLabel(mAtual)}</span><button type="button" class="modal-link" onclick="abrirMetaVendas('${mAtual}')">Definir meta</button></div>`

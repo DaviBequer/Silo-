@@ -429,6 +429,11 @@ function renderResumoSecaoGasto(cat){
     if(!state.paid[pk]) falta += restanteConta(pk, v);
   });
   const pago = Math.max(0, total - falta);
+  /* total do mês em dourado no cabeçalho da seção (v12, mistura B do Davi) */
+  const head = secao.querySelector('.section-head');
+  let ht = head.querySelector('.sec-head-total');
+  if(!ht){ ht = document.createElement('span'); ht.className = 'sec-head-total'; head.querySelector('.section-title').after(ht); }
+  ht.textContent = total > 0.004 ? fmtMoney(total) : '';
   if(total < 0.005){ el.innerHTML = ''; el.style.display = 'none'; return; }
   el.style.display = '';
   const pct = Math.min(100, Math.round(pago/total*100));
@@ -438,6 +443,8 @@ function renderResumoSecaoGasto(cat){
        <div class="sec-resumo-bar"><div style="width:${pct}%"></div></div>
        <div class="sec-resumo-linha sec-resumo-sub"><span class="pago">Pago ${fmtMoney(pago)}</span><span class="${falta<0.005?'pago':''}">${falta<0.005?'✓ tudo pago':'Falta '+fmtMoney(falta)}</span></div>`;
 }
+const gastoFiltro = {};   // filtro de cada seção (só na tela): 'todas' | 'aberto' | 'pagas'
+function gastoFiltrar(cat, f){ gastoFiltro[cat] = f; renderGastoGrid(cat); }
 function renderGastoGrid(cat){
   renderResumoSecaoGasto(cat);
   const u = state.currentUser;
@@ -450,25 +457,33 @@ function renderGastoGrid(cat){
     secao.classList.toggle('collapsed', colapsada);
   }
   const grid = document.getElementById('grid-'+cat);
+  /* filtro Todas / Em aberto / Pagas (v12, escolha C do Davi), por seção */
+  const mFil = mesFinanceiroAtual(), filtro = gastoFiltro[cat] || 'todas';
+  const pagaNoMes = item=>!!state.paid[mFil+'_'+u+'_'+cat+'_'+item.id];
+  const filtrados = filtro === 'pagas' ? items.filter(pagaNoMes) : filtro === 'aberto' ? items.filter(i=>!pagaNoMes(i)) : items;
+  const chips = items.length ? `<div class="sec-filtro">${[['todas','Todas'],['aberto','Em aberto'],['pagas','Pagas']].map(([k, t])=>`<button type="button" class="${filtro === k ? 'on' : ''}" onclick="gastoFiltrar('${cat}','${k}')">${t}</button>`).join('')}</div>` : '';
   if(!items || items.length===0){
     grid.innerHTML = `<div class="empty-state"><div class="title">Nada por aqui</div><div class="desc">Toque em + para incluir um gasto</div></div>`;
+  }else if(!filtrados.length){
+    grid.innerHTML = chips + `<div class="gm-vazio">${filtro === 'pagas' ? 'Nenhuma paga ainda' : 'Tudo pago'} em ${monthLabel(mFil)}.</div>`;
   }else{
-  grid.innerHTML = items.map(item=>{
-    const metaTxt = cat==='futuro' ? futuroDescricaoMeta(item) : ('dia '+(item.dia||1)+(item.mesInicio?' · a partir de '+monthLabel(item.mesInicio):''));
+  grid.innerHTML = chips + filtrados.map(item=>{
+    const metaTxt = cat==='futuro' ? futuroDescricaoMeta(item) : (item.logoUrl ? 'dia '+(item.dia||1) : 'todo mês')+(item.mesInicio?' · a partir de '+monthLabel(item.mesInicio):'');
     const valorTxt = cat==='futuro'
       ? (item.recorrente || (item.parcelas||1)<=1 || item.replicar!==false
           ? fmtMoney(item.valor)
           : 'Variável')
       : fmtMoney(item.valor);
+    /* logo da conta, senão o calendário com o dia (v12, escolha A do Davi) */
     const logo = item.logoUrl
       ? `<img src="${item.logoUrl}" class="conta-logo">`
-      : `<div class="conta-logo conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`;
+      : (cat !== 'futuro' ? gmCal(item.dia || 1) : `<div class="conta-logo conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`);
     const mAtual = mesFinanceiroAtual();
     const pk = mAtual+'_'+u+'_'+cat+'_'+item.id;
     const ativoNoMes = cat==='futuro' ? futuroValorNoMes(item, mAtual)>0 : !(item.mesInicio && mAtual < item.mesInicio);
     const pago = !!state.paid[pk];
     const parc = (state.pagamentosParciais||{})[pk] || 0;
-    const statusTxt = !ativoNoMes ? '' : (pago ? ' · <b style="color:var(--success)">paga</b>' : (parc>0 ? ' · <b style="color:var(--warning)">pago '+fmtMoney(parc)+'</b>' : ' · aberta'));
+    const statusTxt = !ativoNoMes ? '' : (pago ? ' · <b class="lr-paga">✓ paga</b>' : (parc>0 ? ' · <b style="color:var(--warning)">pago '+fmtMoney(parc)+'</b>' : ' · aberta'));
     const btnPagar = !ativoNoMes ? '' : `<button class="btn-icon-sm" title="Registrar pagamento" onclick="abrirEditarConta('${pk}','${u}','${cat}','${item.id}','${mAtual}')">$</button>`;
     return `<div class="list-row">
       ${logo}
@@ -833,10 +848,11 @@ function renderCartaoTrackerList(){
           <button class="btn-icon-sm" title="Excluir cartão" aria-label="Excluir cartão" onclick="excluirCartaoCard('${cartao.id}')">${ICON_TRASH}</button>
         </div>
       </div>
-      <div class="ct-disponivel-lbl">Disponível</div>
-      <div class="ct-disponivel-val">${fmtMoney(disponivel)}</div>
+      <span class="ct-chip" aria-hidden="true"></span>
+      <div class="ct-disponivel-lbl">Fatura de ${monthLabel(faturaAbertaMes(cartao)).toLowerCase()}</div>
+      <div class="ct-disponivel-val">${fmtMoney(faturaCartaoNoMes(cartao, faturaAbertaMes(cartao)))}</div>
       <div class="ct-bar"><div class="ct-bar-fill" style="width:${percentUsado}%"></div></div>
-      <div class="ct-foot"><span>Gasto ${fmtMoney(usado)}</span><span>Fecha dia ${cartao.fechamento||'—'} · Vence dia ${cartao.vencimento||'—'} · Total ${fmtMoney(limite)}</span></div>
+      <div class="ct-foot"><span>Disponível ${fmtMoney(disponivel)} de ${fmtMoney(limite)}</span><span>Fecha ${cartao.fechamento||'—'} · vence ${cartao.vencimento||'—'}</span></div>
       </div>
       ${faturaCaixaHtml(cartao)}
       <div class="ct-fatura-mensal">
@@ -846,6 +862,7 @@ function renderCartaoTrackerList(){
       </div>
       <button type="button" class="ct-toggle-compras ico-btn${cartoesExpandidos[cartao.id]?' aberto':''}" id="cartaoToggle-${cartao.id}" onclick="toggleCartaoDetalhes('${cartao.id}')" title="Detalhes" aria-label="Ver ou ocultar detalhes">${ICO(ICO_D.abaixo, 20)}</button>
       <div class="compras-do-cartao${cartoesExpandidos[cartao.id]?' expanded':''}" id="cartaoDetalhes-${cartao.id}">
+        <div class="placa ct-placa-fatura"><span class="placa-lbl" style="margin-top:0">Fatura de ${monthLabelLong(mesSelecionado || faturaAbertaMes(cartao)).toLowerCase()}</span><b>${fmtMoney(faturaCartaoNoMes(cartao, mesSelecionado || faturaAbertaMes(cartao)))}</b></div>
         ${comprasHtml}
         ${quitadasHtml}
         <div class="credo-vista-list">

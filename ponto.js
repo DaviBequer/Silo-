@@ -201,6 +201,7 @@ function pontoHoje(){
 }
 function renderPontoBater(){
   const el = document.getElementById('pontoBater'); if(!el) return;
+  el.innerHTML = ''; return;   // v12: o Davi não usa o "bater na hora" (ajusta o horário tocando); o resto fica para voltar se ele pedir
   if(pontoMonthKeyAtual() !== monthKey(new Date()) || pontoMesFechado(monthKey(new Date()))){ el.innerHTML = ''; return; }
   const { d, campo } = pontoHoje();
   const agora = minToTime(new Date().getHours()*60 + new Date().getMinutes());
@@ -303,7 +304,7 @@ function renderPonto(){
       };
       diasHtml += `<div class="ponto-dia-row ${isWeekend?'weekend':''} ${travado?'travado':''} ${diaAberto?'':'fechado'}" id="pontoDia-${dia}">
         <div class="pd-head" onclick="toggleDiaPonto(event,'${chaveDia}',${diaAberto})">
-          <div class="pd-data"><svg class="pd-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>${String(dia).padStart(2,'0')} <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
+          <div class="pd-data"><svg class="pd-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg><span class="cal"><b>${dia}</b></span> <small>${DIA_SEMANA[dateObj.getDay()]}</small></div>
           <div style="display:flex;align-items:center;gap:8px">
             <div class="pd-total ${total===0?'zero':''}">${minToHoursLabel(total)}</div>
             <button class="btn-icon-sm ${travado?'concluido-ativo':''}" onclick="toggleDiaConcluido(${dia})" title="${travado?'Reabrir dia':'Marcar como concluído'}">${travado?ICON_CHECK:ICON_UNLOCK}</button>

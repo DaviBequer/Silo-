@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.4', itens: [
+    'Finanças: seções com o total dourado, filtro Todas/Em aberto/Pagas e o calendário do dia; Para onde vai com uma barra e a % por categoria; saldo dos próximos meses em área dourada',
+    'Cartão no formato de cartão (logo, chip e a fatura dentro); faturas futuras e empréstimo em placa; Contas do mês com filtro; Histórico em cartões por mês; Assistente em grafite',
+    'Ponto: Padrão/Diferença/Impacto dentro da placa, dias com calendário e sem o bater na hora; Vendas em placa; música com abas em pílula, tom em grafite e duas colunas; Culto, Medley, Comparar e Tom no padrão novo'
+  ]},
   { versao: 'v12.3', itens: [
     'Janelas: o valor grande no meio e as escolhas curtas viram botões; ícones das abas novos (dinheiro, gráfico, ondas, controles) e botões de ícone num círculo',
     'Versículo centralizado; abertura no mármore com o nome, a saudação e a barra de carregamento em onda; entrada do PIN clara com a saudação'
