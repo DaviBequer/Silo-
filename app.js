@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.1', itens: [
+    'Colar do WhatsApp: a janela começa pela data do culto (calendário já abre); se o texto trouxer a data, ela vem marcada'
+  ]},
   { versao: 'v12.0', itens: [
     'Visual novo no app inteiro (escolhido em 10 rodadas): fundo de mármore, placa grafite com dourado, letra Archivo e barra de baixo com a aba aberta em grafite',
     'Finanças: Davi/Cris dentro da placa do saldo, sobra prevista e dias que faltam, bancos como cartõezinhos só com a logo; blocos do mês (Sobra, Pago, Fixos, Pix, Crédito à vista, Parcelado) e contas com calendário',

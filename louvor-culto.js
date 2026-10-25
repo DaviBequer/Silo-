@@ -377,7 +377,7 @@ function cultoColarParse(texto){
       .replace(/^\s*\[[^\]]*\]\s*[^:]{1,40}:\s*/, '')                                         // [21/10, 20:25] +55 47 ...:
       .replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}\s*-\s*[^:]{1,40}:\s*/, '')   // 21/10/2026 20:25 - Nome:
       .replace(/[*_~]/g, '').trim();
-    if(!s || /^culto\b/i.test(s) || /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(s)) return;
+    if(!s || /^culto\b/i.test(s) || /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(s) || cultoColarDataDoTexto(s)) return;   // linha da data: vai para o campo "Data do culto"
     s = s.replace(/^\s*(\d+\s*[.)]\s+|[-•·▪]\s+)/, '');
     let parte = '';
     const mp = /^([^:]{2,30}):\s*(.*)$/.exec(s);
@@ -419,8 +419,33 @@ function cultoColarNoApp(it){
   if(a) return achados.find(l=>parecido(cuNorm(l.artista), a) || parecido(cuNorm(l.artista), t)) || null;
   return new Set(achados.map(l=>cuNorm(l.artista))).size === 1 ? achados[0] : null;
 }
+/* data do culto no texto colado: linha com "Culto/Domingo/… 26/10" ou só "26/10" (a hora do WhatsApp "[21/10, 20:25]" não conta).
+   Sem ano: o deste ano, ou o do ano que vem se a data já passou há mais de 2 meses */
+function cultoColarDataDoTexto(texto){
+  for(const linha of String(texto || '').split(/\r?\n/)){
+    const s = linha.replace(/^\s*\[[^\]]*\]\s*[^:]{1,40}:\s*/, '').replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}\s*-\s*[^:]{1,40}:\s*/, '').replace(/[*_~]/g, '').trim();
+    const m = /^(?:culto|domingo|s[aá]bado|segunda|ter[cç]a|quarta|quinta|sexta|dia)?[^\d]{0,24}(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?:[\s,].{0,25})?$/i.exec(s);
+    if(!m || (!/^(culto|domingo|s[aá]bado|segunda|ter[cç]a|quarta|quinta|sexta|dia)/i.test(s) && !/^\d/.test(s))) continue;
+    const dia = +m[1], mes = +m[2]; if(dia < 1 || dia > 31 || mes < 1 || mes > 12) continue;
+    const hoje = new Date();
+    let ano = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : hoje.getFullYear();
+    let d = new Date(ano, mes - 1, dia);
+    if(!m[3] && hoje - d > 60 * 86400000) d = new Date(ano + 1, mes - 1, dia);
+    return calISO(d);
+  }
+  return '';
+}
+let cuColarDataMexida = false;
 function cultoColarAbrir(){
   cuColar = []; cuColarMontando = false; cuColarMedleys = {};
+  /* a data vem marcada (a do Culto aberto) e o calendário já abre para confirmar ou trocar; o texto colado pode trazer a data */
+  cuColarDataMexida = false;
+  const inpData = document.getElementById('cuColarData');
+  if(inpData){
+    inpData.value = cultoData || cultoProximaData();
+    document.getElementById('cuColarDataDica').textContent = '';
+    setTimeout(()=>{ const b = inpData.nextElementSibling; if(b && document.getElementById('modalCultoColar').classList.contains('active')) abrirCalendario(inpData, b); }, 280);
+  }
   document.getElementById('cuColarTexto').value = '';
   document.getElementById('cuColarLista').innerHTML = '';
   document.getElementById('cuColarAcoes').style.display = 'none';
@@ -473,7 +498,10 @@ function cultoColarPerguntarOpcao(it, titulo, opcoes, nenhuma, comCantor){
   });
 }
 function cultoColarLer(){
-  cuColar = cultoColarParse(document.getElementById('cuColarTexto').value);
+  const texto = document.getElementById('cuColarTexto').value;
+  const dTexto = cultoColarDataDoTexto(texto), inpData = document.getElementById('cuColarData');
+  if(dTexto && inpData && !cuColarDataMexida && inpData.value !== dTexto){ inpData.value = dTexto; document.getElementById('cuColarDataDica').textContent = 'data tirada do texto colado'; }
+  cuColar = cultoColarParse(texto);
   /* "Boas vindas" / "Haŕpa" → o nome da parte que já existe no roteiro (Boas-vindas, Harpa) */
   const existentes = cultoAtual().partes;
   cuColar.forEach(it=>{ const p = existentes.find(x=>cuNorm(x.nome) === cuNorm(it.parte)); it.parte = p ? p.nome : it.parte.replace(/ŕ/g, 'r'); });
@@ -522,6 +550,9 @@ let cuColarMedleys = {};
 function cultoColarPasso(it, txt){ it.passo = txt; cultoColarRender(); }
 async function cultoColarMontar(){
   if(!cuColar.length) return;
+  /* o roteiro vai para a data escolhida na janela */
+  const dEsc = (document.getElementById('cuColarData') || {}).value;
+  if(dEsc && dEsc !== cultoData) cultoMudarData(dEsc);
   const btn = document.getElementById('cuColarMontar'); btn.disabled = true; btn.textContent = 'Montando…';
   cuColarMontando = true; cuColarMedleys = {};
   document.getElementById('cuColarTexto').style.display = 'none';

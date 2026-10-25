@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=12.0">
+<link rel="stylesheet" href="style.css?v=12.1">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 120</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 121</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1470,6 +1470,8 @@
       <h3>Colar do WhatsApp</h3>
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalCultoColar')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
+    <!-- data do culto: já vem marcada (a do texto colado, senão a do Culto aberto) e dá para trocar antes de montar -->
+    <div class="field cu-colar-data"><label for="cuColarData">Data do culto</label><input type="date" id="cuColarData" onchange="cuColarDataMexida = true"><small id="cuColarDataDica"></small></div>
     <button type="button" class="btn btn-outline btn-block cu-colar-btn" onclick="cultoColarDaAreaDeTransferencia()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>Colar o que copiei</button>
     <textarea id="cuColarTexto" class="voz-campo cu-colar-texto" rows="7" placeholder="Abertura: Por caminhos - Mara Lima (E)&#10;Harpa: 88 (G)&#10;O Deus do impossível (C)" oninput="cultoColarLer()"></textarea>
     <div class="cu-colar-pergunta" id="cuColarPergunta" style="display:none"></div>
@@ -1905,23 +1907,23 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=12.0"></script>
-<script src="core.js?v=12.0"></script>
-<script src="layout.js?v=12.0"></script>
-<script src="app.js?v=12.0"></script>
-<script src="panorama.js?v=12.0"></script>
-<script src="planner.js?v=12.0"></script>
-<script src="ponto.js?v=12.0"></script>
-<script src="louvor.js?v=12.0"></script>
-<script src="louvor-extra.js?v=12.0"></script>
-<script src="louvor-medley.js?v=12.0"></script>
-<script src="louvor-culto.js?v=12.0"></script>
-<script src="louvor-drive.js?v=12.0"></script>
-<script src="atualizar.js?v=12.0"></script>
-<script src="louvor-comparar.js?v=12.0"></script>
-<script src="fatura-pdf.js?v=12.0"></script>
-<script src="emprestimo.js?v=12.0"></script>
-<script src="vendas.js?v=12.0"></script>
+<script src="supabase.js?v=12.1"></script>
+<script src="core.js?v=12.1"></script>
+<script src="layout.js?v=12.1"></script>
+<script src="app.js?v=12.1"></script>
+<script src="panorama.js?v=12.1"></script>
+<script src="planner.js?v=12.1"></script>
+<script src="ponto.js?v=12.1"></script>
+<script src="louvor.js?v=12.1"></script>
+<script src="louvor-extra.js?v=12.1"></script>
+<script src="louvor-medley.js?v=12.1"></script>
+<script src="louvor-culto.js?v=12.1"></script>
+<script src="louvor-drive.js?v=12.1"></script>
+<script src="atualizar.js?v=12.1"></script>
+<script src="louvor-comparar.js?v=12.1"></script>
+<script src="fatura-pdf.js?v=12.1"></script>
+<script src="emprestimo.js?v=12.1"></script>
+<script src="vendas.js?v=12.1"></script>
 <script>carregar();</script>
 </body>
 </html>
