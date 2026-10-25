@@ -96,7 +96,7 @@ function calcularStorageUsage(){
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
   { versao: 'v12.2', itens: [
-    'Peças do app no visual novo (escolhidas uma a uma): janelas com o título numa faixa grafite, campos brancos com o valor em destaque, botões finos em caixa alta, abas em pílula, interruptores dourados'
+    'Peças do app no visual novo (escolhidas uma a uma): janelas com o título numa faixa grafite, campos brancos com o valor em destaque, botões finos em caixa alta, abas em pílula, interruptores dourados',
     'Cabeçalho numa linha só (dias e o que falta pagar numa pílula), títulos de seção com traço dourado, botão Nova música e listas com o calendário do dia'
   ]},
   { versao: 'v12.1', itens: [
