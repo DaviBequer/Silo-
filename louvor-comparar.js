@@ -35,11 +35,22 @@ async function lvOriginalLer(id){
 function lvAtualizarBtnComparar(l){
   const b = document.getElementById('lvBtnComparar');
   if(b) b.style.display = l && l.origem ? '' : 'none';
+  /* "voltar a ser só o PDF do Drive": música que veio do Drive e já teve o texto tirado (pedido do Davi) */
+  const sd = document.getElementById('lvBtnSoDrive');
+  if(sd) sd.style.display = l && l.origem && l.origem.tipo === 'drive' && l.origem.id && !l.origem.apagadoNoDrive && (l.conteudo || '').trim() ? '' : 'none';
+  setTimeout(lvAcoesBarraAtualizar, 0);
   /* logo do Cifra Club: abre no navegador a página de onde a cifra veio (medley: uma por música) */
   const el = document.getElementById('lvLinksCifra'); if(!el) return;
   const links = l && (l.cifraLinks && l.cifraLinks.length ? l.cifraLinks : l.origem && l.origem.tipo === 'cifraclub' && l.origem.url ? [{ titulo: l.titulo, url: l.origem.url }] : []);
   el.innerHTML = (links || []).filter(x=>/^https:\/\/(www\.|m\.)?cifraclub\.com\.br\//.test(x.url || '')).slice(0, 4).map(x=>
     `<a class="lv-icone-btn lv-link-cifra" href="${lvEsc(x.url)}" target="_blank" rel="noopener" title="Abrir no Cifra Club${links.length > 1 ? ': ' + lvEsc(x.titulo || '') : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20"></a>`).join('');
+}
+
+/* a pílula de ações da música some quando nenhum botão dela está à mostra */
+function lvAcoesBarraAtualizar(){
+  const barra = document.getElementById('lvAcoesBarra'); if(!barra) return;
+  const algum = [...barra.children].some(el=>el.style.display !== 'none' && (el.tagName !== 'SPAN' || el.children.length));
+  barra.hidden = !algum;
 }
 
 /* ---------- tela ---------- */

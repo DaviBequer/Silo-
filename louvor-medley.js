@@ -74,6 +74,7 @@ function lvAoAbrirDetalhe(l){
   const btnM = document.getElementById('lvBtnMedley');
   if(btnM) btnM.style.display = ehMedley ? '' : 'none';
   document.querySelectorAll('.lv-so-musica').forEach(el=>{ el.style.display = ehMedley ? 'none' : ''; });
+  if(typeof lvAtualizarBtnComparar === 'function') lvAtualizarBtnComparar(l);   // Comparar e "voltar ao Drive" seguem a origem; a pílula de ações acompanha
   if(ehMedley && !l.medleyEditado){
     const novo = lmGerarTexto(l.medley);
     if(novo !== l.conteudo){ l.conteudo = novo; persist(); }

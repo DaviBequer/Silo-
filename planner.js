@@ -14,7 +14,7 @@ function renderPlanner(){
   renderResumoMes();
 }
 
-let fluxoMesesExpandido = false;
+let fluxoMesesExpandido = true;   // v12 (escolha A do Davi): os 12 meses sempre à vista
 function toggleFluxoMeses(){
   fluxoMesesExpandido = !fluxoMesesExpandido;
   renderRendaTable();
@@ -85,8 +85,15 @@ function renderRendaTable(){
     return `<td class="${mKey===hoje?'current-col':''}"><span class="total-value" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></td>`;
   }).join('')}<td></td></tr>`;
 
+  /* acumulado (v12, escolha A): a sobra somando mês a mês, começando pelo saldo de hoje */
+  let acum = state.users[u].saldoAtual || 0;
+  const acumRow = `<tr class="acum-row"><td class="row-label">Acumulado</td>${months.map((mKey, i)=>{
+    acum = i === 0 ? saldoForMonth(u, mKey) : acum + saldoForMonth(u, mKey);
+    return `<td class="${mKey===hoje?'current-col':''}"><span class="${acum>=0?'pos':'neg'}">${fmtCompacto(acum)}</span></td>`;
+  }).join('')}<td></td></tr>`;
+
   document.getElementById('rendaTableThead').innerHTML = thead;
-  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + gastosRow + cartaoRow + empRow + sobraRow;
+  document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + gastosRow + cartaoRow + empRow + sobraRow + acumRow;
 }
 
 /* janela com cada gasto do mês, agrupado como nas seções do Dashboard */

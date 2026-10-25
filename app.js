@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.6', itens: [
+    'Fluxo mensal: os 12 meses sempre à vista com a primeira coluna presa, o mês atual em grafite e a linha nova Acumulado',
+    'Louvor: menu do + vira uma fileira de pílulas em cima do botão; as ações da música ficam numa pílula grafite embaixo, com o botão de voltar a ser só o PDF do Drive'
+  ]},
   { versao: 'v12.5', itens: [
     'Comparar: os acordes do lado No app dá para editar ali mesmo, olhando o original (a letra não muda)',
     'Comparar: botão Ficar só com o PDF do Drive (o texto do app sai, com Desfazer)'
