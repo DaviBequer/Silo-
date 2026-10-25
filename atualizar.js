@@ -6,7 +6,7 @@
      no Pix do Inter padaria 18; paguei a luz; saldo do Inter 2.300"). A IA monta a lista do que vai entrar, pergunta
      quando tem dúvida e diz quanto falta para bater a fatura/saldo. Nada é gravado até "Gravar tudo" (com Desfazer).
    Itens: vista | parcelada | pix | recebi | conta | saldo | fatura (fatura e saldo são o valor que a pessoa viu no banco). */
-let atzAba = 'resumo', atzConversa = [], atzItens = [], atzOcupado = false, atzRec = null, atzNaoIdent = {}, atzCortar = null;
+let atzAba = 'resumo', atzConversa = [], atzItens = [], atzOcupado = false, atzRec = null, atzCortar = null;
 
 function abrirAtualizar(aba){
   atzAba = aba || 'resumo';
@@ -15,7 +15,7 @@ function abrirAtualizar(aba){
   renderAtualizar();
 }
 function fecharAtualizar(){
-  if(atzRec){ try{ atzRec.abort(); }catch(e){} atzRec = null; }
+  if(atzMicLigado || atzRec) atzMicParar(false);
   document.getElementById('pageAtualizar').classList.remove('active');
   document.body.style.overflow = '';
 }
@@ -272,15 +272,16 @@ async function atzEnviar(texto){
       `"Foi para a próxima fatura" = proximaFatura true. Valores por extenso viram número. Escolha a categoria pelo que foi comprado. ` +
       `Se faltar o banco, o cartão ou o número de parcelas, ou se algo for ambíguo, deixe vazio e PERGUNTE na resposta. ` +
       `NÃO faça contas de quanto falta para bater a fatura ou o saldo: o app calcula e escreve logo depois da sua resposta. ` +
-      `Se no contexto faltaParaBater for maior que zero, pode perguntar se há mais compras desse cartão; se a diferença do saldo for negativa, pode perguntar se houve outro gasto nesse banco. ` +
+      `O app já pergunta o que falta explicar (fatura e saldo): não repita esses valores. Quando a pessoa contar o que gastou para explicar a diferença, lance como pix (banco) ou vista (cartão). ` +
+      `Se ela disser que não lembra o resto ("não sei", "o resto não lembro"), lance um pix "Gasto não identificado" (categoria Outros) no banco com o valor que falta (diferenca do contexto, em positivo), ou uma vista "Compra não identificada" no cartão com faltaParaBater. ` +
       `A pessoa pode corrigir ou tirar itens ("tira a farmácia", "o mercado foi 130"): devolva sempre a lista completa já corrigida. Não invente itens.\n\n` +
       `CONTEXTO: ${JSON.stringify(atzContexto())}\n\nLISTA ATUAL: ${JSON.stringify(atzItensParaIA())}\n\nCONVERSA:\n${historico}` }],
       t=>atzRenderConversa(t), ATZ_ESQUEMA);
     atzItens = atzNormalizarItens(r.itens);
     /* a conta da falta é do app (a IA erra soma): a resposta ganha as linhas com os números certos */
     const conf = atzConferencia(), contas = [];
-    conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.falta) < 0.01 ? `Fatura ${x.c.nome}: bateu ✓` : x.falta > 0 ? `Fatura ${x.c.nome}: ainda faltam ${fmtMoney(x.falta)} para bater com o banco.` : `Fatura ${x.c.nome}: passou ${fmtMoney(-x.falta)} do valor do banco.`));
-    conf.bancos.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.dif) < 0.01 ? `Saldo ${x.b.nome}: bateu ✓` : x.dif < 0 ? `Saldo ${x.b.nome}: ${fmtMoney(-x.dif)} saíram sem ser lançados.` : `Saldo ${x.b.nome}: entrou ${fmtMoney(x.dif)} a mais.`));
+    conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.falta) < 0.01 ? `Fatura ${x.c.nome}: bateu ✓` : x.falta > 0 ? `Fatura ${x.c.nome}: faltam ${fmtMoney(x.falta)} para bater. Quais compras faltam nesse cartão?` : `Fatura ${x.c.nome}: passou ${fmtMoney(-x.falta)} do valor do banco. Algum valor ficou errado?`));
+    conf.bancos.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.dif) < 0.01 ? `Saldo ${x.b.nome}: bateu ✓` : x.dif < 0 ? `Saldo ${x.b.nome}: faltam ${fmtMoney(-x.dif)} para explicar. O que você gastou no ${x.b.nome}?` : `Saldo ${x.b.nome}: entrou ${fmtMoney(x.dif)} a mais. Recebeu algum valor?`));
     atzConversa.push({ quem:'ia', texto: [String(r.resposta || 'Anotado.').trim(), ...contas].join('\n') });
   }catch(e){
     atzConversa.push({ quem:'ia', texto: 'Não consegui falar com a IA agora (' + ((e && e.message) || 'erro') + '). Tente de novo.', erro: true });
@@ -312,6 +313,7 @@ function atzRenderConversa(pensando){
       <div class="atz-linha"><span>No app ${fmtMoney(x.noApp)} + novos ${fmtMoney(x.novos)}</span><b>${fmtMoney(x.noApp + x.novos)}</b></div>
       <div class="atz-linha"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>
       <div class="atz-linha atz-total"><span>${Math.abs(x.falta) < 0.01 ? 'Bateu' : x.falta > 0 ? 'Ainda falta lançar' : 'Passou do banco'}</span><b>${Math.abs(x.falta) < 0.01 ? '✓' : fmtMoney(Math.abs(x.falta))}</b></div>
+      ${x.falta > 0.009 ? `<div class="atz-conf-dica">Fale as compras que faltam desse cartão.</div><button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('cartao','${x.c.id}')">Não lembro: lançar ${fmtMoney(x.falta)} como compra não identificada</button>` : ''}
     </div>`).join('');
   const confBan = conf.bancos.filter(x=>x.informado !== null).map(x=>{
     const sumiu = x.dif < -0.009;
@@ -320,7 +322,9 @@ function atzRenderConversa(pensando){
       <div class="atz-linha"><span>Esperado pelo app</span><b>${fmtMoney(x.esperado)}</b></div>
       <div class="atz-linha"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>
       ${Math.abs(x.dif) < 0.01 ? '<div class="atz-linha atz-total"><span>Bateu</span><b>✓</b></div>'
-        : sumiu ? `<label class="atz-naoident"><input type="checkbox"${atzNaoIdent[x.b.id] !== false ? ' checked' : ''} onchange="atzNaoIdent['${x.b.id}']=this.checked"><span>${fmtMoney(-x.dif)} saíram sem ser lançados: gravar como "Gasto não identificado"</span></label>`
+        : sumiu ? `<div class="atz-linha atz-total"><span>Falta explicar</span><b>${fmtMoney(-x.dif)}</b></div>
+          <div class="atz-conf-dica">Fale o que você gastou no ${escBanco(x.b.nome)} (Pix, débito, contas).</div>
+          <button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('banco','${x.b.id}')">Não lembro: lançar ${fmtMoney(-x.dif)} como gasto não identificado</button>`
         : `<div class="atz-linha atz-total"><span>Entrou a mais</span><b>${fmtMoney(x.dif)}</b></div>`}
     </div>`; }).join('');
   const prontos = atzItens.length && !atzItens.some(atzFaltaNoItem);
@@ -336,13 +340,29 @@ function atzRenderConversa(pensando){
   const m = el.querySelector('.atz-msgs'); if(m) setTimeout(()=>{ const ult = m.lastElementChild; if(ult) ult.scrollIntoView({ block:'nearest', behavior:'smooth' }); }, 30);
 }
 function atzTirarItem(k){ atzItens.splice(k, 1); renderAtualizar(); }
-function atzLimpar(){ atzConversa = []; atzItens = []; atzNaoIdent = {}; renderAtualizar(); }
+/* "Não lembro": o que falta explicar vira um item na lista (Pix "Gasto não identificado" no banco, ou compra no cartão) */
+function atzSemExplicar(onde, id){
+  const conf = atzConferencia();
+  if(onde === 'banco'){
+    const x = conf.bancos.find(b=>b.b.id === id); if(!x || !(x.dif < -0.009)) return;
+    atzItens.push({ tipo:'pix', descricao:'Gasto não identificado', valor: Math.round(-x.dif * 100) / 100, categoria:'Outros', cartaoId:'', cartaoNome:'', bancoId: x.b.id, bancoNome: x.b.nome, parcelas:1, proximaFatura:false, conta:'' });
+  } else {
+    const x = conf.cartoes.find(c=>c.c.id === id); if(!x || !(x.falta > 0.009)) return;
+    atzItens.push({ tipo:'vista', descricao:'Compra não identificada', valor: Math.round(x.falta * 100) / 100, categoria:'Outros', cartaoId: x.c.id, cartaoNome: x.c.nome, bancoId:'', bancoNome:'', parcelas:1, proximaFatura:false, conta:'' });
+  }
+  renderAtualizar();
+}
+function atzLimpar(){ atzConversa = []; atzItens = []; renderAtualizar(); }
 
 /* grava tudo de uma vez (com Desfazer). Banco com saldo informado fica com o saldo informado (o Pix dele só entra no histórico);
    nos outros, Pix/conta tiram e "recebi" soma. */
-function atzGravar(){
+async function atzGravar(){
   if(!atzItens.length || atzItens.some(atzFaltaNoItem)) return;
   const conf = atzConferencia(), agora = Date.now(), hoje = calISO(new Date()), mKey = mesFinanceiroAtual();
+  /* ainda tem diferença sem explicar: avisa antes (o saldo fica o do banco, mas sem dizer onde foi o dinheiro) */
+  const soltas = [...conf.bancos.filter(x=>x.informado !== null && x.dif < -0.009).map(x=>`${fmtMoney(-x.dif)} no ${x.b.nome}`),
+    ...conf.cartoes.filter(x=>x.informado !== null && x.falta > 0.009).map(x=>`${fmtMoney(x.falta)} na fatura ${x.c.nome}`)];
+  if(soltas.length && !(await iosConfirm(`Ainda falta explicar ${soltas.join(' e ')}. Gravar assim mesmo?`))) return;
   const comSaldo = new Set(atzItens.filter(i=>i.tipo === 'saldo').map(i=>i.bancoId));
   const itens = atzItens.slice(), n = itens.length;
   comDesfazer(`${n} ${n === 1 ? 'item gravado' : 'itens gravados'}`, ()=>{
@@ -374,34 +394,63 @@ function atzGravar(){
         if(i.bancoId) mexe(i.bancoId, -i.valor);
       }
     });
-    /* saldo informado: vale o do banco; o que sumiu sem lançamento vira "Gasto não identificado" (se a caixinha ficou marcada) */
-    conf.bancos.filter(x=>x.informado !== null).forEach(x=>{
-      const b = banco(x.b.id); if(!b) return;
-      if(x.dif < -0.009 && atzNaoIdent[b.id] !== false)
-        state.lancamentos.push({ id:'la' + agora + '_ni_' + b.id, mKey, data: hoje, descricao:'Gasto não identificado', valor: Math.round(-x.dif * 100) / 100, categoria:'Outros', banco: b.nome, usuario: state.currentUser });
-      b.valor = x.informado;
-    });
+    /* saldo informado: vale o do banco (o "não identificado" só entra se a pessoa pediu: vira item Pix na lista) */
+    conf.bancos.filter(x=>x.informado !== null).forEach(x=>{ const b = banco(x.b.id); if(b) b.valor = x.informado; });
     if(bancos.length) us.saldoAtual = totalBancos(bancos);
     state.ultimaAtualizacao = agora;
     persist();
   }, ()=>{ if(document.getElementById('pageAtualizar').classList.contains('active')) renderAtualizar(); });
-  atzConversa = []; atzItens = []; atzNaoIdent = {};
+  atzConversa = []; atzItens = [];
   atzAba = 'resumo';
   renderPlanner(); renderPanorama();
   renderAtualizar();
 }
 
-/* ---------- microfone: fala corrida (continua ouvindo até tocar de novo) ---------- */
+/* ---------- microfone: fala corrida ----------
+   O modo "continuous" do Chrome no Android devolve o texto repetido ("saldo do nubank é saldo do nubank é…"), então
+   cada trecho é uma escuta curta: quando ela acaba (a pessoa respirou), junta o trecho e escuta de novo.
+   Só envia depois de ATZ_SILENCIO ms sem falar (ou ao tocar no microfone de novo). */
+const ATZ_SILENCIO = 4000;
+let atzMicLigado = false, atzMicTimer = 0;
 function atzMicrofone(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const inp = document.getElementById('atzTexto'), mic = document.getElementById('atzMic');
   if(!SR){ showToast('Ditado indisponível aqui: use o microfone do teclado'); inp.focus(); return; }
-  if(atzRec){ atzRec.stop(); return; }
-  const r = new SR();
-  r.lang = 'pt-BR'; r.interimResults = true; r.continuous = true;
-  const antes = inp.value.trim() ? inp.value.trim() + ' ' : '';
-  r.onresult = e=>{ let t = ''; for(const res of e.results) t += res[0].transcript; inp.value = antes + t.trim(); };
-  r.onerror = e=>{ if(e.error === 'not-allowed' || e.error === 'service-not-allowed') showToast('Permita o microfone (ou escreva)'); };
-  r.onend = ()=>{ atzRec = null; mic.classList.remove('ouvindo'); if(inp.value.trim()) atzEnviar(inp.value); };
-  try{ r.start(); atzRec = r; mic.classList.add('ouvindo'); }catch(e){ showToast('Não consegui ligar o microfone: escreva'); }
+  if(atzMicLigado){ atzMicParar(true); return; }
+  atzMicLigado = true;
+  let acum = inp.value.trim(), ultimaFala = Date.now();
+  mic.classList.add('ouvindo');
+  const juntar = (a, b)=>{   // sem repetir: se o trecho novo já começa com o anterior (Android), fica só o novo
+    a = a.trim(); b = b.trim();
+    if(!a) return b; if(!b) return a;
+    if(b.toLowerCase().startsWith(a.toLowerCase())) return b;
+    if(a.toLowerCase().endsWith(b.toLowerCase())) return a;
+    return a + ' ' + b;
+  };
+  const ouvir = ()=>{
+    const r = new SR();
+    r.lang = 'pt-BR'; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    let trecho = '';
+    r.onresult = e=>{
+      trecho = e.results[e.results.length - 1][0].transcript;   // só o último resultado: os anteriores já estão nele
+      inp.value = juntar(acum, trecho); ultimaFala = Date.now();
+    };
+    r.onerror = e=>{ if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ showToast('Permita o microfone (ou escreva)'); atzMicParar(false); } };
+    r.onend = ()=>{
+      acum = juntar(acum, trecho); inp.value = acum; atzRec = null;
+      if(atzMicLigado && Date.now() - ultimaFala < ATZ_SILENCIO) ouvir();   // respirou: continua ouvindo
+      else if(atzMicLigado) atzMicParar(true);
+    };
+    try{ r.start(); atzRec = r; }catch(e){ atzMicParar(false); showToast('Não consegui ligar o microfone: escreva'); }
+  };
+  clearInterval(atzMicTimer);
+  atzMicTimer = setInterval(()=>{ if(atzMicLigado && Date.now() - ultimaFala >= ATZ_SILENCIO){ if(atzRec) try{ atzRec.stop(); }catch(e){} else atzMicParar(true); } }, 500);
+  ouvir();
+}
+function atzMicParar(enviar){
+  atzMicLigado = false; clearInterval(atzMicTimer);
+  if(atzRec){ const r = atzRec; atzRec = null; r.onend = null; try{ r.stop(); }catch(e){} }
+  document.getElementById('atzMic').classList.remove('ouvindo');
+  const inp = document.getElementById('atzTexto');
+  if(enviar && inp.value.trim()) atzEnviar(inp.value);
 }

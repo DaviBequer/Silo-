@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v11.2', itens: [
+    'Atualizar: microfone espera 4 segundos de silêncio e não repete mais as palavras',
+    'Saldo ou fatura que não batem: o app pergunta o que foi gasto; só vira não identificado se você tocar em Não lembro (ou disser que não lembra)'
+  ] },
   { versao: 'v11.1', itens: [
     'Linha do "-" à esquerda, junto do texto, com 35% da largura'
   ] },
