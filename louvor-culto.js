@@ -608,7 +608,14 @@ async function cultoColarMontar(){
       fim >= 0 ? c.partes.splice(fim, 0, p) : c.partes.push(p);
     }
     if(!p.musicas.includes(l.id)) p.musicas.push(l.id);
+    /* cada música colada já fica agendada na data escolhida (pedido do Davi); a data antiga que já passou vai para o histórico de tocadas */
+    if(c.data && l.dataAgendamento !== c.data){
+      const hoje = cultoHojeISO();
+      if(l.dataAgendamento && l.dataAgendamento <= hoje) l.tocadaEm = [...new Set([...(l.tocadaEm || []), l.dataAgendamento])].sort();
+      l.dataAgendamento = c.data;
+    }
   });
+  persist();
   cultoGravar(); renderCulto(); renderLouvor(); cultoColarRender();
   btn.disabled = false; btn.textContent = 'Pronto'; btn.onclick = ()=>closeModal('modalCultoColar');
   const n = c.partes.reduce((s, p)=>s + p.musicas.length, 0);

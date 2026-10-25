@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.0', itens: [
+    'Colar do WhatsApp: todas as músicas do roteiro já ficam agendadas na data escolhida',
+    'Louvor: mudar a data, o status, o tom ou o tipo de uma música atualiza na hora a lista, a placa do culto e o Culto aberto'
+  ]},
   { versao: 'v12.9', itens: [
     'Louvor, filtro Atual: mostra tudo com data de hoje para frente (agendada ou no roteiro do Culto), pronta ou não, e o que está em produção; o que é de ontem para trás não aparece',
     'Placa do culto atualiza na hora ao marcar Pronto (N prontas) e a música pronta ganha o número com a borda verde'

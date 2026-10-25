@@ -257,9 +257,7 @@ function toggleLouvorStatus(){
   }
   persist();
   renderLvStatusBtn();
-  renderLouvorLista();
-  if(typeof renderCultoBotao === 'function') renderCultoBotao();   // placa do culto: "N prontas" e o número com a borda verde
-  if(document.getElementById('pageCulto')?.classList.contains('active') && typeof renderCulto === 'function') renderCulto();
+  lvAtualizarTelas();   // placa do culto: "N prontas" e o número com a borda verde
 }
 function closeLouvorDetalhe(){
   if(document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);
@@ -278,6 +276,7 @@ function selecionarLvCategoria(c){
   l.categoria = c;
   renderLvCategoriaChips();
   persist();
+  lvAtualizarTelas();
 }
 /* ===== Editor estilo Word =====
    O texto fica num textarea transparente; por trás, uma camada igualzinha pinta cada linha
@@ -354,6 +353,13 @@ function salvarLouvorData(v){
   if(antiga && antiga !== v && antiga <= hoje){ l.tocadaEm = [...new Set([...(l.tocadaEm||[]), antiga])].sort(); }
   l.dataAgendamento = v || '';
   persist();
+  lvAtualizarTelas();
+}
+/* qualquer mudança na música (data, status, tom, tipo) aparece na hora em tudo o que está na tela: lista, placa do culto, Culto aberto */
+function lvAtualizarTelas(){
+  renderLouvorLista();
+  if(typeof renderCultoBotao === 'function') renderCultoBotao();
+  if(document.getElementById('pageCulto')?.classList.contains('active') && typeof renderCulto === 'function') renderCulto();
 }
 function excluirLouvorAtual(){
   const l = getLouvorAtual(); if(!l) return;
@@ -587,6 +593,7 @@ function lvTomGridEscolher(nota, modoMenor){
   renderLouvorPdfPreview();
   closeModal('modalLvTom');
   if(typeof driveTomMudou === 'function') driveTomMudou(l);   // já estava no Drive: troca o arquivo pelo do tom novo
+  lvAtualizarTelas();
 }
 /* muda o tom de uma música sem abrir a tela (roteiro colado do WhatsApp): sobe/desce a cifra e escreve no tom novo */
 function lvAplicarTom(l, nota, modoMenor){
