@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.5', itens: [
+    'Comparar: os acordes do lado No app dá para editar ali mesmo, olhando o original (a letra não muda)',
+    'Comparar: botão Ficar só com o PDF do Drive (o texto do app sai, com Desfazer)'
+  ]},
   { versao: 'v12.4', itens: [
     'Finanças: seções com o total dourado, filtro Todas/Em aberto/Pagas e o calendário do dia; Para onde vai com uma barra e a % por categoria; saldo dos próximos meses em área dourada',
     'Cartão no formato de cartão (logo, chip e a fatura dentro); faturas futuras e empréstimo em placa; Contas do mês com filtro; Histórico em cartões por mês; Assistente em grafite',

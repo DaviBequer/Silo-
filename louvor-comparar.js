@@ -65,14 +65,50 @@ function lvCompararRenderApp(l){
   const el = document.getElementById('lvcmpApp');
   if(!(l.conteudo || '').trim()){ el.innerHTML = `<div class="lvcmp-tit"><b>No app</b><small>${l.origem && l.origem.tipo === 'drive' ? 'só o arquivo do Drive (o texto não foi tirado)' : 'sem letra ainda'}</small></div>`; return; }
   const olhar = new Set((l.revisar || []).map(t=>t.trim()));
-  const linhas = (l.conteudo || '').split('\n').map(x=>{
+  /* linhas de acorde dá para editar aqui mesmo, olhando o original ao lado (a letra e as partes não) */
+  const linhas = (l.conteudo || '').split('\n').map((x, i)=>{
     const t = x.trim();
     const cls = /^\[.+\]$/.test(t) ? 'rot' : isChordLine(t) ? 'ac' : olhar.has(t) ? 'olhar' : /^-{1,3}$/.test(t) ? 'marca' : '';
+    if(cls === 'ac') return `<div class="lvcmp-l ac lvcmp-edita" contenteditable="plaintext-only" spellcheck="false" autocapitalize="off" data-i="${i}" oninput="lvcmpAcordeMudou(this)" onblur="lvcmpAcordeSalvar()">${lvEsc(x)}</div>`;
     return `<div class="lvcmp-l ${cls}">${lvEsc(x) || '&nbsp;'}</div>`;
   }).join('');
   const n = olhar.size;
-  el.innerHTML = `<div class="lvcmp-tit"><b>No app</b>${n ? `<small>${n} linha${n > 1 ? 's' : ''} em amarelo para conferir</small><button type="button" class="lvi-rel-ok" onclick="lvJaConferi();lvCompararRenderApp(getLouvorAtual())">Já conferi</button>` : '<small>tudo conferido</small>'}</div>
+  const soDrive = l.origem && l.origem.tipo === 'drive' && l.origem.id && !l.origem.apagadoNoDrive
+    ? `<button type="button" class="lvi-rel-ok lvcmp-so-drive" onclick="lvFicarSoComDrive()" title="Apaga o texto do app e a música fica só com o PDF do Drive">Ficar só com o PDF do Drive</button>` : '';
+  el.innerHTML = `<div class="lvcmp-tit"><b>No app</b>${n ? `<small>${n} linha${n > 1 ? 's' : ''} em amarelo para conferir</small><button type="button" class="lvi-rel-ok" onclick="lvJaConferi();lvCompararRenderApp(getLouvorAtual())">Já conferi</button>` : '<small>tudo conferido</small>'}${soDrive}</div>
+    <div class="lvcmp-dica">Toque numa linha de acordes (dourada) para acertar a posição; a letra não muda.</div>
     <div class="lvcmp-texto">${linhas}</div>`;
+}
+/* acorde editado no Comparar: troca só aquela linha do texto (pelo número da linha) e grava logo depois de parar de digitar */
+let lvcmpSalvarT = 0;
+function lvcmpAcordeMudou(el){
+  const l = getLouvorAtual(); if(!l) return;
+  const linhas = (l.conteudo || '').split('\n'), i = Number(el.dataset.i);
+  if(!(i >= 0 && i < linhas.length)) return;
+  linhas[i] = el.textContent.replace(/ /g, ' ').replace(/[\r\n]+/g, '');
+  l.conteudo = linhas.join('\n');
+  delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;   // mexeu à mão: o desfazer do Organizar não vale mais
+  clearTimeout(lvcmpSalvarT); lvcmpSalvarT = setTimeout(lvcmpAcordeSalvar, 700);
+}
+function lvcmpAcordeSalvar(){
+  clearTimeout(lvcmpSalvarT);
+  const l = getLouvorAtual(); if(!l) return;
+  persist();
+  const ta = document.getElementById('lvConteudo');
+  if(ta && ta.value !== l.conteudo){ ta.value = l.conteudo; lvAtualizarEditor(); if(typeof renderLouvorPdfPreview === 'function') renderLouvorPdfPreview(); }
+}
+/* desiste do texto que o app tirou e fica só com o PDF do Drive (como quando a música veio só com o arquivo); dá para desfazer */
+async function lvFicarSoComDrive(){
+  const l = getLouvorAtual(); if(!l || !l.origem || l.origem.tipo !== 'drive') return;
+  if(!(await iosConfirm('Ficar só com o PDF do Drive? O texto que o app montou sai (dá para desfazer logo depois).'))) return;
+  const id = l.id;
+  comDesfazer('A música ficou só com o PDF do Drive', ()=>{
+    const x = state.louvores.find(m=>m.id === id); if(!x) return;
+    x.conteudo = ''; x.origem.soArquivo = true;
+    delete x.revisar; delete x.conteudoAntesOrganizar; delete x.conteudoOrganizado;
+    persist();
+  }, ()=>{ if(louvorAtualId === id){ abrirLouvorDetalhe(id); } });
+  abrirLouvorDetalhe(id);
 }
 /* música só com o PDF do Drive → lê o PDF e monta no padrão do app (como importar); daí em diante abre primeiro o app.
    tomNovo {nota, modoMenor}: veio da troca de tom (o PDF não tem texto para transpor) → lê o PDF como está e muda só a nota.
