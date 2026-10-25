@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.8', itens: [
+    'Comparar: o Cifra Club vem primeiro e o Letras embaixo; o botão de passar para o padrão do app ficou branco na faixa escura',
+    'Sino de notificações em preto (estava sumindo)'
+  ]},
   { versao: 'v12.7', itens: [
     'Louvor: botão + só com o ícone, girando suave; no computador as opções aparecem só de passar o mouse'
   ]},

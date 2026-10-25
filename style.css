@@ -1472,9 +1472,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 .jv-fechar{position:relative;padding:8px;border:none;background:none;color:rgba(199,245,223,.5);font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer}
 
 /* ===== SINO ===== */
-.sino-btn{position:relative}
+.sino-btn{position:relative;color:var(--text)}   /* v12: sino em preto (no fundo claro); antes ficava branco e sumia */
 .sino-btn svg{transform-origin:50% 2px}
-.sino-btn.tem-novo svg{color:#fff;animation:sinoBalanca 2.6s var(--ease) infinite}
+.sino-btn.tem-novo svg{color:var(--text);animation:sinoBalanca 2.6s var(--ease) infinite}
 .sino-conta{position:absolute;top:1px;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--alerta);color:#fff;font-size:10.5px;font-weight:700;line-height:16px;text-align:center;box-shadow:0 0 0 2px var(--noite);pointer-events:none}
 .sino-conta:empty{display:none}
 .sino-btn.tem-novo .sino-conta{animation:pop .4s var(--mola) both}
@@ -2333,7 +2333,8 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-partes .cu-parte-corpo{background:var(--tinta,var(--card-2))!important;border:none!important;border-radius:14px!important;padding:10px 12px 8px 14px}
 .cu-partes .cu-parte-corpo .cu-musica{border-color:rgba(43,38,32,.1)}
 .cu-sug-drive{font-style:normal;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--card-2);color:var(--text-dim);font-size:10.5px;font-weight:600;vertical-align:1px}
-.lvcmp-converter-btn{color:var(--text)}
+.lvcmp-converter-btn{color:var(--graf-tx)!important}   /* fica na faixa grafite do Comparar: em branco */
+.lvcmp-converter-btn:hover{color:var(--latao)!important}
 .lvcmp-converter-btn.girando svg{animation:cuGira 1s linear infinite}
 /* medley: ver as partes de cada música (letra com os acordes); tocar numa parte também a coloca na sequência */
 .lm-ver-btn{flex-shrink:0;color:var(--text-faint)}

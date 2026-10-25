@@ -161,8 +161,9 @@ async function lvCompararRenderOriginal(l){
     const cifra = (o.texto || '').split('\n').map(x=>`<div class="lvcmp-l${isChordLine(x.trim()) ? ' ac' : /^\[.+\]$/.test(x.trim()) ? ' rot' : ''}">${lvEsc(x) || '&nbsp;'}</div>`).join('');
     const marcado = v=>{ const n = lvcmpNorm(v); return [...olhar].some(o=>o && n.includes(o)); };   // no Letras o verso pode vir junto com outro
     const letras = o.letras ? o.letras.estrofes.map(est=>`<div class="lvcmp-estrofe">${est.map(v=>`<div class="lvcmp-l${marcado(v) ? ' olhar' : ''}">${lvEsc(v)}</div>`).join('')}</div>`).join('') : '';
-    el.innerHTML = `${o.letras ? `<div class="lvcmp-tit"><b>Letras</b><a href="${lvEsc(o.letras.url)}" target="_blank" rel="noopener">abrir no site</a></div><div class="lvcmp-texto lvcmp-letras">${letras}</div>` : ''}
-      <div class="lvcmp-tit"><b>Cifra Club</b><a href="${lvEsc(o.url)}" target="_blank" rel="noopener">abrir no site</a></div><div class="lvcmp-texto">${cifra}</div>`;
+    /* Cifra Club primeiro e o Letras embaixo (pedido do Davi) */
+    el.innerHTML = `<div class="lvcmp-tit"><b>Cifra Club</b><a href="${lvEsc(o.url)}" target="_blank" rel="noopener">abrir no site</a></div><div class="lvcmp-texto">${cifra}</div>
+      ${o.letras ? `<div class="lvcmp-tit"><b>Letras</b><a href="${lvEsc(o.letras.url)}" target="_blank" rel="noopener">abrir no site</a></div><div class="lvcmp-texto lvcmp-letras">${letras}</div>` : ''}`;
     return;
   }
   /* PDF ou foto: deste aparelho; o do Drive pode ser baixado de novo */
