@@ -232,8 +232,8 @@ function abrirLouvorDetalhe(id){
   lvAtualizarEditor();
   if(typeof lvAtualizarBtnOrganizar==='function') lvAtualizarBtnOrganizar();
   window.scrollTo(0,0);
-  /* música que veio do Drive só com o arquivo (roteiro colado): abre direto o PDF */
-  if(l.origem && l.origem.soArquivo && !(l.conteudo||'').trim() && typeof lvCompararAbrir==='function') lvCompararAbrir();
+  /* música só com o PDF do Drive: a tela abre normal (campo harmônico, tom) e mostra o PDF no lugar do texto (lvSoPdfRender) */
+  if(typeof lvSoPdfRender === 'function') lvSoPdfRender(l);
 }
 function renderLvStatusBtn(){
   const l = getLouvorAtual(); if(!l) return;
@@ -1366,7 +1366,35 @@ function renderLouvorSlidePreview(){
     el.innerHTML = `<div class="lv-slide-lyric" style="font-size:${pt(l.slideTextoTamanho)};text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lvEsc(lyricText).replace(/\n/g,'<br>')}</div>`;
     if(s.vezes > 1) el.insertAdjacentHTML('beforeend', `<span class="lv-slide-vezes" style="font-size:${pt(LV_SLIDE_VEZES_PT)}">${s.vezes}x</span>`);
   }
+  lvSlidesAppRender(l, slides);
 }
+/* comparativo dos slides (pedido do Davi): toda a letra do app ao lado do slide; as linhas do slide aberto ficam marcadas,
+   cada linha mostra em que slide caiu e tocar nela abre esse slide. As linhas são ligadas aos slides pela ordem do texto
+   (um "Repete" volta a apontar para as linhas originais). */
+function lvSlidesAppRender(l, slides){
+  const el = document.getElementById('lvSlidesApp'); if(!el) return;
+  const linhas = (l.conteudo || '').split('\n');
+  const ehLetra = t=>t && !/^\[.+\]$/.test(t) && !/^-{1,3}$/.test(t) && !isChordLine(t);
+  const ondeCai = {};
+  let ptr = 0;
+  slides.forEach((s, k)=>s.lines.forEach(txt=>{
+    const alvo = txt.trim();
+    let j = linhas.findIndex((x, n)=>n >= ptr && x.trim() === alvo && ehLetra(x.trim()));
+    if(j >= 0) ptr = j + 1; else j = linhas.findIndex(x=>x.trim() === alvo && ehLetra(x.trim()));
+    if(j >= 0) (ondeCai[j] = ondeCai[j] || []).includes(k + 1) || ondeCai[j].push(k + 1);
+  }));
+  const atual = lvSlideIndex;   // 0 = slide do título
+  el.innerHTML = `<div class="lvs-tit"><b>No app</b><small>${atual ? 'slide ' + (atual + 1) + ' marcado' : 'slide 1 (título)'}</small></div>` + linhas.map((x, n)=>{
+    const t = x.trim();
+    if(/^\[.+\]$/.test(t)) return `<div class="lvs-l rot">${lvEsc(t.slice(1, -1))}</div>`;
+    if(t === '-') return '<div class="lvs-l corte"></div>';
+    if(!ehLetra(t)) return '';
+    const ks = ondeCai[n] || [];
+    return `<button type="button" class="lvs-l${ks.includes(atual) ? ' on' : ''}${ks.length ? '' : ' fora'}" ${ks.length ? `onclick="lvSlideIr(${ks[0]})"` : ''}><span>${lvEsc(t)}</span><em>${ks.length ? 'slide ' + ks.map(k=>k + 1).join(' · ') : 'fora dos slides'}</em></button>`;
+  }).join('');
+  const on = el.querySelector('.lvs-l.on'); if(on) el.scrollTop = Math.max(0, on.offsetTop - el.clientHeight / 3);   // rola só a lista, não a página
+}
+function lvSlideIr(n){ lvSlideIndex = n; renderLouvorSlidePreview(); }
 function lvSlideNav(delta){
   const l = getLouvorAtual(); if(!l) return;
   const slides = lvParseContent(l.conteudo).slides;

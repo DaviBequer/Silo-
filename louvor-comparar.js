@@ -119,6 +119,7 @@ async function lvFicarSoComDrive(){
     delete x.revisar; delete x.conteudoAntesOrganizar; delete x.conteudoOrganizado;
     persist();
   }, ()=>{ if(louvorAtualId === id){ abrirLouvorDetalhe(id); } });
+  lvCompararFechar();   // volta para a tela da música, que agora mostra o PDF
   abrirLouvorDetalhe(id);
 }
 /* música só com o PDF do Drive → lê o PDF e monta no padrão do app (como importar); daí em diante abre primeiro o app.
@@ -186,8 +187,8 @@ async function lvCompararRenderOriginal(l){
   caixa.innerHTML = '<div class="gm-vazio">O arquivo original não está neste aparelho.</div>';
 }
 /* lê o PDF do Drive (pede o acesso se precisar, ainda dentro do toque) e mostra; não guarda no aparelho */
-async function lvcmpVerDoDrive(){
-  const l = getLouvorAtual(), caixa = document.getElementById('lvcmpPdf');
+async function lvcmpVerDoDrive(idCaixa){   // idCaixa: onde desenhar (padrão: o Comparar; 'lvSoPdfCaixa' = tela da música)
+  const l = getLouvorAtual(), caixa = document.getElementById(idCaixa || 'lvcmpPdf');
   if(!l || !l.origem || !l.origem.id || !caixa) return;
   const acesso = typeof driveTokenCliente !== 'undefined' && driveTokenCliente ? drivePedirToken() : Promise.reject(new Error(typeof driveClienteId === 'function' && driveClienteId() ? 'o Drive ainda está carregando: toque de novo' : 'o Drive não está ligado (Ajustes → Recursos)'));
   caixa.innerHTML = '<div class="voz-carregando">Abrindo o PDF do Drive…</div>';
@@ -197,7 +198,7 @@ async function lvcmpVerDoDrive(){
     if(!res.ok) throw new Error('Drive ' + res.status);
     await lvcmpDesenhar(caixa, await res.blob());
   }catch(e){
-    caixa.innerHTML = `<div class="gm-vazio">Não consegui abrir o PDF do Drive (${lvEsc((e && e.message) || 'erro')}).</div><button type="button" class="btn btn-outline lvcmp-ver-drive" onclick="lvcmpVerDoDrive()">Tentar de novo</button>`;
+    caixa.innerHTML = `<div class="gm-vazio">Não consegui abrir o PDF do Drive (${lvEsc((e && e.message) || 'erro')}).</div><button type="button" class="btn btn-outline lvcmp-ver-drive" onclick="lvcmpVerDoDrive('${idCaixa || 'lvcmpPdf'}')">Tentar de novo</button>`;
   }
 }
 /* desenha o original (foto ou PDF, página por página) */
@@ -223,4 +224,24 @@ async function lvcmpDesenhar(caixa, blob){
       await pag.render({ canvasContext: cv.getContext('2d'), viewport: v }).promise;
     }
   }catch(e){ caixa.innerHTML = `<div class="gm-vazio">Não consegui mostrar o PDF (${lvEsc((e && e.message) || 'erro')}).</div>`; }
+}
+/* música só com o PDF do Drive (veio assim, ou voltou a ser do Drive): a tela da música abre normal (campo harmônico, tom, status)
+   e mostra o PDF no lugar do texto; o ⇄ passa para o padrão do app (pedido do Davi) */
+async function lvSoPdfRender(l){
+  const pag = document.getElementById('pageLouvorDetalhe'), box = document.getElementById('lvSoPdf');
+  const so = !!(l && typeof driveSoArquivo === 'function' && driveSoArquivo(l));
+  if(pag) pag.classList.toggle('so-pdf', so);
+  if(!box) return;
+  if(!so){ box.innerHTML = ''; return; }
+  const o = l.origem, id = l.id;
+  box.innerHTML = `<div class="lvcmp-tit lv-so-pdf-tit"><b>${lvEsc(o.nome || 'PDF do Drive')}</b>${o.link ? `<a href="${lvEsc(o.link)}" target="_blank" rel="noopener">abrir no Drive</a>` : ''}<button type="button" class="ico-btn lvcmp-converter-btn" onclick="lvConverterDoDrive()" title="Passar para o padrão do app" aria-label="Passar para o padrão do app"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/></svg></button></div>
+    <div id="lvSoPdfCaixa" class="lvcmp-pdf"><div class="voz-carregando">Abrindo o PDF…</div></div>`;
+  if(typeof drivePreparar === 'function') drivePreparar();
+  const caixa = document.getElementById('lvSoPdfCaixa');
+  const g = await lvOriginalLer(id);
+  if(louvorAtualId !== id) return;
+  if(g && g.blob){ await lvcmpDesenhar(caixa, g.blob); return; }
+  if(o.apagadoNoDrive){ caixa.innerHTML = '<div class="gm-vazio">Este PDF foi apagado do Drive.</div>'; return; }
+  if(typeof driveToken !== 'undefined' && driveToken && Date.now() < driveTokenVence){ await lvcmpVerDoDrive('lvSoPdfCaixa'); return; }
+  caixa.innerHTML = `<button type="button" class="btn btn-outline lvcmp-ver-drive" onclick="lvcmpVerDoDrive('lvSoPdfCaixa')">${typeof LOGO_DRIVE !== 'undefined' ? LOGO_DRIVE : ''}Ver o PDF do Drive</button>`;
 }

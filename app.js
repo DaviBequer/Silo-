@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.1', itens: [
+    'Slides: ao lado do slide aparece toda a letra do app, com as linhas do slide aberto marcadas e o número do slide de cada linha; tocar numa linha abre o slide dela',
+    'Música só com o PDF do Drive (ou que voltou a ser do Drive): abre a tela normal, com o campo harmônico e o tom, mostrando o PDF'
+  ]},
   { versao: 'v13.0', itens: [
     'Colar do WhatsApp: todas as músicas do roteiro já ficam agendadas na data escolhida',
     'Louvor: mudar a data, o status, o tom ou o tipo de uma música atualiza na hora a lista, a placa do culto e o Culto aberto'
