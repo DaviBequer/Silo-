@@ -197,8 +197,10 @@ function renderProxContas(u, mKey){
 
 /* ===== Detalhe do "Vai entrar" e do "Falta pagar" (toque nos números do resumo) =====
    As listas somam exatamente o número mostrado no resumo. */
+/* linha de lista (v12, escolha C): a logo da conta, senão o calendário com o dia, senão a inicial */
+function gmCal(dia){ return `<span class="cal"><b>${dia}</b></span>`; }
 function rdLinha(o){
-  const ico = o.logoUrl ? `<img src="${o.logoUrl}" class="conta-logo" alt="">` : `<span class="gm-inicial${o.icoClasse?' '+o.icoClasse:''}">${o.ico || escBanco((o.nome||'?').charAt(0).toUpperCase())}</span>`;
+  const ico = o.logoUrl ? `<img src="${o.logoUrl}" class="conta-logo" alt="">` : o.dia ? gmCal(o.dia) : `<span class="gm-inicial${o.icoClasse?' '+o.icoClasse:''}">${o.ico || escBanco((o.nome||'?').charAt(0).toUpperCase())}</span>`;
   return `<div class="gm-linha${o.feito?' pago':''}">${ico}<div class="gm-info"><div class="gm-nome">${escBanco(o.nome)}</div>${o.sub?`<div class="gm-sub">${o.sub}</div>`:''}</div><div class="gm-valor">${fmtMoney(o.valor)}</div></div>`;
 }
 function rdGrupo(nome, linhas){
@@ -223,8 +225,8 @@ function abrirDetalheResumo(tipo){
   } else {
     titulo = 'Falta pagar'; cor = 'neg';
     const contas = gastosDoMes(u, mKey).filter(g=>g.restante > 0.004).sort((a,b)=>b.restante-a.restante).map(g=>({
-      nome: g.desc, logoUrl: g.logoUrl, valor: g.restante,
-      sub: g.restante < g.valor - 0.004 ? `pago em parte · total ${fmtMoney(g.valor)}` : (g.dia ? 'dia '+g.dia : '')
+      nome: g.desc, logoUrl: g.logoUrl, valor: g.restante, dia: g.dia,
+      sub: g.restante < g.valor - 0.004 ? `pago em parte · total ${fmtMoney(g.valor)}` : ''
     }));
     html += rdGrupo('Contas', contas);
     const diz = dizimoForMonth(u, mKey);
@@ -1208,7 +1210,7 @@ function abrirLancamentos(mKey){
   const total = lista.reduce((s,la)=>s + (Number(la.valor)||0), 0);
   document.getElementById('resumoDetalheTopo').innerHTML = `<div class="rd-rotulo">Pix e débito · ${monthLabelLong(mKey)}</div><div class="rd-total neg">${fmtMoney(total)}</div>`;
   document.getElementById('resumoDetalheLista').innerHTML = lista.length ? lista.map(la=>`
-    <div class="gm-linha"><span class="gm-inicial">${escBanco((la.categoria||'?').charAt(0))}</span>
+    <div class="gm-linha">${la.data ? gmCal(Number(String(la.data).split('-')[2]) || '?') : `<span class="gm-inicial">${escBanco((la.categoria||'?').charAt(0))}</span>`}
       <div class="gm-info"><div class="gm-nome">${escBanco(la.descricao)}</div><div class="gm-sub">${escBanco(la.categoria||'Outros')}${la.banco ? ' · ' + escBanco(la.banco) : ''} · ${String(la.data||'').split('-').reverse().slice(0,2).join('/')}</div></div>
       <div class="gm-valor">${fmtMoney(la.valor)}</div>
       <button type="button" class="ico-btn" title="Excluir" aria-label="Excluir" onclick="excluirLancamento('${la.id}','${mKey}')">${ICO(ICO_D.lixo, 16)}</button>

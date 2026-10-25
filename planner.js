@@ -97,7 +97,7 @@ function abrirGastosDoMes(mKey){
   const total = lista.reduce((s,g)=>s+g.valor, 0), falta = lista.reduce((s,g)=>s+g.restante, 0);
   document.getElementById('gastosMesTitulo').textContent = 'Gastos · ' + monthLabelLong(mKey);
   const linha = g=>{
-    const logo = g.logoUrl ? `<img src="${g.logoUrl}" class="conta-logo" alt="">` : `<span class="gm-inicial">${escBanco((g.desc||'?').charAt(0).toUpperCase())}</span>`;
+    const logo = g.logoUrl ? `<img src="${g.logoUrl}" class="conta-logo" alt="">` : g.dia ? gmCal(g.dia) : `<span class="gm-inicial">${escBanco((g.desc||'?').charAt(0).toUpperCase())}</span>`;
     const parcial = !g.pago && g.restante < g.valor - 0.004;
     const sub = g.pago ? 'pago' : (parcial ? `falta ${fmtMoney(g.restante)}` : (g.dia ? 'dia '+g.dia : ''));
     return `<div class="gm-linha${g.pago?' pago':''}">${logo}<div class="gm-info"><div class="gm-nome">${escBanco(g.desc)}</div>${sub?`<div class="gm-sub">${sub}</div>`:''}</div><div class="gm-valor">${fmtMoney(g.valor)}</div></div>`;
