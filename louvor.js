@@ -20,12 +20,17 @@ function lvCapaHtml(categoria, tom){
   return `<span class="lv-capa ${c.cls}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${c.d}</svg>${tom ? `<b class="lv-capa-tom">${tom}</b>` : ''}</span>`;
 }
 
+/* filtro "Atual" (regra do Davi, 25/10): data de hoje para frente (agendada ou num roteiro do Culto) aparece sempre, pronta ou não;
+   data de ontem para trás não aparece; sem data, só se ainda estiver em produção */
+function lvDataMaisNova(l){
+  let d = l.dataAgendamento || '';
+  (state.cultos || []).forEach(c=>{ if(c.data > d && (c.partes || []).some(p=>(p.musicas || []).includes(l.id))) d = c.data; });
+  return d;
+}
 function lvEstaAtual(l){
-  if(l.status !== 'finalizada') return true;
-  if(!l.dataAgendamento) return false;
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const data = new Date(l.dataAgendamento+'T00:00:00');
-  return data >= hoje;
+  const d = lvDataMaisNova(l);
+  if(d) return d >= calISO(new Date());
+  return l.status !== 'finalizada';
 }
 
 function renderLouvor(){
@@ -253,6 +258,8 @@ function toggleLouvorStatus(){
   persist();
   renderLvStatusBtn();
   renderLouvorLista();
+  if(typeof renderCultoBotao === 'function') renderCultoBotao();   // placa do culto: "N prontas" e o número com a borda verde
+  if(document.getElementById('pageCulto')?.classList.contains('active') && typeof renderCulto === 'function') renderCulto();
 }
 function closeLouvorDetalhe(){
   if(document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);

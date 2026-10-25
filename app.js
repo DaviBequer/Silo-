@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.9', itens: [
+    'Louvor, filtro Atual: mostra tudo com data de hoje para frente (agendada ou no roteiro do Culto), pronta ou não, e o que está em produção; o que é de ontem para trás não aparece',
+    'Placa do culto atualiza na hora ao marcar Pronto (N prontas) e a música pronta ganha o número com a borda verde'
+  ]},
   { versao: 'v12.8', itens: [
     'Comparar: o Cifra Club vem primeiro e o Letras embaixo; o botão de passar para o padrão do app ficou branco na faixa escura',
     'Sino de notificações em preto (estava sumindo)'

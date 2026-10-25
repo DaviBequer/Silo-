@@ -1625,6 +1625,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-culto-partes:empty{display:none}
 .lvcp{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--graf-line)}
 .lvcp i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--latao);color:var(--latao);font-style:normal;font-size:10.5px}
+.lvcp i.pronta{border-color:#7fc79a;color:#9fd3b2}   /* música pronta: número com a borda verde */
 .lvcp span{font-size:13px;font-weight:500;color:var(--graf-tx);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lvcp small{display:block;font-size:11px;font-weight:400;color:var(--graf-dim);overflow:hidden;text-overflow:ellipsis}
 .lvcp em{margin-right:10px;font-style:normal;font-weight:600;color:var(--latao)}

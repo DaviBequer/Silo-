@@ -274,7 +274,7 @@ function renderCultoBotao(){
   const lbl = document.querySelector('#lvCultoPlaca .placa-lbl'); if(lbl) lbl.textContent = cultoDataTexto(d, true) + ' · culto';
   el.innerHTML = `${quando}${itens.length ? ` · <b>${itens.length}</b> ${itens.length === 1 ? 'música' : 'músicas'} · ${prontas} pronta${prontas === 1 ? '' : 's'}` : ' · toque para montar o roteiro'}`;
   const pe = document.getElementById('lvCultoPartes');
-  if(pe) pe.innerHTML = itens.slice(0, 6).map((x, i)=>`<span class="lvcp"><i>${i + 1}</i><span>${lvEsc([x.parte, x.l.titulo || 'Sem título'].filter(Boolean).join(' · '))}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></span>`).join('');
+  if(pe) pe.innerHTML = itens.slice(0, 6).map((x, i)=>`<span class="lvcp"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}" title="${x.l.status === 'finalizada' ? 'Pronta' : 'Em produção'}">${i + 1}</i><span>${lvEsc([x.parte, x.l.titulo || 'Sem título'].filter(Boolean).join(' · '))}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></span>`).join('');
 }
 /* ---------- sugestão de repertório (IA): tema da pregação → músicas do app que combinam, sem repetir as recentes ---------- */
 const CU_SUGESTAO_ESQUEMA = { type:'object', properties:{ musicas:{ type:'array', items:{ type:'object', properties:{
