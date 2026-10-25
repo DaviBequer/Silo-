@@ -129,6 +129,17 @@ function lvFabMenu(abrir){
   m.classList.toggle('aberto', !!abrir);
   fab?.classList.toggle('aberto', !!abrir);
 }
+/* computador (tem mouse): passar o mouse no + já mostra as opções; sair do botão e das opções fecha (no celular continua o toque) */
+(function(){
+  if(!window.matchMedia || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  const fab = document.getElementById('lvFab'), ops = document.querySelector('#lvFabMenu .lv-fab-opcoes');
+  if(!fab || !ops) return;
+  let t = 0;
+  const abrir = ()=>{ clearTimeout(t); lvFabMenu(true); };
+  const fechar = ()=>{ clearTimeout(t); t = setTimeout(()=>lvFabMenu(false), 350); };
+  [fab, ops].forEach(el=>{ el.addEventListener('mouseenter', abrir); el.addEventListener('mouseleave', fechar); });
+  fab.onclick = abrir;   // com o mouse o clique não fecha o que o passar do mouse abriu
+})();
 /* ---------- Novo louvor ---------- */
 function openLouvorForm(){
   document.getElementById('lvNovoTitulo').value = '';

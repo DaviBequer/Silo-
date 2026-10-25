@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.7', itens: [
+    'Louvor: botão + só com o ícone, girando suave; no computador as opções aparecem só de passar o mouse'
+  ]},
   { versao: 'v12.6', itens: [
     'Fluxo mensal: os 12 meses sempre à vista com a primeira coluna presa, o mês atual em grafite e a linha nova Acumulado',
     'Louvor: menu do + vira uma fileira de pílulas em cima do botão; as ações da música ficam numa pílula grafite embaixo, com o botão de voltar a ser só o PDF do Drive'
