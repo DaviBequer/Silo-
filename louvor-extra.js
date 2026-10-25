@@ -661,7 +661,7 @@ function lviTextoDaRespostaIA(c){
 /* Google ocupado: insiste por cerca de 1 minuto, alternando o modelo principal e o reserva,
    com a contagem na tela. Só desiste antes se o erro não for passageiro (chave errada etc.). */
 const LVI_IA_ESPERAS = [0, 3, 5, 8, 10, 12, 15];   // segundos antes de cada tentativa (~53 s no total)
-async function lviPerguntarIA(partes, status, esquema){
+async function lviPerguntarIA(partes, status, esquema, rapido){
   const modelos = [LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA];
   let limite = false;
   for(let i = 0; i < LVI_IA_ESPERAS.length; i++){
@@ -675,7 +675,7 @@ async function lviPerguntarIA(partes, status, esquema){
     if(status && status.log) status.log(`Perguntando ao ${lviNomeModelo(modelo)}${i ? ' (tentativa ' + (i+1) + ')' : ''}`);
     const t0 = Date.now();
     try{
-      const resp = await lviPerguntarIAUmaVez(partes, modelo, esquema);
+      const resp = await lviPerguntarIAUmaVez(partes, modelo, esquema, rapido);
       if(status && status.log) status.log(`${lviNomeModelo(modelo)} respondeu em ${((Date.now()-t0)/1000).toFixed(1).replace('.',',')} s`, 'ok');
       return resp;
     }
@@ -688,17 +688,22 @@ async function lviPerguntarIA(partes, status, esquema){
   }
   throw new Error(limite ? 'limite grátis do Google atingido, tente daqui a pouco' : 'o Google está com muita procura agora, tente daqui a pouco');
 }
-async function lviPerguntarIAUmaVez(partes, modelo, esquema){
+/* rapido: pede à IA para pensar pouco (conversa do Atualizar). Se o Google recusar o ajuste, tenta sem ele e não usa mais. */
+let lviSemPensarPouco = false;
+async function lviPerguntarIAUmaVez(partes, modelo, esquema, rapido){
   const chave = lviChaveIA();
   if(!chave) throw new Error('sem chave');
   const ctrl = new AbortController(), t = setTimeout(()=>ctrl.abort(), 120000);
   let res, corpo;
+  const comRapido = rapido && !lviSemPensarPouco;
   try{
     res = await fetch(LVI_IA_URL, {
       method:'POST', signal: ctrl.signal,
       headers:{ 'Content-Type':'application/json', 'x-goog-api-key': chave },
-      body: JSON.stringify({ model: modelo, input: partes, response_format:{ type:'text', mime_type:'application/json', schema: esquema || LVI_IA_ESQUEMA } })
+      body: JSON.stringify({ model: modelo, input: partes, response_format:{ type:'text', mime_type:'application/json', schema: esquema || LVI_IA_ESQUEMA },
+        ...(comRapido ? { generation_config:{ thinking_level:'low' } } : {}) })
     });
+    if(comRapido && res.status === 400){ lviSemPensarPouco = true; clearTimeout(t); return lviPerguntarIAUmaVez(partes, modelo, esquema, false); }
     corpo = await res.json().catch(()=>null);
   }catch(e){ throw new Error(e && e.name==='AbortError' ? 'a IA demorou demais' : 'sem conexão com a IA'); }
   finally{ clearTimeout(t); }

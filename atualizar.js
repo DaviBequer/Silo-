@@ -175,7 +175,7 @@ function atzCortarHtml(){
 
 /* ---------- aba Conversa ---------- */
 const ATZ_ESQUEMA = { type:'object', properties:{
-  resposta:{ type:'string', description:'O que dizer para a pessoa: curto, em português. Confirme o que entendeu, diga quanto falta para bater a fatura/saldo e PERGUNTE o que estiver faltando (banco, cartão, parcelas, se é desta fatura ou da próxima).' },
+  resposta:{ type:'string', description:'UMA frase curta (até 15 palavras). Não liste os itens nem repita valores: o app mostra a lista. Só pergunte o que estiver faltando ou em dúvida (banco, cartão, parcelas, valor que ficou confuso); se não falta nada, algo como "Anotado."' },
   itens:{ type:'array', description:'A lista COMPLETA e atualizada do que vai ser lançado (inclua os itens anteriores que continuam valendo, com as correções que a pessoa pediu)', items:{ type:'object', properties:{
     tipo:{ type:'string', enum:['vista','parcelada','pix','recebi','conta','saldo','fatura'] },
     descricao:{ type:'string', description:'o que foi, curto, com maiúscula (vazio em saldo e fatura)' },
@@ -276,13 +276,17 @@ async function atzEnviar(texto){
       `Se ela disser que não lembra o resto ("não sei", "o resto não lembro"), lance um pix "Gasto não identificado" (categoria Outros) no banco com o valor que falta (diferenca do contexto, em positivo), ou uma vista "Compra não identificada" no cartão com faltaParaBater. ` +
       `A pessoa pode corrigir ou tirar itens ("tira a farmácia", "o mercado foi 130"): devolva sempre a lista completa já corrigida. Não invente itens.\n\n` +
       `CONTEXTO: ${JSON.stringify(atzContexto())}\n\nLISTA ATUAL: ${JSON.stringify(atzItensParaIA())}\n\nCONVERSA:\n${historico}` }],
-      t=>atzRenderConversa(t), ATZ_ESQUEMA);
+      t=>atzRenderConversa(t), ATZ_ESQUEMA, true);
+    const antes = atzItens;
     atzItens = atzNormalizarItens(r.itens);
     /* a conta da falta é do app (a IA erra soma): a resposta ganha as linhas com os números certos */
     const conf = atzConferencia(), contas = [];
-    conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.falta) < 0.01 ? `Fatura ${x.c.nome}: bateu ✓` : x.falta > 0 ? `Fatura ${x.c.nome}: faltam ${fmtMoney(x.falta)} para bater. Quais compras faltam nesse cartão?` : `Fatura ${x.c.nome}: passou ${fmtMoney(-x.falta)} do valor do banco. Algum valor ficou errado?`));
-    conf.bancos.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.dif) < 0.01 ? `Saldo ${x.b.nome}: bateu ✓` : x.dif < 0 ? `Saldo ${x.b.nome}: faltam ${fmtMoney(-x.dif)} para explicar. O que você gastou no ${x.b.nome}?` : `Saldo ${x.b.nome}: entrou ${fmtMoney(x.dif)} a mais. Recebeu algum valor?`));
-    atzConversa.push({ quem:'ia', texto: [String(r.resposta || 'Anotado.').trim(), ...contas].join('\n') });
+    conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.falta) < 0.01 ? `Fatura ${x.c.nome}: bateu ✓` : x.falta > 0 ? `Fatura ${x.c.nome}: faltam ${fmtMoney(x.falta)} para bater. Que compras faltam?` : `Fatura ${x.c.nome}: passou ${fmtMoney(-x.falta)} do valor do banco. Algum valor ficou errado?`));
+    conf.bancos.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.dif) < 0.01 ? `Saldo ${x.b.nome}: bateu ✓` : x.dif < 0 ? `${x.b.nome}: faltam ${fmtMoney(-x.dif)} para fechar o saldo. O que mais saiu dele?` : `Saldo ${x.b.nome}: entrou ${fmtMoney(x.dif)} a mais. Recebeu algum valor?`));
+    /* a resposta vira: frase curta + lista do que entrou/saiu nesta fala + o que ainda falta (números do app) */
+    const chave = i=>[i.tipo, vozSemAcento(i.descricao), i.valor, i.cartaoId, i.bancoId].join('|');
+    const ks = new Set(antes.map(chave)), kn = new Set(atzItens.map(chave));
+    atzConversa.push({ quem:'ia', texto: String(r.resposta || 'Anotado.').trim(), novos: atzItens.filter(i=>!ks.has(chave(i))), tirados: antes.filter(i=>!kn.has(chave(i))), contas });
   }catch(e){
     atzConversa.push({ quem:'ia', texto: 'Não consegui falar com a IA agora (' + ((e && e.message) || 'erro') + '). Tente de novo.', erro: true });
   }
@@ -292,7 +296,14 @@ async function atzEnviar(texto){
 function atzRenderConversa(pensando){
   const el = document.getElementById('atzConversa'); if(!el) return;
   const conf = atzConferencia();
-  const msgs = atzConversa.map(m=>`<div class="atz-msg ${m.quem}${m.erro ? ' erro' : ''}">${lvEsc(m.texto)}</div>`).join('');
+  const linhaItem = i=>`<li><span>${escBanco(i.descricao || ATZ_TIPOS[i.tipo])}${i.tipo === 'parcelada' ? ` <small>${i.parcelas}x</small>` : ''}</span><b>${fmtMoney(i.valor)}</b><small>${escBanco(ATZ_TIPOS[i.tipo])}${i.cartaoNome || i.bancoNome ? ' · ' + escBanco(i.cartaoNome || i.bancoNome) : ''}${i.proximaFatura ? ' · próxima fatura' : ''}</small></li>`;
+  const msgs = atzConversa.map(m=>m.quem === 'eu' || m.erro ? `<div class="atz-msg ${m.quem}${m.erro ? ' erro' : ''}">${lvEsc(m.texto)}</div>`
+    : `<div class="atz-msg ia">
+        ${m.texto ? `<p>${lvEsc(m.texto)}</p>` : ''}
+        ${(m.novos || []).length ? `<ul class="atz-msg-lista">${m.novos.map(linhaItem).join('')}</ul>` : ''}
+        ${(m.tirados || []).length ? `<ul class="atz-msg-lista tirados">${m.tirados.map(linhaItem).join('')}</ul>` : ''}
+        ${(m.contas || []).map(c=>`<div class="atz-msg-conta${/bateu/.test(c) ? ' ok' : ''}">${lvEsc(c)}</div>`).join('')}
+      </div>`).join('');
   const contas = vozContasAbertas();
   const grupos = Object.keys(ATZ_TIPOS).map(t=>{
     const itens = atzItens.map((i, k)=>({ i, k })).filter(x=>x.i.tipo === t);
@@ -337,7 +348,13 @@ function atzRenderConversa(pensando){
     <div class="atz-chat"><div class="atz-msgs">${msgs || `<div class="atz-msg ia">Fale ou escreva tudo de uma vez, em texto corrido. Por exemplo: "a fatura do Nubank está 1.850. No Nubank à vista mercado 120 e farmácia 45; em duas vezes um tênis de 300 que foi para a próxima fatura. No Pix do Inter padaria 18. Paguei a luz. O Inter está com 2.300."</div>`}
       ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div></div>
     ${lado.trim() ? `<div class="atz-lado">${lado}</div>` : ''}`;
-  const m = el.querySelector('.atz-msgs'); if(m) setTimeout(()=>{ const ult = m.lastElementChild; if(ult) ult.scrollIntoView({ block:'nearest', behavior:'smooth' }); }, 30);
+  /* a última mensagem fica no topo da tela (a resposta inteira à vista; a lista e a conferência vêm logo abaixo) */
+  const m = el.querySelector('.atz-msgs'), caixa = document.getElementById('atzConteudo');
+  if(m && caixa) requestAnimationFrame(()=>{
+    const ult = m.lastElementChild; if(!ult) return;
+    const topo = ult.getBoundingClientRect().top - caixa.getBoundingClientRect().top + caixa.scrollTop - 8;
+    caixa.scrollTo({ top: Math.max(0, topo), behavior:'smooth' });
+  });
 }
 function atzTirarItem(k){ atzItens.splice(k, 1); renderAtualizar(); }
 /* "Não lembro": o que falta explicar vira um item na lista (Pix "Gasto não identificado" no banco, ou compra no cartão) */
@@ -410,7 +427,7 @@ async function atzGravar(){
    O modo "continuous" do Chrome no Android devolve o texto repetido ("saldo do nubank é saldo do nubank é…"), então
    cada trecho é uma escuta curta: quando ela acaba (a pessoa respirou), junta o trecho e escuta de novo.
    Só envia depois de ATZ_SILENCIO ms sem falar (ou ao tocar no microfone de novo). */
-const ATZ_SILENCIO = 4000;
+const ATZ_SILENCIO = 5000;
 let atzMicLigado = false, atzMicTimer = 0;
 function atzMicrofone(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
