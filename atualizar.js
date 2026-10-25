@@ -1,5 +1,5 @@
 /* ================= ATUALIZAR (Finanças): resumão + conversa com a IA =================
-   Botão "Atualizar" (1º atalho, no lugar de Falar e Pagar) → tela cheia com duas abas:
+   Botão "Assistente" (era "Atualizar"; 1º atalho, no lugar de Falar e Pagar) → tela cheia com duas abas:
    - Resumo: última atualização, contas a pagar, cartões (fatura aberta: à vista / parcelas / assinaturas), bancos,
      histórico de gastos (cartão à vista, parcelado, Pix/débito) e "Onde cortar?" (a IA lê o histórico).
    - Conversa: fala ou escreve em texto corrido ("fatura do Nubank está 1.850; no Nubank à vista mercado 120…;

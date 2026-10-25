@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.0', itens: [
+    'Visual novo no app inteiro (escolhido em 10 rodadas): fundo de mármore, placa grafite com dourado, letra Archivo e barra de baixo com a aba aberta em grafite',
+    'Finanças: Davi/Cris dentro da placa do saldo, sobra prevista e dias que faltam, bancos como cartõezinhos só com a logo; blocos do mês (Sobra, Pago, Fixos, Pix, Crédito à vista, Parcelado) e contas com calendário',
+    'Bancos: logo e cor de cada um e "Esconder bancos zerados"; "Atualizar" virou "Assistente"',
+    'Louvor: placa do próximo culto e capas por tipo (Louvor, Harpa, Corinho de fogo) com o tom no canto; Trabalho: seletor Ponto/Vendas com as horas e a meta'
+  ]},
   { versao: 'v11.4', itens: [
     'Louvor: música só com o PDF do Drive pode ser marcada como Pronto (botão no topo do Comparar); trocar o tom depois só muda a nota',
     'Importar e Cifra Club: no lugar das informações técnicas, uma onda animada com o que está fazendo, e a cifra aparece sendo escrita no editor',
@@ -1120,7 +1126,7 @@ function sinoAvisos(){
   try{
     const ult = typeof atzUltimaAtualizacao === 'function' ? atzUltimaAtualizacao() : 0;
     const dias = ult ? Math.floor((Date.now() - ult) / 864e5) : 0;
-    if(dias >= ATZ_DIAS_AVISO) out.push({ id:'financas-'+hojeTxt, tipo:'financas', titulo:'Atualizar as finanças', corpo:`Faz ${dias} dias que nada é lançado. Fale o que gastou desde então.`, quando:'hoje', ir:{ aba:'atualizar' } });
+    if(dias >= ATZ_DIAS_AVISO) out.push({ id:'financas-'+hojeTxt, tipo:'financas', titulo:'Assistente: atualizar as finanças', corpo:`Faz ${dias} dias que nada é lançado. Fale o que gastou desde então.`, quando:'hoje', ir:{ aba:'atualizar' } });
   }catch(e){}
   return out;
 }

@@ -143,24 +143,62 @@ function abrirBancosModal(){
   if(lista.length) lista.forEach(b=>adicionarBancoLinha(false, b));
   else adicionarBancoLinha(false);
   atualizarTotalBancos();
+  const ez = document.getElementById('bancosEsconderZerados'); if(ez) ez.checked = !!(state.users[state.currentUser] || {}).esconderZerados;
   document.getElementById('modalBancos').classList.add('active');
   document.body.style.overflow = 'hidden';
+}
+/* cada banco: logo redonda (toque = escolher a imagem; v12, a logo é a que o Davi importar), cor do cartão, nome e saldo.
+   logo e cor ficam guardadas na própria linha (dataset) e voltam no salvarBancos */
+function bancoLogoHtml(b, i){
+  const cor = (b && b.cor) || corDoBanco(b && b.nome, i);
+  return b && b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : `<span style="background:${cor}">${escBanco(((b && b.nome) || '?').trim().charAt(0).toUpperCase() || '?')}</span>`;
 }
 function adicionarBancoLinha(focar, b){
   const el = document.getElementById('bancosLista');
   const linha = document.createElement('div');
   linha.className = 'banco-linha';
+  const i = el.children.length;
+  linha.dataset.logo = (b && b.logoUrl) || '';
+  linha.dataset.cor = (b && b.cor) || '';
   const valor = b && b.valor ? Number(b.valor).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '';
-  linha.innerHTML = `<input type="text" class="banco-nome" placeholder="Banco" value="${escBanco(b ? b.nome : '')}" autocomplete="off">
+  linha.innerHTML = `<button type="button" class="banco-logo" title="Logo do banco" aria-label="Logo do banco" onclick="bancoLogoEscolher(this)">${bancoLogoHtml(b, i)}</button>
+    <input type="text" class="banco-nome" placeholder="Banco" value="${escBanco(b ? b.nome : '')}" autocomplete="off">
     <div class="input-money banco-valor"><input type="text" inputmode="numeric" placeholder="0,00" value="${valor}" oninput="maskMoneyInput(this);atualizarTotalBancos()"></div>
+    <label class="banco-cor" title="Cor do cartão" aria-label="Cor do cartão"><input type="color" value="${(b && b.cor) || corDoBanco(b && b.nome, i)}" onchange="bancoCorMudou(this)"></label>
     <button type="button" class="btn-icon-sm banco-del" aria-label="Remover banco" onclick="this.closest('.banco-linha').remove();atualizarTotalBancos()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>`;
   el.appendChild(linha);
   if(focar) linha.querySelector('.banco-nome').focus();
 }
+let bancoLogoLinha = null;
+function bancoLogoEscolher(btn){
+  bancoLogoLinha = btn.closest('.banco-linha');
+  if(bancoLogoLinha.dataset.logo){   // já tem logo: tocar de novo tira
+    bancoLogoLinha.dataset.logo = '';
+    btn.innerHTML = bancoLogoHtml({ nome: bancoLogoLinha.querySelector('.banco-nome').value, cor: bancoLogoLinha.dataset.cor }, 0);
+    return;
+  }
+  document.getElementById('bancoLogoArquivo').click();
+}
+function bancoLogoEscolhida(ev){
+  const file = ev.target.files[0]; ev.target.value = '';
+  const linha = bancoLogoLinha; if(!file || !linha) return;
+  const r = new FileReader();
+  r.onload = e=>comprimirImagemDataUrl(e.target.result, 160).then(url=>{
+    linha.dataset.logo = url;
+    linha.querySelector('.banco-logo').innerHTML = `<img src="${url}" alt="">`;
+  });
+  r.readAsDataURL(file);
+}
+function bancoCorMudou(inp){
+  const linha = inp.closest('.banco-linha'); linha.dataset.cor = inp.value;
+  if(!linha.dataset.logo) linha.querySelector('.banco-logo').innerHTML = bancoLogoHtml({ nome: linha.querySelector('.banco-nome').value, cor: inp.value }, 0);
+}
 function lerBancosDaJanela(){
   return [...document.querySelectorAll('#bancosLista .banco-linha')].map(l=>({
     nome: l.querySelector('.banco-nome').value.trim(),
-    valor: parseMoney(l.querySelector('.banco-valor input').value)
+    valor: parseMoney(l.querySelector('.banco-valor input').value),
+    logoUrl: l.dataset.logo || '',
+    cor: l.dataset.cor || ''
   })).filter(b=>b.nome || b.valor);
 }
 function atualizarTotalBancos(){
@@ -168,9 +206,16 @@ function atualizarTotalBancos(){
   document.getElementById('bancosTotal').innerHTML = `<span>Total em ${lista.length} banco${lista.length===1?'':'s'}</span><b>${fmtMoney(totalBancos(lista))}</b>`;
 }
 function salvarBancos(){
-  const lista = lerBancosDaJanela().map((b,i)=>({ id: 'bc'+Date.now().toString(36)+i, nome: b.nome || 'Banco', valor: b.valor }));
+  const lista = lerBancosDaJanela().map((b,i)=>{
+    const o = { id: 'bc'+Date.now().toString(36)+i, nome: b.nome || 'Banco', valor: b.valor };
+    if(b.logoUrl) o.logoUrl = b.logoUrl;
+    if(b.cor) o.cor = b.cor;
+    return o;
+  });
   const us = state.users[state.currentUser];
   us.bancos = lista;
+  const ez = document.getElementById('bancosEsconderZerados');
+  if(ez){ if(ez.checked) us.esconderZerados = true; else delete us.esconderZerados; }
   if(lista.length) us.saldoAtual = totalBancos(lista);
   closeModal('modalBancos');
   renderPlanner();

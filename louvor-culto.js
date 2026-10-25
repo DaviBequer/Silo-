@@ -263,9 +263,18 @@ function renderCultoHistorico(){
 function renderCultoBotao(){
   if(typeof atualizarStatusDrive === 'function'){ atualizarStatusDrive(); if(driveClienteId()) drivePreparar(); }
   const el = document.getElementById('lvCultoInfo'); if(!el) return;
+  /* placa do próximo culto (v12): data e quanto falta; cada música com a parte, o cantor e o tom */
   const d = cultoProximaData(), c = cultoDaData(d);
-  const n = c ? c.partes.reduce((s, p)=>s + p.musicas.length, 0) : (state.louvores||[]).filter(l=>l.dataAgendamento === d).length;
-  el.textContent = `Próximo: ${cultoDataTexto(d, true)}${n ? ` · ${n} ${n === 1 ? 'música' : 'músicas'}` : ''}`;
+  const achar = id=>(state.louvores||[]).find(l=>l.id === id);
+  const itens = c ? c.partes.flatMap(p=>p.musicas.map(id=>({ parte: p.nome, l: achar(id) }))).filter(x=>x.l)
+    : (state.louvores||[]).filter(l=>l.dataAgendamento === d).map(l=>({ parte: '', l }));
+  const dias = Math.round((calParse(d) - calParse(cultoHojeISO())) / 86400000);
+  const quando = dias <= 0 ? 'hoje' : dias === 1 ? 'amanhã' : 'faltam ' + dias + ' dias';
+  const prontas = itens.filter(x=>x.l.status === 'finalizada').length;
+  const lbl = document.querySelector('#lvCultoPlaca .placa-lbl'); if(lbl) lbl.textContent = cultoDataTexto(d, true) + ' · culto';
+  el.innerHTML = `${quando}${itens.length ? ` · <b>${itens.length}</b> ${itens.length === 1 ? 'música' : 'músicas'} · ${prontas} pronta${prontas === 1 ? '' : 's'}` : ' · toque para montar o roteiro'}`;
+  const pe = document.getElementById('lvCultoPartes');
+  if(pe) pe.innerHTML = itens.slice(0, 6).map((x, i)=>`<span class="lvcp"><i>${i + 1}</i><span>${lvEsc([x.parte, x.l.titulo || 'Sem título'].filter(Boolean).join(' · '))}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></span>`).join('');
 }
 /* ---------- sugestão de repertório (IA): tema da pregação → músicas do app que combinam, sem repetir as recentes ---------- */
 const CU_SUGESTAO_ESQUEMA = { type:'object', properties:{ musicas:{ type:'array', items:{ type:'object', properties:{

@@ -439,7 +439,7 @@ function fecharSplash(imediato){
   const el = document.getElementById('splash');
   const sair = ()=>{
     document.body.classList.remove('carregando');
-    document.getElementById('metaCorTema')?.setAttribute('content', '#f4efe6');   // barra de status creme, igual ao app
+    document.getElementById('metaCorTema')?.setAttribute('content', '#f3f2ee');   // barra de status creme, igual ao app
     if(!el) return;
     el.classList.add('saindo');
     setTimeout(()=>el.classList.add('oculta'), 1450);

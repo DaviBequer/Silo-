@@ -9,6 +9,17 @@ let louvorFiltrosVisiveis = true;
 
 function getLouvorAtual(){ return state.louvores.find(l=>l.id===louvorAtualId); }
 
+/* capas padrão por tipo (escolha do Davi, v12): Louvor = ondas de som no grafite, Harpa = harpa no dourado, Corinho de fogo = chama */
+const LV_CAPA = {
+  'Louvor': { cls:'lou', d:'<path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/>' },
+  'Harpa Cristã': { cls:'har', d:'<path d="M6 20.5V5.2"/><circle cx="6" cy="4" r="1.1"/><path d="M6 5.2c2.6-2.2 5.4 1.6 8.4-.2 1.9-1.1 3.4-1.4 4.8-.6"/><path d="M19.4 4.2L8.2 20.5" stroke-width="2.3"/><path d="M4.4 20.8h6"/><path d="M9 4.9v13.6M11.8 5.6v8.9M14.6 5v5.4M17.2 4.4v2.4" stroke-width="1"/>' },
+  'Corinhos': { cls:'fog', d:'<path d="M12 21.2c-3.9 0-6.6-2.7-6.6-6.3 0-3.4 2.4-5.5 3.7-8.5.4 1.9 1.4 3.1 2.6 3.7-.2-2.9.9-5.5 3.1-7.3-.1 3 1.3 4.7 2.6 6.5 1 1.4 1.7 3 1.7 5.2 0 3.9-3.1 6.7-7.1 6.7z"/><path d="M12 18.6c-1.6 0-2.7-1.1-2.7-2.6 0-1.4 1-2.4 1.8-3.7.3 1 .9 1.6 1.6 1.9.1-1 .6-1.9 1.4-2.5 0 1.3.7 2.1 1.1 2.9.3.5.5 1 .5 1.6 0 1.4-1.4 2.4-3.7 2.4z"/>' }
+};
+function lvCapaHtml(categoria, tom){
+  const c = LV_CAPA[categoria] || LV_CAPA['Louvor'];
+  return `<span class="lv-capa ${c.cls}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${c.d}</svg>${tom ? `<b class="lv-capa-tom">${tom}</b>` : ''}</span>`;
+}
+
 function lvEstaAtual(l){
   if(l.status !== 'finalizada') return true;
   if(!l.dataAgendamento) return false;
@@ -90,24 +101,22 @@ function renderLouvorLista(){
       : `<div class="empty-state"><div class="title">Nenhum louvor encontrado</div><div class="desc">Toque no + para adicionar</div></div>`;
     return;
   }
+  /* v12: capa do tipo (Louvor = ondas, Harpa = harpa dourada, Corinho de fogo = chama) com o tom no canto;
+     nome, cantor e status um embaixo do outro; o calendário com o dia fica sempre na coluna da direita */
   el.innerHTML = items.map(l=>{
     ensureLouvorConfig(l);
     const tomAtual = lvTomAtual(l);
-    let badges = '';
-    if(louvorFiltroAtivo === 'Atual'){
-      const finalizada = l.status === 'finalizada';
-      badges = `<div class="lv-card-badges">
-        ${l.dataAgendamento ? `<span class="lv-card-data">${l.dataAgendamento.split('-').reverse().join('/')}</span>` : ''}
-        <span class="lv-card-status${finalizada?' finalizada':''}">${finalizada?'Pronto':'Em Produção'}</span>
-      </div>`;
-    }
+    const finalizada = l.status === 'finalizada';
+    const quem = l.medley ? `Medley · ${l.medley.musicas.length} música${l.medley.musicas.length===1?'':'s'}` : (l.artista || (l.categoria === 'Harpa Cristã' ? 'Harpa Cristã' : l.categoria === 'Corinhos' ? 'Corinho de fogo' : 'Artista desconhecido'));
+    const dia = l.dataAgendamento ? Number(l.dataAgendamento.split('-')[2]) : 0;
     return `<div class="lv-card" onclick="abrirLouvorDetalhe('${l.id}')">
+      ${lvCapaHtml(l.categoria, tomAtual)}
       <div class="lv-card-info">
-        <div class="lv-card-titulo">${l.titulo||'Sem título'}</div>
-        <div class="lv-card-meta">${l.medley ? `Medley · ${l.medley.musicas.length} música${l.medley.musicas.length===1?'':'s'}` : (l.artista||'Artista desconhecido')} · ${l.categoria||'Louvor'}</div>
-        ${badges}
+        <div class="lv-card-titulo">${lvEsc(l.titulo||'Sem título')}</div>
+        <div class="lv-card-meta">${lvEsc(quem)}</div>
+        <span class="lv-card-status${finalizada?' finalizada':''}">${finalizada?'Pronto':'Em produção'}</span>
       </div>
-      ${tomAtual?`<div class="lv-card-tom">${tomAtual}</div>`:''}
+      ${dia ? `<span class="cal" title="${l.dataAgendamento.split('-').reverse().join('/')}"><b>${dia}</b></span>` : '<span class="lv-card-semdata"></span>'}
     </div>`;
   }).join('');
 }

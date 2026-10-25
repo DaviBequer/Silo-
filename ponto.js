@@ -355,9 +355,21 @@ function computePontoMes(mKey){
   return { totalMin, padraoMin, diffMin, valorReceber, impacto };
 }
 
+/* seletor do Trabalho (v12): horas do mês embaixo de "Ponto" e quanto da meta embaixo de "Vendas" */
+function renderTrabalhoSeg(){
+  const r = computePontoMes(pontoMonthKeyAtual());
+  document.querySelectorAll('.trab-info-ponto').forEach(el=>el.textContent = minToHoursLabel(r.totalMin) + ' no mês');
+  let v = '';
+  if(typeof vendasAlvoComissao === 'function'){
+    const m = mesFinanceiroAtual(), alvo = vendasAlvoComissao(m, vendasSobraBase(m));
+    if(alvo && alvo > 0) v = Math.max(0, Math.min(100, Math.round(vendasComissaoNoMes(m) / alvo * 100))) + '% da meta';
+  }
+  document.querySelectorAll('.trab-info-vendas').forEach(el=>el.textContent = v);
+}
 function renderPontoSummary(){
   const mKey = pontoMonthKeyAtual();
   const r = computePontoMes(mKey);
+  renderTrabalhoSeg();
 
   document.getElementById('pontoTotalHoras').textContent = minToHoursLabel(r.totalMin);
   document.getElementById('pontoValorReceber').textContent = fmtMoney(r.valorReceber);

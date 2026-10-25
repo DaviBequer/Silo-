@@ -35,31 +35,23 @@ function atalhosFim(el){
   el.classList.toggle('no-fim', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
 }
 
-/* Resumo do mês atual no topo do Dashboard: o que entra, o que falta pagar e quanto sobra */
+/* Resumo do mês no topo de Finanças (v12): placa grafite com o saldo, a sobra prevista, os dias que faltam e os bancos; depois os blocos do mês */
 function renderResumoMes(){
   const elMes = document.getElementById('resumoMesLabel');
   if(!elMes || !state.users) return;
   if(typeof renderHeaderHoje==='function') renderHeaderHoje();   // "falta pagar" do cabeçalho acompanha
   requestAnimationFrame(()=> atalhosFim(document.getElementById('resumoAtalhos')));
   const u = userDash(), mKey = mesFinanceiroAtual();
-  const saldo = state.users[u].saldoAtual || 0;
-  const entra = incomeForMonth(u, mKey) - saldo;
-  const sai = expensesForMonth(u, mKey);
   const sobra = saldoForMonth(u, mKey);
   elMes.textContent = monthLabelLong(mKey);
-  document.getElementById('resumoEntra').textContent = fmtMoney(entra);
-  document.getElementById('resumoSai').textContent = fmtMoney(sai);
-  /* previsão (serifa): sobra do mês + barra entra × falta pagar */
   const elSobra = document.getElementById('resumoSobra');
   elSobra.textContent = fmtMoneySigned(sobra);
-  elSobra.className = 'prev-valor ' + (sobra >= 0 ? 'pos' : 'neg');
-  const elPrevMes = document.getElementById('resumoPrevMes'); if(elPrevMes) elPrevMes.textContent = monthLabelLong(mKey).split(' ')[0].toLowerCase();
-  const elTipo = document.getElementById('resumoPrevTipo'); if(elTipo){ elTipo.textContent = sobra >= 0 ? 'sobra' : 'falta'; elTipo.className = 'prev-tipo ' + (sobra >= 0 ? 'pos' : 'neg'); }
-  const totBar = Math.max(1, Math.max(0, entra) + Math.max(0, sai));
-  const bE = document.getElementById('resumoBarEntra'), bS = document.getElementById('resumoBarSai');
-  if(bE) bE.style.flexGrow = Math.max(0, entra) / totBar;
-  if(bS) bS.style.flexGrow = Math.max(0, sai) / totBar;
+  elSobra.className = sobra >= 0 ? 'pos' : 'neg';
+  const elTipo = document.getElementById('resumoPrevTipo'); if(elTipo) elTipo.textContent = sobra >= 0 ? 'sobra prevista' : 'falta prevista';
+  const hoje = new Date(), faltam = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate() - hoje.getDate();
+  const elF = document.getElementById('resumoFaltam'); if(elF) elF.textContent = faltam ? 'faltam ' + faltam + ' dia' + (faltam > 1 ? 's' : '') : 'último dia';
   renderCarteira();
+  renderBlocosMes(u, mKey);
   renderCurvaSaldo(u, mKey);
   renderProxContas(u, mKey);  /* atalhos: cartão / empréstimo contando (ou não) neste mês */
   const elInc = document.getElementById('resumoInclui');
@@ -79,36 +71,82 @@ function renderResumoMes(){
   document.getElementById('resumoContasAbertas').textContent = abertas ? '· ' + abertas + ' em aberto' : '· tudo pago';
 }
 
-/* ===== Finanças — visual novo (18/10): carteira, curva do saldo, próximas contas ===== */
-/* cor de cada banco pelo nome (cartão empilhado na carteira); banco desconhecido ganha uma cor neutra da lista */
+/* cor de cada banco pelo nome (quando o Davi não escolheu uma); banco desconhecido ganha uma cor neutra da lista */
 const BANCO_CORES = [
   [/nu ?bank|nubank/i, '#7a1fc9'], [/inter\b/i, '#ff7a1a'], [/viacredi|ailos/i, '#0f5a3b'], [/sicredi/i, '#3a8a2e'], [/sicoob/i, '#00505c'],
   [/ita[uú]/i, '#ec7000'], [/bradesco/i, '#cc092f'], [/santander/i, '#d40000'], [/caixa/i, '#005ca9'], [/brasil|\bbb\b/i, '#0038a8'],
   [/c6/i, '#2b2b2b'], [/picpay/i, '#11a84e'], [/mercado ?pago/i, '#009ee3'], [/pagbank|pagseguro/i, '#1aa58a'], [/neon/i, '#00a5e0'], [/next/i, '#0b8f5a']
 ];
-const BANCO_NEUTRAS = ['#1c1a17', '#3f5e8c', '#7a5b3a', '#4b6b5a'];
+const BANCO_NEUTRAS = ['#3a3d42', '#3f5e8c', '#7a5b3a', '#4b6b5a'];
 function corDoBanco(nome, i){
   const achou = BANCO_CORES.find(([re])=>re.test(nome || ''));
   return achou ? achou[1] : BANCO_NEUTRAS[(i || 0) % BANCO_NEUTRAS.length];
 }
+/* bancos como cartõezinhos em fila dentro da placa (escolha A do Davi): só a logo redonda, o chip e o saldo.
+   Maior saldo primeiro; zerado fica apagado no fim (ou some, com "Esconder bancos zerados") */
 function renderCarteira(){
   const el = document.getElementById('resumoCarteira'); if(!el) return;
   const us = state.users[state.currentUser] || {};
-  const lista = (us.bancos || []).slice().sort((a, b)=>(a.valor || 0) - (b.valor || 0));   // o maior fica na frente
-  if(!lista.length){
-    el.innerHTML = `<div class="cart-banco frente" style="--cor:#1c1a17;top:0"><div class="cb-topo"><b>Seu saldo</b></div><div class="cb-rodape"><small>toque para separar por banco</small></div></div>`;
-    el.style.height = '120px';
-    return;
-  }
-  const passo = 40, alto = 128;
-  el.style.height = (alto + passo * (lista.length - 1)) + 'px';
-  el.innerHTML = lista.map((b, i)=>{
-    const frente = i === lista.length - 1;
-    return `<div class="cart-banco${frente ? ' frente' : ''}" style="--cor:${corDoBanco(b.nome, i)};top:${i * passo}px">
-      <div class="cb-topo"><b>${escBanco(b.nome)}</b>${frente ? '' : `<span>${fmtMoney(b.valor)}</span>`}</div>
-      ${frente ? `<div class="cb-rodape"><small>${lista.length > 1 ? 'maior saldo' : 'conta'}</small><strong>${fmtMoney(b.valor)}</strong></div>` : ''}
+  let lista = (us.bancos || []).map((b, i)=>({ ...b, i })).sort((a, b)=>(b.valor || 0) - (a.valor || 0));
+  if(us.esconderZerados) lista = lista.filter(b=>Math.abs(b.valor || 0) > 0.004);
+  if(!lista.length){ el.innerHTML = '<span class="cc-vazio">toque para separar o saldo por banco</span>'; return; }
+  el.innerHTML = lista.map(b=>{
+    const zero = Math.abs(b.valor || 0) < 0.005;
+    const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : escBanco((b.nome || '?').trim().charAt(0).toUpperCase());
+    return `<div class="cc${zero ? ' zero' : ''}" style="--c:${b.cor || corDoBanco(b.nome, b.i)}" title="${escBanco(b.nome)}">
+      <div class="cc-topo"><span class="cc-logo">${logo}</span><span class="cc-chip"></span></div>
+      <b>${fmtMoney(b.valor || 0).replace(/^R\$\s?/, '')}</b>
     </div>`;
   }).join('');
+}
+/* números do mês: Sobra e Pago com anel; Fixos e Parcelado com barrinha (só nesses dois, pedido do Davi); Cris não tem cartão */
+const FIN_ICO = {
+  fixo:'<circle cx="12" cy="5" r="2"/><path d="M12 7v14M8 11h8"/><path d="M5 13a7 7 0 0 0 14 0"/>',
+  pix:'<path fill="currentColor" stroke="none" fill-rule="evenodd" d="M12 2.2c.7 0 1.4.3 1.9.8l2.6 2.6c-.9 0-1.8.4-2.4 1L12 8.7 9.9 6.6c-.6-.6-1.5-1-2.4-1L10.1 3c.5-.5 1.2-.8 1.9-.8zM5.7 7.1h1.8c.6 0 1.2.2 1.6.7L11.3 10a1 1 0 0 0 1.4 0l2.2-2.2c.4-.4 1-.7 1.6-.7h1.8l2.7 2.7c1.1 1.1 1.1 2.8 0 3.9l-2.7 2.7h-1.8c-.6 0-1.2-.2-1.6-.7L12.7 14a1 1 0 0 0-1.4 0l-2.2 2.2c-.4.4-1 .7-1.6.7H5.7L3 14.2c-1.1-1.1-1.1-2.8 0-3.9zM7.5 18.4c.9 0 1.8-.4 2.4-1l2.1-2.1 2.1 2.1c.6.6 1.5 1 2.4 1L13.9 21c-1 1-2.8 1-3.8 0z"/>',
+  vista:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 14.5h3"/>',
+  parcelado:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M9 6v12M15 6v12" stroke-dasharray="2 2"/><path d="M3.8 7h4.4v10H3.8z" fill="currentColor" stroke="none" opacity=".35"/>'
+};
+function finIco(d){ return `<span class="fb-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg></span>`; }
+function blocosMesDados(u, mKey){
+  const saldo = state.users[u].saldoAtual || 0;
+  const entra = incomeForMonth(u, mKey) - saldo, sobra = saldoForMonth(u, mKey);
+  const contas = getContasDoMes(mKey, u).map(it=>{
+    const k = mKey + '_' + it.user + '_' + it.cat + '_' + it.id;
+    return { valor: Number(it.valor) || 0, falta: state.paid[k] ? 0 : (typeof restanteConta === 'function' ? restanteConta(k, it.valor) : it.valor) };
+  });
+  const totContas = contas.reduce((s, c)=>s + c.valor, 0), faltaContas = contas.reduce((s, c)=>s + Math.max(0, c.falta), 0);
+  const pix = (state.lancamentos || []).filter(la=>la.mKey === mKey && (la.usuario || 'davi') === u).reduce((s, la)=>s + (Number(la.valor) || 0), 0);
+  let vista = 0, parcelado = 0, parcTot = 0, parcPagas = 0;
+  if(u === 'davi') (state.cartoesTracker || []).forEach(c=>{
+    const m = faturaAbertaMes(c);
+    vista += (c.credoVista || []).filter(cv=>cv.mKey === m).reduce((s, cv)=>s + (Number(cv.valor) || 0), 0);
+    (state.comprasTracker || []).filter(x=>x.cartaoId === c.id && !x.pago && x.mesInicio).forEach(x=>{
+      const v = compraTrackerValorNoMes(x, m); if(!v) return;
+      parcelado += v;
+      const n = Math.max(1, Number(x.parcelas) || 1); let k = 1; while(k < n && addMonths(x.mesInicio, k - 1) !== m) k++;   // parcela k de n neste mês
+      parcTot += n; parcPagas += k - 1;
+    });
+  });
+  return { entra, sobra, totContas, faltaContas, pix, vista, parcelado, parcTot, parcPagas };
+}
+function renderBlocosMes(u, mKey){
+  const el = document.getElementById('resumoBlocos'); if(!el) return;
+  const d = blocosMesDados(u, mKey);
+  const pago = d.totContas > 0 ? Math.round((d.totContas - d.faltaContas) / d.totContas * 100) : 100;
+  const pSobra = d.entra + (state.users[u].saldoAtual || 0) > 0 ? Math.max(0, Math.min(100, Math.round(d.sobra / (d.entra + (state.users[u].saldoAtual || 0)) * 100))) : 0;
+  const bloco = (o)=>`<button type="button" class="fb" onclick="${o.on}">${o.ico}<span class="fb-txt"><small>${o.rot}</small><b>${o.val}</b>${o.barra != null ? `<i class="fb-barra"><i style="width:${o.barra}%"></i></i>` : ''}${o.sub ? `<em>${o.sub}</em>` : ''}</span></button>`;
+  const anel = p=>`<span class="fb-anel" style="--p:${p}"></span>`;
+  const b = [
+    bloco({ ico: anel(pSobra), rot: d.sobra >= 0 ? 'Sobra' : 'Falta', val: fmtMoney(d.sobra), on: "abrirDetalheResumo('entra')" }),
+    bloco({ ico: anel(pago), rot: 'Pago', val: pago + '%', sub: d.faltaContas > 0.004 ? 'falta ' + fmtMoney(d.faltaContas) : 'tudo pago', on: 'abrirContasPagar()' }),
+    bloco({ ico: finIco(FIN_ICO.fixo), rot: 'Fixos', val: fmtMoney(d.totContas), barra: pago, on: 'abrirContasPagar()' }),
+    bloco({ ico: finIco(FIN_ICO.pix), rot: 'Pix no mês', val: fmtMoney(d.pix), on: `abrirLancamentos('${mKey}')` })
+  ];
+  if(u === 'davi' && (state.cartoesTracker || []).length){
+    b.push(bloco({ ico: finIco(FIN_ICO.vista), rot: 'Crédito à vista', val: fmtMoney(d.vista), on: "switchDashTab('cartao')" }));
+    b.push(bloco({ ico: finIco(FIN_ICO.parcelado), rot: 'Parcelado', val: fmtMoney(d.parcelado), barra: d.parcTot ? Math.round(d.parcPagas / d.parcTot * 100) : null, on: "switchDashTab('cartao')" }));
+  }
+  el.innerHTML = b.join('');
 }
 /* curva: hoje (saldo) → fim deste mês (sobra) → acumulado dos próximos 4 meses; toque num mês abre o detalhe */
 function renderCurvaSaldo(u, mKey){
@@ -130,7 +168,7 @@ function renderCurvaSaldo(u, mKey){
   const zero = y(0);
   el.innerHTML = `<div class="curva-topo"><span>Saldo nos próximos meses</span><b class="${fim >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(fim)} em ${monthLabel(pts[pts.length - 1].m)}</b></div>
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Saldo previsto mês a mês">
-      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#5a6b2c' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#5a6b2c' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#c9a86a' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#c9a86a' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
       ${min < 0 ? `<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#d2452f" stroke-opacity=".35" stroke-dasharray="3 4"/>` : ''}
       <path d="${d} L${P[P.length - 1][0]},${H} L${P[0][0]},${H} Z" fill="url(#curvaFundo)"/>
       <path d="${d}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
@@ -143,7 +181,7 @@ function fmtCompacto(v){
   const s = v < 0 ? '−' : '', a = Math.abs(v);
   return s + (a >= 1000 ? (a / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : Math.round(a).toLocaleString('pt-BR'));
 }
-/* próximas contas em aberto (pela data), lado a lado */
+/* próximas contas em aberto (pela data): calendário com o dia no meio, nome e o mês embaixo, valor à direita (v12) */
 function renderProxContas(u, mKey){
   const el = document.getElementById('resumoProxContas'); if(!el) return;
   const hoje = new Date().getDate();
@@ -152,8 +190,8 @@ function renderProxContas(u, mKey){
     .filter(it=>it.falta > 0.004);
   if(!abertas.length){ el.innerHTML = '<div class="pc-vazio">Tudo pago neste mês</div>'; return; }
   el.innerHTML = abertas.slice(0, 8).map(it=>{
-    const quando = it.dia === hoje ? 'HOJE' : 'DIA ' + it.dia;
-    return `<button type="button" class="pc-item" onclick="abrirContasPagar()"><small>${quando}</small><b>${escBanco(it.desc)}</b><span>${fmtMoney(it.falta)}</span></button>`;
+    const quando = it.dia === hoje ? 'hoje' : monthLabelLong(mKey).split(' ')[0].toLowerCase();
+    return `<button type="button" class="pc-item" onclick="abrirContasPagar()"><span class="cal${it.dia === hoje ? ' hoje' : ''}"><b>${it.dia}</b></span><b>${escBanco(it.desc)}</b><small>${quando}</small><span class="pc-valor">${fmtMoney(it.falta)}</span></button>`;
   }).join('');
 }
 
