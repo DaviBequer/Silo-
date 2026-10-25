@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v11.4', itens: [
+    'Louvor: música só com o PDF do Drive pode ser marcada como Pronto (botão no topo do Comparar); trocar o tom depois só muda a nota',
+    'Importar e Cifra Club: no lugar das informações técnicas, uma onda animada com o que está fazendo, e a cifra aparece sendo escrita no editor',
+    'Editor da música com uma fonte mais bonita (a mesma do PDF)'
+  ]},
   { versao: 'v11.3', itens: [
     'Atualizar: resposta da IA curta, com cada compra numa linha e o que falta em destaque; a tela vai para a resposta nova',
     'IA da conversa mais rápida (pensa menos) e o microfone espera 5 segundos de silêncio'

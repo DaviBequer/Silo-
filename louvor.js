@@ -98,7 +98,7 @@ function renderLouvorLista(){
       const finalizada = l.status === 'finalizada';
       badges = `<div class="lv-card-badges">
         ${l.dataAgendamento ? `<span class="lv-card-data">${l.dataAgendamento.split('-').reverse().join('/')}</span>` : ''}
-        <span class="lv-card-status${finalizada?' finalizada':''}">${finalizada?'Finalizado':'Em Produção'}</span>
+        <span class="lv-card-status${finalizada?' finalizada':''}">${finalizada?'Pronto':'Em Produção'}</span>
       </div>`;
     }
     return `<div class="lv-card" onclick="abrirLouvorDetalhe('${l.id}')">
@@ -212,16 +212,27 @@ function abrirLouvorDetalhe(id){
 }
 function renderLvStatusBtn(){
   const l = getLouvorAtual(); if(!l) return;
-  const btn = document.getElementById('lvStatusBtn');
   const finalizada = l.status === 'finalizada';
-  btn.textContent = finalizada ? 'Finalizado' : 'Em Produção';
-  btn.classList.toggle('finalizada', finalizada);
+  /* o mesmo botão na música e no Comparar (música só com o PDF do Drive abre direto no Comparar) */
+  ['lvStatusBtn', 'lvcmpStatus'].forEach(id=>{
+    const btn = document.getElementById(id); if(!btn) return;
+    btn.textContent = finalizada ? 'Pronto' : 'Em Produção';
+    btn.classList.toggle('finalizada', finalizada);
+  });
 }
 function toggleLouvorStatus(){
   const l = getLouvorAtual(); if(!l) return;
   l.status = l.status === 'finalizada' ? 'producao' : 'finalizada';
+  /* Pronto = o arquivo está certo: nada para conferir; trocar o tom depois só muda a nota */
+  if(l.status === 'finalizada'){
+    delete l.revisar;
+    if(l.origem && l.origem.tipo === 'drive') showToast('Pronto: o PDF do Drive está certo. Se trocar o tom, o app só muda a nota');
+    lvAtualizarEditor();
+    if(document.getElementById('pageLvComparar')?.classList.contains('active') && typeof lvCompararRenderApp === 'function') lvCompararRenderApp(l);
+  }
   persist();
   renderLvStatusBtn();
+  renderLouvorLista();
 }
 function closeLouvorDetalhe(){
   if(document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);
@@ -262,7 +273,42 @@ function lvAtualizarEditor(){
   ta.style.height = ta.scrollHeight + 'px';
 }
 window.addEventListener('resize', ()=>{ if(document.getElementById('pageLouvorDetalhe')?.classList.contains('active')) lvAtualizarEditor(); });
+/* texto que acabou de chegar (importação, Cifra Club, Drive): aparece sendo escrito no editor, como num chat.
+   Só na tela — l.conteudo já está inteiro e gravado; tocar no editor (ou mexer em outro campo) mostra tudo na hora. */
+let lvEscrevendoParar = null;
+function lvEscreverNoEditor(){
+  const l = getLouvorAtual(), ta = document.getElementById('lvConteudo'), realce = document.getElementById('lvConteudoRealce');
+  if(!l || !ta || !realce || !(l.conteudo || '').trim()) return;
+  if(lvEscrevendoParar) lvEscrevendoParar();
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  switchLouvorSubtab('edicao');
+  const alvo = l.conteudo, id = l.id, total = alvo.length, wrap = ta.closest('.lv-editor-wrap');
+  const dur = Math.min(3200, 900 + total * 1.4), t0 = performance.now();
+  let vivo = true;
+  const parar = ()=>{
+    if(!vivo) return; vivo = false; lvEscrevendoParar = null;
+    ta.readOnly = false; wrap && wrap.classList.remove('escrevendo');
+    if(louvorAtualId === id){ ta.value = (getLouvorAtual() || {}).conteudo || ''; lvAtualizarEditor(); }
+    ta.removeEventListener('pointerdown', parar);
+  };
+  lvEscrevendoParar = parar;
+  ta.readOnly = true; wrap && wrap.classList.add('escrevendo');
+  ta.addEventListener('pointerdown', parar);
+  const passo = ()=>{
+    if(!vivo) return;
+    if(louvorAtualId !== id || (getLouvorAtual() || {}).conteudo !== alvo){ parar(); return; }
+    const p = Math.min(1, (performance.now() - t0) / dur), e = 1 - Math.pow(1 - p, 1.6);   // começa rápido e assenta no fim
+    let n = Math.floor(total * e);
+    const nl = alvo.indexOf('\n', n); if(p < 1 && nl > -1 && nl - n < 3) n = nl;   // não para no meio de um acorde curto
+    ta.value = alvo.slice(0, n);
+    lvAtualizarEditor();
+    realce.innerHTML = realce.innerHTML.replace(/\n$/, '<span class="rl-cursor"></span>\n');
+    if(p < 1) setTimeout(passo, 16); else parar();   // setTimeout (e não rAF): continua mesmo se a tela ficar em segundo plano
+  };
+  passo();
+}
 function salvarLouvorCampo(){
+  if(lvEscrevendoParar) lvEscrevendoParar();   // ainda escrevendo: mostra o texto inteiro antes de ler os campos
   const l = getLouvorAtual(); if(!l) return;
   l.titulo = document.getElementById('lvTitulo').value;
   l.artista = document.getElementById('lvArtista').value;
@@ -485,6 +531,12 @@ function lvTomGridEscolher(nota, modoMenor){
     return;
   }
   const l = getLouvorAtual(); if(!l) return;
+  /* música só com o PDF do Drive: para mudar a nota o app precisa do texto → lê o PDF (como está) e passa para o tom novo */
+  if(typeof driveSoArquivo === 'function' && driveSoArquivo(l) && (nota !== l.tomOriginal || !!modoMenor !== !!l.tomModoMenor)){
+    closeModal('modalLvTom');
+    lvConverterDoDrive({ nota, modoMenor });
+    return;
+  }
   ensureLouvorConfig(l);
   /* sobe/desce a cifra até o tom novo e escreve tudo com os nomes desse tom
      (mesmo de F# para Gb, que soa igual, os nomes mudam). Sem tom anterior: só ajusta os nomes. */

@@ -933,8 +933,10 @@ async function lvImportarNoAtual(ev){
     /* o original fica guardado para comparar (o arquivo no aparelho; de onde veio, nos dados) */
     l.origem = Object.assign({ tipo: 'arquivo', nome: file.name }, ev.origem || {}, { quando: Date.now() });
     lvOriginalGuardar(l.id, file);
+    if(l.status === 'finalizada' && lviModoFiel) delete l.revisar;   // marcada como Pronto: o arquivo já está certo
     persist();
     abrirLouvorDetalhe(l.id);
+    lvEscreverNoEditor();
     lviLogResultado(prog, r);
     prog.fim(lviRelatorioHtml(r, '<button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button>'));
   }catch(e){
@@ -1190,7 +1192,9 @@ async function ccImportar(url){
   const el = document.getElementById('ccLista');
   /* cada passo aparece na tela (Cifra Club, Letras, junção) e o resumo fica na música depois */
   const passos = [];
-  const passo = (txt, tipo)=>{ passos.push({ txt, tipo: tipo || '' }); el.innerHTML = passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join(''); };
+  /* na tela só a onda com a frase do passo atual; os detalhes ficam para o resumo na música */
+  el.innerHTML = lvOndaHtml('Lendo a cifra');
+  const passo = (txt, tipo)=>{ passos.push({ txt, tipo: tipo || '' }); if(!tipo) lvOndaFrase(el, lviFraseCurta(txt)); };
   try{
     const r = await ccMontar(url, passo, ()=>passos.pop());
     closeModal('modalCifraClub');
@@ -1201,11 +1205,13 @@ async function ccImportar(url){
     const st = document.getElementById('lvEdicaoImportStatus');
     if(st){
       st.classList.remove('erro');
-      st.innerHTML = `<div class="cc-passos">${passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
+      /* resumo curto: só os avisos (o que não deu certo); o resto já está na música */
+      st.innerHTML = `<div class="cc-passos">${passos.filter(p=>p.tipo === 'erro').map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
         <div class="cc-passos-acoes"><button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button></div></div>`;
     }
     showToast(r.comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club');
-  }catch(e){ passo(e.message, 'erro'); }
+    lvEscreverNoEditor();
+  }catch(e){ el.innerHTML = `<div class="drive-linha erro">${lvEsc(e.message)}</div>`; }
 }
 /* ---------- Refazer pelo Cifra Club: a música que já existe ganha a cifra nova (com a junção Letras + acordes de hoje),
    mas continua a mesma: nome, cantor, categoria, data, status e lugar nos roteiros do Culto ficam; o tom em que ela
@@ -1233,10 +1239,11 @@ function ccAplicarRefazer(id, r, url, passos){
   ccRefazerId = null;
   renderLouvor();
   abrirLouvorDetalhe(id);
+  lvEscreverNoEditor();
   const st = document.getElementById('lvEdicaoImportStatus');
   if(st){
     st.classList.remove('erro');
-    st.innerHTML = `<div class="cc-passos">${passos.map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
+    st.innerHTML = `<div class="cc-passos">${passos.filter(p=>p.tipo === "erro").map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
       ${antes.maior && !r.dados.tomOriginal ? '<div class="drive-linha erro">O Cifra Club não disse o tom: confira o tom da música</div>' : ''}
       <div class="cc-passos-acoes"><button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button></div></div>`;
   }

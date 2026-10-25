@@ -283,104 +283,55 @@ async function lmSalvar(){
   showToast('Medley pronto');
 }
 
-/* Painel da importação: arquivo, qual IA está trabalhando, tempo, etapas com barra e um registro ao vivo.
-   status(texto, passo): com "passo" abre uma etapa nova (a anterior ganha ✓); sem, escreve embaixo da etapa atual.
-   Extras: status.log(texto, tipo) · status.modelo(nome) · status.arquivo(file) · status.aviso · status.fim(html) · status.erro */
-const LVI_PROGRESSO_ETAPA = { ler: 8, ocr: 20, ia: 22, partes: 78, conferir: 90 };
+/* Carregando da importação: só uma onda animada e uma frase curta do que está fazendo (pedido do Davi:
+   nada de IA, modelo, tempo ou registro na tela). O registro continua guardado em window.lviRegistro para conferência.
+   status(texto, passo): com "passo" troca a frase; sem, é detalhe (só no registro).
+   Extras (mesma interface de antes): status.log · status.modelo · status.arquivo · status.aviso · status.fim(html) · status.erro */
+const LVI_PASSO_FRASE = { ler:'Abrindo o arquivo', ocr:'Lendo a foto', ia:'Lendo a letra e os acordes', partes:'Separando as partes', conferir:'Conferindo os acordes' };
 function lviNomeModelo(m){
   if(!m) return 'Leitura do app (sem IA)';
   const g = /^gemini-([\d.]+)-(flash-lite|flash|pro)/i.exec(m);
   return g ? `Gemini ${g[1]} ${g[2].replace('flash-lite','Flash-Lite').replace('flash','Flash').replace('pro','Pro')}` : m;
 }
+/* frase limpa para a tela: sem "com IA", sem parênteses, sem ✓ */
+function lviFraseCurta(t){
+  return String(t || '').replace(/^✓\s*/, '').replace(/\s*\(.*?\)/g, '').replace(/\s+com (a )?IA\b/i, '').replace(/^A IA está /i, '').replace(/…+$|\.+$/, '').trim();
+}
+/* a onda: três linhas que correm em velocidades diferentes; as pontas somem */
+function lvOndaHtml(frase){
+  const p = a=>`M0 30 Q30 ${30 - a} 60 30 T120 30 T180 30 T240 30 T300 30 T360 30 T420 30 T480 30`;
+  return `<div class="lvo" role="status" aria-live="polite">
+    <div class="lvo-onda" aria-hidden="true"><svg viewBox="0 0 240 60" preserveAspectRatio="none">
+      <g class="g3"><path class="o3" d="${p(10)}"/></g><g class="g2"><path class="o2" d="${p(16)}"/></g><path class="o1" d="${p(22)}"/></svg></div>
+    <div class="lvo-frase"><span>${lvEsc(frase || 'Preparando')}</span><i></i><i></i><i></i></div>
+  </div>`;
+}
+function lvOndaFrase(el, frase){
+  const s = el && el.querySelector('.lvo-frase span'); if(!s || !frase || s.textContent === frase) return;
+  s.classList.remove('nova'); void s.offsetWidth; s.textContent = frase; s.classList.add('nova');
+}
 function lviProgresso(id){
   const el = document.getElementById(id);
-  const passos = [], inicio = Date.now();
-  let pct = 3, alvoIA = null, timer = 0, rodando = true;
-  if(el){
-    el.classList.remove('erro');
-    el.innerHTML = `<div class="lvc">
-      <div class="lvc-topo">
-        <div class="lvc-doc" aria-hidden="true"><div class="lvc-folha"><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="lvc-scan"></span></div>
-        <div class="lvc-info">
-          <div class="lvc-arquivo">Preparando…</div>
-          <div class="lvc-meta"></div>
-          <div class="lvc-chips"><span class="lvc-ia"><i></i><span class="lvc-ia-nome">Escolhendo a IA…</span></span><span class="lvc-tempo">00:00</span></div>
-        </div>
-      </div>
-      <div class="lvc-etapa"><b>Começando</b><small></small></div>
-      <div class="lvc-barra"><span></span></div>
-      <div class="lvc-passos"></div>
-      <div class="lvc-log"></div>
-    </div>`;
-  }
-  const q = s=>el && el.querySelector(s);
-  const mmss = ms=>{ const s = Math.floor(ms/1000); return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); };
-  const barra = ()=>{ const b = q('.lvc-barra span'); if(b) b.style.width = Math.min(100, pct) + '%'; };
-  timer = setInterval(()=>{
-    const t = q('.lvc-tempo'); if(t) t.textContent = mmss(Date.now() - inicio);
-    if(alvoIA !== null && pct < alvoIA){ pct += (alvoIA - pct) * .04; barra(); }   // enquanto a IA pensa, a barra anda devagar
-  }, 250);
-  const desenhaPassos = ()=>{
-    const p = q('.lvc-passos'); if(!p) return;
-    p.innerHTML = passos.map(x=>`<span class="lvc-p ${x.estado}">${x.estado==='ok'?'✓':x.estado==='aviso'||x.estado==='falhou'?'!':''}<em>${lvEsc(x.curto)}</em></span>`).join('');
-    const a = passos[passos.length-1];
-    if(a && q('.lvc-etapa b')){ q('.lvc-etapa b').textContent = a.titulo; q('.lvc-etapa small').textContent = a.sub || ''; }
-  };
+  const inicio = Date.now(), registro = window.lviRegistro = [];
+  let rodando = true;
+  if(el){ el.classList.remove('erro'); el.innerHTML = lvOndaHtml('Preparando'); }
+  const anota = (texto, tipo)=>registro.push({ t: Date.now() - inicio, texto, tipo: tipo || '' });
   const fn = (texto, passo)=>{
     if(!rodando) return;
-    if(passo){
-      passos.forEach(p=>{ if(p.estado==='ativo') p.estado = 'ok'; });
-      passos.push({ id: passo, titulo: texto, curto: texto.replace(/\s*\(.*\)$/,'').replace(/^(Lendo|Separando|Conferindo|Abrindo) /,'').replace(/^o |^a /,''), estado: 'ativo', sub: '' });
-      pct = Math.max(pct, LVI_PROGRESSO_ETAPA[passo] || pct);
-      alvoIA = passo === 'ia' ? 72 : null;
-      barra();
-      fn.log(texto + '…');
-    } else {
-      const a = passos.find(p=>p.estado==='ativo');
-      if(a) a.sub = texto;
-    }
-    desenhaPassos();
+    anota(texto);
+    if(passo) lvOndaFrase(el, LVI_PASSO_FRASE[passo] || lviFraseCurta(texto));
   };
-  fn.log = (texto, tipo)=>{
-    const lg = q('.lvc-log'); if(!lg) return;
-    lg.insertAdjacentHTML('beforeend', `<div class="lvc-linha ${tipo||''}"><time>${mmss(Date.now()-inicio)}</time><span>${lvEsc(texto)}</span></div>`);
-    while(lg.children.length > 9) lg.firstElementChild.remove();
-  };
-  fn.modelo = m=>{
-    const n = q('.lvc-ia-nome'); if(n) n.textContent = lviNomeModelo(m);
-    const c = q('.lvc-ia'); if(c) c.classList.toggle('sem', !m);
-  };
-  fn.arquivo = file=>{
-    if(!file) return;
-    const tipo = lviEhImagem(file) ? 'Foto' : 'PDF';
-    const kb = file.size > 1048576 ? (file.size/1048576).toFixed(1).replace('.',',') + ' MB' : Math.max(1, Math.round(file.size/1024)) + ' KB';
-    const a = q('.lvc-arquivo'); if(a) a.textContent = file.name || 'arquivo';
-    const m = q('.lvc-meta'); if(m) m.textContent = `${tipo} · ${kb}`;
-    fn.log(`Arquivo recebido: ${file.name || tipo} (${kb})`);
-  };
-  fn.aviso = texto=>{
-    const a = passos.find(p=>p.estado==='ativo');
-    if(a){ a.estado = 'aviso'; a.sub = texto; }
-    alvoIA = null;
-    fn.log(texto, 'aviso');
-    desenhaPassos();
-  };
-  const parar = ()=>{ rodando = false; clearInterval(timer); el && el.querySelector('.lvc')?.classList.add('parado'); };
+  fn.log = (texto, tipo)=>anota(texto, tipo);
+  fn.modelo = m=>anota('IA: ' + lviNomeModelo(m));
+  fn.arquivo = file=>{ if(file) anota('Arquivo: ' + (file.name || '') + ' (' + Math.max(1, Math.round(file.size/1024)) + ' KB)'); };
+  fn.aviso = texto=>anota(texto, 'aviso');
   fn.fim = relatorio=>{
-    passos.forEach(p=>{ if(p.estado==='ativo') p.estado = 'ok'; });
-    pct = 100; barra(); desenhaPassos();
-    if(q('.lvc-etapa b')) q('.lvc-etapa b').textContent = 'Pronto'; if(q('.lvc-etapa small')) q('.lvc-etapa small').textContent = 'em ' + mmss(Date.now() - inicio).replace(/^00:/, '') + (Date.now() - inicio < 60000 ? ' s' : '');
-    fn.log('Concluído', 'ok');
-    parar();
-    if(el && relatorio) el.insertAdjacentHTML('beforeend', relatorio);
+    anota('Concluído', 'ok'); rodando = false;
+    if(el) el.innerHTML = relatorio || '';
   };
   fn.erro = msg=>{
-    passos.forEach(p=>{ if(p.estado==='ativo') p.estado = 'falhou'; });
-    desenhaPassos();
-    fn.log(msg, 'erro');
-    parar();
-    el && el.querySelector('.lvc')?.classList.add('falhou');
-    if(el) el.insertAdjacentHTML('beforeend', `<div class="lvi-erro">${lvEsc(msg)}</div>`);
+    anota(msg, 'erro'); rodando = false;
+    if(el){ el.querySelector('.lvo')?.classList.add('parado'); el.insertAdjacentHTML('beforeend', `<div class="lvi-erro">${lvEsc(msg)}</div>`); }
   };
   return fn;
 }

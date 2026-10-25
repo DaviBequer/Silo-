@@ -1534,7 +1534,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lvcmp-tit small{color:var(--text-dim);font-size:12.5px}
 .lvcmp-tit a,.lvcmp-tit .lvi-rel-ok{margin-left:auto}
 .lvcmp-tit a{color:var(--gold);font-size:12.5px;font-weight:600;text-decoration:none}
-.lvcmp-texto{padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card);font-family:'Courier New',monospace;font-size:13px;line-height:1.45;overflow-x:auto}
+.lvcmp-texto{padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card);font-family:'Inconsolata',ui-monospace,'Courier New',monospace;font-size:14px;line-height:1.45;overflow-x:auto}
 .lvcmp-l{min-height:1.45em;white-space:pre}
 .lvcmp-l.ac{color:var(--gold);font-weight:700}
 .lvcmp-l.rot{margin-top:6px;color:var(--text-dim);font-weight:700}
@@ -1637,14 +1637,20 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-hint{margin-bottom:8px;padding:8px 10px;border-radius:10px;background:var(--card-2);font-size:11.5px;line-height:1.5;color:var(--text-faint)}
 .lv-hint code{padding:1px 5px;border:1px solid var(--line);border-radius:4px;background:var(--card);font-size:11.5px}
 /* editor estilo Word: o texto fica transparente e uma camada igual pinta as cores por trás */
+/* editor da música: Inconsolata (a mesma do PDF, no repo em fonts/) no lugar do Courier New — continua monoespaçada para os acordes ficarem em cima da sílaba */
+@font-face{font-family:'Inconsolata';src:url('fonts/Inconsolata-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Inconsolata';src:url('fonts/Inconsolata-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
 .lv-editor-wrap{position:relative;flex:1;margin-top:6px}
-.lv-editor-realce,.lv-editor-wrap .lv-editor-textarea{margin:0;padding:0;border:0;font-family:'Courier New',ui-monospace,monospace;font-size:14.5px;line-height:1.75;letter-spacing:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;tab-size:4}
+.lv-editor-realce,.lv-editor-wrap .lv-editor-textarea{margin:0;padding:0;border:0;font-family:'Inconsolata',ui-monospace,'Courier New',monospace;font-size:16px;line-height:1.7;letter-spacing:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;tab-size:4}
 .lv-editor-realce{position:absolute;inset:0;color:var(--text);pointer-events:none}
 .lv-editor-textarea{width:100%;flex:1;min-height:0;padding:0;border:none;border-radius:0;background:transparent;color:var(--text);resize:none}
 .lv-editor-textarea:focus{outline:none}
 .lv-editor-wrap .lv-editor-textarea{position:relative;z-index:1;display:block;width:100%;min-height:420px;overflow:hidden;resize:none;background:transparent;color:transparent;caret-color:var(--text);-webkit-text-fill-color:transparent}
 .lv-editor-wrap .lv-editor-textarea::placeholder{color:var(--text-faint);-webkit-text-fill-color:var(--text-faint)}
 .lv-editor-wrap .lv-editor-textarea::selection{background:rgba(43,38,32,.28)}
+.lv-editor-realce .rl-cursor{display:inline-block;width:2px;height:1.15em;margin-left:1px;vertical-align:-.2em;background:var(--text);animation:piscar .9s steps(2) infinite}
+.lv-editor-wrap.escrevendo .lv-editor-textarea{caret-color:transparent}
+.lvcmp-status{flex-shrink:0}
 .rl-acorde{color:#e8711a}
 .rl-bloco{border-radius:4px;background:#e4d8c4;color:var(--text);font-weight:700}
 .rl-marca{border-radius:4px;background:var(--card-2);color:var(--text-faint)}
@@ -1829,60 +1835,27 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lvn-campo .dificuldade-chips{margin:0}
 .lvn-criar{min-height:52px;margin-top:18px;border-radius:16px;font-size:15px}
 
-/* painel da IA durante a importação */
-/* painel da IA (v9.6, papel calmo): documento sendo lido, etapa atual grande, passos em lista com o estado de cada um e o registro ao vivo */
-.lvc{position:relative;padding:16px 0 12px;border-top:2px solid var(--text);border-bottom:1px solid var(--line);background:none;color:var(--text);animation:surgir .35s var(--mola) both}
-.lvc-topo{display:flex;align-items:center;gap:14px}
-.lvc-doc{position:relative;width:42px;height:54px;flex-shrink:0;border:1.5px solid var(--text);border-radius:6px;background:var(--card);overflow:hidden}
-.lvc-folha{position:absolute;inset:9px 7px;display:flex;flex-direction:column;gap:5px}
-.lvc-folha i{display:block;height:3px;border-radius:2px;background:var(--line);animation:lvcLer 2.4s ease-in-out infinite}
-.lvc-folha i:nth-child(2n){width:70%}
-.lvc-folha i:nth-child(3n){width:85%}
-.lvc-folha i:nth-child(1){animation-delay:0s}.lvc-folha i:nth-child(2){animation-delay:.25s}.lvc-folha i:nth-child(3){animation-delay:.5s}
-.lvc-folha i:nth-child(4){animation-delay:.75s}.lvc-folha i:nth-child(5){animation-delay:1s}.lvc-folha i:nth-child(6){animation-delay:1.25s}
-.lvc-scan{position:absolute;left:0;right:0;top:-10px;height:10px;background:linear-gradient(to bottom,transparent,rgba(43,38,32,.28),transparent);animation:lvcScan 1.6s ease-in-out infinite}
-.lvc-info{flex:1;min-width:0}
-.lvc-arquivo{font-size:14.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lvc-meta{margin-top:1px;font-size:12px;color:var(--text-faint)}
-.lvc-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
-.lvc-ia{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;color:var(--text-dim);font-size:11.5px;font-weight:600}
-.lvc-ia i{width:7px;height:7px;border-radius:50%;background:var(--success);animation:lvcPulso 1.2s ease-in-out infinite}
-.lvc-ia.sem i{background:var(--text-faint)}
-.lvc-tempo{font:500 11.5px/1 var(--font-mono);color:var(--text-faint)}
-.lvc-etapa{display:flex;flex-direction:column;gap:2px;margin:14px 0 8px}
-.lvc-etapa b{font-family:var(--font-display);font-size:21px;font-weight:600;line-height:1.2;color:var(--text)}
-.lvc-etapa small{min-height:15px;font-size:12.5px;color:var(--text-dim)}
-.lvc-barra{position:relative;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
-.lvc-barra span{position:absolute;inset:0 auto 0 0;width:3%;border-radius:2px;background:var(--text);transition:width .5s var(--ease)}
-.lvc-barra::after{content:"";position:absolute;top:0;bottom:0;width:30%;background:linear-gradient(90deg,transparent,rgba(43,38,32,.35),transparent);animation:lvcCorre 1.3s ease-in-out infinite}
-.lvc-passos{display:flex;flex-direction:column;gap:0;margin:10px 0 2px}
-.lvc-p{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;font-weight:500;color:var(--text-faint);animation:lvcLinha .3s var(--mola) both}
-.lvc-p em{font-style:normal}
-.lvc-p::before{content:"";flex-shrink:0;width:14px;height:14px;border:1.5px solid var(--line);border-radius:50%}
-.lvc-p.ok{color:var(--text-dim);font-size:0}
-.lvc-p.ok em{font-size:13px}
-.lvc-p.ok::before{border-color:var(--success);background:var(--success) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/9px no-repeat}
-.lvc-p.ativo{color:var(--text);font-weight:600}
-.lvc-p.ativo::before{border-color:var(--line);border-top-color:var(--text);animation:girar .7s linear infinite}
-.lvc-p.aviso,.lvc-p.falhou{color:var(--warning);font-size:0}
-.lvc-p.aviso em,.lvc-p.falhou em{font-size:13px}
-.lvc-p.aviso::before,.lvc-p.falhou::before{border-color:var(--warning);background:var(--warning)}
-.lvc-log{display:flex;flex-direction:column;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid var(--line);font:11.5px/1.45 var(--font-mono)}
-.lvc-linha{display:flex;gap:10px;color:var(--text-dim);animation:lvcLinha .35s var(--mola) both}
-.lvc-linha time{flex-shrink:0;color:var(--text-faint)}
-.lvc-linha:last-child span::after{content:"▍";margin-left:2px;color:var(--text);animation:piscar 1s steps(2) infinite}
-.lvc-linha.ok span{color:var(--success)}
-.lvc-linha.aviso span{color:var(--warning)}
-.lvc-linha.erro span{color:var(--danger)}
-.lvc.parado .lvc-scan,.lvc.parado .lvc-barra::after,.lvc.parado .lvc-folha i{animation:none;opacity:0}
-.lvc.parado .lvc-folha i{opacity:1;background:var(--text-faint)}
-.lvc.parado .lvc-ia i,.lvc.parado .lvc-linha:last-child span::after{animation:none}
-.lvc.parado .lvc-linha:last-child span::after{content:none}
-.lvc.falhou .lvc-barra span{background:var(--danger)}
-@keyframes lvcLer{0%,100%{background:var(--line)}50%{background:var(--text-faint)}}
-@keyframes lvcPulso{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-@keyframes lvcCorre{from{left:-30%}to{left:100%}}
-@media (prefers-reduced-motion:reduce){.lvc-folha i,.lvc-scan,.lvc-barra::after,.lvc-ia i{animation:none}}
+/* carregando da importação (v11.4): só a onda e a frase do que está fazendo */
+.lvo{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0 10px;animation:surgir .35s var(--mola) both}
+.lvo-onda{width:min(100%,280px);height:52px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+.lvo-onda svg{display:block;width:100%;height:100%}
+.lvo-onda g{transform-box:fill-box;transform-origin:center}
+.lvo-onda .g2{animation:lvoSobe 2.6s ease-in-out infinite alternate}.lvo-onda .g3{animation:lvoSobe 3.4s ease-in-out infinite alternate-reverse}
+.lvo-onda path{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.lvo-onda .o1{stroke:var(--text);stroke-width:2.4;animation:lvoCorre 2.2s linear infinite}
+.lvo-onda .o2{stroke:var(--gold);stroke-width:2;opacity:.75;animation:lvoCorre 3.4s linear infinite}
+.lvo-onda .o3{stroke:var(--text-faint);stroke-width:1.6;opacity:.45;animation:lvoCorre 5s linear infinite}
+.lvo-frase{display:flex;align-items:baseline;gap:2px;font-size:14px;font-weight:500;color:var(--text-dim)}
+.lvo-frase span.nova{animation:lvoFrase .45s var(--mola) both}
+.lvo-frase i{width:3px;height:3px;border-radius:50%;background:currentColor;animation:lvoPonto 1.2s ease-in-out infinite}
+.lvo-frase i:nth-of-type(2){animation-delay:.18s}.lvo-frase i:nth-of-type(3){animation-delay:.36s}
+.lvo.parado .lvo-onda path,.lvo.parado .lvo-onda g{animation:none;opacity:.25}
+.lvo.parado .lvo-frase i{display:none}
+@keyframes lvoCorre{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes lvoSobe{from{transform:scaleY(.55)}to{transform:scaleY(1.15)}}
+@keyframes lvoFrase{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes lvoPonto{0%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.lvo-onda path,.lvo-onda g,.lvo-frase i{animation:none}}
 
 /* medley */
 .lm{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:0 28px}
@@ -2032,9 +2005,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 @keyframes lvTomEnche{from{background-position:top}to{background-position:bottom}}
 @keyframes lvnLuz{from{transform:translate(0,0) rotate(0)}to{transform:translate(-4%,3%) rotate(8deg)}}
 @keyframes lvnPreenchido{0%{box-shadow:0 0 0 0 rgba(52,211,153,0)}30%{box-shadow:0 0 0 4px rgba(52,211,153,.35)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
-@keyframes lvcScan{0%{top:-14px}100%{top:58px}}
-@keyframes lvcBrilho{to{transform:translateX(100%)}}
-@keyframes lvcLinha{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 @keyframes lmChegou{0%{opacity:0;transform:translateY(-6px) scale(.98)}100%{opacity:1;transform:none}}
 @keyframes efeitoEntra{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes efeitoFeito{0%{transform:scale(.4);opacity:1}55%{transform:scale(1);opacity:1}100%{transform:scale(1.05) translateY(-10px);opacity:0}}

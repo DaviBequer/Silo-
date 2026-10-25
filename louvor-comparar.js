@@ -74,8 +74,10 @@ function lvCompararRenderApp(l){
   el.innerHTML = `<div class="lvcmp-tit"><b>No app</b>${n ? `<small>${n} linha${n > 1 ? 's' : ''} em amarelo para conferir</small><button type="button" class="lvi-rel-ok" onclick="lvJaConferi();lvCompararRenderApp(getLouvorAtual())">Já conferi</button>` : '<small>tudo conferido</small>'}</div>
     <div class="lvcmp-texto">${linhas}</div>`;
 }
-/* música só com o PDF do Drive → lê o PDF e monta no padrão do app (como importar); daí em diante abre primeiro o app */
-async function lvConverterDoDrive(){
+/* música só com o PDF do Drive → lê o PDF e monta no padrão do app (como importar); daí em diante abre primeiro o app.
+   tomNovo {nota, modoMenor}: veio da troca de tom (o PDF não tem texto para transpor) → lê o PDF como está e muda só a nota.
+   Música marcada como Pronto: importa fiel (o arquivo já está certo) e nada fica para conferir. */
+async function lvConverterDoDrive(tomNovo){
   const l = getLouvorAtual(); if(!l || !l.origem) return;
   /* o pedido de acesso ao Drive sai ainda dentro do toque (sem await antes) */
   const acesso = l.origem.id && typeof drivePedirToken === 'function' && typeof driveTokenCliente !== 'undefined' && driveTokenCliente ? drivePedirToken().catch(()=>null) : Promise.resolve(null);
@@ -88,8 +90,19 @@ async function lvConverterDoDrive(){
   const file = blob instanceof File ? blob : new File([blob], l.origem.nome || 'original.pdf', { type:'application/pdf' });
   lvCompararFechar();
   const origem = Object.assign({}, l.origem); delete origem.soArquivo;
-  await lvImportarNoAtual({ target:{ files:[file], value:'' }, semConfirmar: true, origem });
+  const pronta = l.status === 'finalizada';
+  if(tomNovo) showToast('Lendo o PDF para mudar a nota…');
+  await lvImportarNoAtual({ target:{ files:[file], value:'' }, semConfirmar: true, origem, fiel: pronta || !!tomNovo });
   const lv = getLouvorAtual(); if(lv && lv.origem) delete lv.origem.soArquivo;
+  if(lv && tomNovo && (lv.conteudo || '').trim()){
+    lvAplicarTom(lv, tomNovo.nota, tomNovo.modoMenor);
+    if(pronta) delete lv.revisar;
+    persist();
+    atualizarLvTomBox(); renderLouvorPdfPreview();
+    lvEscreverNoEditor();
+    showToast('Só a nota mudou: agora em ' + (tomNovo.modoMenor ? lvRelativoMenor(tomNovo.nota) + 'm' : tomNovo.nota));
+    if(typeof driveTomMudou === 'function') driveTomMudou(lv);
+  }
   persist();
 }
 /* o original */
