@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v12.3', itens: [
+    'Janelas: o valor grande no meio e as escolhas curtas viram botões; ícones das abas novos (dinheiro, gráfico, ondas, controles) e botões de ícone num círculo',
+    'Versículo centralizado; abertura no mármore com o nome, a saudação e a barra de carregamento em onda; entrada do PIN clara com a saudação'
+  ]},
   { versao: 'v12.2', itens: [
     'Peças do app no visual novo (escolhidas uma a uma): janelas com o título numa faixa grafite, campos brancos com o valor em destaque, botões finos em caixa alta, abas em pílula, interruptores dourados',
     'Cabeçalho numa linha só (dias e o que falta pagar numa pílula), títulos de seção com traço dourado, botão Nova música e listas com o calendário do dia'
@@ -933,6 +937,37 @@ function melhorarCampoData(inp){
   sync();
 }
 function melhorarCamposData(raiz){ (raiz||document).querySelectorAll('input[type="date"]:not([data-premium])').forEach(melhorarCampoData); }
+
+/* ========== LISTA CURTA VIRA BOTÕES (v12, janelas escolha C: "escolhas em botões") ==========
+   <select> de uma janela com até 6 opções ganha uma fileira de botões; o select fica escondido e continua valendo
+   (.value, onchange). Se o código trocar as opções ou o valor, os botões acompanham. */
+const _valorSelect = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+function melhorarSelect(sel){
+  if(sel.dataset.chips) return;
+  sel.dataset.chips = '1';
+  const fila = document.createElement('div');
+  fila.className = 'escolha-chips';
+  sel.after(fila);
+  const desenhar = ()=>{
+    const ops = [...sel.options];
+    const cabe = ops.length > 0 && ops.length <= 6;
+    sel.classList.toggle('select-escondido', cabe);
+    fila.hidden = !cabe;
+    if(!cabe) return;
+    const v = _valorSelect.get.call(sel);
+    fila.innerHTML = ops.map(o=>`<button type="button" class="${o.value === v ? 'on' : ''}" data-v="${o.value.replace(/"/g, '&quot;')}">${o.textContent.replace(/</g, '&lt;')}</button>`).join('');
+  };
+  fila.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    _valorSelect.set.call(sel, b.dataset.v); desenhar();
+    sel.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  Object.defineProperty(sel, 'value', { configurable:true, get(){ return _valorSelect.get.call(this); }, set(v){ _valorSelect.set.call(this, v); desenhar(); } });
+  sel.addEventListener('change', desenhar);
+  new MutationObserver(desenhar).observe(sel, { childList:true, subtree:true });
+  desenhar();
+}
+document.querySelectorAll('.modal select').forEach(melhorarSelect);
 melhorarCamposData();
 new MutationObserver(()=>{ if(document.querySelector('input[type="date"]:not([data-premium])')) melhorarCamposData(); }).observe(document.body, { childList:true, subtree:true });
 
@@ -1263,6 +1298,10 @@ function loginModoPin(ligar){
   const email = pinEmailDoAparelho();
   tela.classList.toggle('modo-pin', !!ligar);
   if(ligar){
+    /* saudação com o nome de quem usa este aparelho (v12, escolha A) */
+    const ola = document.getElementById('loginPinOla');
+    if(ola){ const h = new Date().getHours(); let u = 'davi'; try{ u = localStorage.getItem(CHAVE_USUARIO) || 'davi'; }catch(e){}
+      ola.textContent = (h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite') + ', ' + (u === 'cris' ? 'Cris' : 'Davi'); }
     document.getElementById('loginPinErro').textContent = '';
     pinLogin = pinTeclado('loginPinTeclado', 'loginPinPontos', entrarComPin);
     pinTecladoAtivo = pinLogin;

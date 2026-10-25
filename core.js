@@ -454,7 +454,7 @@ function fecharSplash(imediato){
 }
 function mostrarSplash(){
   document.body.classList.add('carregando');
-  document.getElementById('metaCorTema')?.setAttribute('content', '#000000');
+  document.getElementById('metaCorTema')?.setAttribute('content', '#f3f2ee');
   const el = document.getElementById('splash');
   if(el) el.classList.remove('saindo', 'oculta');
 }

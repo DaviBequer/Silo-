@@ -96,6 +96,7 @@ body.carregando .aba,body.carregando .header-hoje{visibility:hidden}
 .nav-item svg{width:22px;height:22px;stroke-width:1.8}
 .nav-item.active{background:var(--graf);color:var(--graf-tx)}
 .nav-item.active svg{color:var(--latao)}
+.nav-item .nf{fill:#fbfaf8}.nav-item.active .nf{fill:var(--graf)}
 /* aba aberta: pílula grafite com o ícone em latão (v12) */
 
 /* abas (telas principais) */
@@ -148,7 +149,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .modal-header{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 -24px 20px;padding:16px 24px 14px;background:var(--graf);color:var(--graf-tx)}
 .modal-header h3{font-family:var(--font-body);font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.2;color:var(--graf-tx)}
 .modal-close{flex-shrink:0;width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.1);color:var(--graf-tx);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
-.modal-close:hover{background:var(--line);color:var(--text)}
+.modal-close:hover{color:var(--latao)}
 .modal-actions{display:flex;gap:10px;margin-top:24px}
 .modal-actions .btn{flex:1}
 .modal .modal-actions{position:sticky;bottom:calc(-24px - var(--safe));z-index:5;margin-bottom:calc(-24px - var(--safe));padding:14px 0 calc(24px + var(--safe));background:var(--bg);box-shadow:0 -1px 0 var(--line)}
@@ -218,6 +219,14 @@ body:has(.modal-overlay.active){overflow:hidden}
 .field .input-money::before{color:var(--latao);z-index:1}
 .field .input-money input::placeholder{color:var(--graf-dim)}
 .field .input-money input:focus{background:var(--graf);border-color:var(--latao)}
+/* janelas (v12, escolha C): o valor bem grande no meio; as listas curtas viram botões (melhorarSelect em app.js) */
+.modal .field:has(.input-money) > label{text-align:center}
+.modal .field .input-money input{min-height:66px;font-size:30px;font-weight:300;letter-spacing:-.02em;text-align:center;padding-left:44px;padding-right:44px}
+.modal .field .input-money::before{font-size:15px}
+.select-escondido{display:none!important}
+.escolha-chips{display:flex;flex-wrap:wrap;gap:6px}
+.escolha-chips button{padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--text-dim);font:inherit;font-size:13.5px;cursor:pointer}
+.escolha-chips button.on{background:var(--graf);border-color:var(--graf);color:var(--graf-tx)}
 .field textarea{min-height:96px}
 .field input::placeholder,.field textarea::placeholder{color:var(--text-faint);font-weight:400}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
@@ -490,11 +499,12 @@ body:has(.modal-overlay.active){overflow:hidden}
 }
 
 /* versículo do dia */
-.versiculo{position:relative;margin:2px 0 18px;padding:4px 4px 4px 20px;border-radius:0;background:none;border-left:2px solid var(--line);box-shadow:var(--sombra-card);animation:vsEntra 1.1s var(--mola) both}
+/* versículo (v12, escolha B): centralizado, em itálico, a referência em dourado */
+.versiculo{position:relative;max-width:640px;margin:2px auto 18px;padding:4px 8px;border:none;border-radius:0;background:none;box-shadow:none;text-align:center;animation:vsEntra 1.1s var(--mola) both}
 .versiculo::before{display:none;content:"“";position:absolute;left:16px;top:50%;width:34px;height:34px;margin-top:-17px;border-radius:50%;background:var(--gold-tint);color:var(--gold-dim);font:800 34px/50px Georgia,serif;text-align:center}
 .versiculo:empty{display:none}
-.vs-texto{margin:0;font-family:var(--font-body);font-weight:400;font-size:15px;line-height:1.55;letter-spacing:-.005em;color:var(--text-dim)}
-.vs-ref{display:block;margin-top:6px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+.vs-texto{margin:0;font-family:var(--font-body);font-style:italic;font-weight:300;font-size:15px;line-height:1.55;letter-spacing:-.005em;color:var(--text-dim)}
+.vs-ref{display:block;margin-top:6px;font:600 11px/1.3 var(--font-narrow);letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
 @media(min-width:1024px){ .vs-texto{font-size:16px} }
 /* celular: versículo inteiro, letra um pouco menor */
 @media(max-width:1023px){
@@ -1448,11 +1458,12 @@ body:has(.modal-overlay.active){overflow:hidden}
 .fundo-acoes .btn{cursor:pointer}
 
 /* ===== ENTRAR (e-mail e senha / PIN) ===== */
-.login-tela{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;padding:16px;background:var(--bg)}
+/* entrada (v12, escolha A): mármore, saudação com o nome, teclado claro */
+.login-tela{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;padding:16px;background:var(--bg) var(--marmore) center/cover}
 .login-tela.show{display:flex}
-.login-card{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;padding:28px 22px;border:none;border-radius:var(--radius);background:var(--card);box-shadow:var(--sombra-card);text-align:center;animation:surgir .45s var(--mola) both}
+.login-card{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;padding:28px 22px;border:none;border-radius:var(--radius);background:none;box-shadow:none;text-align:center;animation:surgir .45s var(--mola) both}
 .login-logo{width:56px;height:56px;margin:0 auto 4px;border-radius:14px;object-fit:cover}
-.login-titulo{font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.1;color:var(--text)}
+.login-titulo{font-family:var(--font-body);font-size:30px;font-weight:300;letter-spacing:-.02em;line-height:1.1;color:var(--text)}
 .login-sub{margin-bottom:8px;font-size:13px;color:var(--text-dim)}
 .login-input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card-2);color:var(--text);font:inherit;font-size:16px;outline:none}
 .login-input:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
@@ -1469,31 +1480,36 @@ body:has(.modal-overlay.active){overflow:hidden}
 .login-tela.modo-pin .login-pin{display:flex}
 .pin-pontos{display:flex;justify-content:center;gap:14px;margin:6px 0 2px}
 .pin-pontos i{width:14px;height:14px;border:1.5px solid var(--text-faint);border-radius:50%;transition:background .15s var(--ease),border-color .15s var(--ease),transform .25s var(--mola)}
-.pin-pontos i.cheio{background:var(--text);border-color:var(--text);transform:scale(1.15)}
+.pin-pontos i.cheio{background:var(--graf);border-color:var(--graf);transform:scale(1.15)}
 .pin-pontos.errou{animation:tremer .4s var(--ease)}
 .pin-pontos.errou i{border-color:var(--danger)}
 .pin-teclado{display:grid;grid-template-columns:repeat(3,64px);justify-content:center;gap:12px 22px;margin:4px 0 6px}
-.pin-tecla{width:64px;height:64px;border:1px solid var(--line);border-radius:50%;background:var(--card-2);color:var(--text);font:inherit;font-size:24px;font-weight:500;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s var(--ease),background .15s var(--ease)}
+.pin-tecla{width:64px;height:64px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--text);font:inherit;font-size:24px;font-weight:500;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s var(--ease),background .15s var(--ease)}
 .pin-tecla:active{transform:scale(.92);background:var(--line)}
 .pin-tecla.apagar{border-color:transparent;background:none;color:var(--text-dim)}
 .pin-modal{display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0 10px;text-align:center}
 
 /* ===== ABERTURA (preta: o cordeiro surge do desfoque, o nome entra letra por letra) ===== */
-.splash{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;transition:opacity 1.4s var(--ease),visibility 0s linear 1.4s}
-.splash-brilho{position:absolute;left:50%;top:44%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;background:radial-gradient(circle,rgba(47,93,70,.55) 0,rgba(47,93,70,.18) 34%,rgba(47,93,70,0) 66%);opacity:0;pointer-events:none;animation:splashBrilhoEntra 1.6s ease-out .2s forwards,splashBrilhoPulsa 3.2s ease-in-out 1.8s infinite alternate}
+/* abertura (v12, escolha C): mármore, o nome grande, a saudação e a barra em onda que ondula enquanto enche (~4 s) */
+.splash{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg) var(--marmore) center/cover;transition:opacity 1.2s var(--ease),visibility 1.2s}
 .splash-conteudo{position:relative;display:flex;flex-direction:column;align-items:center;transition:transform 1.4s var(--ease),filter 1.4s var(--ease)}
-.splash-logo{width:120px;height:120px;animation:splashEntra 1.5s var(--mola) both,splashLuz 3.2s ease-in-out 1.5s infinite alternate}
-.splash-nome{display:flex;margin-top:18px;font-family:var(--font-display);font-weight:800;font-size:44px;line-height:1;letter-spacing:-.02em;color:#f5f2ec}
+.splash-nome{display:flex;font-family:var(--font-body);font-weight:300;font-size:56px;line-height:1;letter-spacing:-.02em;color:var(--text)}
 .splash-nome span{display:inline-block;opacity:0;animation:splashLetra .9s var(--mola) both}
-.splash-nome span:nth-child(1){animation-delay:.55s}
-.splash-nome span:nth-child(2){animation-delay:.63s}
-.splash-nome span:nth-child(3){animation-delay:.71s}
-.splash-nome span:nth-child(4){animation-delay:.79s}
-.splash-nome span:nth-child(5){animation-delay:.87s}
-.splash-linha{width:96px;height:2px;margin-top:22px;border-radius:2px;background:rgba(245,242,236,.1);overflow:hidden;opacity:0;animation:splashLetra .8s ease-out 1.1s both}
-.splash-linha i{display:block;width:40%;height:100%;border-radius:2px;background:linear-gradient(90deg,rgba(111,191,150,0),rgba(111,191,150,.95),rgba(111,191,150,0));animation:splashCorre 1.3s ease-in-out 1.2s infinite}
+.splash-nome span:nth-child(1){animation-delay:.15s}
+.splash-nome span:nth-child(2){animation-delay:.23s}
+.splash-nome span:nth-child(3){animation-delay:.31s}
+.splash-nome span:nth-child(4){animation-delay:.39s}
+.splash-nome span:nth-child(5){animation-delay:.47s}
+.splash-saud{margin-top:10px;min-height:1.3em;font:600 12px/1.3 var(--font-narrow);letter-spacing:.16em;text-transform:uppercase;color:var(--gold);opacity:0;animation:splashLetra .9s var(--mola) .7s both}
+.splash-onda{position:relative;width:180px;height:22px;margin-top:26px}
+.splash-onda svg{position:absolute;left:0;top:0;width:360px;height:22px;overflow:visible;animation:splashOnda 1.6s linear infinite}
+.splash-onda path{fill:none;stroke-width:2.2;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.so-trilho{opacity:.9}.so-trilho path{stroke:rgba(29,31,33,.12)}
+.splash-onda{overflow:hidden}
+.so-cheio{position:absolute;inset:0 auto 0 0;width:0;overflow:hidden;animation:splashEnche 3.6s cubic-bezier(.3,.6,.4,1) .3s forwards}
+.so-cheio path{stroke:var(--latao)}
 .splash.saindo{opacity:0;visibility:hidden;pointer-events:none}
-.splash.saindo .splash-conteudo{transform:scale(1.12);filter:blur(10px)}
+.splash.saindo .splash-conteudo{transform:scale(1.06);filter:blur(8px)}
 .splash.oculta{display:none}
 
 /* ===== LOUVOR ===== */
@@ -1991,11 +2007,14 @@ body:has(.modal-overlay.active){overflow:hidden}
   #pageLouvorDetalhe{left:var(--sidebar-w)!important;top:var(--header-h,64px)!important;border-left:none}
 }
 
-/* ---------- ícones puros (pedido do Davi, 17/10): botões de ícone sem fundo, sem borda, sem caixinha ----------
-   Fica só o traço do ícone; ao tocar ele escurece. O nome aparece segurando (title/aria-label). */
-.section-add,.section-toggle,.voz-btn,.btn-icon-sm,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.modal-close,.pano-nav-btn,.ico-btn,.lv-barra-btn:not(.primario){border:none !important;border-radius:0;background:none !important;box-shadow:none !important}
-.section-add,.voz-btn,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.modal-close,.pano-nav-btn,.ico-btn{color:var(--text-dim)}
-.section-add:hover,.voz-btn:hover,.btn-icon-sm:hover,.lv-icone-btn:hover,.lv-filtro-toggle:hover,.cu-data-seta:hover,.modal-close:hover,.pano-nav-btn:hover,.ico-btn:hover{color:var(--text)}
+/* ---------- botões de ícone (v12, escolha C): o ícone num círculo com contorno fino, como os atalhos ----------
+   O nome aparece segurando (title/aria-label). Fechar da janela, setinhas de abrir e a barra da música ficam sem contorno. */
+.section-toggle,.lv-filtro-toggle,.modal-close,.lv-barra-btn:not(.primario){border:none !important;border-radius:0;background:none !important;box-shadow:none !important}
+.section-add,.voz-btn,.btn-icon-sm,.lv-icone-btn,.cu-data-seta,.pano-nav-btn,.ico-btn{border:1px solid color-mix(in srgb,currentColor 32%,transparent) !important;border-radius:999px !important;background:none !important;box-shadow:none !important}
+.ico-btn,.lv-icone-btn,.section-add,.pano-nav-btn,.cu-data-seta,.voz-btn{min-width:34px;height:34px}
+.btn-icon-sm{width:28px;height:28px}
+.section-add,.voz-btn,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.pano-nav-btn,.ico-btn{color:var(--text-dim)}
+.section-add:hover,.voz-btn:hover,.btn-icon-sm:hover,.lv-icone-btn:hover,.lv-filtro-toggle:hover,.cu-data-seta:hover,.pano-nav-btn:hover,.ico-btn:hover{color:var(--text)}
 .lv-filtro-toggle.active{color:var(--text)}
 .lv-icone-btn.ativo,.lv-icone-btn[aria-pressed="true"]{color:var(--gold)}
 /* botão de ícone genérico (substitui os botões com texto) */
@@ -2072,12 +2091,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 @keyframes efeitoRisco{to{stroke-dashoffset:0}}
 @keyframes efeitoOnda{to{transform:scale(1);opacity:0}}
 @keyframes navPulo{0%{transform:scale(1)}40%{transform:scale(1.22) translateY(-3px)}100%{transform:scale(1)}}
-@keyframes splashEntra{from{opacity:0;transform:scale(.82);filter:blur(14px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
-@keyframes splashLuz{from{filter:drop-shadow(0 0 0 rgba(111,191,150,0))}to{filter:drop-shadow(0 0 18px rgba(111,191,150,.55))}}
+@keyframes splashOnda{from{transform:translateX(0)}to{transform:translateX(-90px)}}   /* uma onda inteira (50 do desenho × 1,8) */
+@keyframes splashEnche{to{width:100%}}
 @keyframes splashLetra{from{opacity:0;transform:translateY(10px);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
-@keyframes splashBrilhoEntra{to{opacity:1}}
-@keyframes splashBrilhoPulsa{from{transform:scale(.92)}to{transform:scale(1.08)}}
-@keyframes splashCorre{from{transform:translateX(-110%)}to{transform:translateX(260%)}}
 @keyframes fundoEntra{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
 
 /* ---------- 7. FUNDO COM IMAGEM ---------- */
@@ -2097,7 +2113,7 @@ html.tem-fundo .versiculo{background:color-mix(in srgb,var(--card) 88%,transpare
 /* quem pede menos movimento no celular */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
-  .splash-logo,.splash-nome span,.splash-linha,.splash-brilho{opacity:1}
+  .splash-nome span,.splash-saud{opacity:1}
 }
 /* barras enchem quando a tela abre (só junto com a entrada dos cartões, não a cada toque) */
 .efeito-entra :is(.sec-resumo-bar div,.cp-resumo-bar div,.emp-progresso div,.vd-bar div,.pj-banner-prog>i,.ct-bar-fill,.hm-cat-barra div,.reserva-proj-barra-fill,.ov-barra){transform-origin:left center;animation:barraEnche 1.3s .25s var(--mola) both}
