@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v131';
-const APP_VERSION = '13.1';
+const CACHE_NAME = 'siloe-cache-v132';
+const APP_VERSION = '13.2';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',

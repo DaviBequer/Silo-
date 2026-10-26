@@ -372,27 +372,41 @@ function cultoColarTom(txt){
 }
 function cultoColarParse(texto){
   const itens = []; let cabecalho = '';
+  /* medley em várias linhas: "Medley:" (ou "Medley do louvor:") sozinho numa linha → as linhas seguintes, até uma linha vazia ou outra parte, são o mesmo medley */
+  let medleyAberto = null;
   String(texto || '').split(/\r?\n/).forEach(linha=>{
     let s = linha
       .replace(/^\s*\[[^\]]*\]\s*[^:]{1,40}:\s*/, '')                                         // [21/10, 20:25] +55 47 ...:
       .replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}\s*-\s*[^:]{1,40}:\s*/, '')   // 21/10/2026 20:25 - Nome:
       .replace(/[*_~]/g, '').trim();
-    if(!s || /^culto\b/i.test(s) || /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(s) || cultoColarDataDoTexto(s)) return;   // linha da data: vai para o campo "Data do culto"
+    if(!s){ medleyAberto = null; return; }
+    if(/^culto\b/i.test(s) || /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(s) || cultoColarDataDoTexto(s)) return;   // linha da data: vai para o campo "Data do culto"
     s = s.replace(/^\s*(\d+\s*[.)]\s+|[-•·▪]\s+)/, '');
     let parte = '';
     const mp = /^([^:]{2,30}):\s*(.*)$/.exec(s);
     if(mp && !/\d/.test(mp[1])){ parte = mp[1].trim(); s = mp[2].trim(); }
-    if(!s){ if(parte) cabecalho = parte; return; }
+    /* "Medley" / "Medley:" sozinho (ou como nome da parte sem música) abre um medley de várias linhas */
+    const soMedley = /^medley\b[^:]*$/i.test(s) && !/[+\/]/.test(s) && s.replace(/^medley\b\s*[-–:]?\s*/i, '') === '';
+    if(!s || soMedley){
+      if(/^medley\b/i.test(parte) || soMedley){ medleyAberto = { grupo: 'md' + itens.length, parte: /^medley\b/i.test(parte) ? (cabecalho || 'Hinos') : (parte || cabecalho || 'Hinos') }; }
+      else { if(parte) cabecalho = parte; medleyAberto = null; }
+      return;
+    }
+    if(parte && !/^medley\b/i.test(parte)) medleyAberto = null;   // outra parte: o medley de várias linhas acabou
     /* tom: "(E)", "( C)", "(Mi maior)" no fim, ou " - D" no fim */
     let tom = null;
     const mt = /\(\s*([^()]*?)\s*\)\s*$/.exec(s);
     if(mt && cultoColarTom(mt[1])){ tom = cultoColarTom(mt[1]); s = s.slice(0, mt.index).trim(); }
     else { const md = /\s[-–]\s*([A-G](?:#|b)?)(m?)\s*$/.exec(s); if(md){ tom = { raiz: md[1], menor: !!md[2] }; s = s.slice(0, md.index).trim(); } }
-    const medley = /^medley\b/i.test(s) || /\s\+\s/.test(s);   // "Medley- A + B" (ou só "A + B"): as músicas viram um medley
-    const grupo = medley ? 'md' + itens.length : '';
-    s = s.replace(/^medley\s*[-–:]?\s*/i, '');
-    const nomeParte = parte || cabecalho || 'Hinos';
-    s.split(/\s+\+\s+/).forEach(peca=>{
+    /* "Medley- A + B", "Medley: A / B", "A+B": as músicas viram UM medley; "+" com ou sem espaço, "/" com espaço */
+    const temMedley = /^medley\b/i.test(s) || /^medley\b/i.test(parte);
+    const separa = temMedley ? /\s*\+\s*|\s+\/\s+/ : /\s*\+\s*/;
+    s = s.replace(/^medley\b\s*[-–:]?\s*/i, '');
+    const pecas = s.split(separa).map(x=>x.trim()).filter(Boolean);
+    const medley = !!medleyAberto || temMedley || pecas.length > 1;
+    const grupo = medleyAberto ? medleyAberto.grupo : medley ? 'md' + itens.length : '';
+    const nomeParte = medleyAberto ? medleyAberto.parte : (/^medley\b/i.test(parte) ? (cabecalho || 'Hinos') : (parte || cabecalho || 'Hinos'));
+    pecas.forEach(peca=>{
       let titulo = peca.trim(), artista = '';
       const ma = /\(\s*([^()]+?)\s*\)\s*$/.exec(titulo);
       if(ma && !cultoColarTom(ma[1])){ artista = ma[1]; titulo = titulo.slice(0, ma.index).trim(); }
