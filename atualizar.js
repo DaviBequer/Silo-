@@ -193,9 +193,10 @@ const ATZ_ESQUEMA = { type:'object', properties:{
     cartao:{ type:'string', description:'nome exato de um cartão da lista (vista, parcelada, fatura); vazio nos outros' },
     banco:{ type:'string', description:'nome exato de um banco da lista (pix, recebi, saldo; conta se disse de onde pagou); vazio se não sabe' },
     parcelas:{ type:'integer', description:'número de parcelas (parcelada); 1 nos outros' },
-    proximaFatura:{ type:'boolean', description:'true se a compra no cartão cai só na próxima fatura' },
+    data:{ type:'string', description:'dia da compra, AAAA-MM-DD. "No dia 25…" vale para essa compra e para as próximas até a pessoa falar outro dia. Dia sem mês = o mais recente que já passou (nunca no futuro). Sem dia falado = hoje' },
+    proximaFatura:{ type:'boolean', description:'true SÓ se a pessoa disse que foi para a próxima fatura (o app já decide a fatura pela data e o fechamento do cartão)' },
     conta:{ type:'string', description:'chave exata da conta da lista (tipo conta); vazio nos outros' }
-  }, required:['tipo','descricao','valor','categoria','categoriaDuvida','cartao','banco','parcelas','proximaFatura','conta'] } }
+  }, required:['tipo','descricao','valor','categoria','categoriaDuvida','cartao','banco','parcelas','data','proximaFatura','conta'] } }
 }, required:['transcricao','resposta','aprendidos','itens'] };
 
 /* o que a lista muda em cada cartão e banco (para a IA e para os Detalhes) */
@@ -204,7 +205,7 @@ function atzConferencia(itens){
   const cartoes = (state.cartoesTracker || []).map(c=>{
     const m = faturaAbertaMes(c), noApp = faturaCartaoNoMes(c, m);
     const meus = itens.filter(i=>i.cartaoId === c.id);
-    const novos = meus.filter(i=>!i.proximaFatura && (i.tipo === 'vista' || i.tipo === 'parcelada'))
+    const novos = meus.filter(i=>(i.tipo === 'vista' || i.tipo === 'parcelada') && atzFaturaDoItem(c, i) === m)
       .reduce((s, i)=>s + (i.tipo === 'parcelada' ? i.valor / Math.max(1, i.parcelas || 1) : i.valor), 0);
     const inf = meus.filter(i=>i.tipo === 'fatura').pop();
     const informado = inf ? inf.valor : null;
@@ -234,9 +235,9 @@ function atzContexto(){
     if(jaUsados.length >= 80) break;
   }
   return {
-    hoje: calISO(new Date()),
+    hoje: calISO(new Date()), diaDaSemana: ATZ_DIAS[new Date().getDay()],
     bancos: bancosDoUsuario().map(b=>({ nome: b.nome, saldoNoApp: Number(b.valor) || 0 })),
-    cartoes: conf.cartoes.map(x=>({ nome: x.c.nome, faturaAberta: monthLabel(x.m), faturaNoApp: Math.round(x.noApp * 100) / 100, novosNestaConversa: Math.round(x.novos * 100) / 100, faturaInformada: x.informado, faltaParaBater: x.falta })),
+    cartoes: conf.cartoes.map(x=>({ nome: x.c.nome, fechamentoDia: parseInt(x.c.fechamento) || null, vencimentoDia: parseInt(x.c.vencimento) || null, faturaAberta: monthLabel(x.m), faturaNoApp: Math.round(x.noApp * 100) / 100, novosNestaConversa: Math.round(x.novos * 100) / 100, faturaInformada: x.informado, faltaParaBater: x.falta })),
     conferenciaDosBancos: conf.bancos.filter(x=>x.informado !== null).map(x=>({ banco: x.b.nome, saldoEsperado: x.esperado, saldoInformado: x.informado, diferenca: x.dif })),
     contasAbertas: vozContasAbertas().map(c=>({ chave: c.key, conta: c.desc, valor: c.valor })),
     categorias: vozCategoriasCartao(),
@@ -265,10 +266,38 @@ function atzNormalizarItens(lista){
       duvida: comCat && !apOk && (!!i.categoriaDuvida || !cats.includes(i.categoria)),
       cartaoId: c ? c.id : '', cartaoNome: c ? c.nome : '', bancoId: b ? b.id : '', bancoNome: b ? b.nome : '',
       parcelas: i.tipo === 'parcelada' ? Math.max(2, Math.min(48, parseInt(i.parcelas) || 2)) : 1,
+      data: atzDataValida(i.data),
       proximaFatura: !!i.proximaFatura && ['vista','parcelada'].includes(i.tipo), conta: conta ? conta.key : '', ok: false
     };
   });
 }
+/* data da compra: AAAA-MM-DD válida e nunca no futuro (sem data = hoje) */
+function atzDataValida(s){
+  const hoje = calISO(new Date());
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? calParse(s) : null;
+  return d && !isNaN(d) ? (calISO(d) > hoje ? hoje : calISO(d)) : hoje;
+}
+/* em qual fatura cai uma compra feita no dia: no dia do fechamento ou depois, a fatura daquele mês já fechou → vai para a do mês seguinte
+   (mesma regra do faturaAbertaMes). Sem fechamento no cartão: a aberta. */
+function atzFaturaDaData(c, iso){
+  const fech = parseInt(c && c.fechamento) || 0, d = iso ? calParse(iso) : null;
+  if(!fech || !d || isNaN(d)) return faturaAbertaMes(c);
+  const m = monthKey(d);
+  return d.getDate() >= Math.min(fech, daysInMonth(m)) ? addMonths(m, 1) : m;
+}
+function atzFaturaDoItem(c, i){
+  let m = atzFaturaDaData(c, i.data);
+  if(i.proximaFatura && m === faturaAbertaMes(c)) m = addMonths(m, 1);
+  return m;
+}
+/* compra no cartão que não cai na fatura aberta: o item avisa em qual fatura vai */
+function atzFaturaOutra(i){
+  if(!['vista','parcelada'].includes(i.tipo) || !i.cartaoId) return '';
+  const c = vozCartoes().find(x=>x.id === i.cartaoId); if(!c) return '';
+  const m = atzFaturaDoItem(c, i), aberta = faturaAbertaMes(c);
+  return m === aberta ? '' : `fatura de ${monthLabel(m)}${m < aberta ? ' (já fechou)' : ''}`;
+}
+const atzDiaCurto = iso=>{ const d = calParse(iso); return d && !isNaN(d) ? String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') : ''; };
 /* a categoria nunca fica no nome: "Mercado Top" → "Top" (+ categoria Mercado). Se só sobrou a categoria, ela é o nome. */
 const ATZ_NOME_SOBRA = /^(no|na|do|da|de|em|o|a)$/;
 function atzLimparNome(desc, cats){
@@ -346,6 +375,8 @@ async function atzPerguntar(msg, audio){
       `fatura (o total que a pessoa viu na fatura aberta do cartão: "a fatura do Nubank está 1.850").\n` +
       `Regras: "no Pix do Nubank"/"no débito do Inter" = pix com aquele banco. "No cartão"/"no crédito" = vista, ou parcelada se falou em vezes. ` +
       `"Foi para a próxima fatura" = proximaFatura true. Valores por extenso viram número. ` +
+      `DATAS: cada item tem a data da compra. "No dia 25 comprei…" vale para aquela compra e para as seguintes até a pessoa falar outro dia ("já no dia 24…"). "Ontem", "anteontem", "sábado" contam a partir de hoje (no contexto). Sem dia falado = hoje. O app decide em qual fatura cai pela data e pelo fechamento do cartão: não marque proximaFatura por causa da data.
+` +
       `CARTÃO E BANCO: se a lista de cartões tem UM só cartão, toda compra no crédito é nele: preencha e NÃO pergunte qual cartão. O mesmo para banco: com um só banco, use ele. ` +
       `Só pergunte o cartão ou o banco quando houver mais de um e a fala não disser qual. Se faltar o número de parcelas ou algo for ambíguo, deixe vazio e PERGUNTE.\n` +
       `CATEGORIA: a descricao é o nome que a pessoa falou ("Top", "JK", "Drogasil"). Para escolher a categoria, veja primeiro "apelidos" (a pessoa ensinou: vale sempre), ` +
@@ -452,7 +483,7 @@ function atzConferenciasHtml(conf){
   const lista = l=>l.map(x=>`<div class="atz-linha"><span>${escBanco(x.nome)}</span><b>${fmtMoney(x.valor)}</b></div>`).join('');
   const st = (dif, txtFalta, txtPassou)=>Math.abs(dif) < 0.01 ? '<span class="atz-pill ok">bateu ✓</span>' : dif > 0 ? `<span class="atz-pill err">${txtFalta}</span>` : `<span class="atz-pill err">${txtPassou}</span>`;
   const cartoes = conf.cartoes.filter(x=>x.informado !== null).map(x=>{
-    const p = atzFaturaPartes(x.c, x.m), novos = atzItens.filter(i=>i.cartaoId === x.c.id && !i.proximaFatura && (i.tipo === 'vista' || i.tipo === 'parcelada'))
+    const p = atzFaturaPartes(x.c, x.m), novos = atzItens.filter(i=>i.cartaoId === x.c.id && (i.tipo === 'vista' || i.tipo === 'parcelada') && atzFaturaDoItem(x.c, i) === x.m)
       .map(i=>({ nome: i.descricao + (i.tipo === 'parcelada' ? ` 1/${i.parcelas}` : ''), valor: i.tipo === 'parcelada' ? i.valor / Math.max(1, i.parcelas) : i.valor }));
     const grupo = (rot, l)=>l.length ? `<details class="atz-fat-g"><summary><span>${rot} <small>${l.length}</small></span><b>${fmtMoney(soma(l))}</b></summary>${lista(l)}</details>` : '';
     return `<div class="atz-fat">
@@ -460,6 +491,8 @@ function atzConferenciasHtml(conf){
       ${grupo('À vista no app', p.vista)}${grupo('Parcelas no app', p.parcelas)}${grupo('Assinaturas', p.assin)}${grupo('Desta conversa', novos)}
       <div class="atz-linha atz-total"><span>Somando tudo</span><b>${fmtMoney(x.noApp + x.novos)}</b></div>
       <div class="atz-linha atz-total"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>
+      ${(()=>{ const fora = atzItens.filter(i=>i.cartaoId === x.c.id && (i.tipo === 'vista' || i.tipo === 'parcelada') && atzFaturaDoItem(x.c, i) !== x.m);
+        return fora.length ? `<div class="atz-fat-fora">${fora.map(i=>`${escBanco(i.descricao || 'Compra')} ${fmtMoney(i.valor)} vai para a ${escBanco(atzFaturaOutra(i))}`).join('<br>')}: não conta nesta.</div>` : ''; })()}
       ${x.falta > 0.009 ? `<div class="atz-fat-falta">Faltam <b>${fmtMoney(x.falta)}</b> para chegar em ${fmtMoney(x.informado)}. Fale as compras que faltam desse cartão.</div>
         <button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('cartao','${x.c.id}')">Não lembro: lançar ${fmtMoney(x.falta)} como compra não identificada</button>`
         : x.falta < -0.009 ? `<div class="atz-fat-falta">O app passou ${fmtMoney(-x.falta)} do valor do banco. Veja se algum item está repetido ou com o valor errado.</div>` : ''}
@@ -485,6 +518,7 @@ function atzEditorHtml(i, k){
     <label class="atz-ed-l"><span>Nome</span><input id="atzEdNome" type="text" value="${escBanco(i.descricao)}" autocomplete="off"></label>
     <label class="atz-ed-l"><span>${i.tipo === 'parcelada' ? 'Valor total' : 'Valor'}</span><input id="atzEdValor" type="text" inputmode="decimal" value="${String(i.valor.toFixed(2)).replace('.', ',')}"></label>
     ${comCat ? `<label class="atz-ed-l"><span>Categoria</span><select id="atzEdCat">${vozCategoriasCartao().map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>` : ''}
+    ${atzGravavel(i) ? `<label class="atz-ed-l"><span>Dia</span><input id="atzEdData" type="date" max="${calISO(new Date())}" value="${i.data || calISO(new Date())}"></label>` : ''}
     ${i.tipo === 'parcelada' ? `<label class="atz-ed-l"><span>Parcelas</span><input id="atzEdParc" type="number" inputmode="numeric" min="2" max="48" value="${i.parcelas}"></label>` : ''}
     ${comCartao ? `<label class="atz-ed-l"><span>Cartão</span><select id="atzEdCartao"><option value="">Escolha</option>${opc(vozCartoes(), i.cartaoId)}</select></label>` : ''}
     ${comBanco ? `<label class="atz-ed-l"><span>Banco</span><select id="atzEdBanco"><option value="">${i.tipo === 'conta' ? 'Não mexer no banco' : 'Escolha'}</option>${opc(bancosDoUsuario(), i.bancoId)}</select></label>` : ''}
@@ -501,6 +535,7 @@ function atzSalvarEdicao(k){
   const cat = v('atzEdCat');
   if(cat && cat !== i.categoria){ i.categoria = cat; i.duvida = false; i.catManual = true; atzAprender(i.descricao, cat); }
   else if(cat && i.duvida){ i.duvida = false; i.catManual = true; atzAprender(i.descricao, cat); }
+  const dt = v('atzEdData'); if(dt) i.data = atzDataValida(dt);
   const parc = parseInt(v('atzEdParc')); if(parc >= 2) i.parcelas = Math.min(48, parc);
   const cid = v('atzEdCartao'); if(cid !== null){ const c = vozCartoes().find(x=>x.id === cid); i.cartaoId = c ? c.id : ''; i.cartaoNome = c ? c.nome : ''; }
   const bid = v('atzEdBanco'); if(bid !== null){ const b = bancosDoUsuario().find(x=>x.id === bid); i.bancoId = b ? b.id : ''; i.bancoNome = b ? b.nome : ''; }
@@ -516,7 +551,7 @@ function atzItemHtml(i, k, dup){
   const falta = atzFaltaNoItem(i), info = !atzGravavel(i);
   const cats = ['vista','pix'].includes(i.tipo) ? vozCategoriasCartao() : null;
   const onde = [i.tipo === 'pix' ? 'Pix ' + i.bancoNome : ['vista','parcelada','fatura'].includes(i.tipo) ? (i.cartaoNome ? 'Cartão ' + i.cartaoNome : '') : i.bancoNome,
-    i.proximaFatura ? 'próxima fatura' : ''].filter(Boolean).join(' · ');
+    i.data ? atzDiaCurto(i.data) : '', atzFaturaOutra(i)].filter(Boolean).join(' · ');
   const nome = i.descricao || (i.tipo === 'saldo' ? 'Saldo' : i.tipo === 'fatura' ? 'Fatura' : 'Item');
   const cat = cats ? `<label class="atz-cat${i.duvida ? ' duv' : ''}" title="Trocar a categoria">${escBanco(i.categoria || 'Outros')}${i.duvida ? '?' : ''}<select aria-label="Categoria" onchange="atzTrocarCategoria(${k}, this.value)">${cats.map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>`
     : i.tipo === 'parcelada' ? `<span>${i.parcelas}x de ${fmtMoney(i.valor / i.parcelas)}</span>` : `<span>${escBanco(ATZ_TIPOS[i.tipo])}</span>`;
@@ -649,7 +684,7 @@ function atzRenderConversa(pensando, rolar){
     ${atzFaixaHtml()}
     <div class="atz-corpo">
       ${atzDetalhes ? `<div class="atz-det">${atzDetalhesHtml(conf)}</div>` : ''}
-      <div class="atz-chat"><div class="atz-msgs">${msgs || (passo ? '' : `<div class="atz-msg ia">Toque no microfone e fale tudo de uma vez, como um áudio. Por exemplo: "gastei 120 no Top no crédito, 45 na farmácia no Pix do Inter e paguei a luz. A fatura do Nubank está 1.850." Cada item aparece aqui com um círculo: toque para confirmar e depois em Gravar.</div>`)}
+      <div class="atz-chat"><div class="atz-msgs">${msgs || (passo ? '' : `<div class="atz-msg ia">Fale ou escreva o que você gastou.</div>`)}
         ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div>
         ${atzConferenciasHtml(conf)}
         ${passo}
@@ -740,16 +775,14 @@ async function atzGravar(){
       const id = agora + '_' + k;
       if(i.tipo === 'vista'){
         const c = (state.cartoesTracker || []).find(x=>x.id === i.cartaoId); if(!c) return;
-        const m = faturaAbertaMes(c);
         if(!c.credoVista) c.credoVista = [];
-        c.credoVista.push({ id:'cv' + id, descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria || 'Outros', mKey: i.proximaFatura ? addMonths(m, 1) : m, criadoEm: agora });
+        c.credoVista.push({ id:'cv' + id, descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria || 'Outros', mKey: atzFaturaDoItem(c, i), data: i.data || hoje, criadoEm: agora });
       } else if(i.tipo === 'parcelada'){
         const c = (state.cartoesTracker || []).find(x=>x.id === i.cartaoId); if(!c) return;
-        const m = faturaAbertaMes(c);
-        state.comprasTracker.push({ id:'cp' + id, nome: i.descricao || 'Compra', descricao:'', logoUrl:'', cartaoId: c.id, valorTotal: i.valor, parcelas: i.parcelas, mesInicio: i.proximaFatura ? addMonths(m, 1) : m, criadoEm: agora });
+        state.comprasTracker.push({ id:'cp' + id, nome: i.descricao || 'Compra', descricao:'', logoUrl:'', cartaoId: c.id, valorTotal: i.valor, parcelas: i.parcelas, mesInicio: atzFaturaDoItem(c, i), data: i.data || hoje, criadoEm: agora });
       } else if(i.tipo === 'pix'){
         const b = banco(i.bancoId);
-        state.lancamentos.push({ id:'la' + id, mKey, data: hoje, descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria || 'Outros', banco: b ? b.nome : '', usuario: state.currentUser });
+        state.lancamentos.push({ id:'la' + id, mKey, data: i.data || hoje, descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria || 'Outros', banco: b ? b.nome : '', usuario: state.currentUser });
         mexe(i.bancoId, -i.valor);
       } else if(i.tipo === 'recebi'){
         mexe(i.bancoId, i.valor);

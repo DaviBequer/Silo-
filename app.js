@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.7', itens: [
+    'Assistente: cada compra tem o dia ("no dia 25 comprei…" vale para as seguintes até você falar outro dia), e dá para trocar o dia ao editar',
+    'A compra cai na fatura certa pelo fechamento do cartão: no dia do fechamento ou depois, vai para a fatura do mês seguinte; o item avisa quando vai para outra fatura',
+    'Sem o texto grande de exemplo na conversa',
+    'Cartões: chip com desenho de chip de verdade; ao pôr a logo de um banco, a cor do cartão vira a cor da logo'
+  ] },
   { versao: 'v13.6', itens: [
     'Assistente: toque no nome de um item para editar (nome, valor, categoria, parcelas, cartão ou banco)',
     'A categoria não vai mais no nome: "mercado Top" vira Top, com a categoria Mercado',

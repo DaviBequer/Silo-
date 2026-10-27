@@ -193,6 +193,15 @@ function bancoLogoEscolhida(ev){
   r.onload = e=>comprimirImagemDataUrl(e.target.result, 160).then(url=>{
     linha.dataset.logo = url;
     linha.querySelector('.banco-logo').innerHTML = `<img src="${url}" alt="">`;
+    /* a cor do cartão vira a cor que mais aparece na logo (dá para trocar depois no seletor) */
+    const pintar = ()=>{
+      const c = corDaLogo(url); if(!c) return;
+      const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(c.fundo); if(!m) return;
+      const hex = '#' + [m[1], m[2], m[3]].map(n=>(+n).toString(16).padStart(2, '0')).join('');
+      linha.dataset.cor = hex;
+      const inp = linha.querySelector('.banco-cor input'); if(inp) inp.value = hex;
+    };
+    if(corDaLogo(url, pintar)) pintar();
   });
   r.readAsDataURL(file);
 }

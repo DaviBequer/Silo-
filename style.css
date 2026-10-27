@@ -574,7 +574,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .cc-topo{position:relative;display:flex;align-items:center;justify-content:space-between}
 .cc-logo{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;overflow:hidden;background:#fff;color:var(--c);font-size:10px;font-weight:800;flex-shrink:0}
 .cc-logo img{width:100%;height:100%;object-fit:cover}
-.cc-chip{width:16px;height:12px;border-radius:3px;background:linear-gradient(135deg,#ecd8a4,#b8913f)}
+.cc-chip{width:18px;height:14px;border-radius:3px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 30'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f6e7b8'/%3E%3Cstop offset='.45' stop-color='%23d9b86e'/%3E%3Cstop offset='1' stop-color='%23a5823a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='.6' y='.6' width='38.8' height='28.8' rx='5' fill='url(%23g)' stroke='%23876626' stroke-width='1.2'/%3E%3Cg fill='none' stroke='%23765820' stroke-width='1.1' stroke-linecap='round'%3E%3Cpath d='M1 10.5h11.5M1 19.5h11.5M27.5 10.5H39M27.5 19.5H39M20 1v6M20 23v6'/%3E%3Crect x='12.5' y='7' width='15' height='16' rx='3.5'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;box-shadow:0 1px 1px rgba(0,0,0,.25)}
 .cc b{position:relative;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cc.zero{background:#3a3d42;color:rgba(255,255,255,.55)}.cc.zero .cc-chip{opacity:.35}.cc.zero .cc-logo{filter:grayscale(1);opacity:.7}
 .cc-vazio{font-size:12px;color:var(--graf-dim)}
@@ -926,7 +926,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 
 .cartao-card-item .ct-face .ct-top{position:absolute;left:16px;right:12px;top:14px}
 .cartao-card-item .ct-face .conta-logo-sm{width:30px;height:30px;border-radius:50%!important;object-fit:cover;background:#fff}
-.ct-chip{position:absolute;left:18px;top:56px;width:30px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ecd8a4,#b8913f)}
+.ct-chip{position:absolute;left:18px;top:56px;width:34px;height:26px;border-radius:5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 30'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f6e7b8'/%3E%3Cstop offset='.45' stop-color='%23d9b86e'/%3E%3Cstop offset='1' stop-color='%23a5823a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='.6' y='.6' width='38.8' height='28.8' rx='5' fill='url(%23g)' stroke='%23876626' stroke-width='1.2'/%3E%3Cg fill='none' stroke='%23765820' stroke-width='1.1' stroke-linecap='round'%3E%3Cpath d='M1 10.5h11.5M1 19.5h11.5M27.5 10.5H39M27.5 19.5H39M20 1v6M20 23v6'/%3E%3Crect x='12.5' y='7' width='15' height='16' rx='3.5'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;box-shadow:0 1px 2px rgba(0,0,0,.25)}
 .cartao-card-item .ct-disponivel-lbl{font:600 10px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;opacity:.75}
 .cartao-card-item .ct-disponivel-val{font:300 28px/1.1 var(--font-body);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .cartao-card-item .ct-foot{display:flex;justify-content:space-between;gap:8px;font-size:11px;opacity:.8}
