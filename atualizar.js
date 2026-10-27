@@ -555,7 +555,7 @@ function atzItemHtml(i, k, dup){
   const nome = i.descricao || (i.tipo === 'saldo' ? 'Saldo' : i.tipo === 'fatura' ? 'Fatura' : 'Item');
   const cat = cats ? `<label class="atz-cat${i.duvida ? ' duv' : ''}" title="Trocar a categoria">${escBanco(i.categoria || 'Outros')}${i.duvida ? '?' : ''}<select aria-label="Categoria" onchange="atzTrocarCategoria(${k}, this.value)">${cats.map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>`
     : i.tipo === 'parcelada' ? `<span>${i.parcelas}x de ${fmtMoney(i.valor / i.parcelas)}</span>` : `<span>${escBanco(ATZ_TIPOS[i.tipo])}</span>`;
-  return `<div class="atz-it${i.ok && !falta ? ' ok' : ''}${falta ? ' falta' : ''}${info ? ' info' : ''}${dup ? ' dup' : ''}">
+  return `<div class="atz-it${i.ok && !falta ? ' ok' : ''}${atzBateu === k ? ' bate' : ''}${falta ? ' falta' : ''}${info ? ' info' : ''}${dup ? ' dup' : ''}">
     ${info ? '<span class="atz-chk" title="Valor que você viu no banco">i</span>'
       : `<button type="button" class="atz-chk" ${falta ? 'disabled' : ''} title="${falta ? 'Responda antes: ' + falta : i.ok ? 'Desmarcar' : 'Confirmar'}" aria-label="${i.ok ? 'Desmarcar' : 'Confirmar'}" aria-pressed="${!!i.ok}" onclick="atzConfirmar(${k})">${ATZ_ICO_OK}</button>`}
     ${atzIcoItem(i)}
@@ -694,6 +694,7 @@ function atzRenderConversa(pensando, rolar){
   const m = el.querySelector('.atz-msgs'), caixa = document.getElementById('atzConteudo'), placa = el.querySelector('.atz-placa');
   if(rolar && m && caixa) requestAnimationFrame(()=>{
     const ult = m.lastElementChild; if(!ult) return;
+    ult.classList.add('ef-nova');   // E15: os itens da resposta nova entram em cascata
     const topo = ult.getBoundingClientRect().top - caixa.getBoundingClientRect().top + caixa.scrollTop - (placa ? placa.offsetHeight : 0) - 12;
     caixa.scrollTo({ top: Math.max(0, topo), behavior:'smooth' });
   });
@@ -703,7 +704,9 @@ function atzDetalhesAlternar(){
   try{ localStorage.setItem('siloe-atz-detalhes', atzDetalhes ? '1' : '0'); }catch(e){}
   atzRenderConversa();
 }
-function atzConfirmar(k){ const i = atzItens[k]; if(!i || atzFaltaNoItem(i)) return; i.ok = !i.ok; renderAtualizar(); }
+/* E12: o item que acabou de ganhar o ✓ "bate" (só ele, só nesse desenho) */
+let atzBateu = -1;
+function atzConfirmar(k){ const i = atzItens[k]; if(!i || atzFaltaNoItem(i)) return; i.ok = !i.ok; atzBateu = i.ok ? k : -1; renderAtualizar(); atzBateu = -1; }
 function atzTirarItem(k){ atzItens.splice(k, 1); atzEditando = -1; renderAtualizar(); }
 function atzTrocarCategoria(k, cat){
   const i = atzItens[k]; if(!i) return;

@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.1', itens: [
+    'Efeitos: placas com degradê que se move, borda dourada girando no Assistente e no Gravar, brilho passando nos números, aurora na abertura e no PIN, líquido enchendo nos anéis e nas metas, onda dourada ao tocar, onda enquanto a IA pensa, anéis no microfone, sino pulsando, alerta respirando na conta que vence hoje, batida ao confirmar, esqueleto brilhante ao carregar, itens entrando em cascata, cartões que inclinam',
+    'Confete ao gravar no Assistente, bater a meta de vendas, completar uma meta de economia e fechar o mês do ponto; faíscas na música pronta'
+  ] },
   { versao: 'v14.0', itens: [
     'Cifra Club falhou: o app diz o que houve e oferece outro caminho (abrir no site, puxar o PDF do Drive ou escrever à mão)',
     'IA: se o Google tirar ou trocar o nome de um modelo, o app tenta outro sozinho e avisa; o nome pode ser trocado em Ajustes → Recursos → Modelos da IA',
