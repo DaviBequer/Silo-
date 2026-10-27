@@ -376,17 +376,33 @@ async function atzPerguntar(msg, audio){
 const ATZ_ICO_OK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const ATZ_ICO_MIC = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 11h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11z"/></svg>';
 const atzTempo = s=>Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+/* repetido: o mesmo valor já lançado no mesmo cartão/banco (à vista e Pix: últimos 120 dias; parcelada: último ano),
+   ou o mesmo item duas vezes nesta conversa. Atualizando do zero a pessoa fala coisa que já estava no app. */
+const ATZ_DUP_DIAS = { vista: 120, pix: 120, parcelada: 365 };
+function atzDuplicados(){
+  const hist = atzHistorico(), agora = Date.now();
+  const dia = ts=>{ const d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
+  const onde = i=>i.tipo === 'pix' ? i.bancoNome : i.cartaoNome;
+  return atzItens.map((i, k)=>{
+    if(!ATZ_DUP_DIAS[i.tipo] || !onde(i)) return null;
+    const antes = atzItens.slice(0, k).find(o=>o.tipo === i.tipo && onde(o) === onde(i) && Math.abs(o.valor - i.valor) < 0.01);
+    if(antes) return { curto: 'repetido nesta conversa', texto: `${i.descricao || 'Item'} ${fmtMoney(i.valor)} aparece duas vezes nesta conversa.` };
+    const h = hist.find(h=>h.tipo === i.tipo && h.onde === onde(i) && Math.abs(h.valor - i.valor) < 0.01 && agora - h.quando < ATZ_DUP_DIAS[i.tipo] * 864e5);
+    if(!h) return null;
+    return { curto: `já lançado em ${dia(h.quando)}`, texto: `${i.descricao || 'Item'} ${fmtMoney(i.valor)} parece repetido: já tem "${h.desc}" de ${fmtMoney(h.valor)} no ${h.onde}, lançado em ${dia(h.quando)}. Se for outra compra, confirme.` };
+  });
+}
 /* um item com o círculo de confirmar, a categoria (toque troca) e o × */
-function atzItemHtml(i, k){
+function atzItemHtml(i, k, dup){
   const falta = atzFaltaNoItem(i), info = !atzGravavel(i);
   const cats = ['vista','pix'].includes(i.tipo) ? vozCategoriasCartao() : null;
   const onde = [ATZ_TIPOS[i.tipo], i.tipo === 'conta' ? '' : (i.cartaoNome || i.bancoNome), i.tipo === 'parcelada' ? i.parcelas + 'x de ' + fmtMoney(i.valor / i.parcelas) : '', i.proximaFatura ? 'próxima fatura' : ''].filter(Boolean).join(' · ');
   const nome = i.descricao || (i.tipo === 'saldo' ? 'Saldo' : i.tipo === 'fatura' ? 'Fatura' : 'Item');
   const cat = cats ? `<label class="atz-cat${i.duvida ? ' duv' : ''}" title="Trocar a categoria">${escBanco(i.categoria || 'Outros')}${i.duvida ? '?' : ''}<select aria-label="Categoria" onchange="atzTrocarCategoria(${k}, this.value)">${cats.map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>` : '';
-  return `<div class="atz-it${i.ok && !falta ? ' ok' : ''}${falta ? ' falta' : ''}${info ? ' info' : ''}">
+  return `<div class="atz-it${i.ok && !falta ? ' ok' : ''}${falta ? ' falta' : ''}${info ? ' info' : ''}${dup ? ' dup' : ''}">
     ${info ? '<span class="atz-chk" title="Valor que você viu no banco">i</span>'
       : `<button type="button" class="atz-chk" ${falta ? 'disabled' : ''} title="${falta ? 'Responda antes: ' + falta : i.ok ? 'Desmarcar' : 'Confirmar'}" aria-label="${i.ok ? 'Desmarcar' : 'Confirmar'}" aria-pressed="${!!i.ok}" onclick="atzConfirmar(${k})">${ATZ_ICO_OK}</button>`}
-    <div class="atz-it-txt"><b>${escBanco(nome)}${cat}</b><small>${escBanco(onde)}${falta ? ` <em>${falta}</em>` : ''}</small></div>
+    <div class="atz-it-txt"><b>${escBanco(nome)}${cat}</b><small>${escBanco(onde)}${falta ? ` <em>${falta}</em>` : ''}${dup ? ` <em class="atz-dup" title="${escBanco(dup.texto)}">${escBanco(dup.curto)}</em>` : ''}</small></div>
     <b class="atz-valor">${fmtMoney(i.valor)}</b>
     <button type="button" class="ico-btn atz-tirar" aria-label="Tirar" title="Tirar" onclick="atzTirarItem(${k})">${CU_ICO.x}</button>
   </div>`;
@@ -424,7 +440,9 @@ function atzRenderConversa(pensando, rolar){
   const ultimo = {}, porMsg = {}, soltos = [];
   atzConversa.forEach((m, mi)=>(m.novos || []).forEach(c=>{ ultimo[c] = mi; }));
   atzItens.forEach((i, k)=>{ const mi = ultimo[atzChave(i)]; if(mi === undefined) soltos.push(k); else (porMsg[mi] = porMsg[mi] || []).push(k); });
-  const lista = ks=>ks.length ? `<div class="atz-its">${ks.map(k=>atzItemHtml(atzItens[k], k)).join('')}</div>` : '';
+  const dups = atzDuplicados();
+  const lista = ks=>ks.length ? `<div class="atz-its">${ks.map(k=>atzItemHtml(atzItens[k], k, dups[k])).join('')}</div>`
+    + ks.filter(k=>dups[k]).map(k=>`<div class="atz-aviso-dup">${lvEsc(dups[k].texto)}</div>`).join('') : '';
   const tirado = i=>`<li>${escBanco(i.descricao || ATZ_TIPOS[i.tipo])} <b>${fmtMoney(i.valor)}</b></li>`;
   const msgs = atzConversa.map((m, mi)=>m.quem === 'eu'
       ? `<div class="atz-msg eu${m.voz ? ' voz' : ''}">${m.voz ? `<span class="atz-aud">${ATZ_ICO_MIC} ${atzTempo(m.dur || 0)}</span>` : ''}${m.texto ? lvEsc(m.texto) : '<span class="atz-aud-espera">…</span>'}</div>`
@@ -523,6 +541,9 @@ async function atzGravar(){
   const soltas = [...conf.bancos.filter(x=>x.informado !== null && x.dif < -0.009).map(x=>`${fmtMoney(-x.dif)} no ${x.b.nome}`),
     ...conf.cartoes.filter(x=>x.informado !== null && x.falta > 0.009).map(x=>`${fmtMoney(x.falta)} na fatura ${x.c.nome}`)];
   if(soltas.length && !(await iosConfirm(`Ainda falta explicar ${soltas.join(' e ')}. Gravar assim mesmo?`))) return;
+  /* repetidos confirmados: pergunta de novo antes de lançar em dobro */
+  const dups = atzDuplicados(), repetidos = itens.filter(i=>dups[atzItens.indexOf(i)]);
+  if(repetidos.length && !(await iosConfirm(`${repetidos.length === 1 ? 'Um item parece repetido' : repetidos.length + ' itens parecem repetidos'} (${repetidos.map(i=>(i.descricao || 'Item') + ' ' + fmtMoney(i.valor)).join(', ')}): já estão no app. Gravar mesmo assim?`))) return;
   const comSaldo = new Set(itens.filter(i=>i.tipo === 'saldo').map(i=>i.bancoId)), n = itens.length;
   comDesfazer(`${n} ${n === 1 ? 'item gravado' : 'itens gravados'}`, ()=>{
     const bancos = bancosDoUsuario(), us = state.users[state.currentUser];

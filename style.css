@@ -2573,3 +2573,7 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
   .atz-placa{padding:12px 18px}
 }
 @media (prefers-reduced-motion:reduce){.atz-barra .atz-mic.ouvindo{animation:none}}
+/* Assistente: item que parece repetido (já está no app ou duas vezes na conversa) */
+.atz-it.dup{background:linear-gradient(90deg,rgba(201,140,40,.12),transparent)}
+.atz-it-txt small em.atz-dup{color:#9a6512}
+.atz-aviso-dup{margin-top:8px;padding:7px 10px;border-radius:10px;background:rgba(201,140,40,.14);color:#7a4f0e;font-size:12.5px;line-height:1.4}

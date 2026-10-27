@@ -95,6 +95,9 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.4', itens: [
+    'Assistente: avisa quando um gasto parece repetido (mesmo valor já lançado no mesmo cartão ou banco, ou falado duas vezes na conversa) e pergunta de novo antes de gravar'
+  ] },
   { versao: 'v13.3', itens: [
     'Assistente novo: a conversa é a tela principal, com o microfone grande; quanto falta, o saldo antes e depois de cada banco e as contas em aberto ficam em "Detalhes" (escondido até você ligar)',
     'Cada item tem um círculo para confirmar; "Gravar" grava só os confirmados',
