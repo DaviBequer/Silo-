@@ -95,6 +95,13 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.3', itens: [
+    'Assistente novo: a conversa é a tela principal, com o microfone grande; quanto falta, o saldo antes e depois de cada banco e as contas em aberto ficam em "Detalhes" (escondido até você ligar)',
+    'Cada item tem um círculo para confirmar; "Gravar" grava só os confirmados',
+    'Voz: o app grava o áudio e a IA ouve direto (sem o ditado do navegador), entendendo melhor valores e nomes de banco',
+    'Com um só cartão (ou um só banco) a IA usa esse sem perguntar',
+    'Categorias: a IA usa o que você já lançou; toque na categoria para trocar ou diga "Top é mercado" e ela aprende (lista em Ajustes → Recursos)'
+  ] },
   { versao: 'v13.2', itens: [
     'Colar do WhatsApp: o medley volta a virar uma música só também quando vem como "Medley:" com as músicas uma por linha, com "+" sem espaço ou separado por "/"'
   ]},
@@ -650,6 +657,7 @@ function atualizarStatusIA(){
   if(inp) inp.placeholder = tem ? 'Chave salva ✓' : 'Cole a chave aqui';
   const rem = document.getElementById('iaRemover'); if(rem) rem.style.display = tem ? '' : 'none';
   if(typeof atualizarStatusDrive === 'function') atualizarStatusDrive();
+  if(typeof atzRenderApelidos === 'function') atzRenderApelidos();
   const ins = document.getElementById('iaInstrucoesInput');
   if(ins && document.activeElement !== ins) ins.value = iaInstrucoes();
 }

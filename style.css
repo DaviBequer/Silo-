@@ -2501,3 +2501,75 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 .atz-msg-lista.tirados li>span,.atz-msg-lista.tirados li>b{text-decoration:line-through;color:var(--text-faint)}
 .atz-msg-conta{margin-top:8px;padding:7px 10px;border-radius:10px;background:#f3e3d9;font-size:13px;font-weight:600;line-height:1.4}
 .atz-msg-conta.ok{background:#e2ead8}
+/* Assistente v13.3: conversa (A) + painel escondido em "Detalhes" (B), ✓ por item, gravação de áudio */
+.atz-placa{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:12px;margin:4px 0 0;padding:11px 14px;border-radius:16px;background:var(--graf);color:var(--graf-tx);box-shadow:0 6px 18px rgba(20,22,26,.12)}
+.atz-placa-info{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}
+.atz-placa-info span{flex-basis:100%;font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--latao)}
+.atz-placa-info b{font-size:21px;font-weight:300;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.atz-placa-info small{font-size:12px;color:var(--graf-dim)}
+.atz-tg{display:inline-flex;align-items:center;gap:7px;flex-shrink:0;padding:4px 0;border:none;background:none;color:var(--graf-dim);font:inherit;font-size:12px;cursor:pointer}
+.atz-tg i{position:relative;width:30px;height:17px;border-radius:999px;background:rgba(255,255,255,.2);transition:background .2s var(--ease)}
+.atz-tg i::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s var(--ease)}
+.atz-tg.on{color:var(--graf-tx)}.atz-tg.on i{background:var(--latao)}.atz-tg.on i::after{transform:translateX(13px)}
+.atz-placa .atz-gravar{flex-shrink:0;min-height:36px;padding:0 14px;background:var(--latao);color:var(--graf);border-color:var(--latao)}
+.atz-placa .atz-gravar:disabled{opacity:.4}
+.atz-corpo{display:flex;flex-direction:column}
+.atz-det{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.atz-det-bloco{padding:9px 12px;border-radius:12px;background:var(--vidro);border:1px solid var(--fio)}
+.atz-det-topo{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.atz-det-topo span{font:600 11px/1.3 var(--font-narrow);letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+.atz-det-topo small{font-size:12px;color:var(--text-faint)}
+.atz-det .atz-linha{padding:4px 0;font-size:13px}
+.atz-det .atz-linha:last-child{border-bottom:none}
+.atz-pill{flex-shrink:0;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.atz-pill.ok{background:var(--success-tint);color:var(--success)}
+.atz-pill.err{background:rgba(176,72,58,.12);color:var(--danger)}
+.atz-its{display:flex;flex-direction:column;margin-top:8px}
+.atz-it{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:0 10px;padding:7px 0;border-top:1px solid var(--fio)}
+.atz-chk{display:grid;place-items:center;width:26px;height:26px;padding:0;border:1.6px solid var(--text-faint);border-radius:50%;background:#fff;color:transparent;font:600 12px/1 var(--font-body);cursor:pointer;transition:background .18s var(--ease),border-color .18s var(--ease),color .18s var(--ease),transform .12s var(--ease)}
+.atz-chk:active{transform:scale(.9)}
+.atz-it.ok .atz-chk{background:var(--success);border-color:var(--success);color:#fff}
+.atz-it.info .atz-chk{border-style:dashed;color:var(--text-faint);cursor:default}
+.atz-chk:disabled{opacity:.45;cursor:default}
+.atz-it-txt{min-width:0;display:flex;flex-direction:column}
+.atz-it-txt b{font-size:14px;font-weight:600;line-height:1.35}
+.atz-it-txt small{font-size:12px;color:var(--text-faint);line-height:1.35}
+.atz-it-txt small em{font-style:normal;font-weight:700;color:var(--danger)}
+.atz-it.falta{background:linear-gradient(90deg,rgba(176,72,58,.07),transparent)}
+.atz-it .atz-valor{font-size:14px}
+.atz-it .atz-tirar{min-width:28px;height:28px;color:var(--text-faint)}
+.atz-cat{position:relative;display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(201,168,106,.22);color:var(--gold);font-size:11px;font-weight:600;vertical-align:1px;cursor:pointer}
+.atz-cat.duv{background:rgba(176,72,58,.12);color:var(--danger)}
+.atz-cat select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.atz-aprendeu{margin-top:8px;font-size:12px;color:var(--gold)}
+.atz-msg.eu.voz .atz-aud{display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:11.5px;color:var(--graf-dim)}
+.atz-aud-espera{opacity:.6}
+.atz-limpar{align-self:center;margin:4px 0 8px;font-size:12.5px}
+.atz-chat{display:flex;flex-direction:column}
+.atz-aps{display:flex;flex-direction:column}
+.atz-ap{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.atz-ap span{flex:1;min-width:0}
+.atz-ap b{font-weight:600;color:var(--gold)}
+.atz-ap .ico-btn{color:var(--text-faint)}
+/* barra: microfone grande à direita; gravando = onda + tempo no lugar do campo */
+.atz-barra{align-items:center}
+.atz-barra .atz-mic{width:52px;height:52px;background:var(--graf);color:var(--latao);box-shadow:0 0 0 5px rgba(201,168,106,.16)}
+.atz-barra .atz-mic.ouvindo{background:var(--danger);color:#fff;animation:atzOuvindo 1.2s infinite}
+.atz-gravando{display:none;flex:1;min-width:0;align-items:center;gap:10px;min-height:44px;padding:0 12px 0 4px;border-radius:22px;background:var(--graf);color:var(--graf-tx)}
+.atz-gravando .ico-btn{color:var(--graf-dim)}
+.atz-gravando b{font-weight:600;font-variant-numeric:tabular-nums}
+.atz-gravando small{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11.5px;color:var(--graf-dim)}
+.atz-grav-onda{display:flex;align-items:center;gap:2px;height:22px;flex-shrink:0}
+.atz-grav-onda i{width:3px;border-radius:2px;background:var(--latao);transition:height .1s linear}
+.atz-barra.gravando .atz-gravando{display:flex}
+.atz-barra.gravando textarea,.atz-barra.gravando .atz-enviar{display:none}
+@media(max-width:400px){.atz-gravando small{display:none}}
+@media(min-width:1024px){
+  #atzConversa.det .atz-corpo{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:28px;align-items:start}
+  #atzConversa.det .atz-det{grid-column:2;grid-row:1;position:sticky;top:84px}
+  #atzConversa.det .atz-chat{grid-column:1;grid-row:1}
+  #atzConversa .atz-chat{max-width:760px;width:100%;margin:0 auto}
+  #atzConversa.det .atz-chat{margin:0;max-width:none}
+  .atz-placa{padding:12px 18px}
+}
+@media (prefers-reduced-motion:reduce){.atz-barra .atz-mic.ouvindo{animation:none}}
