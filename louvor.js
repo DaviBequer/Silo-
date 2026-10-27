@@ -1154,7 +1154,8 @@ function lvPdfCarregarFonte(){
     let s = ''; for(let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
     return btoa(s);
   };
-  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf')])
+  /* junto vem o gerador de PDF (jsPDF), que não carrega mais na abertura do app */
+  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf'), garantirJsPDF()])
     .then(([r, b])=>(lvPdfFonte = { r, b })).catch(()=>{ lvPdfFontePedido = null; return null; });
   return lvPdfFontePedido;
 }

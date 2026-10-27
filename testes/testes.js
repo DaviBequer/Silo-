@@ -179,6 +179,36 @@ async function rodarTestes(){
     finally{ atzConversa = []; atzItens = []; }
     t('assistente: tela desenha sem erro (conversa, detalhes, passo a passo)', !erroAtz, erroAtz);
 
+    /* ---------- faturas do cartão ---------- */
+    const cF = { id:'cf', nome:'Teste', fechamento:6, vencimento:12, credoVista:[{ id:'v9', descricao:'Loja', valor:100, categoria:'Outros', mKey:M }], assinaturas:[{ id:'a9', nome:'Música', valor:20, mesInicio: addMonths(M, -2) }] };
+    state.cartoesTracker.push(cF);
+    state.comprasTracker = [{ id:'cp9', nome:'TV', cartaoId:'cf', valorTotal:300, parcelas:3, mesInicio: addMonths(M, -1) }];
+    perto('fatura: à vista + parcela + assinatura', faturaCartaoNoMes(cF, M), 100 + 100 + 20);
+    perto('fatura: parcela acaba depois da 3ª', faturaCartaoNoMes(cF, addMonths(M, 2)), 20);
+    state.comprasTracker = []; state.cartoesTracker.pop();
+
+    /* ---------- proteção contra perda ---------- */
+    const baseP = JSON.stringify({ louvores: [1,2,3,4,5,6].map(i=>({ id:'l'+i, revisar:[1,2,3,4,5,6] })), cultos:[{ id:'c1' }, { id:'c2' }, { id:'c3' }] });
+    igual('perda: apagar todas as músicas pede confirmação', perdaGrande(baseP, { louvores:[], cultos:[{ id:'c1' }, { id:'c2' }, { id:'c3' }] }).map(x=>[x.p, x.n0, x.n1]), [['louvores', 6, 0]]);
+    igual('perda: tirar uma música não pede', perdaGrande(baseP, JSON.parse(baseP.replace('{"id":"l6","revisar":[1,2,3,4,5,6]},', '').replace(',{"id":"l6","revisar":[1,2,3,4,5,6]}', ''))).length, 0);
+    const semRevisar = JSON.parse(baseP); semRevisar.louvores[0].revisar = [];
+    igual('perda: lista pequena de dentro de uma música não conta', perdaGrande(baseP, semRevisar).length, 0);
+    igual('perda: cultos sumindo pede confirmação', perdaGrande(baseP, { louvores: JSON.parse(baseP).louvores }).map(x=>x.p), ['cultos']);
+
+    /* ---------- telas: abrem sem erro ---------- */
+    let erroTelas = '';
+    const abas = ['planner', 'ponto', 'vendas', 'louvor', 'ajustes', 'trabalho'];
+    try{
+      abas.forEach(a=>switchAba(a));
+      renderPanorama(); renderPlanner(); renderPonto(); renderVendas(); renderLouvorLista(); renderAjustes();
+      abrirContasPagar(M); fecharContasPagar();
+      abrirHistoricoMeses(); closeModal('modalHistoricoMeses');
+      abrirCulto(); fecharCulto();
+      abrirAtualizar('resumo'); abrirAtualizar('conversa'); fecharAtualizar();
+      switchAba('planner');
+    }catch(e){ erroTelas = String(e && e.stack || e); }
+    t('telas: abas e telas cheias abrem sem erro', !erroTelas, erroTelas);
+
     /* ---------- imagens separadas dos dados ---------- */
     const img = 'data:image/png;base64,' + 'A'.repeat(3000);
     const json = JSON.stringify({ x:1, logo: img, outra: img, pequena: 'data:image/png;base64,AAAA' });

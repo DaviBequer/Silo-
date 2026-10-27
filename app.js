@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.9', itens: [
+    'Proteção contra perda: se uma gravação for apagar muita coisa de uma vez (ex.: todas as músicas), o app pergunta antes; se você disser que não, nada é gravado e ele volta para os dados da nuvem',
+    'Backup da semana: o sino lembra a cada 7 dias de baixar uma cópia dos dados no aparelho',
+    'Abre mais rápido: o gerador de PDF só carrega quando você for gerar um PDF',
+    'Mais testes antes de publicar: faturas do cartão, proteção contra perda e todas as abas e telas abrindo sem erro (91 no total)'
+  ] },
   { versao: 'v13.8', itens: [
     'Faxina: saíram 84 regras de visual que nada mais usava (telas e botões que já tinham sido removidos)',
     'Testes novos do Assistente (fatura pela data, gasto repetido, nome sem categoria, um só cartão) e os testes agora rodam sozinhos no GitHub a cada publicação'
@@ -751,6 +757,8 @@ function exportarDadosApp(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  state.ultimoBackup = Date.now(); persist();
+  if(typeof atualizarSino === 'function') atualizarSino();
   showToast('Backup exportado');
 }
 function triggerImportarDados(){
@@ -1237,8 +1245,14 @@ function sinoAvisos(){
     const dias = ult ? Math.floor((Date.now() - ult) / 864e5) : 0;
     if(dias >= ATZ_DIAS_AVISO) out.push({ id:'financas-'+hojeTxt, tipo:'financas', titulo:'Assistente: atualizar as finanças', corpo:`Faz ${dias} dias que nada é lançado. Fale o que gastou desde então.`, quando:'hoje', ir:{ aba:'atualizar' } });
   }catch(e){}
+  /* BACKUP: uma cópia dos dados no aparelho a cada 7 dias (fora do Supabase) */
+  if(remoteReady){
+    const diasB = state.ultimoBackup ? Math.floor((Date.now() - state.ultimoBackup) / 864e5) : null;
+    if(diasB === null || diasB >= BACKUP_DIAS) out.push({ id:'backup-'+hojeTxt, tipo:'backup', titulo:'Backup da semana', corpo: diasB === null ? 'Toque para baixar uma cópia dos seus dados neste aparelho.' : `Faz ${diasB} dias do último backup. Toque para baixar uma cópia dos seus dados neste aparelho.`, quando:'hoje', ir:{ aba:'backup' } });
+  }
   return out;
 }
+const BACKUP_DIAS = 7;
 let sinoAtuais = [];
 function atualizarSino(semLista){
   const btn = document.getElementById('sinoBtn'), conta = document.getElementById('sinoConta');
@@ -1256,6 +1270,7 @@ const SINO_ICONES = {
   ponto: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   vendas: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
   financas: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H9l-5 4z"/></svg>'
+  ,backup: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>'
 };
 function sinoRenderLista(){
   const vistos = new Set(sinoVistos());
@@ -1286,6 +1301,8 @@ function sinoIr(i){
   } else if(a.ir.aba === 'vendas'){
     switchAba('vendas');
     setTimeout(()=>sinoDestacar(document.querySelector('#vendasConteudo .vd-meta-linha') || document.getElementById('vendasConteudo')), 120);
+  } else if(a.ir.aba === 'backup'){
+    exportarDadosApp();
   } else if(a.ir.aba === 'atualizar'){
     switchAba('planner');
     abrirAtualizar('conversa');

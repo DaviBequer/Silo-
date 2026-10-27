@@ -665,7 +665,8 @@ function selecionarPontoExportSemana(idx){
   renderPontoExportResumo();
 }
 
-function gerarPdfPonto(){
+async function gerarPdfPonto(){
+  await garantirJsPDF();
   if(typeof window.jspdf === 'undefined'){
     showToast('Não foi possível carregar o gerador de PDF. Verifique sua conexão.');
     return;

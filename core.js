@@ -207,7 +207,52 @@ async function tratarConflitoSalvar(){
     return true;
   } finally { tratandoConflito = false; }
 }
+/* ===== PROTEÇÃO CONTRA PERDA =====
+   Antes de gravar, compara as listas com o último estado igual ao banco. Se uma lista grande ficaria pela metade
+   (≥ 5 itens) ou vazia (≥ 3 itens) — como os louvores que foram de 23 para 0 em 17/10 —, pergunta antes de gravar.
+   Vale para as listas "de raiz" (louvores, cultos, contas de cada grupo, bancos, lançamentos…) e para as compras
+   de dentro dos cartões; listas pequenas de dentro de um item (ex.: linhas a conferir de uma música) não contam. */
+const PERDA_IGNORAR = /^(pushInscricoes|aparelhos|avisos|loginPin|iaApelidos)/;
+const PERDA_DENTRO = /\.(credoVista|assinaturas)$/;
+const PERDA_NOMES = { louvores:'músicas', cultos:'cultos', lancamentos:'compras no Pix/débito', comprasTracker:'compras parceladas', cartoesTracker:'cartões', credoVista:'compras à vista', assinaturas:'assinaturas', metasEconomia:'metas', paid:'contas pagas', bancos:'bancos', days:'dias do ponto' };
+function perdaContar(o, caminho, out, raiz, prof){
+  if(prof > 6 || !o || typeof o !== 'object') return out;
+  if(Array.isArray(o)){
+    if(raiz || PERDA_DENTRO.test(caminho)) out[caminho] = { n: o.length, raiz };
+    o.forEach((x, i)=>{ if(x && typeof x === 'object') perdaContar(x, caminho + '.' + (x.id || i), out, false, prof + 1); });
+    return out;
+  }
+  const ks = Object.keys(o);
+  if(raiz && caminho && ks.length >= 3 && ks.every(k=>o[k] === true || (o[k] && typeof o[k] === 'object'))) out[caminho] = { n: ks.length, raiz };
+  ks.forEach(k=>perdaContar(o[k], caminho ? caminho + '.' + k : k, out, raiz, prof + 1));
+  return out;
+}
+function perdaGrande(antesJson, depois){
+  let antes; try{ antes = JSON.parse(antesJson); }catch(e){ return []; }
+  const a = perdaContar(antes, '', {}, true, 0), d = perdaContar(depois, '', {}, true, 0);
+  return Object.keys(a).filter(p=>!PERDA_IGNORAR.test(p)).map(p=>{
+    const n0 = a[p].n, n1 = d[p] ? d[p].n : (a[p].raiz ? 0 : null);
+    if(n1 === null) return null;   // o item que tinha a lista saiu inteiro: a lista de cima já conta
+    return (n0 >= 5 && n1 <= n0 * 0.5) || (n0 >= 3 && n1 === 0) ? { p, n0, n1 } : null;
+  }).filter(Boolean);
+}
+let perdaRecusada = false;
+async function perdaConfirmar(perdas){
+  const nome = p=>{ const k = p.split('.').filter(x=>PERDA_NOMES[x]).pop(); return k ? PERDA_NOMES[k] : p; };
+  const txt = perdas.slice(0, 4).map(x=>`${nome(x.p)}: ${x.n0} → ${x.n1}`).join('; ');
+  const ok = await iosConfirm(`Esta gravação vai apagar muita coisa de uma vez (${txt}). Está certo? Se não, nada é gravado e o app volta para os dados da nuvem.`);
+  if(ok) return true;
+  perdaRecusada = true;
+  showToast('Nada foi gravado. Voltando para os dados da nuvem…');
+  setTimeout(()=>location.reload(), 1500);
+  return false;
+}
 async function tentarSalvarNoBanco(){
+  if(perdaRecusada) return false;
+  if(baseSincronizada){
+    const perdas = perdaGrande(baseSincronizada, state);
+    if(perdas.length && !(await perdaConfirmar(perdas))) return false;
+  }
   let ok = false, mesclas = 0;
   for(let t=0; t<3 && !ok; t++){
     const enviado = JSON.stringify(state);
@@ -1142,3 +1187,17 @@ function getPanoWindowMonths(){
   return arr;
 }
 
+
+/* ===== GERADOR DE PDF SOB DEMANDA =====
+   O jsPDF (~350 KB) não carrega mais na abertura: só quando for gerar um PDF (música, Culto, Drive, WhatsApp, ponto).
+   O service worker guarda os dois arquivos, então funciona sem internet depois da 1ª vez. */
+const JSPDF_URLS = ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'];
+let jsPdfPedido = null;
+function carregarScript(src){
+  return new Promise((ok, erro)=>{ const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = erro; document.head.appendChild(s); });
+}
+function garantirJsPDF(){
+  if(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable) return Promise.resolve(true);
+  if(!jsPdfPedido) jsPdfPedido = carregarScript(JSPDF_URLS[0]).then(()=>carregarScript(JSPDF_URLS[1])).then(()=>true).catch(()=>{ jsPdfPedido = null; return false; });
+  return jsPdfPedido;
+}
