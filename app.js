@@ -95,6 +95,10 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.8', itens: [
+    'Faxina: saíram 84 regras de visual que nada mais usava (telas e botões que já tinham sido removidos)',
+    'Testes novos do Assistente (fatura pela data, gasto repetido, nome sem categoria, um só cartão) e os testes agora rodam sozinhos no GitHub a cada publicação'
+  ] },
   { versao: 'v13.7', itens: [
     'Assistente: cada compra tem o dia ("no dia 25 comprei…" vale para as seguintes até você falar outro dia), e dá para trocar o dia ao editar',
     'A compra cai na fatura certa pelo fechamento do cartão: no dia do fechamento ou depois, vai para a fatura do mês seguinte; o item avisa quando vai para outra fatura',

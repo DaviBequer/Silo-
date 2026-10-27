@@ -521,11 +521,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .resumo-card:hover{box-shadow:none;transform:none}
 .resumo-topo{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s3)}
 .resumo-mes{font-size:12.5px;font-weight:500;color:var(--text-dim)}
-.resumo-links{display:flex;gap:6px}
-.resumo-link{padding:4px 0 4px 14px;border:none;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;font-weight:500;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px;cursor:pointer;transition:color var(--dur) var(--ease),text-decoration-color var(--dur) var(--ease),transform .12s var(--ease)}
-.resumo-link:hover{color:var(--text);text-decoration-color:var(--text)}
 .resumo-label{font-size:12.5px;font-weight:500;color:var(--text-dim)}
-.resumo-label-voz{display:flex;align-items:center;gap:8px}
 .resumo-stats{display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:0;margin-top:var(--s4);padding:14px 16px;border-radius:var(--radius-md);background:var(--card);box-shadow:var(--sombra-card)}
 .resumo-stat{min-width:0;padding:0;border:none;border-radius:0;background:none;color:inherit;font:inherit;text-align:left}
 .resumo-stat+.resumo-stat{padding-left:14px}
@@ -653,8 +649,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 @media(max-width:420px){ .banco-linha{grid-template-columns:32px minmax(0,.8fr) minmax(0,1.2fr) 26px 24px;gap:6px} .banco-linha .input-money input{padding-left:34px!important} }
 .bancos-add{display:inline-flex;align-items:center;gap:7px;margin:12px 0 16px;padding:6px 0;border:none;background:none;color:var(--gold-dim);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 /* microfone ao lado do saldo */
-.voz-btn{width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--card);color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
-.voz-btn:hover{color:var(--text);border-color:var(--text-faint)}
 
 /* fluxo mensal (tabela) */
 .ponto-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -877,7 +871,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .compra-tracker-item.pago .ct-nome{text-decoration:line-through}
 .credo-vista-list{display:flex;flex-direction:column;margin-top:var(--s2);padding-top:var(--s2);border-top:1px solid var(--line)}
 .credo-vista-item{display:flex;justify-content:space-between;align-items:center;padding:var(--s1) 0;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
-.ct-acoes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
 .credo-vista-item:last-child{border-bottom:none}
 .credo-vista-item .cv-desc{flex:1;color:var(--text-faint);font-weight:500}
 .credo-vista-item .cv-valor{color:var(--text);font-weight:700}
@@ -1110,20 +1103,11 @@ body:has(.modal-overlay.active){overflow:hidden}
 .hm-cartao.on .hm-nome{color:var(--latao)}.hm-cartao.on .hm-legenda{color:var(--graf-dim)}
 .hm-cartao.on .hm-sobra.neg{color:#f0a08c}
 .hm-det-tit{margin-bottom:6px;font-weight:600}
-.hm-mes{border-top:1px solid var(--line)}
-.hm-mes:first-child{border-top:none}
-.hm-mes summary{list-style:none;padding:14px 0;cursor:pointer}
-.hm-mes summary::-webkit-details-marker{display:none}
-.hm-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
 .hm-nome{font-size:14.5px;font-weight:700;color:var(--text)}
 .hm-nome small{margin-left:4px;font-size:12px;font-weight:600;color:var(--gold-dim)}
 .hm-sobra{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
 .hm-sobra.pos,.hm-comp.pos{color:var(--success)}
 .hm-sobra.neg,.hm-comp.neg{color:var(--danger)}
-.hm-barras{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
-.hm-barra{min-width:2px;height:6px;border-radius:99px}
-.hm-barra.entra{background:var(--success)}
-.hm-barra.sai{background:var(--danger);opacity:.75}
 .hm-legenda{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text-faint)}
 .hm-legenda b{color:var(--text-dim);font-variant-numeric:tabular-nums}
 .hm-comp{margin-left:auto;font-weight:700}
@@ -1541,16 +1525,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .seg-sair{color:var(--danger)}
 #segEmailAtual{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* imagem de fundo: quanto ela aparece */
-.fundo-forca{margin:12px 0 6px}
-.fundo-forca-topo{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:12.5px;color:var(--text-dim)}
-.fundo-forca-topo b{font-size:13px;color:var(--text);font-variant-numeric:tabular-nums}
-.fundo-barra{width:100%;height:6px;margin:6px 0;border-radius:999px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background:linear-gradient(to right,var(--gold) 0,var(--gold) var(--p,22%),var(--line) var(--p,22%),var(--line) 100%)}
-.fundo-barra::-webkit-slider-thumb{width:24px;height:24px;border:2px solid var(--gold);border-radius:50%;background:var(--card);box-shadow:0 2px 8px rgba(28,25,23,.18);-webkit-appearance:none;appearance:none;transition:transform .15s var(--mola)}
-.fundo-barra:active::-webkit-slider-thumb{transform:scale(1.15)}
-.fundo-barra::-moz-range-thumb{width:22px;height:22px;border:2px solid var(--gold);border-radius:50%;background:var(--card);box-shadow:0 2px 8px rgba(28,25,23,.18)}
-.fundo-forca-pontas{display:flex;justify-content:space-between;margin-top:2px;font-size:12px;color:var(--text-faint)}
-.fundo-acoes{display:flex;align-items:center;gap:12px;margin-top:8px}
-.fundo-acoes .btn{cursor:pointer}
 
 /* ===== ENTRAR (e-mail e senha / PIN) ===== */
 /* entrada (v12, escolha A): mármore, saudação com o nome, teclado claro */
@@ -1564,7 +1538,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .login-input:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-tint)}
 .login-senha{position:relative}
 .login-senha .login-input{padding-right:48px}
-.login-pin-email{margin:4px 0 14px;text-align:center}
 .login-olho{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:38px;height:38px;padding:0;border:none;border-radius:50%;background:none;color:var(--text-faint);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .login-olho:hover{background:var(--primary-tint);color:var(--text)}
 .login-erro{min-height:16px;font-size:12.5px;color:var(--danger)}
@@ -1703,7 +1676,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .drive-whats svg{width:40px;height:40px}
 .drive-whats:active{transform:scale(.9)}
 .drive-whats-dica{text-align:center;border-bottom:none}
-.cu-drive{display:flex;align-items:center;justify-content:center;gap:6px}
 /* Comparar com o original (louvor-comparar.js): celular = abas Original / No app; computador = lado a lado */
 .lvcmp{padding-bottom:var(--s5)}
 .lvcmp-abas{margin-bottom:var(--s2)}
@@ -1879,8 +1851,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-barra-btn:hover{background:var(--card-2)}
 .lv-barra-btn svg{flex-shrink:0;color:var(--text-dim)}
 .lv-barra-btn .accordion-chevron{transition:transform .25s var(--mola)}
-.lv-barra-btn.primario{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
-.lv-barra-btn.primario svg{color:#fff}
 .lv-barra-btn.lv-btn-pdf,.lv-btn-pdf{width:38px;padding:0}
 .lv-barra-dir{display:flex;align-items:center;gap:8px}
 @media(max-width:420px){ .lv-barra-btn{padding:0 11px;font-size:12.5px} }
@@ -1948,11 +1918,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-pdf-preview.editando [contenteditable]:focus{outline:2px solid var(--gold);outline-offset:1px;background:#f3f7ff}
 .lv-pdf-preview.editando .lv-linha.olhar{border-radius:3px;background:#fff1a8}
 /* aba Música: folha (padrão) ou texto (lvModoTexto) */
-#lvPanelEdicao[data-modo="folha"] .lv-editor-wrap,
-#lvPanelEdicao[data-modo="folha"] .lv-title-input,
-#lvPanelEdicao[data-modo="folha"] .lv-artist-input,
-#lvPanelEdicao[data-modo="texto"] .lv-pdf-wrap,
-#lvPanelEdicao[data-modo="texto"] .lv-config{display:none !important}
+#lvPanelEdicao[data-modo="folha"] .lv-editor-wrap,#lvPanelEdicao[data-modo="folha"] .lv-title-input,#lvPanelEdicao[data-modo="folha"] .lv-artist-input,#lvPanelEdicao[data-modo="texto"] .lv-pdf-wrap,#lvPanelEdicao[data-modo="texto"] .lv-config{display:none !important}
 #lvPanelEdicao .lv-barra{justify-content:flex-start}
 #lvPanelEdicao .lv-barra-dir{margin-left:auto}
 /* nome de cada música dentro do medley, na folha */
@@ -2025,22 +1991,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lvn-kicker{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#d9c48a}
 .lvn-hero h2{margin:6px 0 8px;font-family:var(--font-display);font-size:42px;font-weight:800;line-height:1;letter-spacing:-.01em;color:#fff}
 .lvn-hero p{max-width:440px;margin:0 0 20px;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.75)}
-.lvn-opcoes{display:grid;gap:10px}
-@media(min-width:600px){ .lvn-opcoes{grid-template-columns:1fr 1fr} }
-.lvn-op{position:relative;display:flex;align-items:center;gap:14px;width:100%;padding:16px;border:1px solid var(--noite-line);border-radius:var(--radius-md);background:rgba(255,255,255,.055);color:var(--noite-tx);font:inherit;text-align:left;cursor:pointer;transition:transform .3s var(--mola),background .25s var(--ease),border-color .25s var(--ease),box-shadow .25s var(--ease)}
-.lvn-op:hover{transform:translateY(-2px);background:rgba(255,255,255,.085);border-color:rgba(255,255,255,.2);box-shadow:0 14px 30px -16px rgba(0,0,0,.6)}
-.lvn-op:active{transform:scale(.98)}
-.lvn-op-ico{width:46px;height:46px;flex-shrink:0;border-radius:15px;background:linear-gradient(140deg,var(--gold),var(--brilho-suave));color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -8px rgba(111,191,150,.7),inset 0 1px 0 rgba(255,255,255,.25)}
-.lvn-op-medley .lvn-op-ico{background:linear-gradient(140deg,#7a4a2a,#e0a46a);box-shadow:0 8px 20px -8px rgba(224,164,106,.6),inset 0 1px 0 rgba(255,255,255,.25)}
-.lvn-op-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.lvn-op-txt b{font-size:15.5px;font-weight:600;letter-spacing:-.01em}
-.lvn-op-txt small{font-size:12px;line-height:1.4;color:rgba(250,250,249,.55)}
-.lvn-op-seta{flex-shrink:0;color:rgba(250,250,249,.45)}
-.lvn-op-ia{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;background:var(--brilho-tint);color:#a7f3d0;font-size:11px;font-weight:600;letter-spacing:.04em}
-.lvn-op-ia i{width:6px;height:6px;border-radius:50%;background:var(--brilho);box-shadow:0 0 8px var(--brilho);animation:piscar 1.6s steps(2) infinite}
-.lvn-op-ia.sem{background:rgba(255,255,255,.08);color:rgba(250,250,249,.55)}
-.lvn-op-ia.sem i{background:#a8a29e;box-shadow:none;animation:none}
-#pageLouvorForm.importando .lvn-op{opacity:.4;pointer-events:none}
 .lvn-form{padding:20px;border:none;border-radius:var(--radius);background:var(--card);box-shadow:var(--sombra-card)}
 .lvn-form.preenchido{animation:lvnPreenchido 1.2s var(--ease)}
 .lvn-form-topo{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px;margin-bottom:16px}
@@ -2156,12 +2106,12 @@ body:has(.modal-overlay.active){overflow:hidden}
 
 /* ---------- botões de ícone (v12, escolha C): o ícone num círculo com contorno fino, como os atalhos ----------
    O nome aparece segurando (title/aria-label). Fechar da janela, setinhas de abrir e a barra da música ficam sem contorno. */
-.section-toggle,.lv-filtro-toggle,.modal-close,.lv-barra-btn:not(.primario){border:none !important;border-radius:0;background:none !important;box-shadow:none !important}
-.section-add,.voz-btn,.btn-icon-sm,.lv-icone-btn,.cu-data-seta,.pano-nav-btn,.ico-btn{border:1px solid color-mix(in srgb,currentColor 32%,transparent) !important;border-radius:999px !important;background:none !important;box-shadow:none !important}
-.ico-btn,.lv-icone-btn,.section-add,.pano-nav-btn,.cu-data-seta,.voz-btn{min-width:34px;height:34px}
+.section-toggle,.lv-filtro-toggle,.modal-close{border:none !important;border-radius:0;background:none !important;box-shadow:none !important}
+.section-add,.btn-icon-sm,.lv-icone-btn,.cu-data-seta,.pano-nav-btn,.ico-btn{border:1px solid color-mix(in srgb,currentColor 32%,transparent) !important;border-radius:999px !important;background:none !important;box-shadow:none !important}
+.ico-btn,.lv-icone-btn,.section-add,.pano-nav-btn,.cu-data-seta{min-width:34px;height:34px}
 .btn-icon-sm{width:28px;height:28px}
-.section-add,.voz-btn,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.pano-nav-btn,.ico-btn{color:var(--text-dim)}
-.section-add:hover,.voz-btn:hover,.btn-icon-sm:hover,.lv-icone-btn:hover,.lv-filtro-toggle:hover,.cu-data-seta:hover,.pano-nav-btn:hover,.ico-btn:hover{color:var(--text)}
+.section-add,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.pano-nav-btn,.ico-btn{color:var(--text-dim)}
+.section-add:hover,.btn-icon-sm:hover,.lv-icone-btn:hover,.lv-filtro-toggle:hover,.cu-data-seta:hover,.pano-nav-btn:hover,.ico-btn:hover{color:var(--text)}
 .lv-filtro-toggle.active{color:var(--text)}
 .lv-icone-btn.ativo,.lv-icone-btn[aria-pressed="true"]{color:var(--gold)}
 /* botão de ícone genérico (substitui os botões com texto) */
@@ -2169,7 +2119,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 .ico-btn:active{transform:scale(.88)}
 .ico-btn svg{flex-shrink:0}
 .ico-btn.perigo{color:var(--danger)}
-.ico-btn .ico-num{font-size:11px;color:var(--text-faint)}
 .ico-linha{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:10px}
 .ico-btn.ativo,.btn-icon-sm.ativo{color:var(--gold)}
 .ct-toggle-compras.ico-btn{display:flex;width:auto;margin:6px auto 0;padding:0 8px}
@@ -2195,7 +2144,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 @media(min-width:640px){ .modal{animation:modalPop .35s var(--mola)} }
 .toast.show{transition:opacity .25s var(--ease),transform .45s cubic-bezier(.2,1.3,.4,1)}
 /* toque: tudo que é botão afunda um pouco */
-.btn:active,.dash-tab:active,.user-tab:active,.nav-item:active,.header-btn:active,.resumo-link:active,.resumo-btn:active,.dif-chip:active,.btn-icon-sm:active,.lv-rot-check:active,.voz-btn:active,.voz-mic:active,.section-add:active,.lv-barra-btn:active,.filter-chip:active,.inclui-chip:active,.lv-icone-btn:active,.lv-filtro-toggle:active{transform:scale(.96)}
+.btn:active,.dash-tab:active,.user-tab:active,.nav-item:active,.header-btn:active,.resumo-btn:active,.dif-chip:active,.btn-icon-sm:active,.voz-mic:active,.section-add:active,.lv-barra-btn:active,.filter-chip:active,.inclui-chip:active,.lv-icone-btn:active,.lv-filtro-toggle:active{transform:scale(.96)}
 /* cartões entrando um depois do outro (efeitoEntradaCartoes) */
 .efeito-entra{animation:efeitoEntra .7s var(--mola) both;animation-delay:calc(var(--i,0) * 60ms)}
 /* "feito": anel que abre + ✓ no ponto do toque */
@@ -2345,7 +2294,6 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-colar-item.perguntando{background:none}
 .cu-colar-item.no-medley .cu-colar-ico:not(.ok):not(.erro):not(.gira){font-size:11px;font-weight:700;color:var(--text-dim)}
 .cu-md-txt{min-width:0}
-.cu-md-ordem{flex-shrink:0;min-height:36px;padding:6px 12px;font-size:12.5px}
 
 /* Culto (v9.9): cada parte num bloco de cor pastel; entra com animação só ao abrir/trocar a data */
 .cu-parte.entra{animation:surgir .35s var(--mola) both;animation-delay:calc(var(--i,0) * 40ms)}
@@ -2421,23 +2369,6 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 .atz-msg.pensando i:nth-child(2){animation-delay:.15s}.atz-msg.pensando i:nth-child(3){animation-delay:.3s}
 .atz-msg.pensando span{margin-left:6px;font-size:12px}
 @keyframes atzPonto{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
-.atz-confs{display:flex;flex-direction:column;gap:10px;margin:6px 0}
-.atz-conf{padding:10px 12px;border-radius:12px;background:#f3e3d9}
-.atz-conf.ok{background:#e2ead8}
-.atz-conf>b{display:block;margin-bottom:2px;font-size:13.5px}
-.atz-conf .atz-linha{padding:4px 0;border-color:rgba(43,38,32,.1);font-size:13px}
-.atz-conf .atz-linha:last-child{border-bottom:none}
-.atz-grupo{margin-bottom:6px}
-.atz-grupo>span{display:block;margin:10px 0 2px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}
-.atz-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
-.atz-item>div{flex:1;min-width:0;display:flex;flex-direction:column}
-.atz-item b{font-size:14px;font-weight:600}
-.atz-item small{font-size:12px;color:var(--text-faint)}
-.atz-item small em{font-style:normal;font-weight:700;color:var(--danger)}
-.atz-item.falta{background:linear-gradient(90deg,rgba(176,72,58,.07),transparent)}
-.atz-acoes{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
-.atz-acoes .btn{min-width:150px}
-.atz-acoes .btn:disabled{opacity:.45}
 /* barra de baixo: microfone, texto e enviar */
 .atz-barra{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + var(--safe));border-top:1px solid var(--line);background:var(--bg)}
 .atz-barra textarea{flex:1;min-height:44px;max-height:140px;padding:11px 16px;border:1px solid var(--graf);border-radius:22px;background:var(--graf);color:var(--graf-tx);font:inherit;font-size:15px;line-height:1.4;resize:none}
@@ -2475,9 +2406,7 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
   .atz-cartao-topo b:first-child{font-size:16px}
   .atz-cortar .atz-dica{padding:12px 0}
   /* conversa: o chat de um lado, o que vai entrar e as conferências do outro */
-  #atzConversa.com-lado{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:36px;align-items:start}
   #atzConversa .atz-msg{max-width:78%}
-  .atz-lado{position:sticky;top:0;padding-top:12px}
   .atz-barra{padding-left:32px;padding-right:32px}
 }
 @media(min-width:1024px) and (max-width:1279px){
@@ -2486,7 +2415,6 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 }
 .lv-links-cifra{display:contents}
 .lv-link-cifra img{display:block;width:20px;height:20px;border-radius:5px}
-.atz-conf-dica{margin-top:6px;font-size:13px;line-height:1.4;color:var(--text)}
 .atz-naolembro{margin-top:6px;font-size:12.5px;text-align:left}
 /* resposta da IA: frase curta + lista do que entrou (cada compra numa linha) + o que falta */
 .atz-msg.ia{white-space:normal;min-width:min(260px,88%)}
@@ -2499,8 +2427,6 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 .atz-msg-lista li>b{font-weight:600;font-variant-numeric:tabular-nums}
 .atz-msg-lista li>small{grid-column:1 / -1;padding-left:12px;font-size:12px;color:var(--text-faint)}
 .atz-msg-lista.tirados li>span,.atz-msg-lista.tirados li>b{text-decoration:line-through;color:var(--text-faint)}
-.atz-msg-conta{margin-top:8px;padding:7px 10px;border-radius:10px;background:#f3e3d9;font-size:13px;font-weight:600;line-height:1.4}
-.atz-msg-conta.ok{background:#e2ead8}
 /* Assistente v13.3: conversa (A) + painel escondido em "Detalhes" (B), ✓ por item, gravação de áudio */
 .atz-placa{position:sticky;top:0;z-index:3;display:flex;flex-direction:column;gap:8px;margin:4px 0 0;padding:11px 14px 10px;border-radius:16px;background:var(--graf);color:var(--graf-tx);box-shadow:0 6px 18px rgba(20,22,26,.12)}
 .atz-placa-topo{display:flex;align-items:center;gap:12px}

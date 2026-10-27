@@ -1,0 +1,55 @@
+# Publica o Siloé no GitHub Pages SÓ se os testes passarem.
+# 1) confere se todo .js abre sem erro de digitação; 2) roda os testes num Chrome sem tela; 3) publica.
+# Se algo falhar, o site continua na versão anterior.
+name: Testar e publicar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Conferir se os arquivos .js abrem sem erro
+        run: for f in *.js; do node --check "$f" || exit 1; done
+      - name: Instalar o Chrome dos testes
+        run: npm install --no-save --no-package-lock puppeteer@23.11.1
+      - name: Rodar os testes
+        run: |
+          python3 -m http.server 5500 >/dev/null 2>&1 &
+          sleep 2
+          node testes/rodar.mjs
+
+  publicar:
+    needs: testar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Separar só os arquivos do app
+        run: |
+          mkdir _site
+          rsync -a --exclude='.git' --exclude='.github' --exclude='testes' --exclude='_site' --exclude='node_modules' ./ _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
