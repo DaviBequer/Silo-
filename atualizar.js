@@ -27,7 +27,7 @@ function atzTrocarAba(a){ atzAba = a; renderAtualizar(); }
 function renderAtualizar(rolar){
   document.querySelectorAll('#atzAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.aba === atzAba));
   document.getElementById('atzResumo').style.display = atzAba === 'resumo' ? '' : 'none';
-  document.getElementById('atzConversa').style.display = atzAba === 'conversa' ? '' : 'none';
+  document.getElementById('atzConversa').style.display = atzAba === 'resumo' ? 'none' : '';
   const n = atzItens.filter(i=>i.tipo !== 'fatura').length;
   document.getElementById('atzAbaConversaN').textContent = n ? n : '';
   if(atzAba === 'resumo') atzRenderResumo(); else atzRenderConversa(null, rolar);
@@ -180,7 +180,7 @@ function atzCortarHtml(){
 /* ---------- aba Conversa ---------- */
 const ATZ_ESQUEMA = { type:'object', properties:{
   transcricao:{ type:'string', description:'Se a última fala veio em ÁUDIO: o que a pessoa disse, escrito certinho (valores em algarismos, nomes de banco/cartão como na lista). Se veio em texto: repita o texto.' },
-  resposta:{ type:'string', description:'UMA frase curta (até 15 palavras). Não liste os itens nem repita valores: o app mostra a lista. Só pergunte o que estiver faltando de verdade (banco ou cartão quando há mais de um, parcelas, valor confuso); se não falta nada, algo como "Anotado."' },
+  resposta:{ type:'string', description:'Curtíssima: só "Anotado." (ou "Corrigido.", "Tirei."). O app mostra tudo na tela: não liste itens nem valores. Só quando faltar algo de verdade (banco ou cartão quando há mais de um, parcelas, valor confuso) faça UMA pergunta curta.' },
   aprendidos:{ type:'array', description:'Quando a pessoa ensinar a categoria de um nome ("Top é mercado", "120 no Top, mercado"): {nome, categoria}. Vazio se não ensinou nada.', items:{ type:'object', properties:{
     nome:{ type:'string' }, categoria:{ type:'string', description:'uma categoria exata da lista' }
   }, required:['nome','categoria'] } },
@@ -307,7 +307,7 @@ async function atzEnviarAudio(blob, dur){
   if(atzOcupado || !atzTemIA()) return;
   const msg = { quem:'eu', voz: true, dur, texto:'' };
   atzConversa.push(msg);
-  atzAba = 'conversa'; atzOcupado = true; renderAtualizar(); atzRenderConversa('Ouvindo o áudio…', true);
+  if(atzAba === 'resumo') atzAba = 'conversa'; atzOcupado = true; renderAtualizar(); atzRenderConversa('Ouvindo o áudio…', true);
   let audio;
   try{ audio = await atzAudioParaEnviar(blob); }
   catch(e){
@@ -320,7 +320,7 @@ async function atzEnviarAudio(blob, dur){
 }
 /* manda a fala (texto ou áudio) com o contexto do app; a IA devolve a lista inteira */
 async function atzPerguntar(msg, audio){
-  atzAba = 'conversa'; atzOcupado = true; renderAtualizar(); atzRenderConversa(audio ? 'Ouvindo o áudio…' : 'Entendendo…', true);
+  if(atzAba === 'resumo') atzAba = 'conversa'; atzOcupado = true; renderAtualizar(); atzRenderConversa(audio ? 'Ouvindo o áudio…' : 'Entendendo…', true);
   try{
     const historico = atzConversa.filter(m=>m !== msg).slice(-16).map(m=>(m.quem === 'eu' ? 'Pessoa: ' : 'Você: ') + m.texto).join('\n')
       + '\nPessoa: ' + (audio ? '[a fala está no ÁUDIO anexado]' : msg.texto);
@@ -342,6 +342,8 @@ async function atzPerguntar(msg, audio){
       `O app já pergunta o que falta explicar (fatura e saldo): não repita esses valores. Quando a pessoa contar o que gastou para explicar a diferença, lance como pix (banco) ou vista (cartão). ` +
       `Se ela disser que não lembra o resto ("não sei", "o resto não lembro"), lance um pix "Gasto não identificado" (categoria Outros) no banco com o valor que falta (diferenca do contexto, em positivo), ou uma vista "Compra não identificada" no cartão com faltaParaBater. ` +
       `A pessoa pode corrigir ou tirar itens ("tira a farmácia", "o mercado foi 130"): devolva sempre a lista completa já corrigida. Não invente itens.\n\n` +
+      (atzAba === 'passo' && atzPassos()[atzPassoI] ? `O APP PERGUNTOU À PESSOA: "${atzPassoPergunta(atzPassos()[atzPassoI])}" (a fala responde isso).
+` : '') +
       `CONTEXTO: ${JSON.stringify(atzContexto())}\n\nLISTA ATUAL: ${JSON.stringify(atzItensParaIA())}\n\nCONVERSA:\n${historico}` }];
     if(audio) partes.push({ type:'audio', data: audio.b64, mime_type: audio.mime });
     const r = await lviPerguntarIA(partes, t=>atzRenderConversa(t), ATZ_ESQUEMA, true);
@@ -392,20 +394,118 @@ function atzDuplicados(){
     return { curto: `já lançado em ${dia(h.quando)}`, texto: `${i.descricao || 'Item'} ${fmtMoney(i.valor)} parece repetido: já tem "${h.desc}" de ${fmtMoney(h.valor)} no ${h.onde}, lançado em ${dia(h.quando)}. Se for outra compra, confirme.` };
   });
 }
-/* um item com o círculo de confirmar, a categoria (toque troca) e o × */
+/* ícones do Assistente (traço fino, como o resto do app): tipo = como pagou; categoria = o que comprou */
+const ATZ_ICO_TIPO = {
+  vista:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 14.5h3"/>',
+  parcelada:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M9 6v12M15 6v12" stroke-dasharray="2 2"/><path d="M3.8 7h4.4v10H3.8z" fill="currentColor" stroke="none" opacity=".35"/>',
+  pix: FIN_ICO.pix,
+  recebi:'<rect x="2.5" y="6.5" width="19" height="11" rx="2"/><circle cx="12" cy="12" r="2.3"/><path d="M6 10v4M18 10v4"/>',
+  conta:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="m9 11 2 2 4-4"/>',
+  saldo:'<path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.7 10v8M14.3 10v8M19 10v8M3 20h18"/>',
+  fatura:'<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>'
+};
+const ATZ_ICO_CAT = [
+  [/mercad|supermerc|atacad|feira/, '<path d="M3 4h2l2.2 11h10.6L20 7H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/><path d="M9 7.5V5h3v2.5M13.5 7.5V4h3.5v3.5"/>'],
+  [/farm|saude|remed|medic|hospital/, '<rect x="3.5" y="8.5" width="17" height="7" rx="3.5" transform="rotate(-40 12 12)"/><path d="m9.3 9.3 5.4 5.4" transform="rotate(5 12 12)"/>'],
+  [/combust|gasolin|posto/, '<path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M4 21h12M7.5 7h5"/><path d="M15 10h1.5a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 0 3 0V8.5L18 6"/>'],
+  [/aliment|restaur|lanche|comida|padaria|ifood|delivery/, '<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 21V3c-2 1.5-3 4-3 7h3"/>'],
+  [/transp|uber|onibus|carro|estacion/, '<path d="M5 16V11l2-5h10l2 5v5M3 16h18v2H3z"/><circle cx="7.5" cy="13" r=".8"/><circle cx="16.5" cy="13" r=".8"/>'],
+  [/lazer|cinema|stream|diver/, '<circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z"/>'],
+  [/roupa|vest|calcad/, '<path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 4.5 8 3z"/>'],
+  [/casa|morad|aluguel/, '<path d="M3 11 12 4l9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5"/>']
+];
+const ATZ_ICO_OUTROS = '<circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/>';
+const atzSvg = (d, t)=>`<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+function atzIcoCategoria(cat){ const n = vozSemAcento(cat); const a = ATZ_ICO_CAT.find(([re])=>re.test(n)); return a ? a[1] : ATZ_ICO_OUTROS; }
+/* círculo do item: com categoria = o que comprou + selinho de como pagou; sem categoria = o tipo */
+function atzIcoItem(i, t){
+  const temCat = ['vista','pix'].includes(i.tipo);
+  return `<span class="atz-ci">${atzSvg(temCat ? atzIcoCategoria(i.categoria) : ATZ_ICO_TIPO[i.tipo], t || 17)}${temCat ? `<span class="atz-ci-sel">${atzSvg(ATZ_ICO_TIPO[i.tipo], 9)}</span>` : ''}</span>`;
+}
+/* um item (estilo R2): círculo de confirmar, ícone, nome, "categoria · cartão" (toque na categoria troca), valor e × */
 function atzItemHtml(i, k, dup){
   const falta = atzFaltaNoItem(i), info = !atzGravavel(i);
   const cats = ['vista','pix'].includes(i.tipo) ? vozCategoriasCartao() : null;
-  const onde = [ATZ_TIPOS[i.tipo], i.tipo === 'conta' ? '' : (i.cartaoNome || i.bancoNome), i.tipo === 'parcelada' ? i.parcelas + 'x de ' + fmtMoney(i.valor / i.parcelas) : '', i.proximaFatura ? 'próxima fatura' : ''].filter(Boolean).join(' · ');
+  const onde = [i.tipo === 'pix' ? 'Pix ' + i.bancoNome : ['vista','parcelada','fatura'].includes(i.tipo) ? (i.cartaoNome ? 'Cartão ' + i.cartaoNome : '') : i.bancoNome,
+    i.proximaFatura ? 'próxima fatura' : ''].filter(Boolean).join(' · ');
   const nome = i.descricao || (i.tipo === 'saldo' ? 'Saldo' : i.tipo === 'fatura' ? 'Fatura' : 'Item');
-  const cat = cats ? `<label class="atz-cat${i.duvida ? ' duv' : ''}" title="Trocar a categoria">${escBanco(i.categoria || 'Outros')}${i.duvida ? '?' : ''}<select aria-label="Categoria" onchange="atzTrocarCategoria(${k}, this.value)">${cats.map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>` : '';
+  const cat = cats ? `<label class="atz-cat${i.duvida ? ' duv' : ''}" title="Trocar a categoria">${escBanco(i.categoria || 'Outros')}${i.duvida ? '?' : ''}<select aria-label="Categoria" onchange="atzTrocarCategoria(${k}, this.value)">${cats.map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>`
+    : i.tipo === 'parcelada' ? `<span>${i.parcelas}x de ${fmtMoney(i.valor / i.parcelas)}</span>` : `<span>${escBanco(ATZ_TIPOS[i.tipo])}</span>`;
   return `<div class="atz-it${i.ok && !falta ? ' ok' : ''}${falta ? ' falta' : ''}${info ? ' info' : ''}${dup ? ' dup' : ''}">
     ${info ? '<span class="atz-chk" title="Valor que você viu no banco">i</span>'
       : `<button type="button" class="atz-chk" ${falta ? 'disabled' : ''} title="${falta ? 'Responda antes: ' + falta : i.ok ? 'Desmarcar' : 'Confirmar'}" aria-label="${i.ok ? 'Desmarcar' : 'Confirmar'}" aria-pressed="${!!i.ok}" onclick="atzConfirmar(${k})">${ATZ_ICO_OK}</button>`}
-    <div class="atz-it-txt"><b>${escBanco(nome)}${cat}</b><small>${escBanco(onde)}${falta ? ` <em>${falta}</em>` : ''}${dup ? ` <em class="atz-dup" title="${escBanco(dup.texto)}">${escBanco(dup.curto)}</em>` : ''}</small></div>
+    ${atzIcoItem(i)}
+    <div class="atz-it-txt"><b>${escBanco(nome)}</b><small>${cat}${onde ? ' · ' + escBanco(onde) : ''}${falta ? ` <em>${falta}</em>` : ''}${dup ? ` <em class="atz-dup" title="${escBanco(dup.texto)}">${escBanco(dup.curto)}</em>` : ''}</small></div>
     <b class="atz-valor">${fmtMoney(i.valor)}</b>
     <button type="button" class="ico-btn atz-tirar" aria-label="Tirar" title="Tirar" onclick="atzTirarItem(${k})">${CU_ICO.x}</button>
   </div>`;
+}
+/* faixa do alto: total grande, quanto foi para cada categoria (barra + valor + %) e os itens bem pequenos */
+const ATZ_CORES = ['#c9a86a','#8fb3a0','#d39a7a','#a3a9cf','#c7b4d6','#9cc3cf','#d8c38f','#b9a48f'];
+let atzFaixaMin = false;
+function atzFaixaHtml(){
+  const gastos = atzItens.filter(i=>['vista','parcelada','pix','conta'].includes(i.tipo));
+  const total = gastos.reduce((s, i)=>s + i.valor, 0);
+  const gravaveis = atzItens.filter(atzGravavel), ok = gravaveis.filter(atzConfirmado).length;
+  const porCat = {};
+  gastos.forEach(i=>{ const c = i.tipo === 'parcelada' ? 'Parcelado' : i.tipo === 'conta' ? 'Contas' : (i.categoria || 'Outros'); porCat[c] = (porCat[c] || 0) + i.valor; });
+  const cats = Object.entries(porCat).sort((a, b)=>b[1] - a[1]).map(([c, v], n)=>({ c, v, cor: ATZ_CORES[n % ATZ_CORES.length], p: total ? Math.round(v / total * 100) : 0 }));
+  const outros = atzItens.filter(i=>!gastos.includes(i));
+  return `<div class="atz-placa${atzFaixaMin ? ' min' : ''}">
+    <div class="atz-placa-topo">
+      <button type="button" class="atz-placa-info" onclick="atzFaixaAlternar()" aria-expanded="${!atzFaixaMin}"><span>Nesta conversa</span><b>${fmtMoney(total)}</b><small>${gravaveis.length ? `${gravaveis.length} ${gravaveis.length === 1 ? 'item' : 'itens'} · ${ok} confirmado${ok === 1 ? '' : 's'}` : 'nada anotado ainda'}</small></button>
+      <div class="atz-placa-acoes">
+        <button type="button" class="atz-tg${atzDetalhes ? ' on' : ''}" role="switch" aria-checked="${atzDetalhes}" onclick="atzDetalhesAlternar()"><i></i>Detalhes</button>
+        ${gravaveis.length ? `<button type="button" class="btn atz-gravar" ${ok ? '' : 'disabled'} onclick="atzGravar()">${ok ? 'Gravar ' + ok : 'Gravar'}</button>` : ''}
+      </div>
+    </div>
+    ${!atzFaixaMin && cats.length ? `<div class="atz-fx-barra">${cats.map(x=>`<i style="width:${Math.max(2, x.v / total * 100)}%;background:${x.cor}"></i>`).join('')}</div>
+      <div class="atz-fx-cats">${cats.map(x=>`<span><em style="background:${x.cor}"></em>${escBanco(x.c)} <b>${fmtMoney(x.v)}</b> <small>${x.p}%</small></span>`).join('')}</div>` : ''}
+    ${!atzFaixaMin && atzItens.length ? `<div class="atz-fx-its">${[...gastos, ...outros].map(i=>`<span class="atz-fx-it${i.ok ? ' ok' : ''}">${atzIcoItem(i, 10)}${escBanco(i.descricao || ATZ_TIPOS[i.tipo])} <b>${fmtMoney(i.valor)}</b></span>`).join('')}</div>` : ''}
+  </div>`;
+}
+function atzFaixaAlternar(){ atzFaixaMin = !atzFaixaMin; atzRenderConversa(); }
+
+/* ---------- passo a passo: o app pergunta banco por banco, cartão por cartão e as contas ---------- */
+let atzPassoI = 0;
+function atzPassos(){
+  const p = bancosDoUsuario().map(b=>({ tipo:'banco', id: b.id, nome: b.nome }));
+  (state.cartoesTracker || []).forEach(c=>p.push({ tipo:'cartao', id: c.id, nome: c.nome }));
+  if(vozContasAbertas().length) p.push({ tipo:'contas' });
+  return p;
+}
+function atzPassoPergunta(p){
+  if(!p) return '';
+  if(p.tipo === 'banco') return `Quanto está o saldo do ${p.nome} agora? Se gastou algo nele (Pix, débito), fale também.`;
+  if(p.tipo === 'cartao'){ const c = (state.cartoesTracker || []).find(x=>x.id === p.id); return `Quanto está a fatura aberta do ${p.nome}${c ? ' (' + monthLabel(faturaAbertaMes(c)) + ')' : ''}? Fale também as compras que ainda não estão no app.`; }
+  return 'Quais destas contas você já pagou? Toque nelas ou fale.';
+}
+function atzPassoHtml(conf){
+  const passos = atzPassos(), p = passos[atzPassoI];
+  if(!passos.length) return '';
+  const barra = `<div class="atz-passo-prog"><i style="width:${Math.min(100, atzPassoI / passos.length * 100)}%"></i></div>`;
+  if(!p) return `<div class="atz-passo">${barra}<b>Pronto, passou por tudo.</b><small>Confira os itens, toque nos círculos e em Gravar.</small>
+    <div class="atz-passo-acoes"><button type="button" class="link-txt" onclick="atzPassoIr(-1)">Voltar</button><button type="button" class="link-txt" onclick="atzPassoIr(-${passos.length})">Começar de novo</button></div></div>`;
+  let st = '';
+  if(p.tipo === 'banco'){ const x = conf.bancos.find(b=>b.b.id === p.id); if(x && x.informado !== null) st = Math.abs(x.dif) < 0.01 ? '<span class="atz-pill ok">bateu ✓</span>' : x.dif < 0 ? `<span class="atz-pill err">faltam ${fmtMoney(-x.dif)}: o que mais saiu?</span> <button type="button" class="link-txt" onclick="atzSemExplicar('banco','${p.id}')">Não lembro</button>` : `<span class="atz-pill err">entrou ${fmtMoney(x.dif)} a mais: recebeu algo?</span>`; }
+  if(p.tipo === 'cartao'){ const x = conf.cartoes.find(c=>c.c.id === p.id); if(x && x.informado !== null) st = Math.abs(x.falta) < 0.01 ? '<span class="atz-pill ok">bateu ✓</span>' : x.falta > 0 ? `<span class="atz-pill err">faltam ${fmtMoney(x.falta)}: que compras faltam?</span> <button type="button" class="link-txt" onclick="atzSemExplicar('cartao','${p.id}')">Não lembro</button>` : `<span class="atz-pill err">passou ${fmtMoney(-x.falta)}: algum valor errado?</span>`; }
+  const chips = p.tipo === 'contas' ? `<div class="atz-passo-chips">${vozContasAbertas().map((c, n)=>{ const tem = atzItens.some(i=>i.tipo === 'conta' && i.conta === c.key);
+    return `<button type="button" class="${tem ? 'on' : ''}" onclick="atzPassoConta(${n})">${escBanco(c.desc)} <small>${fmtMoney(c.valor)}</small></button>`; }).join('')}</div>` : '';
+  return `<div class="atz-passo">${barra}<span class="atz-passo-n">${atzPassoI + 1} de ${passos.length}</span><b>${lvEsc(atzPassoPergunta(p))}</b>${st ? `<div class="atz-passo-st">${st}</div>` : ''}${chips}
+    <div class="atz-passo-acoes">${atzPassoI ? '<button type="button" class="link-txt" onclick="atzPassoIr(-1)">Voltar</button>' : '<span></span>'}<button type="button" class="btn btn-sm" onclick="atzPassoIr(1)">${/bateu/.test(st) ? 'Próximo' : 'Pular'}</button></div></div>`;
+}
+function atzPassoIr(d){ atzPassoI = Math.max(0, Math.min(atzPassos().length, atzPassoI + d)); atzRenderConversa(); }
+/* conta tocada no passo a passo: entra (ou sai) da lista sem passar pela IA */
+function atzPassoConta(n){
+  const c = vozContasAbertas()[n]; if(!c) return;
+  const k = atzItens.findIndex(i=>i.tipo === 'conta' && i.conta === c.key);
+  if(k >= 0) atzItens.splice(k, 1);
+  else {
+    const item = { tipo:'conta', descricao: c.desc, valor: Math.round(Number(c.valor) * 100) / 100, categoria:'', duvida:false, cartaoId:'', cartaoNome:'', bancoId:'', bancoNome:'', parcelas:1, proximaFatura:false, conta: c.key, ok:false };
+    atzItens.push(item);
+    atzConversa.push({ quem:'ia', texto:'Anotado.', novos:[atzChave(item)] });
+  }
+  renderAtualizar(true);
 }
 /* Detalhes: cada cartão e banco mexido (antes → depois, quanto falta) e as contas em aberto */
 function atzDetalhesHtml(conf){
@@ -455,19 +555,15 @@ function atzRenderConversa(pensando, rolar){
         ${atzDetalhes ? (m.contas || []).map(c=>`<div class="atz-msg-conta${/bateu/.test(c) ? ' ok' : ''}">${lvEsc(c)}</div>`).join('') : ''}
       </div>`).join('')
     + (soltos.length ? `<div class="atz-msg ia">${lista(soltos)}</div>` : '');
-  const gravaveis = atzItens.filter(atzGravavel), ok = gravaveis.filter(atzConfirmado).length;
-  const total = atzItens.filter(i=>['vista','parcelada','pix','conta'].includes(i.tipo)).reduce((s, i)=>s + i.valor, 0);
+  const passo = atzAba === 'passo' ? atzPassoHtml(conf) : '';
   el.classList.toggle('det', atzDetalhes);
   el.innerHTML = `
-    <div class="atz-placa">
-      <div class="atz-placa-info"><span>Nesta conversa</span><b>${fmtMoney(total)}</b><small>${gravaveis.length ? `${ok} de ${gravaveis.length} confirmado${ok === 1 ? '' : 's'}` : 'nada anotado ainda'}</small></div>
-      <button type="button" class="atz-tg${atzDetalhes ? ' on' : ''}" role="switch" aria-checked="${atzDetalhes}" onclick="atzDetalhesAlternar()"><i></i>Detalhes</button>
-      ${gravaveis.length ? `<button type="button" class="btn atz-gravar" ${ok ? '' : 'disabled'} onclick="atzGravar()">${ok ? 'Gravar ' + ok : 'Gravar'}</button>` : ''}
-    </div>
+    ${atzFaixaHtml()}
     <div class="atz-corpo">
       ${atzDetalhes ? `<div class="atz-det">${atzDetalhesHtml(conf)}</div>` : ''}
-      <div class="atz-chat"><div class="atz-msgs">${msgs || `<div class="atz-msg ia">Toque no microfone e fale tudo de uma vez, como um áudio. Por exemplo: "gastei 120 no Top no crédito, 45 na farmácia no Pix do Inter e paguei a luz. A fatura do Nubank está 1.850." Cada item aparece aqui com um círculo: toque para confirmar e depois em Gravar.</div>`}
+      <div class="atz-chat"><div class="atz-msgs">${msgs || (passo ? '' : `<div class="atz-msg ia">Toque no microfone e fale tudo de uma vez, como um áudio. Por exemplo: "gastei 120 no Top no crédito, 45 na farmácia no Pix do Inter e paguei a luz. A fatura do Nubank está 1.850." Cada item aparece aqui com um círculo: toque para confirmar e depois em Gravar.</div>`)}
         ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div>
+        ${passo}
         ${atzConversa.length && !pensando ? '<button type="button" class="link-txt atz-limpar" onclick="atzLimpar()">Começar de novo</button>' : ''}</div>
     </div>`;
   /* fala nova: a última mensagem fica logo abaixo da faixa (a resposta inteira à vista) */
@@ -590,7 +686,7 @@ async function atzGravar(){
    O ditado do navegador errava números e nomes de banco e repetia trechos no Android. Agora o app grava (MediaRecorder),
    para sozinho depois de ATZ_SILENCIO ms de silêncio (ou ao tocar de novo) e manda o áudio para o Gemini, que ouve e
    entende junto, sabendo os bancos e cartões. O áudio vira WAV 16 kHz mono (formato que o Gemini sempre aceita). */
-const ATZ_SILENCIO = 2500, ATZ_GRAV_MAX = 180;
+const ATZ_SILENCIO = 1500, ATZ_GRAV_MAX = 180;
 let atzGrav = null;
 async function atzMicrofone(){
   if(atzGrav){ atzGravParar(true); return; }

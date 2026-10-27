@@ -566,6 +566,7 @@ function lviTomSiloe(raiz, menor){
    Sem chave, sem internet ou se a IA falhar: volta para a leitura simples de antes. Trocar de modelo: LVI_IA_MODELO. */
 const LVI_IA_MODELO = 'gemini-3.8-flash';
 const LVI_IA_MODELOS_RESERVA = ['gemini-3.6-flash'];   // grátis também: usado quando o principal está "com muita procura"
+const LVI_IA_MODELO_RAPIDO = 'gemini-3.5-flash-lite';   // Assistente: responde em 2–3 s (o principal leva 4–5); sem "pensar pouco"
 const LVI_IA_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 /* modo fiel: arquivo do Drive que já está no formato certo → importa como está (sem corrigir, juntar nem repetir) */
 let lviModoFiel = false;
@@ -662,10 +663,11 @@ function lviTextoDaRespostaIA(c){
    com a contagem na tela. Só desiste antes se o erro não for passageiro (chave errada etc.). */
 const LVI_IA_ESPERAS = [0, 3, 5, 8, 10, 12, 15];   // segundos antes de cada tentativa (~53 s no total)
 async function lviPerguntarIA(partes, status, esquema, rapido){
-  const modelos = [LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA];
+  /* rapido (Assistente): começa no modelo leve (2–3 s); se falhar, o principal entra na hora, sem esperar */
+  const modelos = rapido ? [LVI_IA_MODELO_RAPIDO, LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA] : [LVI_IA_MODELO, ...LVI_IA_MODELOS_RESERVA];
   let limite = false;
   for(let i = 0; i < LVI_IA_ESPERAS.length; i++){
-    for(let s = LVI_IA_ESPERAS[i]; s > 0; s--){
+    for(let s = rapido && i === 1 ? 0 : LVI_IA_ESPERAS[i]; s > 0; s--){
       if(status) status(`Google ocupado — tentando de novo em ${s} s (tentativa ${i+1} de ${LVI_IA_ESPERAS.length})`);
       await new Promise(r=>setTimeout(r, 1000));
     }
@@ -695,7 +697,7 @@ async function lviPerguntarIAUmaVez(partes, modelo, esquema, rapido){
   if(!chave) throw new Error('sem chave');
   const ctrl = new AbortController(), t = setTimeout(()=>ctrl.abort(), 120000);
   let res, corpo;
-  const comRapido = rapido && !lviSemPensarPouco;
+  const comRapido = rapido && !lviSemPensarPouco && modelo !== LVI_IA_MODELO_RAPIDO;
   try{
     res = await fetch(LVI_IA_URL, {
       method:'POST', signal: ctrl.signal,

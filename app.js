@@ -95,6 +95,12 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.5', itens: [
+    'Assistente: a faixa do alto mostra o total grande, quanto foi para cada categoria (valor e %) e os itens bem pequenos; no computador largo ela fica numa coluna à direita',
+    'Itens com ícone da categoria (carrinho, remédio, garfo…) e um selinho de cartão ou Pix; a IA responde só "Anotado."',
+    'Mais rápido: usa o modelo leve do Google (2 a 3 s) e, se falhar, o de antes; a gravação para com 1,5 s de silêncio',
+    'Nova aba "Passo a passo": pergunta banco por banco, cartão por cartão e as contas pagas'
+  ] },
   { versao: 'v13.4', itens: [
     'Assistente: avisa quando um gasto parece repetido (mesmo valor já lançado no mesmo cartão ou banco, ou falado duas vezes na conversa) e pergunta de novo antes de gravar'
   ] },
