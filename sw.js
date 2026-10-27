@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v139';
-const APP_VERSION = '13.9';
+const CACHE_NAME = 'siloe-cache-v140';
+const APP_VERSION = '14.0';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -8,12 +8,17 @@ const ARQUIVOS = [
   `./supabase.js?v=${APP_VERSION}`,
   `./core.js?v=${APP_VERSION}`,
   `./layout.js?v=${APP_VERSION}`,
+  `./changelog.js?v=${APP_VERSION}`,
   `./app.js?v=${APP_VERSION}`,
+  `./app-recursos.js?v=${APP_VERSION}`,
   `./panorama.js?v=${APP_VERSION}`,
   `./planner.js?v=${APP_VERSION}`,
+  `./voz.js?v=${APP_VERSION}`,
   `./ponto.js?v=${APP_VERSION}`,
   `./louvor.js?v=${APP_VERSION}`,
   `./louvor-extra.js?v=${APP_VERSION}`,
+  `./ia.js?v=${APP_VERSION}`,
+  `./louvor-cifraclub.js?v=${APP_VERSION}`,
   `./louvor-medley.js?v=${APP_VERSION}`,
   `./louvor-comparar.js?v=${APP_VERSION}`,
   `./louvor-culto.js?v=${APP_VERSION}`,

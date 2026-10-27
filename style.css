@@ -2565,3 +2565,5 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 .atz-fat-g summary b{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
 .atz-fat-g .atz-linha{padding:3px 0 3px 10px;font-size:12.5px;border-bottom:none}
 .atz-fat-falta{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(176,72,58,.09);font-size:13px;line-height:1.4}
+/* Cifra Club falhou: outros caminhos */
+.cc-outro{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--text-dim)}

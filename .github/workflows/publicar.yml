@@ -34,6 +34,14 @@ jobs:
           python3 -m http.server 5500 >/dev/null 2>&1 &
           sleep 2
           node testes/rodar.mjs
+      - name: Guardar as fotos das telas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fotos-das-telas
+          path: testes/fotos
+          if-no-files-found: ignore
+          retention-days: 30
 
   publicar:
     needs: testar
