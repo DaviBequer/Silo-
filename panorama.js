@@ -171,8 +171,8 @@ function renderCurvaSaldo(u, mKey){
       <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#c9a86a' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#c9a86a' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
       ${min < 0 ? `<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#d2452f" stroke-opacity=".35" stroke-dasharray="3 4"/>` : ''}
       <path d="${d} L${P[P.length - 1][0]},${H} L${P[0][0]},${H} Z" fill="url(#curvaFundo)"/>
-      <path d="${d}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-      ${P.map((p, i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i === 0 ? 4.5 : 3}" fill="${i === 0 ? '#fff' : cor}" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join('')}
+      <path class="curva-linha" pathLength="1" d="${d}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      ${P.map((p, i)=>`<circle${i === 0 ? ' class="curva-hoje"' : ''} cx="${p[0]}" cy="${p[1]}" r="${i === 0 ? 4.5 : 3}" fill="${i === 0 ? '#fff' : cor}" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join('')}
     </svg>
     <div class="curva-meses">${pts.map(p=>p.m ? `<button type="button" onclick="abrirDetalheAcumulado('${p.m}')"><span>${p.rot}</span><b class="${p.v >= 0 ? 'pos' : 'neg'}">${fmtCompacto(p.v)}</b></button>` : `<span class="curva-hoje"><span>hoje</span><b>${fmtCompacto(p.v)}</b></span>`).join('')}</div>`;
 }

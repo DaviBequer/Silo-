@@ -582,7 +582,7 @@ function renderVersiculo(){
   const el = document.getElementById('versiculoDia');
   if(!el || el.dataset.pronto) return;
   el.dataset.pronto = '1';
-  el.innerHTML = `<p class="vs-texto">${versiculoAtual[0]}</p><span class="vs-ref">${versiculoAtual[1]}</span>`;
+  el.innerHTML = `<p class="vs-texto">${String(versiculoAtual[0]).split(" ").map((w, i)=>`<span class="vs-p" style="--i:${i}">${w}</span>`).join(" ")}</p><span class="vs-ref">${versiculoAtual[1]}</span>`;
   el.onclick = ()=>el.classList.toggle('inteiro');
 }
 

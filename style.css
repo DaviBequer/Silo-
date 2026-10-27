@@ -2638,3 +2638,94 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 @media (prefers-reduced-motion:reduce){
   .placa,.atz-placa,.atalho.escuro span,.atz-placa .atz-gravar,.atz-placa-info b,.ponto-valor-grande,.placa .placa-prev b,.vd-meta-linha > b,.ef-aurora i,.fb-anel::after,.reserva-proj-barra-fill,.atz-msg.pensando::before,.atz-barra .atz-mic.ouvindo::before,.atz-barra .atz-mic.ouvindo::after,.pc-item,.atz-fat,.voz-carregando::after,.atz-msg.ef-nova .atz-it,.lv-rolar-play.ligado,.sino-btn .sino-conta{animation:none!important}
 }
+
+/* ================= Efeitos v14.2 (rodada 2: F1–F20; código em efeitos.js) ================= */
+@property --efg{syntax:'<percentage>';initial-value:100%;inherits:false}
+/* F1 pílula que escorrega na barra de baixo */
+.bottom-nav.com-pilula .nav-item.active{background:none}
+.bottom-nav .nav-item{z-index:1}
+.nav-pilula{position:absolute;z-index:0;border-radius:14px;background:var(--graf);pointer-events:none;transition:left .45s cubic-bezier(.3,1.3,.5,1),top .45s cubic-bezier(.3,1.3,.5,1),width .45s cubic-bezier(.3,1.3,.5,1),height .45s cubic-bezier(.3,1.3,.5,1)}
+/* F2 telas cheias chegam com profundidade */
+.fullpage.active{animation:efTela .5s cubic-bezier(.3,1.15,.5,1) backwards;box-shadow:-18px 0 40px rgba(20,22,26,.12)}
+@keyframes efTela{from{transform:translateX(38px) scale(.985);opacity:.35}}
+/* F3 janelas com o fundo mais desfocado */
+.modal-overlay{backdrop-filter:blur(7px) saturate(.9);-webkit-backdrop-filter:blur(7px) saturate(.9)}
+/* F4 topo de vidro ao rolar */
+.header{transition:box-shadow .25s var(--ease),background-color .25s var(--ease)}
+body.ef-rolou .header{background:rgba(243,242,238,.72);box-shadow:0 1px 0 var(--fio),0 8px 20px rgba(20,22,26,.06)}
+/* F5 puxar para atualizar */
+.ef-puxar{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:300;width:38px;height:38px;margin-left:-19px;display:grid;place-items:center;pointer-events:none;opacity:0;transform:translateY(-40px);transition:opacity .2s}
+.ef-puxar i{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid var(--latao);background:linear-gradient(0deg,var(--latao) var(--efg),rgba(255,255,255,.9) var(--efg))}
+.ef-puxar.solto i{animation:efGotaGira .9s cubic-bezier(.3,1.2,.5,1) infinite}
+@keyframes efGotaGira{to{transform:rotate(315deg)}}
+/* F6 nome da abertura se desenhando */
+.splash-nome span{-webkit-text-stroke:1px currentColor;animation:splashLetra .9s var(--mola) both,efTraco 2s ease both}
+@keyframes efTraco{0%,45%{-webkit-text-fill-color:transparent}100%{-webkit-text-fill-color:currentColor}}
+/* F7 bolinhas do PIN enchem com líquido */
+.pin-pontos i.cheio{background:linear-gradient(0deg,var(--graf) var(--efg),transparent var(--efg))}
+.pin-pontos i.cheio:not(:has(+ i.cheio)){animation:efPinEnche .35s ease}
+@keyframes efPinEnche{from{--efg:0%}}
+/* F8 versículo palavra por palavra */
+.vs-p{animation:efPalavra .55s ease both;animation-delay:calc(var(--i) * 55ms)}
+@keyframes efPalavra{from{opacity:0}}
+/* F9 cartões dos bancos abrindo em leque */
+.ef-leque .cc{animation:efLeque .65s cubic-bezier(.3,1.3,.5,1) both}
+.ef-leque .cc:nth-child(2){animation-delay:.07s}.ef-leque .cc:nth-child(3){animation-delay:.14s}.ef-leque .cc:nth-child(4){animation-delay:.21s}.ef-leque .cc:nth-child(n+5){animation-delay:.28s}
+@keyframes efLeque{from{opacity:0;transform:translateX(-70%) rotate(-9deg) scale(.88)}}
+/* F10 curva do saldo se desenhando + ponto de hoje pulsando */
+.ef-desenha .curva-linha{stroke-dasharray:1;stroke-dashoffset:1;animation:efDesenha 1.6s ease .15s forwards}
+@keyframes efDesenha{to{stroke-dashoffset:0}}
+.curva-hoje{transform-box:fill-box;transform-origin:center;animation:efPontoHoje 2s ease-in-out infinite}
+@keyframes efPontoHoje{50%{transform:scale(1.45)}}
+/* F11 calendarinhos virando a folha */
+.ef-vira .cal{animation:efVira .7s ease both}
+@keyframes efVira{0%{transform:perspective(300px) rotateX(-90deg);opacity:.3}100%{transform:none}}
+/* F12 deslizar para tirar (itens do Assistente) */
+.atz-it{touch-action:pan-y}
+.atz-it.ef-arrasta{transition:none;background:linear-gradient(270deg,rgba(176,72,58,.18),transparent 70%)}
+.atz-it.ef-sai{transition:transform .25s ease,opacity .25s ease;opacity:0}
+/* F13 aviso de Desfazer com o tempo diminuindo */
+.toast.com-acao{overflow:hidden}
+.toast.com-acao::after{content:'';position:absolute;left:0;bottom:0;width:100%;height:3px;background:var(--latao);transform-origin:left;animation:efTempo 6s linear forwards}
+@keyframes efTempo{to{transform:scaleX(0)}}
+/* F14 anel das horas de hoje no Ponto */
+.ponto-placa{position:relative}
+.ef-anel-hoje{position:absolute;right:16px;top:58px;width:68px;height:68px;pointer-events:none}
+.ef-anel-hoje circle.f{transition:stroke-dashoffset 1.6s ease}
+.ef-anel-hoje text{font-family:var(--font-body)}
+@media(max-width:360px){.ef-anel-hoje{display:none}}
+/* F15 números de painel girando (Vendas) */
+.ef-painel{display:inline-flex}
+.ef-painel b{display:inline-block;overflow:hidden;height:1.15em;line-height:1.15em;font-weight:inherit}
+.ef-painel b i{display:block;font-style:normal;animation:efPainel 1.1s cubic-bezier(.2,.9,.3,1) both}
+@keyframes efPainel{from{transform:translateY(-500%)}}
+/* F16 capas das músicas vivas */
+.lv-capa.lou svg{transform-origin:50% 50%;animation:efEqualiza 1.6s ease-in-out infinite}
+@keyframes efEqualiza{50%{transform:scaleY(.72)}}
+.lv-capa.fog svg{transform-origin:50% 100%;animation:efChama 1.8s ease-in-out infinite}
+@keyframes efChama{25%{transform:scale(1.05,.96) rotate(-2deg)}75%{transform:scale(.97,1.05) rotate(2deg)}}
+.lv-capa.har svg{transform-origin:30% 100%;animation:efHarpa 3s ease-in-out infinite}
+@keyframes efHarpa{50%{transform:rotate(-4deg)}}
+/* F17 folha da cifra abrindo */
+#lvPdfWrap.ef-abre{perspective:1200px}
+#lvPdfWrap.ef-abre > *{transform-origin:left center;animation:efFolha .8s cubic-bezier(.3,1.15,.5,1) both}
+@keyframes efFolha{from{transform:rotateY(-55deg);opacity:0}}
+/* F18 tom girando ao trocar */
+#lvTomBoxValor{display:inline-block}
+#lvTomBoxValor.ef-gira{animation:efTomGira .6s cubic-bezier(.3,1.3,.5,1)}
+@keyframes efTomGira{0%{transform:translateY(-110%);opacity:0}100%{transform:none;opacity:1}}
+/* F19 linha do tempo do culto se desenhando */
+.cu-parte.entra{animation-delay:calc(var(--i,0) * 160ms)}
+.cu-parte.entra::before{background:var(--latao);width:2px;transform-origin:top;animation:efLinha .45s ease both;animation-delay:calc(var(--i,0) * 160ms + 200ms)}
+.cu-parte.entra .cu-parte-num{animation:efAcende .6s ease both;animation-delay:calc(var(--i,0) * 160ms)}
+@keyframes efLinha{from{transform:scaleY(0)}}
+@keyframes efAcende{0%{box-shadow:0 0 0 0 rgba(201,168,106,.8)}100%{box-shadow:0 0 0 10px rgba(201,168,106,0)}}
+/* F20 menu do + sai em arco */
+.lv-fab-menu.aberto .lv-fab-op{animation:efArco .55s cubic-bezier(.3,1.35,.5,1) both}
+.lv-fab-menu.aberto .lv-fab-op:nth-child(2){animation-delay:.05s}.lv-fab-menu.aberto .lv-fab-op:nth-child(3){animation-delay:.1s}.lv-fab-menu.aberto .lv-fab-op:nth-child(4){animation-delay:.15s}.lv-fab-menu.aberto .lv-fab-op:nth-child(5){animation-delay:.2s}.lv-fab-menu.aberto .lv-fab-op:nth-child(n+6){animation-delay:.25s}
+@keyframes efArco{0%{opacity:0;transform:translate(34vw,90px) rotate(-28deg) scale(.4)}60%{opacity:1}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .nav-pilula,.fullpage.active,.splash-nome span,.pin-pontos i,.vs-p,.ef-leque .cc,.ef-desenha .curva-linha,.curva-hoje,.ef-vira .cal,.toast.com-acao::after,.ef-painel b i,.lv-capa svg,#lvPdfWrap.ef-abre > *,#lvTomBoxValor,.cu-parte.entra::before,.cu-parte-num,.lv-fab-op{animation:none!important;transition:none!important}
+  .ef-desenha .curva-linha{stroke-dashoffset:0}
+  .splash-nome span{-webkit-text-fill-color:currentColor}
+}
