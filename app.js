@@ -95,6 +95,11 @@ function calcularStorageUsage(){
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v13.6', itens: [
+    'Assistente: toque no nome de um item para editar (nome, valor, categoria, parcelas, cartão ou banco)',
+    'A categoria não vai mais no nome: "mercado Top" vira Top, com a categoria Mercado',
+    'Falou a fatura (ou o saldo): aparece sempre a conferência com tudo o que já está nela (à vista, parcelas, assinaturas e o desta conversa) e quanto falta para chegar no valor do banco'
+  ] },
   { versao: 'v13.5', itens: [
     'Assistente: a faixa do alto mostra o total grande, quanto foi para cada categoria (valor e %) e os itens bem pequenos; no computador largo ela fica numa coluna à direita',
     'Itens com ícone da categoria (carrinho, remédio, garfo…) e um selinho de cartão ou Pix; a IA responde só "Anotado."',

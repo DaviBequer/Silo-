@@ -2617,3 +2617,25 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
   #atzConversa .atz-placa-info b{font-size:34px}
   #atzConversa .atz-fx-its{max-height:none;overflow:visible}
 }
+/* Assistente: editar item e conferência da fatura (aparece sempre que a pessoa fala a fatura ou o saldo) */
+.atz-it-nome{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:0;border:none;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.atz-it-nome b{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.atz-lapis{flex-shrink:0;color:var(--text-faint)}
+.atz-ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;padding:10px 0;border-top:1px solid var(--fio)}
+.atz-ed-l{display:flex;flex-direction:column;gap:3px;min-width:0}
+.atz-ed-l:first-child{grid-column:1 / -1}
+.atz-ed-l span{font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+.atz-ed-l input,.atz-ed-l select{width:100%;min-height:38px;padding:6px 10px;border:1px solid var(--fio);border-radius:10px;background:#fff;color:var(--text);font:inherit;font-size:16px}
+.atz-ed-acoes{grid-column:1 / -1;display:flex;align-items:center;justify-content:flex-end;gap:14px}
+.atz-fats{display:flex;flex-direction:column;gap:10px;margin:2px 0 10px}
+.atz-fat{padding:11px 13px;border-radius:14px;background:#fff;border:1px solid var(--fio)}
+.atz-fat .atz-linha{padding:5px 0;font-size:13px}
+.atz-fat-g{border-bottom:1px solid var(--line)}
+.atz-fat-g summary{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 0;font-size:13px;color:var(--text-dim);cursor:pointer;list-style:none}
+.atz-fat-g summary::-webkit-details-marker{display:none}
+.atz-fat-g summary span::after{content:' ▾';font-size:10px;color:var(--text-faint)}
+.atz-fat-g[open] summary span::after{content:' ▴'}
+.atz-fat-g summary small{font-size:11px;color:var(--text-faint)}
+.atz-fat-g summary b{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.atz-fat-g .atz-linha{padding:3px 0 3px 10px;font-size:12.5px;border-bottom:none}
+.atz-fat-falta{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(176,72,58,.09);font-size:13px;line-height:1.4}

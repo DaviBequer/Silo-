@@ -186,7 +186,7 @@ const ATZ_ESQUEMA = { type:'object', properties:{
   }, required:['nome','categoria'] } },
   itens:{ type:'array', description:'A lista COMPLETA e atualizada do que vai ser lançado (inclua os itens anteriores que continuam valendo, com as correções que a pessoa pediu)', items:{ type:'object', properties:{
     tipo:{ type:'string', enum:['vista','parcelada','pix','recebi','conta','saldo','fatura'] },
-    descricao:{ type:'string', description:'o nome que a pessoa falou (a loja ou o que comprou: "Top", "Farmácia"), curto, com maiúscula. Não troque pelo nome da categoria. Vazio em saldo e fatura' },
+    descricao:{ type:'string', description:'o nome que a pessoa falou (a loja ou o que comprou: "Top", "Farmácia"), curto, com maiúscula. NUNCA ponha a categoria no nome: "mercado Top" = descricao "Top" e categoria Mercado; "farmácia Drogasil" = "Drogasil" e Farmácia. Só use a palavra da categoria como nome se for a única coisa dita ("gastei 50 no mercado" = "Mercado"). Vazio em saldo e fatura' },
     valor:{ type:'number', description:'em reais. Parcelada: o valor TOTAL da compra ("2x de 150" = 300). Saldo/fatura: o valor que a pessoa viu no banco' },
     categoria:{ type:'string', description:'uma categoria exata da lista (vista e pix); vazio nos outros' },
     categoriaDuvida:{ type:'boolean', description:'true se você não tem certeza da categoria (nome que não está nos apelidos nem nos já usados e que você não conhece)' },
@@ -257,16 +257,29 @@ function atzNormalizarItens(lista){
       || (['pix','recebi','saldo'].includes(i.tipo) && bancos.length === 1 ? bancos[0] : null);
     const conta = i.tipo === 'conta' ? contas.find(x=>x.key === i.conta) : null;
     const comCat = ['vista','pix'].includes(i.tipo);
-    const ap = apelidos[atzChaveNome(i.descricao)], apOk = ap && cats.includes(ap.categoria);
+    const nm = comCat ? atzLimparNome(i.descricao, cats) : { nome: String(i.descricao || '').trim(), cat: '' };
+    const ap = apelidos[atzChaveNome(nm.nome)], apOk = ap && cats.includes(ap.categoria);
     return {
-      tipo: i.tipo, descricao: String(i.descricao || '').trim() || (conta ? conta.desc : ''), valor: Math.round(Number(i.valor) * 100) / 100,
-      categoria: !comCat ? '' : apOk ? ap.categoria : cats.includes(i.categoria) ? i.categoria : vozAdivinharCategoria(i.descricao),
+      tipo: i.tipo, descricao: nm.nome || (conta ? conta.desc : ''), valor: Math.round(Number(i.valor) * 100) / 100,
+      categoria: !comCat ? '' : apOk ? ap.categoria : cats.includes(i.categoria) ? i.categoria : nm.cat || vozAdivinharCategoria(nm.nome),
       duvida: comCat && !apOk && (!!i.categoriaDuvida || !cats.includes(i.categoria)),
       cartaoId: c ? c.id : '', cartaoNome: c ? c.nome : '', bancoId: b ? b.id : '', bancoNome: b ? b.nome : '',
       parcelas: i.tipo === 'parcelada' ? Math.max(2, Math.min(48, parseInt(i.parcelas) || 2)) : 1,
       proximaFatura: !!i.proximaFatura && ['vista','parcelada'].includes(i.tipo), conta: conta ? conta.key : '', ok: false
     };
   });
+}
+/* a categoria nunca fica no nome: "Mercado Top" → "Top" (+ categoria Mercado). Se só sobrou a categoria, ela é o nome. */
+const ATZ_NOME_SOBRA = /^(no|na|do|da|de|em|o|a)$/;
+function atzLimparNome(desc, cats){
+  const palavras = String(desc || '').trim().split(/\s+/).filter(Boolean);
+  const chaves = cats.map(c=>[vozSemAcento(c), c]).concat([['supermercado', 'Mercado'], ['mercadinho', 'Mercado']]);
+  let cat = '';
+  const resto = palavras.filter(p=>{ const n = vozSemAcento(p); const a = chaves.find(([k])=>k === n); if(a && cats.includes(a[1])){ cat = cat || a[1]; return false; } return true; })
+    .filter((p, k, arr)=>!(ATZ_NOME_SOBRA.test(vozSemAcento(p)) && (k === 0 || k === arr.length - 1)));
+  if(!resto.length) return { nome: palavras.join(' '), cat };
+  const nome = resto.join(' ');
+  return { nome: nome.charAt(0).toUpperCase() + nome.slice(1), cat };
 }
 const ATZ_TIPOS = { vista:'Cartão à vista', parcelada:'Cartão parcelado', pix:'Pix/débito', recebi:'Recebi', conta:'Conta paga', saldo:'Saldo no banco', fatura:'Fatura no banco' };
 /* o que ainda falta para o item poder ser gravado */
@@ -358,7 +371,7 @@ async function atzPerguntar(msg, audio){
     aprendeu.forEach(a=>atzAprender(a.nome, a.categoria, true));
     if(aprendeu.length) persist();
     const antes = atzItens;
-    atzItens = atzManterConfirmados(antes, atzNormalizarItens(r.itens));
+    atzItens = atzManterConfirmados(antes, atzNormalizarItens(r.itens)); atzEditando = -1;
     /* a conta da falta é do app (a IA erra soma): a resposta ganha as linhas com os números certos (aparecem nos Detalhes) */
     const conf = atzConferencia(), contas = [];
     conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.falta) < 0.01 ? `Fatura ${x.c.nome}: bateu ✓` : x.falta > 0 ? `Fatura ${x.c.nome}: faltam ${fmtMoney(x.falta)} para bater. Que compras faltam?` : `Fatura ${x.c.nome}: passou ${fmtMoney(-x.falta)} do valor do banco. Algum valor ficou errado?`));
@@ -422,8 +435,84 @@ function atzIcoItem(i, t){
   const temCat = ['vista','pix'].includes(i.tipo);
   return `<span class="atz-ci">${atzSvg(temCat ? atzIcoCategoria(i.categoria) : ATZ_ICO_TIPO[i.tipo], t || 17)}${temCat ? `<span class="atz-ci-sel">${atzSvg(ATZ_ICO_TIPO[i.tipo], 9)}</span>` : ''}</span>`;
 }
+/* conferência que aparece sempre (mesmo com Detalhes desligado) quando a pessoa fala a fatura ou o saldo:
+   tudo o que já está na fatura do app (à vista, parcelas, assinaturas), o que entra agora e quanto falta para chegar no valor do banco */
+function atzFaturaPartes(c, m){
+  const vista = (c.credoVista || []).filter(cv=>cv.mKey === m).map(cv=>({ nome: cv.descricao || 'Compra', valor: Number(cv.valor) || 0 }));
+  const parcelas = (state.comprasTracker || []).filter(cp=>cp.cartaoId === c.id).map(cp=>{
+    const v = compraTrackerValorNoMes(cp, m); if(!(v > 0)) return null;
+    let n = 1, mm = cp.mesInicio; while(mm && mm < m && n < 200){ mm = addMonths(mm, 1); n++; }
+    return { nome: `${cp.nome || 'Compra'} ${n}/${cp.parcelas}`, valor: v };
+  }).filter(Boolean);
+  const assin = (c.assinaturas || []).map(a=>({ nome: a.nome || 'Assinatura', valor: assinaturaValorNoMes(a, m) })).filter(a=>a.valor > 0);
+  return { vista, parcelas, assin };
+}
+function atzConferenciasHtml(conf){
+  const soma = l=>l.reduce((s, x)=>s + x.valor, 0);
+  const lista = l=>l.map(x=>`<div class="atz-linha"><span>${escBanco(x.nome)}</span><b>${fmtMoney(x.valor)}</b></div>`).join('');
+  const st = (dif, txtFalta, txtPassou)=>Math.abs(dif) < 0.01 ? '<span class="atz-pill ok">bateu ✓</span>' : dif > 0 ? `<span class="atz-pill err">${txtFalta}</span>` : `<span class="atz-pill err">${txtPassou}</span>`;
+  const cartoes = conf.cartoes.filter(x=>x.informado !== null).map(x=>{
+    const p = atzFaturaPartes(x.c, x.m), novos = atzItens.filter(i=>i.cartaoId === x.c.id && !i.proximaFatura && (i.tipo === 'vista' || i.tipo === 'parcelada'))
+      .map(i=>({ nome: i.descricao + (i.tipo === 'parcelada' ? ` 1/${i.parcelas}` : ''), valor: i.tipo === 'parcelada' ? i.valor / Math.max(1, i.parcelas) : i.valor }));
+    const grupo = (rot, l)=>l.length ? `<details class="atz-fat-g"><summary><span>${rot} <small>${l.length}</small></span><b>${fmtMoney(soma(l))}</b></summary>${lista(l)}</details>` : '';
+    return `<div class="atz-fat">
+      <div class="atz-det-topo"><span>Fatura ${escBanco(x.c.nome)} · ${monthLabel(x.m)}</span>${st(x.falta, 'faltam ' + fmtMoney(x.falta), 'passou ' + fmtMoney(-x.falta))}</div>
+      ${grupo('À vista no app', p.vista)}${grupo('Parcelas no app', p.parcelas)}${grupo('Assinaturas', p.assin)}${grupo('Desta conversa', novos)}
+      <div class="atz-linha atz-total"><span>Somando tudo</span><b>${fmtMoney(x.noApp + x.novos)}</b></div>
+      <div class="atz-linha atz-total"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>
+      ${x.falta > 0.009 ? `<div class="atz-fat-falta">Faltam <b>${fmtMoney(x.falta)}</b> para chegar em ${fmtMoney(x.informado)}. Fale as compras que faltam desse cartão.</div>
+        <button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('cartao','${x.c.id}')">Não lembro: lançar ${fmtMoney(x.falta)} como compra não identificada</button>`
+        : x.falta < -0.009 ? `<div class="atz-fat-falta">O app passou ${fmtMoney(-x.falta)} do valor do banco. Veja se algum item está repetido ou com o valor errado.</div>` : ''}
+    </div>`;
+  }).join('');
+  const bancos = conf.bancos.filter(x=>x.informado !== null).map(x=>`<div class="atz-fat">
+      <div class="atz-det-topo"><span>Saldo ${escBanco(x.b.nome)}</span>${st(-x.dif, 'falta explicar ' + fmtMoney(-x.dif), 'entrou ' + fmtMoney(x.dif) + ' a mais')}</div>
+      <div class="atz-linha"><span>Esperado pelo app</span><b>${fmtMoney(x.esperado)}</b></div>
+      <div class="atz-linha atz-total"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>
+      ${x.dif < -0.009 ? `<div class="atz-fat-falta">Saíram <b>${fmtMoney(-x.dif)}</b> que o app não sabe. O que mais você gastou no ${escBanco(x.b.nome)}?</div>
+        <button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('banco','${x.b.id}')">Não lembro: lançar ${fmtMoney(-x.dif)} como gasto não identificado</button>` : ''}
+    </div>`).join('');
+  return cartoes || bancos ? `<div class="atz-fats">${cartoes}${bancos}</div>` : '';
+}
+/* editar um item (toque no nome): nome, valor, categoria, parcelas, cartão ou banco */
+const ATZ_ICO_LAPIS = '<svg class="atz-lapis" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>';
+let atzEditando = -1;
+function atzEditar(k){ atzEditando = k; atzRenderConversa(); const el = document.getElementById('atzEdNome'); if(el) el.focus(); }
+function atzEditorHtml(i, k){
+  const opc = (lista, atual)=>lista.map(x=>`<option value="${escBanco(x.id)}"${x.id === atual ? ' selected' : ''}>${escBanco(x.nome)}</option>`).join('');
+  const comCat = ['vista','pix'].includes(i.tipo), comCartao = ['vista','parcelada','fatura'].includes(i.tipo), comBanco = ['pix','recebi','saldo','conta'].includes(i.tipo);
+  return `<form class="atz-ed" onsubmit="event.preventDefault();atzSalvarEdicao(${k})">
+    <label class="atz-ed-l"><span>Nome</span><input id="atzEdNome" type="text" value="${escBanco(i.descricao)}" autocomplete="off"></label>
+    <label class="atz-ed-l"><span>${i.tipo === 'parcelada' ? 'Valor total' : 'Valor'}</span><input id="atzEdValor" type="text" inputmode="decimal" value="${String(i.valor.toFixed(2)).replace('.', ',')}"></label>
+    ${comCat ? `<label class="atz-ed-l"><span>Categoria</span><select id="atzEdCat">${vozCategoriasCartao().map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>` : ''}
+    ${i.tipo === 'parcelada' ? `<label class="atz-ed-l"><span>Parcelas</span><input id="atzEdParc" type="number" inputmode="numeric" min="2" max="48" value="${i.parcelas}"></label>` : ''}
+    ${comCartao ? `<label class="atz-ed-l"><span>Cartão</span><select id="atzEdCartao"><option value="">Escolha</option>${opc(vozCartoes(), i.cartaoId)}</select></label>` : ''}
+    ${comBanco ? `<label class="atz-ed-l"><span>Banco</span><select id="atzEdBanco"><option value="">${i.tipo === 'conta' ? 'Não mexer no banco' : 'Escolha'}</option>${opc(bancosDoUsuario(), i.bancoId)}</select></label>` : ''}
+    <div class="atz-ed-acoes"><button type="button" class="link-txt" onclick="atzEditando=-1;atzRenderConversa()">Cancelar</button><button type="submit" class="btn btn-sm">Salvar</button></div>
+  </form>`;
+}
+function atzSalvarEdicao(k){
+  const i = atzItens[k]; if(!i) return;
+  const v = id=>{ const el = document.getElementById(id); return el ? el.value : null; };
+  const antes = atzChave(i);
+  const nome = String(v('atzEdNome') || '').trim(); if(nome) i.descricao = nome;
+  const tx = String(v('atzEdValor') || '').trim(), valor = Number(tx.includes(',') ? tx.replace(/\./g, '').replace(',', '.') : tx);
+  if(valor > 0) i.valor = Math.round(valor * 100) / 100;
+  const cat = v('atzEdCat');
+  if(cat && cat !== i.categoria){ i.categoria = cat; i.duvida = false; i.catManual = true; atzAprender(i.descricao, cat); }
+  else if(cat && i.duvida){ i.duvida = false; i.catManual = true; atzAprender(i.descricao, cat); }
+  const parc = parseInt(v('atzEdParc')); if(parc >= 2) i.parcelas = Math.min(48, parc);
+  const cid = v('atzEdCartao'); if(cid !== null){ const c = vozCartoes().find(x=>x.id === cid); i.cartaoId = c ? c.id : ''; i.cartaoNome = c ? c.nome : ''; }
+  const bid = v('atzEdBanco'); if(bid !== null){ const b = bancosDoUsuario().find(x=>x.id === bid); i.bancoId = b ? b.id : ''; i.bancoNome = b ? b.nome : ''; }
+  /* a resposta onde o item apareceu continua apontando para ele */
+  const depois = atzChave(i);
+  if(depois !== antes) atzConversa.forEach(m=>{ if(m.novos) m.novos = m.novos.map(c=>c === antes ? depois : c); });
+  atzEditando = -1;
+  renderAtualizar();
+}
 /* um item (estilo R2): círculo de confirmar, ícone, nome, "categoria · cartão" (toque na categoria troca), valor e × */
 function atzItemHtml(i, k, dup){
+  if(atzEditando === k) return atzEditorHtml(i, k);
   const falta = atzFaltaNoItem(i), info = !atzGravavel(i);
   const cats = ['vista','pix'].includes(i.tipo) ? vozCategoriasCartao() : null;
   const onde = [i.tipo === 'pix' ? 'Pix ' + i.bancoNome : ['vista','parcelada','fatura'].includes(i.tipo) ? (i.cartaoNome ? 'Cartão ' + i.cartaoNome : '') : i.bancoNome,
@@ -435,7 +524,7 @@ function atzItemHtml(i, k, dup){
     ${info ? '<span class="atz-chk" title="Valor que você viu no banco">i</span>'
       : `<button type="button" class="atz-chk" ${falta ? 'disabled' : ''} title="${falta ? 'Responda antes: ' + falta : i.ok ? 'Desmarcar' : 'Confirmar'}" aria-label="${i.ok ? 'Desmarcar' : 'Confirmar'}" aria-pressed="${!!i.ok}" onclick="atzConfirmar(${k})">${ATZ_ICO_OK}</button>`}
     ${atzIcoItem(i)}
-    <div class="atz-it-txt"><b>${escBanco(nome)}</b><small>${cat}${onde ? ' · ' + escBanco(onde) : ''}${falta ? ` <em>${falta}</em>` : ''}${dup ? ` <em class="atz-dup" title="${escBanco(dup.texto)}">${escBanco(dup.curto)}</em>` : ''}</small></div>
+    <div class="atz-it-txt"><button type="button" class="atz-it-nome" title="Editar" onclick="atzEditar(${k})"><b>${escBanco(nome)}</b>${ATZ_ICO_LAPIS}</button><small>${cat}${onde ? ' · ' + escBanco(onde) : ''}${falta ? ` <em>${falta}</em>` : ''}${dup ? ` <em class="atz-dup" title="${escBanco(dup.texto)}">${escBanco(dup.curto)}</em>` : ''}</small></div>
     <b class="atz-valor">${fmtMoney(i.valor)}</b>
     <button type="button" class="ico-btn atz-tirar" aria-label="Tirar" title="Tirar" onclick="atzTirarItem(${k})">${CU_ICO.x}</button>
   </div>`;
@@ -552,7 +641,6 @@ function atzRenderConversa(pensando, rolar){
         ${lista(porMsg[mi] || [])}
         ${(m.tirados || []).length ? `<ul class="atz-msg-lista tirados">${m.tirados.map(tirado).join('')}</ul>` : ''}
         ${(m.aprendeu || []).length ? `<div class="atz-aprendeu">Aprendi: ${lvEsc(m.aprendeu.join(', '))}</div>` : ''}
-        ${atzDetalhes ? (m.contas || []).map(c=>`<div class="atz-msg-conta${/bateu/.test(c) ? ' ok' : ''}">${lvEsc(c)}</div>`).join('') : ''}
       </div>`).join('')
     + (soltos.length ? `<div class="atz-msg ia">${lista(soltos)}</div>` : '');
   const passo = atzAba === 'passo' ? atzPassoHtml(conf) : '';
@@ -563,6 +651,7 @@ function atzRenderConversa(pensando, rolar){
       ${atzDetalhes ? `<div class="atz-det">${atzDetalhesHtml(conf)}</div>` : ''}
       <div class="atz-chat"><div class="atz-msgs">${msgs || (passo ? '' : `<div class="atz-msg ia">Toque no microfone e fale tudo de uma vez, como um áudio. Por exemplo: "gastei 120 no Top no crédito, 45 na farmácia no Pix do Inter e paguei a luz. A fatura do Nubank está 1.850." Cada item aparece aqui com um círculo: toque para confirmar e depois em Gravar.</div>`)}
         ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div>
+        ${atzConferenciasHtml(conf)}
         ${passo}
         ${atzConversa.length && !pensando ? '<button type="button" class="link-txt atz-limpar" onclick="atzLimpar()">Começar de novo</button>' : ''}</div>
     </div>`;
@@ -580,7 +669,7 @@ function atzDetalhesAlternar(){
   atzRenderConversa();
 }
 function atzConfirmar(k){ const i = atzItens[k]; if(!i || atzFaltaNoItem(i)) return; i.ok = !i.ok; renderAtualizar(); }
-function atzTirarItem(k){ atzItens.splice(k, 1); renderAtualizar(); }
+function atzTirarItem(k){ atzItens.splice(k, 1); atzEditando = -1; renderAtualizar(); }
 function atzTrocarCategoria(k, cat){
   const i = atzItens[k]; if(!i) return;
   i.categoria = cat; i.duvida = false; i.catManual = true;
