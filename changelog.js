@@ -1,6 +1,14 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.5', itens: [
+    'Capotraste: a cifra do Cifra Club com capo vem com a casa certa (tom F# com forma de E = capo na 2ª casa) e os acordes como se toca',
+    'Botão CAPO ao lado do tom, com o braço do violão para escolher a casa: os acordes mudam na hora e o som continua no mesmo tom; folha e PDF mostram "Capo 2ª · forma de E"',
+    'Letra nova no app inteiro: Urbanist, redonda e fina (a cifra continua na mesma letra)',
+    'Cartão de crédito na cor do banco, com o chip separado das informações; sem o efeito de inclinar e de luz ao passar o mouse',
+    'Empréstimo em cartão de vidro em pé, sem chip, do tamanho de um cartão também no computador',
+    'Bancos no saldo de Finanças no mesmo modelo do cartão, com R$ e o valor centralizado'
+  ] },
   { versao: 'v14.4', itens: [
     'Ícone novo: grafite que esquenta para o dourado, com o cordeiro claro',
     'Abertura nova: cordeiro e nome maiores no alto e um versículo curto do dia aparecendo palavra por palavra (toque na tela para pular)',

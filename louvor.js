@@ -435,9 +435,37 @@ function lvTomAtual(l){
   if(!maior) return '';
   return l.tomModoMenor ? lvRelativoMenor(maior) + 'm' : maior;
 }
+/* ---------- Capotraste (v14.5) ----------
+   l.capo = casa do capotraste (0 = sem). A cifra fica escrita como se toca (a "forma") e o tom é o que SOA:
+   capo na 2ª casa com forma de E = tom F#. Trocar o capo reescreve os acordes para continuar soando no mesmo tom. */
+const LV_TONS_COMUNS = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+function lvCapo(l){ return Math.max(0, Math.min(11, parseInt(l && l.capo, 10) || 0)); }
+/* tom maior da forma (o que a mão faz) para um tom que soa e um capo */
+function lvFormaDe(tomMaior, capo){
+  const pc = lvPc(tomMaior);
+  return !capo || pc < 0 ? tomMaior : LV_TONS_COMUNS[((pc - capo) % 12 + 12) % 12];
+}
+function lvFormaMaior(l){ return lvFormaDe(lvTomMaiorAtual(l), lvCapo(l)); }
+function lvFormaAtual(l){
+  const f = lvFormaMaior(l); if(!f) return '';
+  return l.tomModoMenor ? lvRelativoMenor(f) + 'm' : f;
+}
+/* "Capo 2 · forma de E" (vazio sem capo) */
+function lvCapoTexto(l){ const c = lvCapo(l); return c && l.tomOriginal ? `Capo ${c}ª · forma de ${lvFormaAtual(l)}` : (c ? `Capo ${c}ª casa` : ''); }
+/* muda a casa do capotraste: os acordes descem/sobem para o som continuar no mesmo tom */
+function lvMudarCapo(l, capo){
+  capo = Math.max(0, Math.min(11, parseInt(capo, 10) || 0));
+  const antes = lvCapo(l); if(capo === antes) return false;
+  const formaAntes = lvFormaMaior(l);
+  l.capo = capo;
+  const formaNova = lvFormaMaior(l);
+  if(l.conteudo) l.conteudo = lvTransposeConteudoTexto(l.conteudo, antes - capo, formaNova || null, formaAntes || null);
+  return true;
+}
 function atualizarLvTomBox(){
   const l = getLouvorAtual(); if(!l) return;
   document.getElementById('lvTomBoxValor').textContent = lvTomAtual(l) || '—';
+  if(typeof lvCapoRender === 'function') lvCapoRender(l);
   renderLvHarmonicBar(l);
 }
 const LV_GRAUS_MAIOR = [
@@ -575,7 +603,8 @@ function lvTomGridEscolher(nota, modoMenor){
      (mesmo de F# para Gb, que soa igual, os nomes mudam). Sem tom anterior: só ajusta os nomes. */
   const pcNota = lvPc(nota), pcAntes = lvPc(lvTomMaiorAtual(l));
   const delta = (pcAntes===-1 || pcNota===-1) ? 0 : ((pcNota - pcAntes)%12+12)%12;
-  l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, nota, lvTomMaiorAtual(l));
+  /* com capotraste a cifra está escrita na forma: os nomes seguem a forma do tom novo (o capo continua o mesmo) */
+  l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, lvFormaDe(nota, lvCapo(l)), lvFormaMaior(l));
   /* medley: cada música sobe/desce junto, para continuar igual quando o medley se atualizar */
   if(l.medley){
     l.medley.musicas.forEach((m, i)=>{ if(m.tom && delta) m.tom = lvShiftNote(m.tom, delta) || m.tom; });
@@ -601,7 +630,7 @@ function lvAplicarTom(l, nota, modoMenor){
   ensureLouvorConfig(l);
   const pcNota = lvPc(nota), pcAntes = lvPc(lvTomMaiorAtual(l));
   const delta = (pcAntes===-1 || pcNota===-1) ? 0 : ((pcNota - pcAntes)%12+12)%12;
-  if(l.conteudo) l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, nota, lvTomMaiorAtual(l));
+  if(l.conteudo) l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, lvFormaDe(nota, lvCapo(l)), lvFormaMaior(l));
   l.tomOriginal = nota;
   l.transpose = 0;
   l.tomModoMenor = !!modoMenor;
@@ -1038,7 +1067,7 @@ function renderLouvorPdfPreview(){
         <div class="lv-sheet-title" data-campo="titulo" style="font-size:${l.pdfTamanhoTitulo+8}pt">${lvEsc(l.titulo||'Sem título')}</div>
         <div class="lv-sheet-artist" data-campo="artista">${lvEsc(l.artista||'')}</div>
       </div>
-      ${tomAtual?`<div class="lv-sheet-tom-box"><span>TOM</span><b>${tomAtual}</b></div>`:''}
+      ${tomAtual?`<div class="lv-sheet-tom-box"><span>TOM</span><b>${tomAtual}</b>${lvCapo(l)?`<small>Capo ${lvCapo(l)}ª · ${lvFormaAtual(l)}</small>`:''}</div>`:''}
     </div>
     <div class="lv-sheet-cols">${bodyHtml || '<p class="empty-hint">Sem conteúdo ainda.</p>'}</div>
   `;
@@ -1208,6 +1237,11 @@ function lvMontarPdf(l){
     doc.setFontSize(17);
     doc.setTextColor(30,30,32);
     doc.text(tomAtual, boxX+boxW/2, boxY+35, { align:'center' });
+    if(lvCapo(l)){   // capotraste: ao lado da caixa do tom, em laranja como os acordes
+      doc.setFontSize(7.5);
+      doc.setTextColor(...orange);
+      doc.text(`CAPO ${lvCapo(l)}ª · FORMA ${lvFormaAtual(l)}`, boxX - 8, boxY+35, { align:'right' });
+    }
   }
 
   doc.setDrawColor(230,230,233);
@@ -1465,4 +1499,52 @@ async function lvLimparTudo(){
     persist();
     renderLouvor();
   }, ()=>renderLouvor());
+}
+
+/* ---------- seletor do capotraste (v14.5): braço do violão com as casas; tocar numa casa muda os acordes na hora ---------- */
+function lvCapoRender(l){
+  const b = document.getElementById('lvCapoBtn'); if(!b) return;
+  b.hidden = !!l.medley;
+  const c = lvCapo(l);
+  b.classList.toggle('ligado', c > 0);
+  b.querySelector('.lv-capo-val').textContent = c ? c + 'ª' : '—';
+  b.title = c ? `Capotraste na ${c}ª casa (forma de ${lvFormaAtual(l)})` : 'Capotraste';
+}
+function lvCapoAbrir(){
+  const l = getLouvorAtual(); if(!l || l.medley) return;
+  document.getElementById('lvCapoJanela')?.remove();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay active'; ov.id = 'lvCapoJanela';
+  ov.onclick = e=>{ if(e.target === ov) ov.remove(); };
+  const casas = Array.from({ length: 10 }, (_, i)=>i);
+  ov.innerHTML = `<div class="modal lv-capo-modal"><div class="modal-header"><div class="modal-title">Capotraste</div>
+      <button type="button" class="modal-close" aria-label="Fechar" onclick="document.getElementById('lvCapoJanela').remove()">×</button></div>
+    <div class="lv-capo-braco" role="radiogroup" aria-label="Casa do capotraste">
+      ${casas.map(n=>`<button type="button" class="lv-capo-casa" role="radio" data-n="${n}" onclick="lvCapoEscolher(${n})">
+        <span class="lv-capo-cordas"></span>${[3, 5, 7, 9].includes(n) ? '<i class="lv-capo-ponto"></i>' : ''}
+        <b>${n ? n : 'Sem'}</b></button>`).join('')}
+    </div>
+    <div class="lv-capo-info" id="lvCapoInfo"></div>
+    <p class="lv-capo-dica">O tom continua o mesmo: os acordes mudam para a forma que você faz com o capotraste.</p></div>`;
+  document.body.appendChild(ov);
+  lvCapoPintar(l);
+}
+function lvCapoPintar(l){
+  const c = lvCapo(l);
+  document.querySelectorAll('#lvCapoJanela .lv-capo-casa').forEach(b=>{ const on = +b.dataset.n === c; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  const info = document.getElementById('lvCapoInfo');
+  if(info) info.innerHTML = l.tomOriginal
+    ? `<span>Soa em</span><b>${lvTomAtual(l)}</b><span>${c ? `você toca na forma de` : 'sem capotraste'}</span>${c ? `<b class="forma">${lvFormaAtual(l)}</b>` : ''}`
+    : '<span>Escolha o tom da música para ver a forma.</span>';
+}
+function lvCapoEscolher(n){
+  const l = getLouvorAtual(); if(!l) return;
+  if(!lvMudarCapo(l, n)) return;
+  persist();
+  const el = document.getElementById('lvConteudo');
+  if(el){ el.value = l.conteudo; lvAtualizarEditor(); }
+  atualizarLvTomBox();
+  renderLouvorPdfPreview();
+  lvCapoPintar(l);
+  if(typeof driveTomMudou === 'function') driveTomMudou(l);   // os acordes do arquivo do Drive mudaram
 }

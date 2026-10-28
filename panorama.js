@@ -95,7 +95,7 @@ function renderCarteira(){
     const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : escBanco((b.nome || '?').trim().charAt(0).toUpperCase());
     return `<div class="cc${zero ? ' zero' : ''}" style="--c:${b.cor || corDoBanco(b.nome, b.i)}" title="${escBanco(b.nome)}">
       <div class="cc-topo"><span class="cc-logo">${logo}</span><span class="cc-chip"></span></div>
-      <b>${fmtMoney(b.valor || 0).replace(/^R\$\s?/, '')}</b>
+      <b><small>R$</small>${fmtMoney(Math.abs(b.valor || 0)).replace(/^R\$\s?/, '').replace(/^/, (b.valor || 0) < -0.004 ? '-' : '')}</b>
     </div>`;
   }).join('');
 }

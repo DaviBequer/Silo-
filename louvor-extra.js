@@ -653,7 +653,7 @@ async function lvImportarNoAtual(ev){
     delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;   // texto novo: o desfazer anterior não vale mais
     if(!(l.titulo||'').trim() && r.titulo) l.titulo = r.titulo;
     if(!(l.artista||'').trim() && r.artista) l.artista = r.artista;
-    if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; }
+    if(r.tom.tomOriginal){ l.tomOriginal = r.tom.tomOriginal; l.tomModoMenor = r.tom.tomModoMenor; l.transpose = 0; l.capo = 0; }
     if(ev.novo && r.categoria) l.categoria = r.categoria;
     const olhar = lviModoFiel ? ((r.conferencia && r.conferencia.olhar) || []) : lviCorrigirTextos((r.conferencia && r.conferencia.olhar) || []);
     if(olhar.length) l.revisar = olhar; else delete l.revisar;

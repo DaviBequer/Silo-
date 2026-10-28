@@ -107,7 +107,7 @@ function ccAplicarRefazer(id, r, url, passos){
   comDesfazer('Cifra refeita pelo Cifra Club', ()=>{
     l.conteudo = r.dados.conteudo;
     delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado; delete l.medleyEditado;
-    l.tomOriginal = r.dados.tomOriginal || ''; l.tomModoMenor = !!r.dados.tomModoMenor; l.transpose = 0;
+    l.tomOriginal = r.dados.tomOriginal || ''; l.tomModoMenor = !!r.dados.tomModoMenor; l.transpose = 0; l.capo = r.dados.capo || 0;
     if(antes.maior && l.tomOriginal) lvAplicarTom(l, antes.maior, antes.menor);   // continua no tom em que estava
     ccGuardarOrigem(l, r, url);
     persist();
@@ -183,19 +183,54 @@ async function ccMontar(url, passo, tirar){
     passo(`✓ ${doc.secoes.filter(s=>!s.repeatOf).length} partes · texto arrumado (maiúsculas, pontos, versos)`, 'ok');
     const m = /^([A-G](?:#|b)?)(m?)$/.exec(c.tom || '');
     const tom = m ? lviTomSiloe(m[1], !!m[2]) : null;
+    /* capotraste: a cifra do Cifra Club vem escrita na forma (E) e o "Tom" é o que soa (F#) */
+    const capo = tom ? ccCapoDaCifra(c, tom.tomOriginal, conteudo) : 0;
+    if(capo) passo(`✓ Capotraste na ${capo}ª casa: tom ${c.tom}, acordes na forma de ${lvFormaDe(tom.tomOriginal, capo)}${tom.tomModoMenor ? 'm' : ''}`, 'ok');
     return { c, lt, revisar, comLetras, dados: {
       titulo: c.titulo || '', artista: c.artista || '', categoria: harpa ? 'Harpa Cristã' : 'Louvor',
-      tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false,
+      tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false, capo,
       conteudo
     } };
   }
+}
+/* casa do capotraste de uma cifra do Cifra Club (0 = sem):
+   1º o que a página diz ("Capotraste: 2ª casa" / "com forma de E", vindo da função "cifra");
+   sem isso, compara o tom da página com o tom em que os acordes estão escritos (campo harmônico) */
+function ccCapoDaCifra(c, tomMaior, conteudo){
+  const pcTom = lvPc(tomMaior); if(pcTom < 0) return 0;
+  const n = parseInt(c.capo, 10);
+  if(n > 0 && n < 12) return n;
+  const f = /^([A-G](?:#|b)?)(m?)$/.exec(c.forma || '');
+  if(f){ const pcF = lvPc(lviTomSiloe(f[1], !!f[2]).tomOriginal); if(pcF >= 0) return ((pcTom - pcF) % 12 + 12) % 12; }
+  const forma = lvTomDosAcordes(conteudo);
+  if(!forma || forma.pc === pcTom || forma.nota(pcTom) > .6 || forma.melhor < .85) return 0;
+  const capo = ((pcTom - forma.pc) % 12 + 12) % 12;
+  return capo >= 1 && capo <= 7 ? capo : 0;   // capo acima da 7ª casa quase não existe: aí é outra coisa (melhor não mexer)
+}
+/* tom maior em que os acordes de um texto estão escritos: { pc, melhor (0..1), nota(pc) } — fração dos acordes que cabem no campo de cada tom
+   (o 1º e o último acorde contam em dobro: costumam ser o tom) */
+function lvTomDosAcordes(texto){
+  const raizes = [];
+  (texto || '').split('\n').forEach(linha=>{
+    if(!isChordLine(linha.trim())) return;
+    lvAcordesDaLinha(linha).forEach(a=>{ const m = /^([A-G](?:#|b)?)/.exec(a.name || ''); const pc = m ? lvPc(m[1]) : -1; if(pc >= 0) raizes.push(pc); });
+  });
+  if(raizes.length < 4) return null;
+  const pesos = raizes.map((pc, i)=>({ pc, p: i === 0 || i === raizes.length - 1 ? 2 : 1 }));
+  const total = pesos.reduce((s, x)=>s + x.p, 0);
+  const nota = k=>pesos.reduce((s, x)=>s + (LV_ESCALA_MAIOR.includes(((x.pc - k) % 12 + 12) % 12) ? x.p : 0), 0) / total;
+  /* empate (E e A cabem nos mesmos acordes E A B C#m): vence o tom do 1º/último acorde ou do relativo menor dele */
+  const ponta = k=>[raizes[0], raizes[raizes.length - 1]].filter(pc=>pc === k || pc === (k + 9) % 12).length * .03;
+  let pc = 0;
+  for(let k = 1; k < 12; k++) if(nota(k) + ponta(k) > nota(pc) + ponta(pc)) pc = k;
+  return { pc, melhor: nota(pc), nota };
 }
 /* cria a música já com os dados e abre a tela dela (Cifra Club e Drive); abrir:false = só cria (roteiro colado do WhatsApp) */
 function lvCriarDireto(d, abrir){
   const novo = {
     id: 'lv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
     titulo: d.titulo || '', artista: d.artista || '', categoria: d.categoria || 'Louvor',
-    tom: '', tomOriginal: d.tomOriginal || '', tomModoMenor: !!d.tomModoMenor, transpose: 0,
+    tom: '', tomOriginal: d.tomOriginal || '', tomModoMenor: !!d.tomModoMenor, transpose: 0, capo: d.capo || 0,
     dataAgendamento: '', status: 'producao', colunas: 'auto', conteudo: d.conteudo || '', criadoEm: Date.now()
   };
   state.louvores.push(novo);

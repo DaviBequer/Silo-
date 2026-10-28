@@ -850,7 +850,7 @@ function renderCartaoTrackerList(){
         <div class="ct-meta">Quitada · ${fmtMoney(compraTrackerCalc(item).total)}</div>
       </div>`).join('') : '');
 
-    const cor = corDaLogo(cartao.logoUrl, renderCartaoTrackerList);
+    const cor = corDaLogo(cartao.logoUrl, renderCartaoTrackerList) || (cartao.logoUrl ? null : { fundo: corDoBanco(cartao.nome, 0), texto: '#fff' });   // sem logo: cor pelo nome do banco
     return `<div class="cartao-card-item">
       <div class="ct-face${cor?' colorida':''}"${estiloFaceCor(cor)}>
       <div class="ct-top">

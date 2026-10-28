@@ -101,7 +101,19 @@ async function rodarTestes(){
     const ltDoc = lviMontaBlocos(lviTextoParaLinhas(lt ? lt.texto : ''));
     t('Letras: refrão repetido vira "Repete - Refrão"', lviBlocosParaTexto(ltDoc.secoes).includes('[Repete - Refrão]'), lviBlocosParaTexto(ltDoc.secoes));
     igual('Cifra Club: espaço invisível no começo da linha não esconde os acordes', lviTextoParaLinhas('​D        A\n​Santo santo é o Senhor').map(r=>r.type + ':' + (r.chords || []).length), ['lyric:2']);
-    t('Letras: outra música não junta', lviJuntarComLetras('D\nsanto santo santo', [['Outra letra que não tem nada a ver']]) === null);
+    /* capotraste: Cifra Club "Tom: F# (com forma de E) · Capotraste 2ª casa" — a cifra vem na forma E */
+    const ousado = '[Intro] C#m  B4  A9  E\n\n[Primeira Parte]\nC#m        B4\nAntes de eu falar\nA9            E\nTu cantavas sobre mim\n\n[Refrão]\nE\nOh, impressionante\nB4          C#m   A9\nInfinito e ousado amor';
+    igual('capo: a página diz a casa', ccCapoDaCifra({ capo: 2 }, 'F#', ousado), 2);
+    igual('capo: "com forma de E" com tom F#', ccCapoDaCifra({ forma: 'E' }, 'F#', ousado), 2);
+    igual('capo: descoberto pelos acordes (forma E, tom F#)', ccCapoDaCifra({}, 'F#', ousado), 2);
+    igual('capo: acordes já no tom da página = sem capo', ccCapoDaCifra({}, 'E', ousado), 0);
+    const lc = { tomOriginal: 'F#', tomModoMenor: false, transpose: 0, capo: 2, conteudo: 'E  B4\nOh' };
+    igual('capo: forma de E com tom F#', [lvFormaAtual(lc), lvTomAtual(lc)], ['E', 'F#']);
+    lvMudarCapo(lc, 0);
+    igual('capo: tirar o capo escreve os acordes no tom que soa', [lc.conteudo.split('\n')[0].trim().split(/\s+/), lvTomAtual(lc)], [['F#', 'C#4'], 'F#']);
+    lvMudarCapo(lc, 4);
+    igual('capo na 4ª: forma de D, continua soando F#', [lc.conteudo.split('\n')[0].trim().split(/\s+/), lvFormaAtual(lc), lvTomAtual(lc)], [['D', 'A4'], 'D', 'F#']);
+    t('Letras: outra música não junta',lviJuntarComLetras('D\nsanto santo santo', [['Outra letra que não tem nada a ver']]) === null);
     const harpa = lviPadraoHarpa(lviMontaBlocos(lviTextoParaLinhas('[Primeira Parte]\num dois três\n\n[Refrão]\nquatro cinco\n\n[Segunda Parte]\nseis sete\n\n[Terceira Parte]\noito nove')).secoes);
     igual('Harpa: refrão depois de cada parte', harpa.map(s=>s.repeatOf ? 'R' : s.name), ['Primeira Parte', 'Refrão', 'Segunda Parte', 'R', 'Terceira Parte', 'R']);
     igual('PDF do Siloé: rótulos com letras espaçadas', ['I N T R O','P R I M E I R A PA R T E','R E F R Ã O | 2 x','R E P E T E - R E F R Ã O','Santo é o Senhor'].map(lviRotuloDe), ['Intro','Primeira Parte','Refrão | 2x','Repete - Refrão',null]);

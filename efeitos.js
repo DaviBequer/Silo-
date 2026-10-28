@@ -1,6 +1,6 @@
 /* ================= EFEITOS (v14.1, escolhidos pelo Davi no artefato "Efeitos do Siloé": todos os 18) =================
    Quase tudo é CSS (bloco "Efeitos v14.1" no fim do style.css). Aqui ficam os que precisam de código:
-   E4 aurora na abertura e no PIN · E16 confete dourado · E17 cartão que inclina · E18 faíscas,
+   E4 aurora na abertura e no PIN · E16 confete dourado · E18 faíscas,
    e os ganchos que disparam confete/faíscas (gravar no Assistente, meta batida, venda que bate a meta,
    música pronta, mês fechado no Ponto). Tudo desliga com "reduzir movimento" (efeitosLigados, app.js). */
 
@@ -48,21 +48,6 @@ function efFaiscas(el){
   document.body.appendChild(box);
   setTimeout(()=>box.remove(), 1600);
 }
-
-/* E17: cartões dos bancos e frente do cartão de crédito inclinam e o reflexo segue o dedo/mouse */
-const EF_INCLINA = '.cc, .ct-face';
-document.addEventListener('pointermove', e=>{
-  if(!efeitosLigados) return;
-  const c = e.target.closest && e.target.closest(EF_INCLINA); if(!c) return;
-  const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-  c.classList.add('ef-inclina');
-  c.style.setProperty('--efx', (x * 100).toFixed(1) + '%'); c.style.setProperty('--efy', (y * 100).toFixed(1) + '%');
-  c.style.transform = `perspective(600px) rotateY(${((x - .5) * 16).toFixed(2)}deg) rotateX(${((.5 - y) * 16).toFixed(2)}deg)`;
-}, { passive: true });
-['pointerleave', 'pointerup', 'pointercancel'].forEach(ev=>document.addEventListener(ev, e=>{
-  const c = e.target.closest && e.target.closest(EF_INCLINA); if(!c) return;
-  c.style.transform = ''; c.classList.remove('ef-inclina');
-}, true));
 
 /* ganchos: as funções do app continuam as mesmas; aqui só se soma o efeito depois que elas rodam */
 function efDepois(nome, depois){

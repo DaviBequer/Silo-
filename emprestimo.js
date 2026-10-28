@@ -104,7 +104,7 @@ function renderEmprestimos(){
         <span class="emp-parc-val">${valor}${extra}</span>
       </div>`);
     }
-    const cor = corDaLogo(emp.logoUrl, renderEmprestimos);
+    const cor = corDaLogo(emp.logoUrl, renderEmprestimos) || (emp.logoUrl ? null : { fundo: corDoBanco(emp.nome, 0), texto: '#fff' });   // sem logo: cor pelo nome do banco
     return `<div class="card resumo-card emp-card">
       <div class="ct-face${cor?' colorida':''}"${estiloFaceCor(cor)}>
       <div class="resumo-topo">
