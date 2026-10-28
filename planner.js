@@ -39,7 +39,7 @@ function renderRendaTable(){
     }
     if(u==='davi'){
       const val = rendaBaseForMonth(u, mKey);
-      return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:700">${fmtMoney(val)}</td>`;
+      return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:600">${fmtMoney(val)}</td>`;
     }
     const val = state.users[u].income[mKey] || 0;
     return `<td class="cell-money ${mKey===hoje?'current-col':''}"><input type="text" inputmode="numeric" enterkeyhint="next" value="${val?val.toFixed(2).replace('.',','):''}" placeholder="0,00" oninput="maskMoneyInput(this)" onchange="setIncome('${u}','${mKey}', this.value)" onkeydown="handleMoneyKeydown(event)"></td>`;
@@ -925,7 +925,7 @@ function renderAjusteFatura(){
   document.getElementById('ajusteFaturaResumo').innerHTML = `
     <div class="simulador-linha"><span class="label">No app hoje</span><span class="valor">${fmtMoney(noApp)}</span></div>
     ${temValor ? `<div class="simulador-linha"><span class="label">Valor no banco</span><span class="valor">${fmtMoney(informado)}</span></div>
-    <div class="simulador-linha" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span class="label" style="font-weight:800">Ajuste</span><span class="valor" style="font-weight:800;color:${Math.abs(dif)<0.01?'var(--text-dim)':(dif>0?'var(--danger)':'var(--success)')}">${Math.abs(dif)<0.01?'nenhum, já bate':(dif>0?'+':'−')+fmtMoney(Math.abs(dif))}</span></div>` : ''}`;
+    <div class="simulador-linha" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span class="label" style="font-weight:600">Ajuste</span><span class="valor" style="font-weight:600;color:${Math.abs(dif)<0.01?'var(--text-dim)':(dif>0?'var(--danger)':'var(--success)')}">${Math.abs(dif)<0.01?'nenhum, já bate':(dif>0?'+':'−')+fmtMoney(Math.abs(dif))}</span></div>` : ''}`;
 }
 function confirmarAjusteFatura(){
   if(!ajusteFaturaAlvo) return;

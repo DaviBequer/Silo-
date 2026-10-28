@@ -578,8 +578,10 @@ function renderPontoExportResumo(){
   const min = dias.reduce((s,dia)=>s + dayTotalMinutes(getDia(mKey, dia)), 0);
   const btn = document.querySelector('#modalPontoExport .modal-actions .btn:not(.btn-outline)');
   if(btn) btn.disabled = !dias.length;
+  const valorHora = state.ponto.valorHora || 0;
+  const valor = pontoExportTipo === 'mes' && valorHora > 0 ? `<em>${fmtMoney((min / 60) * valorHora)}</em>` : '';   // mês inteiro: o valor total vai junto (também no PDF)
   el.innerHTML = dias.length
-    ? `<span>${dias.length} dia${dias.length>1?'s':''} no PDF</span><b>${minToHoursLabel(min)}</b>`
+    ? `<span>${dias.length} dia${dias.length>1?'s':''} no PDF</span><b>${minToHoursLabel(min)}${valor}</b>`
     : `<span>${pontoExportTipo==='personalizado' ? 'Escolha os dias' : 'Nenhum dia trabalhado nesse período'}</span>`;
 }
 /* Personalizado: só aparecem os dias já trancados (cadeado) */
@@ -706,36 +708,54 @@ async function gerarPdfPonto(){
   const nome = pontoNomeDoPdf();
   const pageW = 595, pageH = 842;
   const marginX = 48, direita = pageW - marginX;
-  const tinta = [17,24,39], suave = [107,114,128], claro = [156,163,175], linha = [229,231,235], linhaSemana = [203,208,216], azul = [37,99,235];
+  /* cores do app (v14.7): grafite, latão e linhas bem leves — minimalista, sem enfeite */
+  const tinta = [29,31,33], suave = [92,96,102], claro = [150,153,158], linha = [231,229,224], linhaSemana = [211,206,196],
+        latao = [154,122,62], graf = [34,37,42], grafTx = [241,239,233], latCl = [201,168,106];
   const espaco = n=>{ if(doc.setCharSpace) doc.setCharSpace(n); };
   const nDias = linhas.length;
+  /* mês inteiro: o valor a receber (horas × valor da hora) entra junto do total */
+  const valorHora = state.ponto.valorHora || 0;
+  const comValor = pontoExportTipo === 'mes' && valorHora > 0;
+  const valorTotal = (totalMin / 60) * valorHora;
 
-  /* ---- Cabeçalho: nome e período à esquerda, total de horas em destaque à direita ---- */
-  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...azul); espaco(1.2);
-  doc.text('REGISTRO DE PONTO', marginX, 58);
-  doc.setTextColor(...claro);
-  /* alinhado à direita "na mão": com espaço entre letras o align:'right' passa da margem */
-  const rotTotal = 'TOTAL DE HORAS';
-  doc.text(rotTotal, direita - doc.getTextWidth(rotTotal) - 1.2*(rotTotal.length-1), 58);
+  /* ---- Cabeçalho: nome e período à esquerda; à direita a placa grafite com o total (como no app) ---- */
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...latao); espaco(1.6);
+  doc.text('REGISTRO DE PONTO', marginX, 60);
   espaco(0);
-  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(...tinta);
-  doc.text(nome || 'Registro de ponto', marginX, 84, { maxWidth: pageW - marginX*2 - 150 });
-  doc.setFontSize(24);
-  doc.text(minToHoursLabel(totalMin), direita, 85, { align:'right' });
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(...suave);
-  doc.text(periodoLabel, marginX, 103);
-  doc.text(`${nDias} dia${nDias>1?'s':''} trabalhado${nDias>1?'s':''}`, direita, 103, { align:'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(22); doc.setTextColor(...tinta);
+  doc.text(nome || 'Registro de ponto', marginX, 88, { maxWidth: pageW - marginX*2 - 190 });
+  doc.setFontSize(10); doc.setTextColor(...suave);
+  doc.text(periodoLabel, marginX, 107);
+  doc.setFontSize(9); doc.setTextColor(...claro);
+  doc.text(`${nDias} dia${nDias>1?'s':''} trabalhado${nDias>1?'s':''}`, marginX, 121);
+  const pW = 170, pH = comValor ? 88 : 62, pX = direita - pW, pY = 40;
+  doc.setFillColor(...graf); doc.roundedRect(pX, pY, pW, pH, 10, 10, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...latCl); espaco(1.3);
+  doc.text('TOTAL DE HORAS', pX + 16, pY + 20);
+  espaco(0);
+  doc.setFont('helvetica','normal'); doc.setFontSize(22); doc.setTextColor(...grafTx);
+  doc.text(minToHoursLabel(totalMin), pX + 16, pY + 46);
+  if(comValor){
+    doc.setDrawColor(70,74,80); doc.setLineWidth(0.5);
+    doc.line(pX + 16, pY + 56, pX + pW - 16, pY + 56);
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...latCl); espaco(1.3);
+    doc.text('VALOR TOTAL', pX + 16, pY + 72);
+    espaco(0);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...latCl);
+    doc.text(fmtMoney(valorTotal).replace(/\s/g, ' '), pX + pW - 16, pY + 73, { align:'right' });
+  }
+  const topoTabela = pY + pH + 26;
   doc.setDrawColor(...linha); doc.setLineWidth(0.8);
-  doc.line(marginX, 122, direita, 122);
+  doc.line(marginX, topoTabela - 12, direita, topoTabela - 12);
 
   /* ---- Planilha ---- */
   doc.autoTable({
-    startY: 142,
+    startY: topoTabela + 4,
     head: [['DIA','ENTRADA','ALMOÇO','VOLTA','SAÍDA','HORAS']],
     body: linhas,
     foot: [['Total','','','','', minToHoursLabel(totalMin)]],
     theme: 'plain',
-    headStyles: { textColor:claro, fontStyle:'bold', fontSize:7.5, halign:'center', cellPadding:{top:2,bottom:9,left:6,right:6} },
+    headStyles: { textColor:latao, fontStyle:'bold', fontSize:7.5, halign:'center', cellPadding:{top:2,bottom:9,left:6,right:6} },
     bodyStyles: { fontSize:10, textColor:tinta, halign:'center', cellPadding:{top:8,bottom:8,left:6,right:6} },
     footStyles: { fontSize:11, textColor:tinta, fontStyle:'bold', halign:'center', cellPadding:{top:12,bottom:6,left:6,right:6} },
     columnStyles: { 0:{ halign:'left', cellWidth:92 }, 5:{ fontStyle:'bold', halign:'right' } },
@@ -750,7 +770,7 @@ async function gerarPdfPonto(){
     didDrawCell: (data)=>{
       const c = data.cell, base = c.y + c.height;
       if(data.section==='head'){
-        doc.setDrawColor(...tinta); doc.setLineWidth(0.9);
+        doc.setDrawColor(...graf); doc.setLineWidth(0.6);
         doc.line(c.x, base, c.x + c.width, base);
       }
       if(data.section==='body'){
@@ -771,7 +791,7 @@ async function gerarPdfPonto(){
         doc.line(c.x, base, c.x + c.width, base);
       }
       if(data.section==='foot' && data.column.index===0){
-        doc.setDrawColor(...tinta); doc.setLineWidth(0.9);
+        doc.setDrawColor(...graf); doc.setLineWidth(0.6);
         doc.line(marginX, c.y, direita, c.y);
       }
     }

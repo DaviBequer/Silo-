@@ -99,7 +99,7 @@ function renderChangelog(){
   const v = CHANGELOG[0];
   el.innerHTML = `
     <div style="padding:8px 10px;background:var(--card-2);border-radius:8px">
-      <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px">${String(v.versao).replace(/^v(\d+)\.(\d+)$/, 'Nº $1$2')}</div>
+      <div style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:3px">${String(v.versao).replace(/^v(\d+)\.(\d+)$/, 'Nº $1$2')}</div>
       ${v.itens.map(txt => `<div style="font-size:11.5px;color:var(--text-faint);line-height:1.4">• ${txt}</div>`).join('')}
     </div>
   `;

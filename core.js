@@ -106,7 +106,7 @@ function garantirSyncUI(){
   const b = document.createElement('div');
   b.id = 'syncBanner';
   b.style.cssText = 'display:none;position:fixed;left:8px;right:8px;top:calc(var(--header-h,64px) + 6px);z-index:900;background:#b3261e;color:#fff;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.3)';
-  b.innerHTML = '<div id="syncBannerMsg"></div><div style="display:flex;gap:8px;margin-top:8px"><button type="button" id="syncBannerBtn" style="flex:1;border:none;border-radius:8px;padding:7px 10px;font-weight:700;font-family:inherit;background:#fff;color:#b3261e;cursor:pointer">Tentar de novo</button></div>';
+  b.innerHTML = '<div id="syncBannerMsg"></div><div style="display:flex;gap:8px;margin-top:8px"><button type="button" id="syncBannerBtn" style="flex:1;border:none;border-radius:8px;padding:7px 10px;font-weight:600;font-family:inherit;background:#fff;color:#b3261e;cursor:pointer">Tentar de novo</button></div>';
   document.body.appendChild(b);
 }
 function atualizarStatusSalvo(estado, detalhe){

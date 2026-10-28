@@ -1,6 +1,12 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.7', itens: [
+    'O visual da abertura no app inteiro: letras finas, títulos leves e blocos mais transparentes sobre o mármore',
+    'Empréstimo no computador: o cartão em pé fica à esquerda e as informações ao lado',
+    'PDF do Ponto PJ nas cores do app: placa grafite com o total de horas e, no mês inteiro, o valor total',
+    'Exportar Ponto: o mês mostra o valor total junto das horas; botão "Selecionar todos" com mais espaço'
+  ] },
   { versao: 'v14.6', itens: [
     'Comparar no computador: o lado do Cifra Club e o do app rolam cada um sozinho',
     'Tocar numa frase (ou no nome da parte) de um lado rola o outro, suave, até a mesma frase ficar ao lado; refrão repetido vai para a mesma vez'
