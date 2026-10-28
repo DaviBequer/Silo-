@@ -662,3 +662,49 @@ function finEssencialAlternar(){
   }
 }
 finAplicarEssencial();
+
+/* ---------- Esqueci a senha / o PIN (v14.9) ----------
+   O Supabase manda um link para o e-mail; ao abrir o link, o app entra (supabase.js) e pede a senha nova aqui.
+   A senha nova também vira o PIN se tiver 6 números (o PIN é a senha da conta). */
+async function esqueciSenha(){
+  const campo = document.getElementById('loginEmail');
+  const email = (campo && campo.value.trim()) || pinEmailDoAparelho();
+  const erro = document.getElementById(document.getElementById('loginTela').classList.contains('modo-pin') ? 'loginPinErro' : 'loginErro');
+  if(!email){ loginModoPin(false); erro.textContent = 'Escreva seu e-mail e toque em "Esqueci a senha" de novo'; campo && campo.focus(); return; }
+  if(!(await iosConfirm(`Mandar um link para ${email} para criar uma senha nova?`))) return;
+  const r = await window.SiloSupabase.esqueciSenha(email);
+  erro.textContent = r.ok ? 'Pronto: abra o link no e-mail NESTE aparelho (pode demorar 1 minuto para chegar)' : r.erro;
+}
+function novaSenhaPedir(){
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay active';
+  ov.innerHTML = `<form class="modal nova-senha" onsubmit="event.preventDefault()"><div class="modal-header"><div class="modal-title">Senha nova</div></div>
+    <p class="ia-desc" style="margin:12px 0">Com 6 números ela também vira o seu PIN.</p>
+    <input type="password" class="login-input" id="novaSenha1" placeholder="Senha nova" autocomplete="new-password" inputmode="text">
+    <input type="password" class="login-input" id="novaSenha2" placeholder="Repita a senha nova" autocomplete="new-password" style="margin-top:8px">
+    <div class="login-erro" id="novaSenhaErro"></div>
+    <button type="submit" class="btn btn-block" id="novaSenhaBtn">Salvar senha nova</button></form>`;
+  document.body.appendChild(ov);
+  const btn = ov.querySelector('#novaSenhaBtn'), err = ov.querySelector('#novaSenhaErro');
+  btn.onclick = async ()=>{
+    const a = ov.querySelector('#novaSenha1').value, b = ov.querySelector('#novaSenha2').value;
+    if(a.length < 6){ err.textContent = 'Use pelo menos 6 caracteres'; return; }
+    if(a !== b){ err.textContent = 'As duas não são iguais'; return; }
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const r = await window.SiloSupabase.trocarSenha(a);
+    btn.disabled = false; btn.textContent = 'Salvar senha nova';
+    if(!r.ok){ err.textContent = r.erro; return; }
+    try{ sessionStorage.removeItem('siloe-nova-senha'); }catch(e){}
+    if(typeof digDesligar === 'function') digDesligar();   // a digital guardava o PIN antigo: liga de novo depois
+    ov.remove();
+    showToast(/^\d{6}$/.test(a) ? 'Senha nova salva: ela também é o seu PIN' : 'Senha nova salva');
+  };
+  setTimeout(()=>ov.querySelector('#novaSenha1').focus(), 200);
+}
+(function(){
+  let pedir = false, erroLink = '';
+  try{ pedir = sessionStorage.getItem('siloe-nova-senha') === '1'; erroLink = sessionStorage.getItem('siloe-link-erro') || ''; sessionStorage.removeItem('siloe-link-erro'); }catch(e){}
+  if(erroLink) setTimeout(()=>showToast('O link do e-mail não valeu (' + erroLink.slice(0, 60) + '): peça outro em "Esqueci a senha"'), 2500);
+  /* espera a abertura sair (a janela ficaria por baixo dela) */
+  if(pedir && !window.siloRecuperando){ let n = 0; const t = setInterval(()=>{ const s = document.getElementById('splash'); if(++n > 40 || !s || s.classList.contains('oculta') || s.classList.contains('saindo')){ clearInterval(t); novaSenhaPedir(); } }, 300); }
+})();

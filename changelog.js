@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.9', itens: [
+    '"Esqueci a senha" e "Esqueci o PIN" na tela de entrar: o Supabase manda um link para o e-mail',
+    'Abrir o link do e-mail entra no app e pede a senha nova (com 6 números ela também vira o PIN)'
+  ] },
   { versao: 'v14.8', itens: [
     'Extrato novo (atalho ao lado do Assistente): cada compra pela data da compra, com abas Tudo, Cartão e Pix e débito',
     'Tocar no nome de uma conta (ex.: Mercado) mostra o limite, quanto já foi, quanto falta ou quanto passou, e cada compra que caiu nela',

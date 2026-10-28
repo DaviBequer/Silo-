@@ -15,6 +15,20 @@
   }
 
   const client = getClient();
+  /* link "trocar a senha" do e-mail (v14.9): chega com #access_token=…&type=recovery. O app não lê o endereço sozinho
+     (detectSessionInUrl: false), então aqui ele entra com esse link, tira o código do endereço e recarrega;
+     depois de abrir, o app pede a senha nova (siloe-nova-senha). Link vencido (#error=…) só avisa. */
+  (function(){
+    const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+    if (h.get('error')) { try { sessionStorage.setItem('siloe-link-erro', h.get('error_description') || h.get('error')); } catch (e) {} history.replaceState(null, '', location.pathname + location.search); return; }
+    if (!client || h.get('type') !== 'recovery' || !h.get('access_token')) return;
+    window.siloRecuperando = true;
+    client.auth.setSession({ access_token: h.get('access_token'), refresh_token: h.get('refresh_token') || '' }).then(({ error })=>{
+      try { if (!error) sessionStorage.setItem('siloe-nova-senha', '1'); else sessionStorage.setItem('siloe-link-erro', error.message); } catch (e) {}
+      history.replaceState(null, '', location.pathname + location.search);
+      location.reload();
+    });
+  })();
   // ?teste na URL: lê o banco de verdade mas não grava nada (para conferir mudanças na prévia)
   const MODO_TESTE = /[?&]teste\b/.test(location.search);
   let ultimoUpdatedAt = null;   // updated_at da última leitura/gravação deste aparelho (detecta outro aparelho salvando por cima)
@@ -148,6 +162,18 @@
         const m = String((e && e.message) || e);
         return { ok:false, erro: /should be|at least|weak/i.test(m) ? 'O banco não aceitou esse PIN como senha (' + m.slice(0,80) + ')'
           : /reauth|recent/i.test(m) ? 'Por segurança, saia e entre de novo com a senha antiga antes de criar o PIN' : m.slice(0,120) };
+      }
+    },
+    /* esqueci a senha: o Supabase manda um link para o e-mail; o link volta para este endereço do app */
+    async esqueciSenha(email){
+      if (!client) return { ok:false, erro:'Supabase não configurado' };
+      try {
+        const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+        if (error) throw error;
+        return { ok:true };
+      } catch (e) {
+        const m = String((e && e.message) || e);
+        return { ok:false, erro: /rate|seconds|too many/i.test(m) ? 'Espere um minuto antes de pedir outro link' : m.slice(0,120) };
       }
     },
     /* troca o e-mail da conta: o Supabase manda um link de confirmação (vale só depois de confirmar) */
