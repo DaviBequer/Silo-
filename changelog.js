@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.6', itens: [
+    'Comparar no computador: o lado do Cifra Club e o do app rolam cada um sozinho',
+    'Tocar numa frase (ou no nome da parte) de um lado rola o outro, suave, até a mesma frase ficar ao lado; refrão repetido vai para a mesma vez'
+  ] },
   { versao: 'v14.5', itens: [
     'Capotraste: a cifra do Cifra Club com capo vem com a casa certa (tom F# com forma de E = capo na 2ª casa) e os acordes como se toca',
     'Botão CAPO ao lado do tom, com o braço do violão para escolher a casa: os acordes mudam na hora e o som continua no mesmo tom; folha e PDF mostram "Capo 2ª · forma de E"',

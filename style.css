@@ -1710,6 +1710,12 @@ body:has(.modal-overlay.active){overflow:hidden}
   .lvcmp-abas{display:none}
   .lvcmp-grade{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);align-items:start}
   .lvcmp-grade .lvcmp-col{display:block !important}
+  /* cada lado rola sozinho (pedido do Davi): o Cifra Club tem introdução e tablatura que o app não tem; tocar numa frase alinha o outro lado */
+  .fullpage-content.lvcmp{display:flex;flex-direction:column;overflow:hidden;padding-bottom:16px}
+  .lvcmp-grade{flex:1;min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
+  .lvcmp-grade .lvcmp-col{height:100%;overflow-y:auto;overscroll-behavior:contain;padding:0 6px 55vh 0;scroll-behavior:auto}
+  .lvcmp-l:not(.lvcmp-edita):not(.ac){cursor:pointer;border-radius:4px}
+  .lvcmp-l:not(.lvcmp-edita):not(.ac):hover{background:rgba(201,168,106,.14)}
 }
 .lvcmp-tit{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:var(--s3) 0 8px}
 .lvcmp-tit b{font-size:15px;font-weight:600}
@@ -1728,6 +1734,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lvcmp-l.rot{margin-top:6px;color:var(--text-dim);font-weight:700}
 .lvcmp-l.marca{color:var(--text-faint)}
 .lvcmp-l.olhar{border-radius:3px;background:#fff1a8;color:#3a3000}
+.lvcmp-l.ef-achou{animation:lvcmpAchou 1.6s ease}
+@keyframes lvcmpAchou{0%,35%{background:rgba(201,168,106,.42);box-shadow:0 0 0 3px rgba(201,168,106,.42)}100%{background:transparent;box-shadow:0 0 0 3px transparent}}
 .lvcmp-letras{font-family:var(--font-body);font-size:14px}
 .lvcmp-letras .lvcmp-l{white-space:normal}
 .lvcmp-estrofe+.lvcmp-estrofe{margin-top:12px}

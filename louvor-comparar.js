@@ -245,3 +245,55 @@ async function lvSoPdfRender(l){
   if(typeof driveToken !== 'undefined' && driveToken && Date.now() < driveTokenVence){ await lvcmpVerDoDrive('lvSoPdfCaixa'); return; }
   caixa.innerHTML = `<button type="button" class="btn btn-outline lvcmp-ver-drive" onclick="lvcmpVerDoDrive('lvSoPdfCaixa')">${typeof LOGO_DRIVE !== 'undefined' ? LOGO_DRIVE : ''}Ver o PDF do Drive</button>`;
 }
+
+/* ---------- alinhar os dois lados (v14.5, computador): tocar numa frase de um lado rola o outro até a mesma frase ficar ao lado ----------
+   Cada coluna rola sozinha; linhas de acorde não contam (a do app é editável). Frase repetida (refrão): vale a mesma vez (1ª, 2ª…) */
+function lvcmpPalavras(el){
+  const t = el.textContent.trim();
+  if(!t || isChordLine(t) || /^-{1,3}$/.test(t)) return null;
+  const rot = /^\[(.+)\]$/.exec(t);
+  return { rot: !!rot, p: lvcmpNorm(rot ? lvVezesDoRotulo(rot[1]).nome : t).split(' ').filter(Boolean) };
+}
+function lvcmpParecido(a, b){
+  if(!a || !b || a.rot !== b.rot || !a.p.length || !b.p.length) return 0;
+  const sb = new Set(b.p);
+  const comum = a.p.filter(w=>sb.has(w)).length;
+  return comum / Math.max(a.p.length, b.p.length);
+}
+function lvcmpAlinhar(ev){
+  if(!matchMedia('(min-width:1024px)').matches) return;
+  const linha = ev.target.closest('.lvcmp-l');
+  if(!linha || linha.classList.contains('lvcmp-edita') || linha.isContentEditable) return;
+  const colA = linha.closest('.lvcmp-col'); if(!colA) return;
+  const colB = colA.classList.contains('lvcmp-app') ? document.querySelector('#lvcmpGrade .lvcmp-orig') : document.querySelector('#lvcmpGrade .lvcmp-app');
+  const alvo = lvcmpPalavras(linha); if(!alvo || !colB) return;
+  /* qual vez é essa frase deste lado (refrão que aparece 3x → a 2ª vez procura a 2ª vez do outro lado) */
+  const iguaisA = [...colA.querySelectorAll('.lvcmp-l')].filter(x=>lvcmpParecido(lvcmpPalavras(x), alvo) >= .8);
+  const vez = Math.max(0, iguaisA.indexOf(linha));
+  const cands = [...colB.querySelectorAll('.lvcmp-l')].map(x=>({ x, s: lvcmpParecido(lvcmpPalavras(x), alvo) })).filter(c=>c.s >= .5);
+  if(!cands.length){ showToast('Não achei essa frase do outro lado'); return; }
+  const melhor = Math.max(...cands.map(c=>c.s));
+  const bons = cands.filter(c=>c.s >= melhor - .05);
+  const achado = (bons[Math.min(vez, bons.length - 1)] || bons[0]).x;
+  /* rola o outro lado até a frase achada ficar na mesma altura da que foi tocada */
+  const dy = achado.getBoundingClientRect().top - linha.getBoundingClientRect().top;
+  lvcmpRolar(colB, colB.scrollTop + dy);
+  [linha, achado].forEach(x=>{ x.classList.remove('ef-achou'); void x.offsetWidth; x.classList.add('ef-achou'); });
+}
+/* rolagem suave própria (0,6 s, desacelerando); se o navegador pausar a animação, chega no lugar certo do mesmo jeito */
+function lvcmpRolar(col, destino){
+  destino = Math.max(0, Math.min(destino, col.scrollHeight - col.clientHeight));
+  const ini = col.scrollTop, dist = destino - ini, t0 = performance.now(), dur = 600;
+  const id = (col.lvcmpRolaId || 0) + 1; col.lvcmpRolaId = id;
+  if(!dist) return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ col.scrollTop = destino; return; }
+  const passo = agora=>{
+    if(col.lvcmpRolaId !== id) return;
+    const k = Math.min(1, (agora - t0) / dur);
+    col.scrollTop = ini + dist * (1 - Math.pow(1 - k, 3));
+    if(k < 1) requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+  setTimeout(()=>{ if(col.lvcmpRolaId === id) col.scrollTop = destino; }, dur + 150);
+}
+document.addEventListener('click', ev=>{ if(ev.target.closest && ev.target.closest('#lvcmpGrade')) lvcmpAlinhar(ev); });
