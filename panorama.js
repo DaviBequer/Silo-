@@ -1251,23 +1251,23 @@ function excluirLancamento(id, mKey){
 }
 /* ================= EXTRATO (v14.8): cada compra que entrou no app, pela DATA DA COMPRA (a que foi dita no Assistente),
    não pelo dia em que foi lançada. Cartão à vista, cartão parcelado e Pix/débito; abas Tudo · Cartão · Pix e débito ================= */
-let extMes = null, extFiltro = 'tudo';
+let extMes = null, extFiltro = 'tudo', extEditando = false, extVisiveis = [];
 function extratoItens(){
   const out = [], u = state.currentUser;
   const dataDe = (iso, ts)=>iso || (ts ? calISO(new Date(ts)) : '');
   if(u === 'davi') (state.cartoesTracker || []).forEach(c=>{
     (c.credoVista || []).forEach(cv=>{
       if(cv.ajuste) return;
-      out.push({ data: dataDe(cv.data, Number(cv.criadoEm) || atzTsDoId(cv.id, 'cv')), tipo: 'cartao', desc: cv.descricao || 'Compra', cat: cv.categoria || 'Outros', onde: c.nome, valor: Number(cv.valor) || 0, logo: c.logoUrl });
+      out.push({ ref: { t: 'cv', c: c.id, id: cv.id }, data: dataDe(cv.data, Number(cv.criadoEm) || atzTsDoId(cv.id, 'cv')), tipo: 'cartao', desc: cv.descricao || 'Compra', cat: cv.categoria || 'Outros', onde: c.nome, valor: Number(cv.valor) || 0, logo: c.logoUrl });
     });
   });
   if(u === 'davi') (state.comprasTracker || []).forEach(cp=>{
     const c = (state.cartoesTracker || []).find(x=>x.id === cp.cartaoId);
     const n = Number(cp.parcelas) || 1, total = Number(cp.valorTotal) || 0;
-    out.push({ data: dataDe(cp.data, Number(cp.criadoEm) || atzTsDoId(cp.id, 'cp')), tipo: 'cartao', parc: true, desc: cp.nome || 'Compra', cat: n > 1 ? `${n}x de ${fmtMoney(total / n)}` : 'Parcelada', onde: c ? c.nome : 'Cartão', valor: total, logo: c && c.logoUrl });
+    out.push({ ref: { t: 'cp', id: cp.id }, data: dataDe(cp.data, Number(cp.criadoEm) || atzTsDoId(cp.id, 'cp')), tipo: 'cartao', parc: true, desc: cp.nome || 'Compra', cat: n > 1 ? `${n}x de ${fmtMoney(total / n)}` : 'Parcelada', onde: c ? c.nome : 'Cartão', valor: total, logo: c && c.logoUrl });
   });
   (state.lancamentos || []).filter(la=>(la.usuario || 'davi') === u).forEach(la=>{
-    out.push({ data: dataDe(la.data, atzTsDoId(la.id, 'la')), tipo: 'pix', desc: la.descricao || 'Compra', cat: la.categoria || 'Outros', onde: la.banco || 'Pix/débito', valor: Number(la.valor) || 0 });
+    out.push({ ref: { t: 'la', id: la.id }, data: dataDe(la.data, atzTsDoId(la.id, 'la')), tipo: 'pix', desc: la.descricao || 'Compra', cat: la.categoria || 'Outros', onde: la.banco || 'Pix/débito', valor: Number(la.valor) || 0 });
   });
   return out.filter(x=>x.data).sort((a, b)=>b.data.localeCompare(a.data));
 }
@@ -1285,6 +1285,9 @@ function renderExtrato(){
   document.querySelectorAll('#extAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.f === extFiltro));
   const doMes = extratoItens().filter(x=>x.data.slice(0, 7) === extMes);
   const itens = extFiltro === 'tudo' ? doMes : doMes.filter(x=>x.tipo === extFiltro);
+  extVisiveis = itens;
+  document.getElementById('pageExtrato').classList.toggle('editando', extEditando);
+  const be = document.getElementById('extEditarBtn'); if(be){ be.classList.toggle('on', extEditando); be.textContent = extEditando ? 'Pronto' : 'Editar'; }
   const soma = t=>doMes.filter(x=>x.tipo === t).reduce((s, x)=>s + x.valor, 0);
   const total = itens.reduce((s, x)=>s + x.valor, 0);
   document.getElementById('extTotal').innerHTML = `<span class="placa-lbl" style="margin-top:0">${extFiltro === 'tudo' ? 'Gasto no mês' : extFiltro === 'cartao' ? 'No cartão' : 'No Pix e débito'}</span>
@@ -1305,7 +1308,79 @@ function renderExtrato(){
         const ico = typeof atzIcoItem === 'function' ? atzIcoItem({ tipo: x.parc ? 'parcelada' : x.tipo === 'pix' ? 'pix' : 'vista', categoria: catIco }, 17) : '';
         const como = x.tipo === 'pix' ? `<em class="ext-como pix">Pix/débito</em> ${escBanco(x.onde)}` : `<em class="ext-como">Cartão</em> ${escBanco(x.onde)}`;
         const cat = x.cat && x.cat !== 'Outros' && semAcentoCore(x.cat) !== semAcentoCore(x.desc) ? ' · ' + escBanco(x.cat) : '';
-        return `<div class="ext-linha">${ico}<span class="ext-info"><b>${escBanco(x.desc)}</b><small>${como}${cat}</small></span><span class="ext-valor">${fmtMoney(x.valor)}</span></div>`;
+        return `<div class="ext-linha"${extEditando ? ` role="button" tabindex="0" onclick="extratoEditar(${extVisiveis.indexOf(x)})"` : ''}>${ico}<span class="ext-info"><b>${escBanco(x.desc)}</b><small>${como}${cat}</small></span><span class="ext-valor">${fmtMoney(x.valor)}</span></div>`;
       }).join('')}</div>`;
   }).join('');
+}
+/* ---------- editar pelo Extrato (v15.1): "Editar" no alto liga o modo; tocar numa compra abre a janela ----------
+   Muda a compra de verdade (à vista do cartão, parcelada ou Pix/débito). O saldo do banco não muda (como ao apagar um lançamento). */
+function extratoRedesenhar(){ renderExtrato(); renderPlanner(); renderPanorama(); }
+function extratoModoEditar(){ extEditando = !extEditando; renderExtrato(); if(extEditando) showToast('Toque numa compra para editar'); }
+function extratoAchar(ref){
+  if(ref.t === 'cv'){ const c = (state.cartoesTracker || []).find(x=>x.id === ref.c); return { c, o: c && (c.credoVista || []).find(x=>x.id === ref.id) }; }
+  if(ref.t === 'cp') return { o: (state.comprasTracker || []).find(x=>x.id === ref.id) };
+  return { o: (state.lancamentos || []).find(x=>x.id === ref.id) };
+}
+function extratoEditar(k){
+  const x = extVisiveis[k]; if(!x || !x.ref) return;
+  const { o } = extratoAchar(x.ref); if(!o) return;
+  const parc = x.ref.t === 'cp';
+  const nome = parc ? o.nome : o.descricao, valor = parc ? o.valorTotal : o.valor;
+  const cats = typeof vozCategoriasCartao === 'function' ? vozCategoriasCartao() : [];
+  const catAtual = o.categoria || 'Outros';
+  if(!parc && !cats.includes(catAtual)) cats.unshift(catAtual);
+  document.getElementById('extEditJanela')?.remove();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay active'; ov.id = 'extEditJanela';
+  ov.onclick = e=>{ if(e.target === ov) ov.remove(); };
+  ov.innerHTML = `<div class="modal"><div class="modal-header"><h3>Editar compra</h3>
+      <button class="modal-close" aria-label="Fechar" onclick="document.getElementById('extEditJanela').remove()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></button></div>
+    <div class="ext-edit-onde">${x.tipo === 'pix' ? 'Pix/débito' : parc ? 'Cartão parcelado' : 'Cartão'} · ${escBanco(x.onde)}</div>
+    <div class="field"><label>Nome</label><input type="text" id="extEdNome" value="${escBanco(nome || '')}"></div>
+    <div class="field"><label>${parc ? 'Valor total' : 'Valor'}</label><div class="input-money"><span>R$</span><input type="text" inputmode="numeric" id="extEdValor" value="${(Number(valor) || 0).toFixed(2).replace('.', ',')}" oninput="maskMoneyInput(this)"></div></div>
+    ${parc ? `<div class="field"><label>Parcelas</label><input type="number" min="1" max="48" id="extEdParc" value="${Number(o.parcelas) || 1}"></div>`
+      : `<div class="field"><label>Categoria</label><select id="extEdCat">${cats.map(c=>`<option${c === catAtual ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></div>`}
+    <div class="field"><label>Data da compra</label><input type="date" id="extEdData" value="${x.data || ''}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-block ext-apagar" onclick="extratoApagar(${k})">Apagar</button>
+      <button class="btn btn-block" onclick="extratoSalvar(${k})">Salvar</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  if(typeof melhorarCampoData === 'function') melhorarCampoData(ov.querySelector('#extEdData'));
+  const selCat = ov.querySelector('#extEdCat'); if(selCat && typeof melhorarSelect === 'function') try{ melhorarSelect(selCat); }catch(e){}
+}
+function extratoSalvar(k){
+  const x = extVisiveis[k]; if(!x) return;
+  const ov = document.getElementById('extEditJanela');
+  const nome = ov.querySelector('#extEdNome').value.trim() || 'Compra';
+  const valor = parseMoney(ov.querySelector('#extEdValor').value);
+  const data = ov.querySelector('#extEdData').value || x.data;
+  if(!(valor > 0)){ showToast('Coloque o valor'); return; }
+  const cat = ov.querySelector('#extEdCat') ? ov.querySelector('#extEdCat').value : null;
+  const parcelas = ov.querySelector('#extEdParc') ? Math.max(1, parseInt(ov.querySelector('#extEdParc').value, 10) || 1) : null;
+  comDesfazer('Compra editada', ()=>{
+    const { c, o } = extratoAchar(x.ref); if(!o) return;
+    if(x.ref.t === 'cp'){
+      Object.assign(o, { nome, valorTotal: valor, parcelas, data });
+    } else {
+      Object.assign(o, { descricao: nome, valor, categoria: cat, data });
+      /* à vista: a data decide a fatura (mesma regra do Assistente: depois do fechamento vai para a fatura seguinte) */
+      if(x.ref.t === 'cv' && c && data !== x.data && typeof atzFaturaDaData === 'function') o.mKey = atzFaturaDaData(c, data);
+    }
+    persist();
+  }, extratoRedesenhar);
+  ov.remove();
+  extratoRedesenhar();
+}
+async function extratoApagar(k){
+  const x = extVisiveis[k]; if(!x) return;
+  if(!(await iosConfirm(`Apagar "${x.desc}" (${fmtMoney(x.valor)})?${x.tipo === 'pix' ? ' O saldo do banco não muda.' : ''}`))) return;
+  comDesfazer('Compra apagada', ()=>{
+    if(x.ref.t === 'cv'){ const c = (state.cartoesTracker || []).find(y=>y.id === x.ref.c); if(c) c.credoVista = (c.credoVista || []).filter(y=>y.id !== x.ref.id); }
+    else if(x.ref.t === 'cp') state.comprasTracker = (state.comprasTracker || []).filter(y=>y.id !== x.ref.id);
+    else state.lancamentos = (state.lancamentos || []).filter(y=>y.id !== x.ref.id);
+    persist();
+  }, extratoRedesenhar);
+  document.getElementById('extEditJanela')?.remove();
+  extratoRedesenhar();
 }

@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.1', itens: [
+    'Extrato: botão Editar no alto — com ele ligado, tocar numa compra abre a janela para mudar nome, valor, categoria e data, ou apagar (com Desfazer)'
+  ] },
   { versao: 'v15.0', itens: [
     'Extrato: cada compra com o ícone do que foi (carrinho, cápsula, prato, patinha…) e o selo de como pagou (Cartão ou Pix/débito) com o banco',
     'Ícones novos de categoria: Pet e Contas/taxas (água, luz, multa, boleto)'
