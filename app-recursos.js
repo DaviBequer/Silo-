@@ -124,14 +124,15 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) atualiz
    no aparelho. Na tela de login o aparelho que já conhece o e-mail mostra só o teclado do PIN. */
 const PIN_TAM = 6;
 /* o app tem uma conta só: aparelho novo já entra pelo PIN com o e-mail da conta (trocado na aba Segurança, fica guardado no aparelho) */
-const PIN_EMAIL_CONTA = atob('ZGF2aWpyMTIzLmJlcXVlckBnbWFpbC5jb20=');
+/* O e-mail da conta NÃO fica mais no código (o repositório é público). Cada aparelho guarda o seu depois do
+   primeiro login (siloe-pin-email ou a sessão). Aparelho novo, sem e-mail guardado: entra uma vez com e-mail e senha. */
 function pinEmailDoAparelho(){
   try{
     const salvo = localStorage.getItem('siloe-pin-email'); if(salvo) return salvo;
     const s = JSON.parse(localStorage.getItem('siloe-auth') || 'null');   // sessão guardada (mesmo vencida) tem o e-mail
     if(s && s.user && s.user.email) return s.user.email;
   }catch(e){}
-  return PIN_EMAIL_CONTA;
+  return '';
 }
 function pinGuardarEmail(email){ try{ if(email) localStorage.setItem('siloe-pin-email', email); else localStorage.removeItem('siloe-pin-email'); }catch(e){} }
 /* depois de carregar: se o PIN já foi criado (em qualquer aparelho), este aparelho passa a entrar com ele */
@@ -181,6 +182,7 @@ let pinLogin = null;
 function loginModoPin(ligar){
   const tela = document.getElementById('loginTela'); if(!tela) return;
   const email = pinEmailDoAparelho();
+  if(ligar && !email) ligar = false;   // aparelho que ainda não sabe o e-mail: primeiro login com e-mail e senha
   tela.classList.toggle('modo-pin', !!ligar);
   if(ligar){
     /* saudação com o nome de quem usa este aparelho (v12, escolha A) */

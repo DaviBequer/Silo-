@@ -43,6 +43,8 @@ let salvandoPromise = null;
 let tratandoConflito = false;
 const LOCAL_COPIA_KEY = 'siloe-copia-local-v1';
 const LOCAL_META_KEY = 'siloe-copia-local-meta-v1';
+/* base da mescla: o último estado que este aparelho sabe que estava igual ao banco (para juntar a cópia pendente com o banco sem perder o que o outro aparelho fez) */
+const LOCAL_BASE_KEY = 'siloe-copia-local-base-v1';
 
 /* aba de teste (?teste): não grava no banco NEM na cópia local (que é compartilhada com a aba de verdade) */
 const MODO_TESTE_LOCAL = /[?&]teste\b/.test(location.search);
@@ -62,8 +64,10 @@ function marcarLocalSincronizado(){
 function guardarCopiaLocal(){
   if(MODO_TESTE_LOCAL) return;
   try{
-    localStorage.setItem(LOCAL_COPIA_KEY, JSON.stringify(state));
+    const json = JSON.stringify(state);
+    localStorage.setItem(LOCAL_COPIA_KEY, json);
     localStorage.setItem(LOCAL_META_KEY, JSON.stringify({ t: Date.now(), dirty: false }));
+    try{ localStorage.setItem(LOCAL_BASE_KEY, json); }catch(e){}
   }catch(e){}
 }
 function lerCopiaLocalQualquer(){
@@ -74,7 +78,10 @@ function lerCopiaLocalQualquer(){
 }
 function apagarCopiaLocal(){
   if(MODO_TESTE_LOCAL) return;
-  try{ localStorage.removeItem(LOCAL_COPIA_KEY); localStorage.removeItem(LOCAL_META_KEY); }catch(e){}
+  try{ localStorage.removeItem(LOCAL_COPIA_KEY); localStorage.removeItem(LOCAL_META_KEY); localStorage.removeItem(LOCAL_BASE_KEY); }catch(e){}
+}
+function lerCopiaLocalBase(){
+  try{ const st = JSON.parse(localStorage.getItem(LOCAL_BASE_KEY) || 'null'); return (st && typeof st === 'object' && st.users) ? st : null; }catch(e){ return null; }
 }
 function lerCopiaLocalPendente(){
   try{
@@ -343,10 +350,20 @@ async function carregarDaNuvem(){
       try{ igual = JSON.stringify(pend.state) === JSON.stringify(saved); }catch(e){}
       if(igual){ marcarLocalSincronizado(); }
       else {
-        /* vence a edição mais recente: a deste aparelho ou a que está no banco */
-        const tBanco = r.updatedAt ? Date.parse(r.updatedAt) : 0;
-        if(pend.t > tBanco){ saved = pend.state; precisaSalvar = true; }
-        else { marcarLocalSincronizado(); }
+        /* junta campo a campo: o que este aparelho mudou desde a base + o que o banco (outro aparelho) mudou.
+           Antes a mais recente substituía o banco inteiro e a edição do outro aparelho sumia. */
+        const base = lerCopiaLocalBase();
+        if(base && saved){
+          const junto = mesclarValor(base, pend.state, saved);
+          precisaSalvar = JSON.stringify(junto) !== JSON.stringify(saved);
+          saved = junto;
+          if(!precisaSalvar) marcarLocalSincronizado();
+        } else {
+          /* sem base guardada (versão antiga do app): vence a edição mais recente, como antes */
+          const tBanco = r.updatedAt ? Date.parse(r.updatedAt) : 0;
+          if(pend.t > tBanco){ saved = pend.state; precisaSalvar = true; }
+          else { marcarLocalSincronizado(); }
+        }
       }
     }
 
@@ -565,21 +582,17 @@ async function sairDeTodosAparelhos(){
   location.reload();
 }
 
-/* ================= LIMPEZA AUTOMÁTICA (mantém só mês atual + mês passado) ================= */
+/* ================= LIMPEZA AUTOMÁTICA (só listas que já venceram) =================
+   Desde a v14.3 (conselho de 27/10/2026) NÃO apaga mais nada guardado por mês: renda, contas pagas (state.paid),
+   dias do ponto, salário recebido, dízimo e gastos antigos ficam. Antes eles eram apagados a cada abertura do app,
+   o que perdia o histórico e fazia a proteção contra perda perguntar sem parar. Só saem as listas que já terminaram
+   (extras e contas futuras com a última parcela antes do mês do app). */
 function limparDadosAntigos(){
   // Planner/Panorama operam 1 mês à frente: "mês passado" financeiro = mês real atual
   const limitePlanner = todayKey();
-  // Ponto PJ é sempre em tempo real: "mês passado" real = mês real atual -1
-  const limitePonto = addMonths(mesPontoRef, -1);
-
   ['davi','cris'].forEach(u=>{
     const us = state.users[u];
-    Object.keys(us.income||{}).forEach(mKey=>{ if(mKey < limitePlanner) delete us.income[mKey]; });
-    Object.keys(us.incomeExtra||{}).forEach(mKey=>{ if(mKey < limitePlanner) delete us.incomeExtra[mKey]; });
     us.extras = (us.extras||[]).filter(e=> (e.mesFim||e.mesInicio) >= limitePlanner);
-    (us.cartoes||[]).forEach(c=>{
-      Object.keys(c.gastos||{}).forEach(mKey=>{ if(mKey < limitePlanner) delete c.gastos[mKey]; });
-    });
     us.expenses.futuro = (us.expenses.futuro||[]).filter(item=>{
       if(item.recorrente) return true; // recorrente nunca expira sozinho
       const isLegado = item.mes !== undefined && item.recorrente === undefined && item.parcelas === undefined;
@@ -588,14 +601,6 @@ function limparDadosAntigos(){
       const fim = addMonths(item.mesInicio || limitePlanner, parcelas-1);
       return fim >= limitePlanner;
     });
-  });
-  Object.keys(state.ponto.days||{}).forEach(mKey=>{ if(mKey < limitePonto) delete state.ponto.days[mKey]; });
-  ['salarioRecebido','dizimoPago'].forEach(campo=>{
-    Object.keys(state[campo]||{}).forEach(k=>{ const mKey = k.split('_')[1]; if(mKey && mKey < limitePlanner) delete state[campo][k]; });
-  });
-  Object.keys(state.paid||{}).forEach(pk=>{
-    const mKey = pk.split('_')[0];
-    if(mKey < limitePlanner) delete state.paid[pk];
   });
 }
 

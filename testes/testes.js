@@ -209,6 +209,15 @@ async function rodarTestes(){
     }catch(e){ erroTelas = String(e && e.stack || e); }
     t('telas: abas e telas cheias abrem sem erro', !erroTelas, erroTelas);
 
+    /* ---------- dados que não podem sumir (conselho 27/10) ---------- */
+    state.paid['2020-01_davi_fixo_f1'] = true;
+    state.ponto.days['2020-01'] = { '5': { entrada:'08:00', saida:'17:00' } };
+    state.users.davi.income['2020-01'] = 1234;
+    limparDadosAntigos();
+    t('limpeza: conta paga, dia do ponto e renda de meses antigos continuam', state.paid['2020-01_davi_fixo_f1'] === true && !!state.ponto.days['2020-01'] && state.users.davi.income['2020-01'] === 1234);
+    delete state.paid['2020-01_davi_fixo_f1']; delete state.ponto.days['2020-01']; delete state.users.davi.income['2020-01'];
+    igual('mescla da cópia pendente: junta o que cada aparelho mudou', mesclarValor({ a:1, b:1, l:[{ id:'x', v:1 }] }, { a:2, b:1, l:[{ id:'x', v:1 }, { id:'y', v:2 }] }, { a:1, b:3, l:[{ id:'x', v:9 }] }), { a:2, b:3, l:[{ id:'x', v:9 }, { id:'y', v:2 }] });
+
     /* ---------- imagens separadas dos dados ---------- */
     const img = 'data:image/png;base64,' + 'A'.repeat(3000);
     const json = JSON.stringify({ x:1, logo: img, outra: img, pequena: 'data:image/png;base64,AAAA' });

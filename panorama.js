@@ -807,10 +807,11 @@ async function finalizarContasPagar(){
     return;
   }
   const abertas = contasEmAbertoNoMes(mKey) + cpExtrasAbertosNoMes(mKey, userDash());
-  if(abertas > 0){
-    const ok = await iosConfirm(`Ainda há ${abertas} conta${abertas>1?'s':''} em aberto em ${monthLabel(mKey)}. Concluir o mês e passar para ${monthLabel(addMonths(mKey,1))} mesmo assim?`);
-    if(!ok) return;
-  }
+  /* sempre pergunta: concluir avança o mês do app (dá para desfazer por 6 s no aviso) */
+  const ok = await iosConfirm(abertas > 0
+    ? `Ainda há ${abertas} conta${abertas>1?'s':''} em aberto em ${monthLabel(mKey)}. Concluir o mês e passar para ${monthLabel(addMonths(mKey,1))} mesmo assim?`
+    : `Concluir ${monthLabel(mKey)} e passar para ${monthLabel(addMonths(mKey,1))}?`);
+  if(!ok) return;
   fecharContasPagar();
   concluirMesAtual();
 }

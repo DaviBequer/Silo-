@@ -828,18 +828,19 @@ function resumoCompletoDoMes(mKey){
   return { v:2, renda, salario, extras, contas, dizimo, cartao, emprestimo, gastoTotal, sobra: renda - gastoTotal, fechadoEm: Date.now() };
 }
 /* fecha o mês atual do Dashboard (guarda o resumo completo no histórico) e avança para o próximo */
+/* com Desfazer (6 s): o mês do app (mesAtualRef) também volta */
 function concluirMesAtual(){
-  const mesQueFecha = mesFinanceiroAtual();
-  if(!state.historicoMeses) state.historicoMeses = {};
-  state.historicoMeses[mesQueFecha] = resumoCompletoDoMes(mesQueFecha);
-
-  mesAtualRef = addMonths(mesAtualRef, 1);
-  state.mesAtual = mesAtualRef;
-  state.panoOffset = 0;
-  state.focusMonth = mesFinanceiroAtual();
-  persist();
-  renderAll();
-  showToast('Mês concluído — avançou para ' + monthLabel(mesFinanceiroAtual()));
+  const mesQueFecha = mesFinanceiroAtual(), refAntes = mesAtualRef;
+  comDesfazer('Mês concluído — avançou para ' + monthLabel(addMonths(mesQueFecha, 1)), ()=>{
+    if(!state.historicoMeses) state.historicoMeses = {};
+    state.historicoMeses[mesQueFecha] = resumoCompletoDoMes(mesQueFecha);
+    mesAtualRef = addMonths(mesAtualRef, 1);
+    state.mesAtual = mesAtualRef;
+    state.panoOffset = 0;
+    state.focusMonth = mesFinanceiroAtual();
+    persist();
+    renderAll();
+  }, ()=>{ mesAtualRef = refAntes; state.mesAtual = refAntes; state.focusMonth = mesFinanceiroAtual(); persist(); renderAll(); });
 }
 
 /* ================= MODAIS (fechar por clique fora) ================= */

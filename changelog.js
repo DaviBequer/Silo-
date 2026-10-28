@@ -1,6 +1,12 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.3', itens: [
+    'Dados: o app não apaga mais contas pagas, dias do ponto e renda de meses antigos ao abrir',
+    'Dados: alteração que não chegou ao banco agora é juntada com o que o outro aparelho mudou (antes uma substituía a outra)',
+    'Concluir mês (era Finalizar) sempre pergunta antes e tem Desfazer por 6 segundos',
+    'Segurança: o e-mail da conta saiu do código público; aparelho novo entra uma vez com e-mail e senha e depois usa o PIN'
+  ] },
   { versao: 'v14.2', itens: [
     'Mais efeitos: pílula da barra de baixo que escorrega, telas chegando com profundidade, janelas com fundo desfocado, topo de vidro ao rolar, puxar a tela para atualizar, nome da abertura se desenhando, PIN que enche, versículo palavra por palavra',
     'Cartões dos bancos em leque, curva do saldo se desenhando, calendários virando, deslizar item do Assistente para tirar, aviso de Desfazer com o tempo, anel das horas de hoje no Ponto, números das Vendas girando, capas das músicas vivas, folha da cifra abrindo, tom girando, linha do tempo do Culto e menu do + saindo em arco'
