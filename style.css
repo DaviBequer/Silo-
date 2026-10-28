@@ -2876,3 +2876,7 @@ body{font-weight:400;letter-spacing:.005em}
 .ext-info small{font-size:12px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ext-valor{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
 @media (min-width:1024px){ .fullpage-content.ext{max-width:760px;margin:0 auto;width:100%} }
+/* Extrato: selo de como pagou na linha de baixo (Cartão grafite / Pix claro) */
+.ext-linha{grid-template-columns:34px minmax(0,1fr) auto}
+.ext-como{display:inline-block;margin-right:4px;padding:1px 7px;border-radius:99px;background:var(--graf);color:var(--latao);font:600 9.5px/1.5 var(--font-narrow);font-style:normal;letter-spacing:.08em;text-transform:uppercase;vertical-align:1px}
+.ext-como.pix{background:var(--card-2);color:var(--text-dim)}

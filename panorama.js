@@ -1264,7 +1264,7 @@ function extratoItens(){
   if(u === 'davi') (state.comprasTracker || []).forEach(cp=>{
     const c = (state.cartoesTracker || []).find(x=>x.id === cp.cartaoId);
     const n = Number(cp.parcelas) || 1, total = Number(cp.valorTotal) || 0;
-    out.push({ data: dataDe(cp.data, Number(cp.criadoEm) || atzTsDoId(cp.id, 'cp')), tipo: 'cartao', desc: cp.nome || 'Compra', cat: n > 1 ? `${n}x de ${fmtMoney(total / n)}` : 'Parcelada', onde: c ? c.nome : 'Cartão', valor: total, logo: c && c.logoUrl });
+    out.push({ data: dataDe(cp.data, Number(cp.criadoEm) || atzTsDoId(cp.id, 'cp')), tipo: 'cartao', parc: true, desc: cp.nome || 'Compra', cat: n > 1 ? `${n}x de ${fmtMoney(total / n)}` : 'Parcelada', onde: c ? c.nome : 'Cartão', valor: total, logo: c && c.logoUrl });
   });
   (state.lancamentos || []).filter(la=>(la.usuario || 'davi') === u).forEach(la=>{
     out.push({ data: dataDe(la.data, atzTsDoId(la.id, 'la')), tipo: 'pix', desc: la.descricao || 'Compra', cat: la.categoria || 'Outros', onde: la.banco || 'Pix/débito', valor: Number(la.valor) || 0 });
@@ -1298,7 +1298,14 @@ function renderExtrato(){
   document.getElementById('extLista').innerHTML = Object.keys(dias).sort().reverse().map(d=>{
     const dt = calParse(d), lista = dias[d];
     return `<div class="ext-dia"><div class="ext-dia-topo">${gmCal(dt.getDate())}<span class="ext-dia-txt"><b>${dt.getDate()} de ${MES_NOMES_LONGOS[dt.getMonth()].toLowerCase()}</b><small>${semana[dt.getDay()]}</small></span><em>${fmtMoney(lista.reduce((s, x)=>s + x.valor, 0))}</em></div>
-      ${lista.map(x=>`<div class="ext-linha"><span class="ext-ico ${x.tipo}">${x.tipo === 'pix' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l4 4-4 4-4-4z"/><path d="M12 13l4 4-4 4-4-4z"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>'}</span>
-        <span class="ext-info"><b>${escBanco(x.desc)}</b><small>${escBanco(x.cat)} · ${escBanco(x.onde)}</small></span><span class="ext-valor">${fmtMoney(x.valor)}</span></div>`).join('')}</div>`;
+      ${lista.map(x=>{
+        /* ícone do que foi comprado (o mesmo do Assistente: carrinho, cápsula, prato…) + selinho de como pagou;
+           sem categoria conhecida, tenta pelo nome da compra */
+        const catIco = typeof atzIcoCategoria === 'function' && atzIcoCategoria(x.cat) === ATZ_ICO_OUTROS ? x.desc : x.cat;
+        const ico = typeof atzIcoItem === 'function' ? atzIcoItem({ tipo: x.parc ? 'parcelada' : x.tipo === 'pix' ? 'pix' : 'vista', categoria: catIco }, 17) : '';
+        const como = x.tipo === 'pix' ? `<em class="ext-como pix">Pix/débito</em> ${escBanco(x.onde)}` : `<em class="ext-como">Cartão</em> ${escBanco(x.onde)}`;
+        const cat = x.cat && x.cat !== 'Outros' && semAcentoCore(x.cat) !== semAcentoCore(x.desc) ? ' · ' + escBanco(x.cat) : '';
+        return `<div class="ext-linha">${ico}<span class="ext-info"><b>${escBanco(x.desc)}</b><small>${como}${cat}</small></span><span class="ext-valor">${fmtMoney(x.valor)}</span></div>`;
+      }).join('')}</div>`;
   }).join('');
 }

@@ -456,7 +456,9 @@ const ATZ_ICO_CAT = [
   [/transp|uber|onibus|carro|estacion/, '<path d="M5 16V11l2-5h10l2 5v5M3 16h18v2H3z"/><circle cx="7.5" cy="13" r=".8"/><circle cx="16.5" cy="13" r=".8"/>'],
   [/lazer|cinema|stream|diver/, '<circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z"/>'],
   [/roupa|vest|calcad/, '<path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 4.5 8 3z"/>'],
-  [/casa|morad|aluguel/, '<path d="M3 11 12 4l9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5"/>']
+  [/casa|morad|aluguel/, '<path d="M3 11 12 4l9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5"/>'],
+  [/pet|cachorr|gato|racao|veterin/, '<circle cx="5.5" cy="10" r="1.8"/><circle cx="9.5" cy="5.8" r="1.8"/><circle cx="14.5" cy="5.8" r="1.8"/><circle cx="18.5" cy="10" r="1.8"/><path d="M12 11.5c-2.6 0-5 3.6-5 6 0 1.6 1.2 2.5 2.6 2.5 1 0 1.6-.6 2.4-.6s1.4.6 2.4.6c1.4 0 2.6-.9 2.6-2.5 0-2.4-2.4-6-5-6z"/>'],
+  [/multa|taxa|samae|agua|luz|energia|conta|boleto|imposto/, '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>']
 ];
 const ATZ_ICO_OUTROS = '<circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/>';
 const atzSvg = (d, t)=>`<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
