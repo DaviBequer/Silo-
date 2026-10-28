@@ -1,6 +1,13 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.8', itens: [
+    'Extrato novo (atalho ao lado do Assistente): cada compra pela data da compra, com abas Tudo, Cartão e Pix e débito',
+    'Tocar no nome de uma conta (ex.: Mercado) mostra o limite, quanto já foi, quanto falta ou quanto passou, e cada compra que caiu nela',
+    'Assistente: compra com o nome e o valor de uma conta (ex.: Spotify no cartão) marca a conta como paga; compra numa conta-limite mostra como ela fica',
+    'Fluxo mensal: o mês atual numa pílula grafite, sem a coluna pintada',
+    'Histórico de meses: o mês atual não encosta mais na borda do celular'
+  ] },
   { versao: 'v14.7', itens: [
     'O visual da abertura no app inteiro: letras finas, títulos leves e blocos mais transparentes sobre o mármore',
     'Empréstimo no computador: o cartão em pé fica à esquerda e as informações ao lado',

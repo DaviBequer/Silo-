@@ -101,6 +101,21 @@ async function rodarTestes(){
     const ltDoc = lviMontaBlocos(lviTextoParaLinhas(lt ? lt.texto : ''));
     t('Letras: refrão repetido vira "Repete - Refrão"', lviBlocosParaTexto(ltDoc.secoes).includes('[Repete - Refrão]'), lviBlocosParaTexto(ltDoc.secoes));
     igual('Cifra Club: espaço invisível no começo da linha não esconde os acordes', lviTextoParaLinhas('​D        A\n​Santo santo é o Senhor').map(r=>r.type + ':' + (r.chords || []).length), ['lyric:2']);
+    /* v14.8: compra com o nome e o valor de uma conta paga a conta; compra pequena só desconta (conta-limite) */
+    {
+      const vv = { e: state.users.davi.expenses, p: state.paid, cv: state.cartoesTracker, la: state.lancamentos };
+      state.users.davi.expenses = { moradia:[], assinatura:[], fixo:[], futuro:[] }; state.paid = {};
+      const m = mesFinanceiroAtual();
+      state.users.davi.expenses.assinatura = [{ id:'tsp', desc:'Spotify', valor:21.9, dia:8 }];
+      state.users.davi.expenses.fixo = [{ id:'tme', desc:'Mercado', valor:850, dia:5 }];
+      state.cartoesTracker = [{ id:'tc', nome:'Nubank', fechamento:5, vencimento:12, credoVista:[{ id:'cv1', descricao:'Top', valor:1200, categoria:'Mercado', mKey:m, data:'2026-10-25' }], assinaturas:[] }];
+      state.lancamentos = [];
+      igual('Spotify no cartão marca a conta Spotify como paga', atzContasPagasPeloItem([{ tipo:'vista', descricao:'Spotify', valor:21.9 }]).map(c=>c.desc), ['Spotify']);
+      igual('Mercado 10 não marca a conta Mercado inteira', atzContasPagasPeloItem([{ tipo:'pix', descricao:'Mercado', valor:10 }]).length, 0);
+      const cm = contaPorNome('mercado', m);
+      igual('conta-limite: gasto e quanto passou', [cm && cm.limite, cm && cm.gasto], [850, 1200]);
+      state.users.davi.expenses = vv.e; state.paid = vv.p; state.cartoesTracker = vv.cv; state.lancamentos = vv.la;
+    }
     /* capotraste: Cifra Club "Tom: F# (com forma de E) · Capotraste 2ª casa" — a cifra vem na forma E */
     const ousado = '[Intro] C#m  B4  A9  E\n\n[Primeira Parte]\nC#m        B4\nAntes de eu falar\nA9            E\nTu cantavas sobre mim\n\n[Refrão]\nE\nOh, impressionante\nB4          C#m   A9\nInfinito e ousado amor';
     igual('capo: a página diz a casa', ccCapoDaCifra({ capo: 2 }, 'F#', ousado), 2);

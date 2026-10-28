@@ -1249,3 +1249,56 @@ function excluirLancamento(id, mKey){
     persist(); renderPanorama(); abrirLancamentos(mKey);
   }, ()=>{ if(document.getElementById('modalResumoDetalhe').dataset.modo === 'lancamentos') abrirLancamentos(mKey); });
 }
+/* ================= EXTRATO (v14.8): cada compra que entrou no app, pela DATA DA COMPRA (a que foi dita no Assistente),
+   não pelo dia em que foi lançada. Cartão à vista, cartão parcelado e Pix/débito; abas Tudo · Cartão · Pix e débito ================= */
+let extMes = null, extFiltro = 'tudo';
+function extratoItens(){
+  const out = [], u = state.currentUser;
+  const dataDe = (iso, ts)=>iso || (ts ? calISO(new Date(ts)) : '');
+  if(u === 'davi') (state.cartoesTracker || []).forEach(c=>{
+    (c.credoVista || []).forEach(cv=>{
+      if(cv.ajuste) return;
+      out.push({ data: dataDe(cv.data, Number(cv.criadoEm) || atzTsDoId(cv.id, 'cv')), tipo: 'cartao', desc: cv.descricao || 'Compra', cat: cv.categoria || 'Outros', onde: c.nome, valor: Number(cv.valor) || 0, logo: c.logoUrl });
+    });
+  });
+  if(u === 'davi') (state.comprasTracker || []).forEach(cp=>{
+    const c = (state.cartoesTracker || []).find(x=>x.id === cp.cartaoId);
+    const n = Number(cp.parcelas) || 1, total = Number(cp.valorTotal) || 0;
+    out.push({ data: dataDe(cp.data, Number(cp.criadoEm) || atzTsDoId(cp.id, 'cp')), tipo: 'cartao', desc: cp.nome || 'Compra', cat: n > 1 ? `${n}x de ${fmtMoney(total / n)}` : 'Parcelada', onde: c ? c.nome : 'Cartão', valor: total, logo: c && c.logoUrl });
+  });
+  (state.lancamentos || []).filter(la=>(la.usuario || 'davi') === u).forEach(la=>{
+    out.push({ data: dataDe(la.data, atzTsDoId(la.id, 'la')), tipo: 'pix', desc: la.descricao || 'Compra', cat: la.categoria || 'Outros', onde: la.banco || 'Pix/débito', valor: Number(la.valor) || 0 });
+  });
+  return out.filter(x=>x.data).sort((a, b)=>b.data.localeCompare(a.data));
+}
+function abrirExtrato(){
+  extMes = extMes || calISO(new Date()).slice(0, 7);
+  document.getElementById('pageExtrato').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  renderExtrato();
+}
+function fecharExtrato(){ document.getElementById('pageExtrato').classList.remove('active'); document.body.style.overflow = ''; }
+function extratoMes(d){ extMes = addMonths(extMes, d); renderExtrato(); }
+function extratoFiltro(f){ extFiltro = f; renderExtrato(); }
+function renderExtrato(){
+  document.getElementById('extMesLabel').textContent = monthLabelLong(extMes);
+  document.querySelectorAll('#extAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.f === extFiltro));
+  const doMes = extratoItens().filter(x=>x.data.slice(0, 7) === extMes);
+  const itens = extFiltro === 'tudo' ? doMes : doMes.filter(x=>x.tipo === extFiltro);
+  const soma = t=>doMes.filter(x=>x.tipo === t).reduce((s, x)=>s + x.valor, 0);
+  const total = itens.reduce((s, x)=>s + x.valor, 0);
+  document.getElementById('extTotal').innerHTML = `<span class="placa-lbl" style="margin-top:0">${extFiltro === 'tudo' ? 'Gasto no mês' : extFiltro === 'cartao' ? 'No cartão' : 'No Pix e débito'}</span>
+    <b class="ext-total">${fmtMoney(total)}</b>
+    <div class="ext-partes"><span>Cartão <b>${fmtMoney(soma('cartao'))}</b></span><span>Pix e débito <b>${fmtMoney(soma('pix'))}</b></span><span>${itens.length} compra${itens.length === 1 ? '' : 's'}</span></div>`;
+  if(!itens.length){ document.getElementById('extLista').innerHTML = `<div class="gm-vazio">Nenhuma compra em ${monthLabelLong(extMes).toLowerCase()}${extFiltro === 'tudo' ? '' : ' nesta aba'}.</div>`; return; }
+  /* um grupo por dia, do mais novo para o mais antigo */
+  const dias = {};
+  itens.forEach(x=>{ (dias[x.data] = dias[x.data] || []).push(x); });
+  const semana = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  document.getElementById('extLista').innerHTML = Object.keys(dias).sort().reverse().map(d=>{
+    const dt = calParse(d), lista = dias[d];
+    return `<div class="ext-dia"><div class="ext-dia-topo">${gmCal(dt.getDate())}<span class="ext-dia-txt"><b>${dt.getDate()} de ${MES_NOMES_LONGOS[dt.getMonth()].toLowerCase()}</b><small>${semana[dt.getDay()]}</small></span><em>${fmtMoney(lista.reduce((s, x)=>s + x.valor, 0))}</em></div>
+      ${lista.map(x=>`<div class="ext-linha"><span class="ext-ico ${x.tipo}">${x.tipo === 'pix' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l4 4-4 4-4-4z"/><path d="M12 13l4 4-4 4-4-4z"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>'}</span>
+        <span class="ext-info"><b>${escBanco(x.desc)}</b><small>${escBanco(x.cat)} · ${escBanco(x.onde)}</small></span><span class="ext-valor">${fmtMoney(x.valor)}</span></div>`).join('')}</div>`;
+  }).join('');
+}

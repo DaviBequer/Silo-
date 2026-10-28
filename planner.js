@@ -30,7 +30,7 @@ function renderRendaTable(){
 
   const thead = `<tr><th style="text-align:left;padding-left:10px">Categoria</th>${months.map(mKey=>{
     const isCurrent = mKey===hoje;
-    return `<th class="${isCurrent?'current-col':''}">${monthLabel(mKey).slice(0,3)}${isCurrent?'<small>atual</small>':''}</th>`;
+    return `<th class="${isCurrent?'current-col':''}">${isCurrent ? `<span class="fx-pilula">${monthLabel(mKey).slice(0,3)} · atual</span>` : monthLabel(mKey).slice(0,3)}</th>`;
   }).join('')}<th></th></tr>`;
 
   const rendaRow = `<tr><td class="row-label">Renda</td>${months.map(mKey=>{
@@ -461,6 +461,62 @@ function renderResumoSecaoGasto(cat){
 }
 const gastoFiltro = {};   // filtro de cada seção (só na tela): 'todas' | 'aberto' | 'pagas'
 function gastoFiltrar(cat, f){ gastoFiltro[cat] = f; renderGastoGrid(cat); }
+/* ---------- detalhe da conta (v14.8): tocar no nome mostra o limite, quanto já foi, quanto falta (ou quanto passou)
+   e cada compra que caiu nela (cartão à vista e Pix/débito com a categoria igual ao nome da conta), pela data da compra ---------- */
+let contaDetalheAberta = null;
+function contaDetalheAlternar(pk){
+  contaDetalheAberta = contaDetalheAberta === pk ? null : pk;
+  const cat = String(pk).split('_')[2];
+  renderGastoGrid(cat);
+}
+/* compras que contam numa conta (mesma regra de contaUsadaNoCartao) → [{data, desc, onde, tipo, valor}] */
+function contaComprasDe(pk){
+  const p = String(pk).split('_'), mKey = p[0], user = p[1], cat = p[2], id = p.slice(3).join('_');
+  const item = ((state.users[user] || {}).expenses || {})[cat]?.find(i=>String(i.id) === id);
+  if(!item || !item.desc) return [];
+  const nome = semAcentoCore(item.desc), out = [];
+  if(user === 'davi') (state.cartoesTracker || []).forEach(c=>(c.credoVista || []).forEach(cv=>{
+    if(cv.mKey === mKey && !cv.ajuste && semAcentoCore(cv.categoria) === nome) out.push({ data: cv.data || '', desc: cv.descricao || 'Compra', onde: c.nome, tipo: 'cartao', valor: Number(cv.valor) || 0 });
+  }));
+  (state.lancamentos || []).forEach(la=>{
+    if(la.mKey === mKey && (la.usuario || 'davi') === user && semAcentoCore(la.categoria) === nome) out.push({ data: la.data || '', desc: la.descricao || 'Compra', onde: la.banco || 'Pix/débito', tipo: 'pix', valor: Number(la.valor) || 0 });
+  });
+  return out.sort((a, b)=>String(b.data).localeCompare(String(a.data)));
+}
+/* conta do mês com esse nome (Mercado) → { pk, desc, limite, gasto } ou null */
+function contaPorNome(nome, mKey){
+  const u = state.currentUser, n = semAcentoCore(nome), ex = (state.users[u] || {}).expenses || {};
+  for(const cat of ['fixo', 'moradia', 'assinatura']){
+    const item = (ex[cat] || []).find(i=>!i.arquivado && semAcentoCore(i.desc) === n && !(i.mesInicio && mKey < i.mesInicio));
+    if(item){
+      const pk = mKey + '_' + u + '_' + cat + '_' + item.id;
+      const gasto = contaComprasDe(pk).reduce((s, c)=>s + c.valor, 0) + ((state.pagamentosParciais || {})[pk] || 0);
+      return { pk, desc: item.desc, limite: Number(item.valor) || 0, gasto: Math.round(gasto * 100) / 100 };
+    }
+  }
+  return null;
+}
+function contaDetalheHtml(pk, item){
+  const cat = String(pk).split('_')[2], mKey = String(pk).split('_')[0];
+  const limite = cat === 'futuro' ? futuroValorNoMes(item, mKey) : (Number(item.valor) || 0);
+  const compras = contaComprasDe(pk);
+  const parcial = (state.pagamentosParciais || {})[pk] || 0;
+  const gasto = Math.round((compras.reduce((s, c)=>s + c.valor, 0) + parcial) * 100) / 100;
+  const pago = !!state.paid[pk];
+  const dif = Math.round((limite - gasto) * 100) / 100;
+  const pct = limite > 0 ? Math.min(100, gasto / limite * 100) : 0;
+  const passou = dif < -0.004;
+  const fim = pago && !compras.length ? '<span class="cd-ok">✓ paga</span>'
+    : passou ? `<span class="cd-neg">passou ${fmtMoney(-dif)}</span>` : `<span>falta ${fmtMoney(dif)}</span>`;
+  const linhas = compras.map(c=>`<div class="cd-linha"><span class="cd-data">${c.data ? c.data.slice(8, 10) + '/' + c.data.slice(5, 7) : '—'}</span>
+      <span class="cd-info"><b>${escBanco(c.desc)}</b><small>${c.tipo === 'pix' ? 'Pix/débito' : 'Cartão'} · ${escBanco(c.onde)}</small></span><span class="cd-valor">${fmtMoney(c.valor)}</span></div>`).join('')
+    + (parcial > 0.004 ? `<div class="cd-linha"><span class="cd-data">—</span><span class="cd-info"><b>Pago à parte</b><small>marcado na conta</small></span><span class="cd-valor">${fmtMoney(parcial)}</span></div>` : '');
+  return `<div class="conta-detalhe">
+    <div class="cd-topo"><span>Limite <b>${fmtMoney(limite)}</b></span><span>Gasto <b>${fmtMoney(gasto)}</b></span>${fim}</div>
+    <div class="cd-barra${passou ? ' passou' : ''}"><i style="width:${pct.toFixed(1)}%"></i></div>
+    ${linhas || '<div class="cd-vazio">Nenhuma compra nesta conta em ' + monthLabel(mKey) + '. No Assistente, diga a compra com essa categoria (ex.: "mercado 120 no Nubank").</div>'}
+  </div>`;
+}
 function renderGastoGrid(cat){
   renderResumoSecaoGasto(cat);
   const u = state.currentUser;
@@ -501,9 +557,10 @@ function renderGastoGrid(cat){
     const parc = (state.pagamentosParciais||{})[pk] || 0;
     const statusTxt = !ativoNoMes ? '' : (pago ? ' · <b class="lr-paga">✓ paga</b>' : (parc>0 ? ' · <b style="color:var(--warning)">pago '+fmtMoney(parc)+'</b>' : ' · aberta'));
     const btnPagar = !ativoNoMes ? '' : `<button class="btn-icon-sm" title="Registrar pagamento" onclick="abrirEditarConta('${pk}','${u}','${cat}','${item.id}','${mAtual}')">$</button>`;
-    return `<div class="list-row">
+    const aberta = contaDetalheAberta === pk;
+    return `<div class="list-row${aberta ? ' aberta' : ''}">
       ${logo}
-      <div class="lr-info">
+      <div class="lr-info" onclick="contaDetalheAlternar('${pk}')" title="Ver o que foi gasto nesta conta">
         <div class="lr-desc">${item.desc}</div>
         ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
         <div class="lr-meta">${metaTxt}${statusTxt}</div>
@@ -516,7 +573,7 @@ function renderGastoGrid(cat){
         </div>
         <div class="lr-value">${valorTxt}</div>
       </div>
-    </div>`;
+    </div>${aberta && ativoNoMes ? contaDetalheHtml(pk, item) : ''}`;
   }).join('');
   }
   const arqEl = document.getElementById('grid-'+cat+'-arquivados');

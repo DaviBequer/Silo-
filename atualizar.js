@@ -562,7 +562,15 @@ function atzItemHtml(i, k, dup){
     <div class="atz-it-txt"><button type="button" class="atz-it-nome" title="Editar" onclick="atzEditar(${k})"><b>${escBanco(nome)}</b>${ATZ_ICO_LAPIS}</button><small>${cat}${onde ? ' · ' + escBanco(onde) : ''}${falta ? ` <em>${falta}</em>` : ''}${dup ? ` <em class="atz-dup" title="${escBanco(dup.texto)}">${escBanco(dup.curto)}</em>` : ''}</small></div>
     <b class="atz-valor">${fmtMoney(i.valor)}</b>
     <button type="button" class="ico-btn atz-tirar" aria-label="Tirar" title="Tirar" onclick="atzTirarItem(${k})">${CU_ICO.x}</button>
+    ${atzLimiteHtml(i)}
   </div>`;
+}
+/* compra com a categoria de uma conta-limite (Mercado de R$ 850): mostra como a conta fica com essa compra */
+function atzLimiteHtml(i){
+  if(!['vista', 'pix'].includes(i.tipo) || !i.categoria || typeof contaPorNome !== 'function') return '';
+  const c = contaPorNome(i.categoria, mesFinanceiroAtual()); if(!c) return '';
+  const depois = Math.round((c.gasto + (Number(i.valor) || 0)) * 100) / 100, dif = c.limite - depois;
+  return `<div class="atz-limite${dif < -0.004 ? ' passou' : ''}"><span>${escBanco(c.desc)}: ${fmtMoney(depois)} de ${fmtMoney(c.limite)}</span><b>${dif < -0.004 ? 'passou ' + fmtMoney(-dif) : 'falta ' + fmtMoney(dif)}</b></div>`;
 }
 /* faixa do alto: total grande, quanto foi para cada categoria (barra + valor + %) e os itens bem pequenos */
 const ATZ_CORES = ['#c9a86a','#8fb3a0','#d39a7a','#a3a9cf','#c7b4d6','#9cc3cf','#d8c38f','#b9a48f'];
@@ -756,6 +764,23 @@ function atzRenderApelidos(){
 
 /* grava só os itens confirmados (com Desfazer). Banco com saldo confirmado fica com o saldo informado (o Pix dele só entra no histórico);
    nos outros, Pix/conta tiram e "recebi" soma. Os que não foram confirmados continuam na conversa. */
+/* contas em aberto que uma compra paga por inteiro: mesmo nome (Spotify no cartão = conta Spotify) e valor de pelo menos 90% do que falta.
+   Compra menor (Mercado 10 de uma conta de 850) não marca: ela já desconta da conta pela categoria (contaUsadaNoCartao) */
+function atzContasPagasPeloItem(itens){
+  const contas = vozContasAbertas(), usadas = new Set(), out = [];
+  const nome = s=>vozSemAcento(s).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  itens.filter(i=>['vista', 'parcelada', 'pix'].includes(i.tipo)).forEach(i=>{
+    const d = nome(i.descricao);
+    if(!d) return;
+    const c = contas.find(c=>{
+      if(usadas.has(c.key)) return false;
+      const n = nome(c.desc);
+      return n && (n === d || (n.length > 3 && (` ${d} `).includes(` ${n} `)) || (d.length > 3 && (` ${n} `).includes(` ${d} `)));
+    });
+    if(c && (Number(i.valor) || 0) >= c.valor * 0.9){ usadas.add(c.key); out.push(c); }
+  });
+  return out;
+}
 async function atzGravar(){
   const itens = atzItens.filter(atzConfirmado);
   if(!itens.length) return;
@@ -767,8 +792,10 @@ async function atzGravar(){
   /* repetidos confirmados: pergunta de novo antes de lançar em dobro */
   const dups = atzDuplicados(), repetidos = itens.filter(i=>dups[atzItens.indexOf(i)]);
   if(repetidos.length && !(await iosConfirm(`${repetidos.length === 1 ? 'Um item parece repetido' : repetidos.length + ' itens parecem repetidos'} (${repetidos.map(i=>(i.descricao || 'Item') + ' ' + fmtMoney(i.valor)).join(', ')}): já estão no app. Gravar mesmo assim?`))) return;
+  /* compra no cartão ou no Pix com o nome de uma conta do mês (ex.: Spotify) e do valor dela: a conta fica paga também */
+  const pagas = atzContasPagasPeloItem(itens);
   const comSaldo = new Set(itens.filter(i=>i.tipo === 'saldo').map(i=>i.bancoId)), n = itens.length;
-  comDesfazer(`${n} ${n === 1 ? 'item gravado' : 'itens gravados'}`, ()=>{
+  comDesfazer(`${n} ${n === 1 ? 'item gravado' : 'itens gravados'}${pagas.length ? ' · ' + pagas.map(p=>p.desc).join(', ') + (pagas.length === 1 ? ' marcada como paga' : ' marcadas como pagas') : ''}`, ()=>{
     const bancos = bancosDoUsuario(), us = state.users[state.currentUser];
     const banco = id=>bancos.find(b=>b.id === id);
     const mexe = (id, v)=>{ const b = banco(id); if(b && !comSaldo.has(id)) b.valor = Math.round(((Number(b.valor) || 0) + v) * 100) / 100; };
@@ -795,6 +822,7 @@ async function atzGravar(){
         if(i.bancoId) mexe(i.bancoId, -i.valor);
       }
     });
+    pagas.forEach(p=>{ state.paid[p.key] = true; if(state.pagamentosParciais) delete state.pagamentosParciais[p.key]; });
     /* saldo confirmado: vale o do banco (o "não identificado" só entra se a pessoa pediu: vira item Pix na lista) */
     conf.bancos.filter(x=>x.informado !== null).forEach(x=>{ const b = banco(x.b.id); if(b) b.valor = x.informado; });
     if(bancos.length) us.saldoAtual = totalBancos(bancos);
