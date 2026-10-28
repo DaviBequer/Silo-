@@ -511,8 +511,11 @@ function fecharSplash(imediato){
       if(aba && typeof efeitoEntradaCartoes==='function'){ efeitoEntradaCartoes(aba); efeitoContarNumeros(aba); efeitoContarSaldo(); }
     }, 250);
   };
-  const falta = SPLASH_MINIMO_MS - performance.now();
-  if(imediato || falta <= 0) sair(); else setTimeout(sair, falta);
+  /* v14.4: a abertura mostra o versículo do dia e fica o tempo de ler (window.splashMinimo, do index); um toque encurta */
+  const minimo = ()=>typeof window.splashMinimo === 'number' ? window.splashMinimo : SPLASH_MINIMO_MS;
+  if(imediato || performance.now() >= minimo()){ sair(); return; }
+  const espera = ()=>{ if(performance.now() >= minimo()) sair(); else setTimeout(espera, 120); };
+  setTimeout(espera, 120);
 }
 function mostrarSplash(){
   document.body.classList.add('carregando');

@@ -1,6 +1,12 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v14.4', itens: [
+    'Ícone novo: grafite que esquenta para o dourado, com o cordeiro claro',
+    'Abertura nova: cordeiro e nome maiores no alto e um versículo curto do dia aparecendo palavra por palavra (toque na tela para pular)',
+    'Entrar com a digital (ou o rosto) do celular: liga em Ajustes → Segurança ou na pergunta depois de entrar com o PIN; pode pedir a digital toda vez que abrir o app. O PIN continua valendo',
+    'Tela do PIN: a tecla de apagar virou uma seta'
+  ] },
   { versao: 'v14.3', itens: [
     'Dados: o app não apaga mais contas pagas, dias do ponto e renda de meses antigos ao abrir',
     'Dados: alteração que não chegou ao banco agora é juntada com o que o outro aparelho mudou (antes uma substituía a outra)',

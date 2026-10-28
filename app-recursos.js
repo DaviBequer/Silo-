@@ -149,7 +149,7 @@ function pinTeclado(tecladoId, pontosId, aoCompletar){
   const tec = document.getElementById(tecladoId), pts = document.getElementById(pontosId);
   let valor = '';
   const desenha = ()=>{ pts.innerHTML = Array.from({ length: PIN_TAM }, (_, i)=>`<i class="${i < valor.length ? 'cheio' : ''}"></i>`).join(''); };
-  const apaga = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="m18 9-6 6"/><path d="m12 9 6 6"/></svg>';
+  const apaga = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5"/><path d="m11 6-6 6 6 6"/></svg>';   // seta para apagar (v14.4)
   tec.innerHTML = ['1','2','3','4','5','6','7','8','9','','0','x'].map(t=>
     t === '' ? '<span></span>' : `<button type="button" class="pin-tecla${t==='x'?' apagar':''}" data-t="${t}" aria-label="${t==='x'?'Apagar':t}">${t==='x'?apaga:t}</button>`).join('');
   const toca = t=>{

@@ -13,7 +13,7 @@
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=14.3">
+<link rel="stylesheet" href="style.css?v=14.4">
 </head>
 <body class="carregando">
 
@@ -24,7 +24,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 143</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 144</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -317,6 +317,12 @@
       <div class="ia-topo"><span class="ia-titulo">PIN</span><span class="ia-status" id="pinStatus">Desligado</span></div>
       <div class="ia-desc">Você entra com 6 números. O PIN é a senha da sua conta.</div>
       <button type="button" class="btn btn-sm" id="pinBtn" onclick="abrirCriarPin()">Criar PIN</button>
+    </div>
+    <div class="ia-config" id="digConfig" style="display:none">
+      <div class="ia-topo"><span class="ia-titulo">Digital</span><span class="ia-status" id="digStatus">Desligada</span></div>
+      <div class="ia-desc">Entrar com a digital (ou o rosto) deste aparelho no lugar do PIN. O PIN continua valendo se a digital falhar.</div>
+      <label class="dig-trava" id="digTravaLinha" style="display:none"><input type="checkbox" id="digTrava" onchange="digTravaMudou(this.checked)"> Pedir a digital toda vez que abrir o app</label>
+      <button type="button" class="btn btn-sm" id="digBtn" onclick="digBotaoAjustes()">Ligar a digital</button>
     </div>
     <div class="ia-config">
       <div class="ia-topo"><span class="ia-titulo">Senha</span></div>
@@ -1874,17 +1880,45 @@
 <!-- abertura (v12, escolha C): o nome grande, a saudação e a barra de carregamento em onda (ondulando enquanto enche) -->
 <div class="splash" id="splash" aria-label="Carregando">
   <div class="splash-conteudo">
-    <div class="splash-nome" aria-label="Siloé"><span>S</span><span>i</span><span>l</span><span>o</span><span>é</span></div>
-    <div class="splash-saud" id="splashSaud"></div>
+    <div class="splash-topo"><i class="splash-cord" aria-hidden="true"></i><div class="splash-nome" aria-label="Siloé"><span>S</span><span>i</span><span>l</span><span>o</span><span>é</span></div></div>
+    <div class="splash-vs-caixa"><p class="splash-vs" id="splashVs"></p><div class="splash-ref" id="splashRef"></div></div>
     <div class="splash-onda" aria-hidden="true">
       <svg class="so-trilho" viewBox="0 0 200 24" preserveAspectRatio="none"><path d="M0 12 Q12.5 2 25 12 T50 12 T75 12 T100 12 T125 12 T150 12 T175 12 T200 12 T225 12 T250 12 T275 12 T300 12 T325 12 T350 12 T375 12 T400 12"/></svg>
       <div class="so-cheio"><svg viewBox="0 0 200 24" preserveAspectRatio="none"><path d="M0 12 Q12.5 2 25 12 T50 12 T75 12 T100 12 T125 12 T150 12 T175 12 T200 12 T225 12 T250 12 T275 12 T300 12 T325 12 T350 12 T375 12 T400 12"/></svg></div>
     </div>
   </div>
 </div>
-<script>/* saudação da abertura: hora do dia + quem usa este aparelho */
-(function(){ try{ const h = new Date().getHours(), u = localStorage.getItem('siloe-usuario') || 'davi';
-  document.getElementById('splashSaud').textContent = (h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite') + ', ' + (u === 'cris' ? 'Cris' : 'Davi'); }catch(e){} })();</script>
+<script>/* abertura (v14.4, escolha A3): versículo curto do dia aparecendo palavra por palavra.
+   A abertura fica o tempo de ler (window.splashMinimo, usado por fecharSplash em core.js); tocar na tela encurta. */
+(function(){ try{
+  const VS = [
+    ['Lâmpada para os meus pés é a tua palavra, e luz para o meu caminho.', 'Salmos 119:105'],
+    ['O Senhor é o meu pastor; nada me faltará.', 'Salmos 23:1'],
+    ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'],
+    ['Entrega o teu caminho ao Senhor; confia nele, e ele tudo fará.', 'Salmos 37:5'],
+    ['Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia.', 'Salmos 46:1'],
+    ['Buscai primeiro o reino de Deus, e a sua justiça, e todas estas coisas vos serão acrescentadas.', 'Mateus 6:33'],
+    ['Este é o dia que o Senhor fez; regozijemo-nos e alegremo-nos nele.', 'Salmos 118:24'],
+    ['Confia no Senhor de todo o teu coração, e não te estribes no teu próprio entendimento.', 'Provérbios 3:5'],
+    ['Aquietai-vos, e sabei que eu sou Deus.', 'Salmos 46:10'],
+    ['Lança o teu cuidado sobre o Senhor, e Ele te susterá.', 'Salmos 55:22'],
+    ['O choro pode durar uma noite, mas a alegria vem pela manhã.', 'Salmos 30:5'],
+    ['Eu sou o caminho, e a verdade, e a vida.', 'João 14:6'],
+    ['O Senhor pelejará por vós, e vós vos calareis.', 'Êxodo 14:14'],
+    ['Em paz me deito e logo adormeço, porque só Tu, Senhor, me fazes habitar em segurança.', 'Salmos 4:8'],
+    ['Não temas, porque Eu sou contigo.', 'Isaías 41:10'],
+    ['Os que esperam no Senhor renovarão as suas forças.', 'Isaías 40:31'],
+    ['Bem-aventurado o homem que confia no Senhor.', 'Salmos 34:8'],
+    ['Esforça-te, e tem bom ânimo; o Senhor teu Deus é contigo por onde quer que andares.', 'Josué 1:9']
+  ];
+  const hoje = new Date(), dia = Math.floor((hoje - new Date(hoje.getFullYear(), 0, 0)) / 864e5);
+  const [txt, ref] = VS[dia % VS.length], palavras = txt.split(' ');
+  document.getElementById('splashVs').innerHTML = palavras.map((w, i)=>'<span style="animation-delay:' + (0.55 + i * 0.12).toFixed(2) + 's">' + w + '</span>').join(' ');
+  document.getElementById('splashRef').textContent = ref;
+  document.getElementById('splashRef').style.animationDelay = (0.75 + palavras.length * 0.12).toFixed(2) + 's';
+  window.splashMinimo = Math.min(6000, Math.max(2600, 1700 + palavras.length * 120 + 1300));
+  document.getElementById('splash').addEventListener('click', ()=>{ window.splashMinimo = 0; });
+}catch(e){} })();</script>
 
 <!-- LOGIN: aparece só quando o banco exige login e este aparelho ainda não entrou -->
 <div class="login-tela" id="loginTela">
@@ -1909,6 +1943,7 @@
     <div class="pin-pontos" id="loginPinPontos"></div>
     <div class="login-erro" id="loginPinErro"></div>
     <div class="pin-teclado" id="loginPinTeclado"></div>
+    <button type="button" class="login-digital" id="loginDigital" hidden onclick="digEntrarClique()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 11v4M8.5 9.5a4 4 0 0 1 7 2.5v2M7 13v1a5 5 0 0 0 3 4.6M17 14.5a5 5 0 0 1-1.2 3M5.2 9A8 8 0 0 1 19 9.5M4.5 13a8 8 0 0 0 .7 3"/></svg>Entrar com a digital</button>
     <button type="button" class="login-troca" onclick="loginModoPin(false)">Entrar com e-mail e senha</button>
   </div>
 </div>
@@ -1934,29 +1969,30 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=14.3"></script>
-<script src="core.js?v=14.3"></script>
-<script src="layout.js?v=14.3"></script>
-<script src="changelog.js?v=14.3"></script>
-<script src="app.js?v=14.3"></script>
-<script src="app-recursos.js?v=14.3"></script>
-<script src="panorama.js?v=14.3"></script>
-<script src="planner.js?v=14.3"></script>
-<script src="voz.js?v=14.3"></script>
-<script src="ponto.js?v=14.3"></script>
-<script src="louvor.js?v=14.3"></script>
-<script src="louvor-extra.js?v=14.3"></script>
-<script src="ia.js?v=14.3"></script>
-<script src="louvor-cifraclub.js?v=14.3"></script>
-<script src="louvor-medley.js?v=14.3"></script>
-<script src="louvor-culto.js?v=14.3"></script>
-<script src="louvor-drive.js?v=14.3"></script>
-<script src="atualizar.js?v=14.3"></script>
-<script src="louvor-comparar.js?v=14.3"></script>
-<script src="fatura-pdf.js?v=14.3"></script>
-<script src="emprestimo.js?v=14.3"></script>
-<script src="vendas.js?v=14.3"></script>
-<script src="efeitos.js?v=14.3"></script>
+<script src="supabase.js?v=14.4"></script>
+<script src="core.js?v=14.4"></script>
+<script src="layout.js?v=14.4"></script>
+<script src="changelog.js?v=14.4"></script>
+<script src="app.js?v=14.4"></script>
+<script src="app-recursos.js?v=14.4"></script>
+<script src="panorama.js?v=14.4"></script>
+<script src="planner.js?v=14.4"></script>
+<script src="voz.js?v=14.4"></script>
+<script src="ponto.js?v=14.4"></script>
+<script src="louvor.js?v=14.4"></script>
+<script src="louvor-extra.js?v=14.4"></script>
+<script src="ia.js?v=14.4"></script>
+<script src="louvor-cifraclub.js?v=14.4"></script>
+<script src="louvor-medley.js?v=14.4"></script>
+<script src="louvor-culto.js?v=14.4"></script>
+<script src="louvor-drive.js?v=14.4"></script>
+<script src="atualizar.js?v=14.4"></script>
+<script src="louvor-comparar.js?v=14.4"></script>
+<script src="fatura-pdf.js?v=14.4"></script>
+<script src="emprestimo.js?v=14.4"></script>
+<script src="vendas.js?v=14.4"></script>
+<script src="efeitos.js?v=14.4"></script>
+<script src="digital.js?v=14.4"></script>
 <script>carregar();</script>
 </body>
 </html>
