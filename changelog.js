@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.5', itens: [
+    'Cartão: "Controle desde" — faturas antes desse mês (só com parceladas antigas, sem as compras à vista) não contam, não aparecem como vencidas e não entram nos gráficos. Automático = mês da 1ª compra à vista',
+    'O app volta para a tela onde você estava quando recarrega (aba, Cartões/Empréstimo, música aberta, Extrato, Assistente e a rolagem), guardado só neste aparelho',
+    'Assistente: a conversa e os itens ainda não gravados ficam guardados no aparelho e voltam se o app recarregar'
+  ] },
   { versao: 'v15.4', itens: [
     'Botão voltar do celular: fecha a janela ou tela aberta; senão volta para Finanças; em Finanças só sai com dois voltar seguidos (sem aviso)',
     'Assistente: os itens de cada resposta ficam separados por banco e por cartão, com o total de cada um'

@@ -643,8 +643,18 @@ let cartoesExpandidos = {};
 let secoesGastoColapsadas = {};
 let quitadasMostrarPorCartao = {};
 let faturaMesSelecionado = {};
-/* Fatura de um cartão num mês: parcelas + à vista + assinaturas */
+/* v15.5: mês em que o controle do cartão começou. Antes dele só as parcelas antigas foram lançadas (sem as compras à vista
+   daquela época): essas faturas ficam de fora. Escolhido no cartão (controleDesde) ou automático = mês da 1ª compra à vista */
+function cartaoControleDesde(cartao){
+  if(!cartao) return '';
+  if(cartao.controleDesde) return cartao.controleDesde;
+  const meses = (cartao.credoVista || []).map(cv=>cv.mKey).filter(Boolean).sort();
+  return meses[0] || '';
+}
+function cartaoForaDoControle(cartao, mKey){ const d = cartaoControleDesde(cartao); return !!(d && mKey < d); }
+/* Fatura de um cartão num mês: parcelas + à vista + assinaturas (0 antes do controle começar) */
 function faturaCartaoNoMes(cartao, mKey){
+  if(cartaoForaDoControle(cartao, mKey)) return 0;
   const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
   const totalParcelas = compras.reduce((s,item)=>s+compraTrackerValorNoMes(item, mKey), 0);
   const totalVista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).reduce((s,cv)=>s+Number(cv.valor||0), 0);
@@ -813,7 +823,7 @@ function gerarFaturaMensalHtml(cartao){
   const inicio = [todayKey(), mesFinanceiroAtual()].sort()[0];
   const selecionado = faturaMesSelecionado[cartao.id];
   const meses = [];
-  for(let i=0;i<13;i++) meses.push(addMonths(inicio, i));
+  for(let i=0;i<13;i++){ const m = addMonths(inicio, i); if(!cartaoForaDoControle(cartao, m)) meses.push(m); }   // antes do controle do cartão: não aparece
   return meses.map(mKey=>{
     const f = faturaStatus(cartao, mKey);
     const sel = selecionado===mKey ? ' selected' : '';
@@ -1035,8 +1045,20 @@ function openCartaoCardModal(id){
     document.getElementById('cartaoCardLimite').value = '';
     cartaoCardLogoUrlAtual = null;
   }
+  cartaoCardControleOpcoes(id ? (state.cartoesTracker||[]).find(i=>i.id===id) : null);
   renderCartaoCardLogoPreview();
   document.getElementById('modalCartaoCard').classList.add('active');
+}
+/* "Controle desde": Automático (1ª compra à vista) ou um mês, do mês da parcela mais antiga até a fatura aberta */
+function cartaoCardControleOpcoes(cartao){
+  const sel = document.getElementById('cartaoCardControle'); if(!sel) return;
+  const aberta = cartao ? faturaAbertaMes(cartao) : mesFinanceiroAtual();
+  const inicios = (state.comprasTracker || []).filter(cp=>cartao && cp.cartaoId === cartao.id && cp.mesInicio).map(cp=>cp.mesInicio).sort();
+  let m = inicios[0] && inicios[0] < addMonths(aberta, -12) ? inicios[0] : addMonths(aberta, -12);
+  const meses = []; while(m <= aberta){ meses.push(m); m = addMonths(m, 1); }
+  const auto = cartao && !cartao.controleDesde ? cartaoControleDesde(cartao) : '';
+  sel.innerHTML = `<option value="">Automático${auto ? ' (' + monthLabel(auto) + ')' : ' (1ª compra à vista)'}</option>` + meses.reverse().map(x=>`<option value="${x}">${monthLabel(x)}</option>`).join('');
+  sel.value = (cartao && cartao.controleDesde) || '';
 }
 let cartaoCardLogoUrlAtual = null;
 function renderCartaoCardLogoPreview(){
@@ -1070,8 +1092,13 @@ function salvarCartaoCard(){
   if(id){
     const item = state.cartoesTracker.find(i=>i.id===id);
     if(item) Object.assign(item, { nome, fechamento, vencimento, limite, logoUrl });
+    const ctrl = document.getElementById('cartaoCardControle')?.value || '';
+    if(item){ if(ctrl) item.controleDesde = ctrl; else delete item.controleDesde; }
   } else {
-    state.cartoesTracker.push({ id: 'crd'+Date.now(), nome, fechamento, vencimento, limite, logoUrl });
+    /* cartão novo: o controle começa na fatura aberta de hoje */
+    const novo = { id: 'crd'+Date.now(), nome, fechamento, vencimento, limite, logoUrl };
+    novo.controleDesde = document.getElementById('cartaoCardControle')?.value || faturaAbertaMes(novo);
+    state.cartoesTracker.push(novo);
   }
   persist();
   closeModal('modalCartaoCard');

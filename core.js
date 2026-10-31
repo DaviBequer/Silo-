@@ -486,6 +486,7 @@ async function carregarDaNuvem(){
   if(typeof aplicarFundoApp==='function') aplicarFundoApp();
   renderAll();
   fecharSplash();
+  if(typeof posRestaurar==='function') posRestaurar();   // v15.5: volta para a tela onde a pessoa estava
   if(typeof abrirAbaDoAviso==='function') abrirAbaDoAviso();
   if(typeof lviAbrirCompartilhado==='function') lviAbrirCompartilhado();
   if(typeof avisosRenovarSozinho==='function' && !MODO_TESTE_LOCAL) avisosRenovarSozinho();

@@ -1184,6 +1184,7 @@ function ondeVaiDados(u, mKey){
   const sa = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if(u === 'davi'){
     (state.cartoesTracker||[]).forEach(c=>{
+      if(typeof cartaoForaDoControle === 'function' && cartaoForaDoControle(c, mKey)) return;   // antes do controle do cartão: fica de fora
       Object.entries(cartaoGastosPorMes(c, mKey).porCategoria).forEach(([cat, v])=>soma(vista, cat === 'Ajuste' ? 'Ajuste da fatura' : cat, v));
       soma(g, 'Parcelas no cartão', (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id).reduce((s,cp)=>s + compraTrackerValorNoMes(cp, mKey), 0));
     });

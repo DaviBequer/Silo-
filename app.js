@@ -531,6 +531,57 @@ iniciarBotaoVoltar();
 
 
 
+/* ================= ONDE EU ESTAVA (v15.5) =================
+   O app às vezes recarrega ao voltar para ele (outro aparelho salvou algo, ou o celular fechou o app em segundo plano)
+   e abria sempre em Finanças. Agora a tela atual fica guardada NESTE aparelho (localStorage, não vai para o banco)
+   e, depois de carregar, o app volta para ela: aba, Cartões/Empréstimo, tela cheia (música aberta, Extrato, Assistente…)
+   e a rolagem. Vale por 12 h. A aba ?teste não guarda nem restaura (divide o armazenamento com a aba de verdade). */
+const POS_KEY = 'siloe-onde-estava', POS_VALIDADE = 12 * 3600e3;
+let posRestaurando = false, posTimer = null, posPronto = false;   // só guarda depois de restaurar (a carga troca de aba e apagaria a posição)
+function posGuardar(){
+  if(!posPronto || posRestaurando || (typeof MODO_TESTE_LOCAL !== 'undefined' && MODO_TESTE_LOCAL)) return;
+  try{
+    const aba = ((document.querySelector('.aba.active') || {}).id || '').replace('aba-', '');
+    const tela = ([...document.querySelectorAll('.fullpage.active')].pop() || {}).id || '';
+    localStorage.setItem(POS_KEY, JSON.stringify({ t: Date.now(), aba, tela,
+      dash: typeof dashTabAtiva !== 'undefined' ? dashTabAtiva : 'geral',
+      louvor: typeof louvorAtualId !== 'undefined' ? louvorAtualId : null,
+      atzAba: typeof atzAba !== 'undefined' ? atzAba : null,
+      y: Math.round(window.scrollY) }));
+  }catch(e){}
+}
+function posGuardarLogo(){ clearTimeout(posTimer); posTimer = setTimeout(posGuardar, 400); }
+function posRestaurar(){
+  if(typeof MODO_TESTE_LOCAL !== 'undefined' && MODO_TESTE_LOCAL) return;
+  let p = null; try{ p = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); }catch(e){}
+  if(!p || Date.now() - p.t > POS_VALIDADE){ posPronto = true; return; }
+  posRestaurando = true;
+  try{
+    if(['ponto', 'vendas', 'louvor', 'ajustes'].includes(p.aba)) switchAba(p.aba);
+    if(p.aba === 'planner' && ['cartao', 'emprestimo'].includes(p.dash)) switchDashTab(p.dash);
+    const temMusica = p.louvor && (state.louvores || []).some(l=>l.id === p.louvor);
+    const abre = {
+      pageExtrato: ()=>abrirExtrato(),
+      pageAtualizar: ()=>abrirAtualizar(p.atzAba || 'conversa'),
+      pageContasPagar: ()=>abrirContasPagar(),
+      pageCulto: ()=>abrirCulto(),
+      pageLouvorDetalhe: ()=>{ if(temMusica) abrirLouvorDetalhe(p.louvor); },
+      pageLvComparar: ()=>{ if(temMusica){ abrirLouvorDetalhe(p.louvor); lvCompararAbrir(); } }
+    }[p.tela];
+    if(abre) abre();
+    else if(p.y > 0) setTimeout(()=>window.scrollTo(0, p.y), 350);
+  }catch(e){}
+  setTimeout(()=>{ posRestaurando = false; posPronto = true; }, 600);
+}
+/* qualquer troca de aba ou tela cheia guarda a posição (observando as classes, sem mexer em cada função de abrir) */
+(function(){
+  const obs = new MutationObserver(posGuardarLogo);
+  const ligar = ()=>document.querySelectorAll('.aba, .fullpage, #aba-planner').forEach(el=>obs.observe(el, { attributes: true, attributeFilter: ['class', 'data-tab'] }));
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ligar); else ligar();
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) posGuardar(); });   // saiu do app: guarda também a rolagem
+  window.addEventListener('scroll', ()=>{ if(!document.querySelector('.fullpage.active')) posGuardarLogo(); }, { passive: true });
+})();
+
 /* ================= ALTURA REAL DO MENU INFERIOR ================= */
 function ajustarAlturaMenuInferior(){
   const nav = document.querySelector('.bottom-nav');

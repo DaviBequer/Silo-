@@ -24,7 +24,25 @@ function fecharAtualizar(){
   document.body.style.overflow = '';
 }
 function atzTrocarAba(a){ atzAba = a; renderAtualizar(); }
+/* v15.5: a conversa e os itens ainda não gravados ficam guardados NESTE aparelho (o app pode recarregar ao voltar para ele).
+   Valem por 12 h; a aba ?teste não guarda nem lê. Gravar ou "Começar de novo" esvazia. */
+const ATZ_RASCUNHO = 'siloe-atz-rascunho';
+function atzRascunhoGuardar(){
+  if(typeof MODO_TESTE_LOCAL !== 'undefined' && MODO_TESTE_LOCAL) return;
+  try{
+    if(!atzConversa.length && !atzItens.length){ localStorage.removeItem(ATZ_RASCUNHO); return; }
+    localStorage.setItem(ATZ_RASCUNHO, JSON.stringify({ t: Date.now(), conversa: atzConversa, itens: atzItens, passo: atzPassoI }));
+  }catch(e){}
+}
+(function(){
+  if(typeof MODO_TESTE_LOCAL !== 'undefined' && MODO_TESTE_LOCAL) return;
+  try{
+    const r = JSON.parse(localStorage.getItem(ATZ_RASCUNHO) || 'null');
+    if(r && Date.now() - r.t < 12 * 3600e3){ atzConversa = r.conversa || []; atzItens = r.itens || []; setTimeout(()=>{ atzPassoI = r.passo || 0; }, 0); }
+  }catch(e){}
+})();
 function renderAtualizar(rolar){
+  atzRascunhoGuardar();
   document.querySelectorAll('#atzAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.aba === atzAba));
   document.getElementById('atzResumo').style.display = atzAba === 'resumo' ? '' : 'none';
   document.getElementById('atzConversa').style.display = atzAba === 'resumo' ? 'none' : '';

@@ -116,6 +116,15 @@ async function rodarTestes(){
       igual('conta-limite: gasto e quanto passou', [cm && cm.limite, cm && cm.gasto], [850, 1200]);
       state.users.davi.expenses = vv.e; state.paid = vv.p; state.cartoesTracker = vv.cv; state.lancamentos = vv.la;
     }
+    /* v15.5: fatura antes do controle do cartão (parcelada antiga sem as compras à vista da época) fica de fora */
+    {
+      const fa = '2026-11', c = { id:'tctl', nome:'X', fechamento:5, vencimento:12, credoVista:[{ id:'a', valor:300, mKey: fa }], assinaturas:[] };
+      const cp0 = state.comprasTracker; state.comprasTracker = [{ id:'tp', cartaoId:'tctl', valorTotal:1200, parcelas:12, mesInicio: addMonths(fa, -8) }];
+      igual('controle automático = 1ª compra à vista; antes fica 0; depois conta', [cartaoControleDesde(c), faturaCartaoNoMes(c, addMonths(fa, -2)), faturaCartaoNoMes(c, fa)], [fa, 0, 400]);
+      c.controleDesde = addMonths(fa, -3);
+      igual('controle escolhido à mão', [faturaCartaoNoMes(c, addMonths(fa, -3)), faturaCartaoNoMes(c, addMonths(fa, -4))], [100, 0]);
+      state.comprasTracker = cp0;
+    }
     /* capotraste: Cifra Club "Tom: F# (com forma de E) · Capotraste 2ª casa" — a cifra vem na forma E */
     const ousado = '[Intro] C#m  B4  A9  E\n\n[Primeira Parte]\nC#m        B4\nAntes de eu falar\nA9            E\nTu cantavas sobre mim\n\n[Refrão]\nE\nOh, impressionante\nB4          C#m   A9\nInfinito e ousado amor';
     igual('capo: a página diz a casa', ccCapoDaCifra({ capo: 2 }, 'F#', ousado), 2);
