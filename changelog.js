@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.4', itens: [
+    'Botão voltar do celular: fecha a janela ou tela aberta; senão volta para Finanças; em Finanças só sai com dois voltar seguidos (sem aviso)',
+    'Assistente: os itens de cada resposta ficam separados por banco e por cartão, com o total de cada um'
+  ] },
   { versao: 'v15.3', itens: [
     'Assistente no celular: ao editar um item, a placa e a barra de digitar saem do caminho e o editor fica acima do teclado',
     'Assistente: "Lista" mostra todos os itens juntos e "Confirmar todos" confirma de uma vez',

@@ -714,8 +714,17 @@ function atzRenderConversa(pensando, rolar){
   atzConversa.forEach((m, mi)=>(m.novos || []).forEach(c=>{ ultimo[c] = mi; }));
   atzItens.forEach((i, k)=>{ const mi = ultimo[atzChave(i)]; if(mi === undefined) soltos.push(k); else (porMsg[mi] = porMsg[mi] || []).push(k); });
   const dups = atzDuplicados();
-  const lista = ks=>ks.length ? `<div class="atz-its">${ks.map(k=>atzItemHtml(atzItens[k], k, dups[k])).join('')}</div>`
-    + ks.filter(k=>dups[k]).map(k=>`<div class="atz-aviso-dup">${lvEsc(dups[k].texto)}</div>`).join('') : '';
+  /* v15.4: os itens de uma resposta separados por cartão e por banco (Inter, Nubank, Cartão Nubank, Contas…) */
+  const grupoDe = i=>i.cartaoNome ? 'Cartão ' + i.cartaoNome : i.bancoNome ? i.bancoNome : i.tipo === 'conta' ? 'Contas' : 'Sem banco ou cartão';
+  const lista = ks=>{
+    if(!ks.length) return '';
+    const grupos = [];
+    ks.forEach(k=>{ const g = grupoDe(atzItens[k]); let gr = grupos.find(x=>x.nome === g); if(!gr) grupos.push(gr = { nome: g, ks: [] }); gr.ks.push(k); });
+    const its = gks=>`<div class="atz-its">${gks.map(k=>atzItemHtml(atzItens[k], k, dups[k])).join('')}</div>`;
+    const soma = gks=>gks.reduce((s, k)=>s + (['vista', 'parcelada', 'pix', 'conta'].includes(atzItens[k].tipo) ? atzItens[k].valor : 0), 0);
+    return (grupos.length < 2 ? its(ks) : grupos.map(g=>`<div class="atz-grupo"><div class="atz-grupo-tit"><span>${escBanco(g.nome)}</span>${soma(g.ks) > 0.004 ? `<b>${fmtMoney(soma(g.ks))}</b>` : ''}</div>${its(g.ks)}</div>`).join(''))
+      + ks.filter(k=>dups[k]).map(k=>`<div class="atz-aviso-dup">${lvEsc(dups[k].texto)}</div>`).join('');
+  };
   const tirado = i=>`<li>${escBanco(i.descricao || ATZ_TIPOS[i.tipo])} <b>${fmtMoney(i.valor)}</b></li>`;
   const msgs = atzConversa.map((m, mi)=>m.quem === 'eu'
       ? `<div class="atz-msg eu${m.voz ? ' voz' : ''}"${m.texto && m.texto[0] !== '(' ? ` role="button" tabindex="0" title="Tocar para corrigir o que foi entendido" onclick="atzCorrigirFala(${mi})"` : ''}>${m.voz ? `<span class="atz-aud">${ATZ_ICO_MIC} ${atzTempo(m.dur || 0)}</span>` : ''}${m.texto ? lvEsc(m.texto) : '<span class="atz-aud-espera">…</span>'}</div>`

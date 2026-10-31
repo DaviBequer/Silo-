@@ -462,19 +462,54 @@ function fecharCamadaAbertaVoltar(){
   const modais = document.querySelectorAll('.modal-overlay.active');
   if(modais.length){
     const topo = modais[modais.length-1];
-    closeModal(topo.id);
+    /* janelas criadas na hora (sem id) saem pelo X delas ou são tiradas */
+    if(topo.id) closeModal(topo.id);
+    else { const x = topo.querySelector('.modal-close'); if(x) x.click(); else topo.remove(); }
     return true;
   }
   const paginas = document.querySelectorAll('.fullpage.active');
   if(paginas.length){
     const pg = paginas[paginas.length-1];
-    pg.classList.remove('active');
-    document.body.style.overflow = '';
+    /* o voltar da própria tela (faz a limpeza dela: microfone, rascunhos…) */
+    const btn = pg.querySelector('.fullpage-header .header-btn');
+    if(btn) btn.click(); else { pg.classList.remove('active'); document.body.style.overflow = ''; }
     return true;
   }
   return false;
 }
+/* v15.4: sem nada aberto e fora da tela inicial → volta para Finanças (e Cartões/Empréstimo → Finanças) */
+function voltarParaInicio(){
+  const naFinancas = document.getElementById('aba-planner')?.classList.contains('active');
+  if(naFinancas && (typeof dashTabAtiva === 'undefined' || dashTabAtiva === 'geral')) return false;
+  if(naFinancas) switchDashTab('geral'); else switchAba('planner');
+  return true;
+}
+/* um "voltar" do celular: fecha o que estiver aberto, senão vai para Finanças; em Finanças, só sai com dois voltar seguidos (sem aviso) */
+function voltarDoCelular(){
+  if(fecharCamadaAbertaVoltar() || voltarParaInicio()) return 'tratou';
+  return 'inicio';
+}
 function iniciarBotaoVoltar(){
+  /* Chrome (Android): CloseWatcher pega o voltar antes de fechar o app. O jeito antigo (histórico) falhava:
+     o Chrome pula entradas criadas sem toque na tela, então dois voltar rápidos fechavam o app */
+  if('CloseWatcher' in window){
+    let vigia = null;
+    const novo = ()=>{
+      try{ vigia = new CloseWatcher(); }catch(e){ vigia = null; return; }
+      vigia.onclose = ()=>{
+        vigia = null;
+        if(voltarDoCelular() === 'tratou'){ voltarSairArmado = false; novo(); return; }
+        /* na tela inicial: o próximo voltar em até 2 s sai do app (sem vigia); passou o tempo, volta a proteger */
+        voltarSairArmado = true;
+        clearTimeout(voltarSairTimer);
+        voltarSairTimer = setTimeout(()=>{ voltarSairArmado = false; if(!vigia) novo(); }, 2000);
+      };
+    };
+    novo();
+    /* tocar na tela também volta a proteger (a 2ª pressão só sai se vier logo depois da 1ª) */
+    document.addEventListener('pointerdown', ()=>{ if(!vigia && !voltarSairArmado) novo(); }, true);
+    return;
+  }
   if(!window.history || !history.pushState) return;
   history.replaceState({siloe:'base'}, '');
   history.pushState({siloe:'guarda'}, '');
@@ -486,9 +521,8 @@ function iniciarBotaoVoltar(){
       return;
     }
     history.pushState({siloe:'guarda'}, '');
-    if(fecharCamadaAbertaVoltar()) return;
-    voltarSairArmado = true;
-    showToast('Toque de novo em voltar para sair');
+    if(voltarDoCelular() === 'tratou') return;
+    voltarSairArmado = true;   // sem aviso: o 2º voltar seguido sai
     clearTimeout(voltarSairTimer);
     voltarSairTimer = setTimeout(()=>{ voltarSairArmado = false; }, 2000);
   });
