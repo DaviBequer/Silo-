@@ -2958,3 +2958,26 @@ body{font-weight:400;letter-spacing:.005em}
 .atz-grupo-tit b{font:600 12px/1.3 var(--font-body);letter-spacing:0;text-transform:none;color:var(--text-dim);font-variant-numeric:tabular-nums}
 .atz-grupo .atz-its .atz-it:first-child{border-top:0}
 .field-dica{display:block;margin-top:6px;font-size:11.5px;line-height:1.4;color:var(--text-faint)}
+/* v15.6: saldo do cartãozinho do banco maior, crescendo com a largura do cartão; no computador, saldo e cartões na mesma linha */
+.cc{container-type:inline-size}
+@media (max-width:1023px){ .cc{flex:0 0 42%;min-width:128px;max-width:180px} }
+.cc b{font-size:clamp(14px,14.5cqw,24px);font-weight:600;letter-spacing:-.015em}
+@media (min-width:1024px){
+  .fin-placa{display:grid;grid-template-columns:minmax(250px,max-content) minmax(0,1fr);column-gap:32px;align-items:center}
+  .fin-placa > .placa-topo{grid-column:1 / -1}
+  .fin-placa > :not(.placa-topo):not(.carteira){grid-column:1}
+  .fin-placa > .carteira{grid-column:2;grid-row:2 / span 3;align-self:center;margin:0;justify-content:flex-end}
+  .fin-placa .cc{flex:0 1 230px;min-width:170px;max-width:240px}
+}
+/* v15.6: telas de foco (Fixos, Pix, Crédito à vista, Parcelado) */
+.foco .ext-placa{margin-bottom:18px}
+.foco-extra{display:block;font-size:11px;font-weight:400;color:var(--text-faint);text-align:right}
+.ext-linha.foco-pago{opacity:.6}
+.ext-como.foco-ok{background:var(--success-tint);color:var(--success)}
+.foco .ext-linha > .conta-logo,.foco .ext-linha > .cal{width:32px;height:32px}
+@media (min-width:1024px){
+  .fullpage-content.foco{max-width:none}
+  #focoLista{column-count:2;column-gap:40px}
+  #focoLista > .ext-linha,#focoLista > .ext-dia{break-inside:avoid}
+  .foco .ext-placa{max-width:760px;margin-left:auto;margin-right:auto}
+}

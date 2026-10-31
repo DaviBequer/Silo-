@@ -74,7 +74,7 @@ function renderResumoMes(){
 
 /* cor de cada banco pelo nome (quando o Davi não escolheu uma); banco desconhecido ganha uma cor neutra da lista */
 const BANCO_CORES = [
-  [/nu ?bank|nubank/i, '#7a1fc9'], [/inter\b/i, '#ff7a1a'], [/viacredi|ailos/i, '#0f5a3b'], [/sicredi/i, '#3a8a2e'], [/sicoob/i, '#00505c'],
+  [/nu ?bank|nubank/i, '#7a1fc9'], [/inter\b/i, '#ff7a1a'], [/viacred|ailos/i, '#0b4f8f'], [/sicredi/i, '#3a8a2e'], [/sicoob/i, '#00505c'],
   [/ita[uú]/i, '#ec7000'], [/bradesco/i, '#cc092f'], [/santander/i, '#d40000'], [/caixa/i, '#005ca9'], [/brasil|\bbb\b/i, '#0038a8'],
   [/c6/i, '#2b2b2b'], [/picpay/i, '#11a84e'], [/mercado ?pago/i, '#009ee3'], [/pagbank|pagseguro/i, '#1aa58a'], [/neon/i, '#00a5e0'], [/next/i, '#0b8f5a']
 ];
@@ -82,6 +82,15 @@ const BANCO_NEUTRAS = ['#3a3d42', '#3f5e8c', '#7a5b3a', '#4b6b5a'];
 function corDoBanco(nome, i){
   const achou = BANCO_CORES.find(([re])=>re.test(nome || ''));
   return achou ? achou[1] : BANCO_NEUTRAS[(i || 0) % BANCO_NEUTRAS.length];
+}
+/* cor do cartãozinho: a escolhida no banco, senão a da tabela. ViaCredi: a cor tirada da logo saía verde; o fundo do cartão é azul (pedido do Davi) */
+function corDoCartaoBanco(b){
+  const cor = b.cor || corDoBanco(b.nome, b.i);
+  if(/viacred|ailos/i.test(b.nome || '')){
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(cor);
+    if(m && parseInt(m[2], 16) > parseInt(m[3], 16)) return corDoBanco(b.nome, b.i);   // esverdeado → azul da ViaCredi
+  }
+  return cor;
 }
 /* bancos como cartõezinhos em fila dentro da placa (escolha A do Davi): só a logo redonda, o chip e o saldo.
    Maior saldo primeiro; zerado fica apagado no fim (ou some, com "Esconder bancos zerados") */
@@ -94,7 +103,7 @@ function renderCarteira(){
   el.innerHTML = lista.map(b=>{
     const zero = Math.abs(b.valor || 0) < 0.005;
     const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : escBanco((b.nome || '?').trim().charAt(0).toUpperCase());
-    return `<div class="cc${zero ? ' zero' : ''}" style="--c:${b.cor || corDoBanco(b.nome, b.i)}" title="${escBanco(b.nome)}">
+    return `<div class="cc${zero ? ' zero' : ''}" style="--c:${corDoCartaoBanco(b)}" title="${escBanco(b.nome)}">
       <div class="cc-topo"><span class="cc-logo">${logo}</span><span class="cc-chip"></span></div>
       <b><small>R$</small>${fmtMoney(Math.abs(b.valor || 0)).replace(/^R\$\s?/, '').replace(/^/, (b.valor || 0) < -0.004 ? '-' : '')}</b>
     </div>`;
@@ -140,12 +149,12 @@ function renderBlocosMes(u, mKey){
   const b = [
     bloco({ ico: anel(pSobra), rot: d.sobra >= 0 ? 'Sobra' : 'Falta', val: fmtMoney(d.sobra), on: "abrirDetalheResumo('entra')" }),
     bloco({ ico: anel(pago), rot: 'Pago', val: pago + '%', sub: d.faltaContas > 0.004 ? 'falta ' + fmtMoney(d.faltaContas) : 'tudo pago', on: 'abrirContasPagar()' }),
-    bloco({ ico: finIco(FIN_ICO.fixo), rot: 'Fixos', val: fmtMoney(d.totContas), barra: pago, on: 'abrirContasPagar()' }),
-    bloco({ ico: finIco(FIN_ICO.pix), rot: 'Pix no mês', val: fmtMoney(d.pix), on: `abrirLancamentos('${mKey}')` })
+    bloco({ ico: finIco(FIN_ICO.fixo), rot: 'Fixos', val: fmtMoney(d.totContas), barra: pago, on: `abrirFoco('fixos','${mKey}')` }),
+    bloco({ ico: finIco(FIN_ICO.pix), rot: 'Pix no mês', val: fmtMoney(d.pix), on: `abrirFoco('pix','${mKey}')` })
   ];
   if(u === 'davi' && (state.cartoesTracker || []).length){
-    b.push(bloco({ ico: finIco(FIN_ICO.vista), rot: 'Crédito à vista', val: fmtMoney(d.vista), on: "switchDashTab('cartao')" }));
-    b.push(bloco({ ico: finIco(FIN_ICO.parcelado), rot: 'Parcelado', val: fmtMoney(d.parcelado), barra: d.parcTot ? Math.round(d.parcPagas / d.parcTot * 100) : null, on: "switchDashTab('cartao')" }));
+    b.push(bloco({ ico: finIco(FIN_ICO.vista), rot: 'Crédito à vista', val: fmtMoney(d.vista), on: `abrirFoco('vista','${mKey}')` }));
+    b.push(bloco({ ico: finIco(FIN_ICO.parcelado), rot: 'Parcelado', val: fmtMoney(d.parcelado), barra: d.parcTot ? Math.round(d.parcPagas / d.parcTot * 100) : null, on: `abrirFoco('parcelado','${mKey}')` }));
   }
   el.innerHTML = b.join('');
 }
@@ -1395,4 +1404,80 @@ async function extratoApagar(k){
   }, extratoRedesenhar);
   document.getElementById('extEditJanela')?.remove();
   extratoRedesenhar();
+}
+
+/* ================= FOCO (v15.6): tocar num bloco de Finanças abre só aquilo — Fixos, Pix no mês, Crédito à vista, Parcelado —
+   com a soma e a quantidade no alto (mesmo visual do Extrato) ================= */
+let focoTipo = null, focoMes = null;
+function abrirFoco(tipo, mKey){
+  focoTipo = tipo; focoMes = mKey || mesFinanceiroAtual();
+  document.getElementById('pageFoco').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  renderFoco();
+}
+function fecharFoco(){ document.getElementById('pageFoco').classList.remove('active'); document.body.style.overflow = ''; }
+function focoLinha(ico, nome, sub, valor, extra, pago){
+  return `<div class="ext-linha${pago ? ' foco-pago' : ''}">${ico}<span class="ext-info"><b>${escBanco(nome)}</b><small>${sub}</small></span><span class="ext-valor">${fmtMoney(valor)}${extra ? `<small class="foco-extra">${extra}</small>` : ''}</span></div>`;
+}
+const focoIco = (tipo, cat)=>typeof atzIcoItem === 'function' ? atzIcoItem({ tipo, categoria: cat }, 17) : '';
+function focoData(iso){ return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; }
+function renderFoco(){
+  const u = state.currentUser, mKey = focoMes;
+  const titulo = { fixos:'Fixos', pix:'Pix no mês', vista:'Crédito à vista', parcelado:'Parcelado' }[focoTipo] || '';
+  document.getElementById('focoTitulo').textContent = titulo;
+  let placa = '', lista = '';
+  if(focoTipo === 'fixos'){
+    const contas = gastosDoMes(u, mKey);
+    const total = contas.reduce((s, g)=>s + g.valor, 0), falta = contas.reduce((s, g)=>s + g.restante, 0);
+    placa = focoPlacaHtml('Contas de ' + monthLabelLong(mKey).toLowerCase(), total, [`Pago <b>${fmtMoney(total - falta)}</b>`, `Falta <b>${fmtMoney(falta)}</b>`, `${contas.length} conta${contas.length === 1 ? '' : 's'}`]);
+    lista = GASTO_GRUPOS.map(([cat, nome])=>{
+      const itens = contas.filter(g=>g.cat === cat).sort((a, b)=>(a.pago - b.pago) || ((a.dia || 0) - (b.dia || 0)));
+      if(!itens.length) return '';
+      return focoGrupo(nome, itens.reduce((s, g)=>s + g.valor, 0), itens.map(g=>{
+        const ico = g.logoUrl ? `<img src="${g.logoUrl}" class="conta-logo" alt="">` : gmCal(g.dia || 1);
+        const parcial = !g.pago && g.restante < g.valor - 0.004;
+        const sub = g.pago ? '<em class="ext-como foco-ok">PAGA</em>' : parcial ? `falta ${fmtMoney(g.restante)}` : (g.dia ? 'vence dia ' + g.dia : 'em aberto');
+        return focoLinha(ico, g.desc, sub, g.valor, '', g.pago);
+      }).join(''));
+    }).join('');
+  } else if(focoTipo === 'pix'){
+    const itens = (state.lancamentos || []).filter(la=>la.mKey === mKey && (la.usuario || 'davi') === u).sort((a, b)=>String(b.data || '').localeCompare(String(a.data || '')));
+    const total = itens.reduce((s, la)=>s + (Number(la.valor) || 0), 0);
+    placa = focoPlacaHtml('Pix e débito em ' + monthLabelLong(mKey).toLowerCase(), total, [`${itens.length} compra${itens.length === 1 ? '' : 's'}`, ...focoPorCategoria(itens.map(la=>[la.categoria, la.valor]))]);
+    lista = itens.map(la=>focoLinha(focoIco('pix', la.categoria || la.descricao), la.descricao || 'Compra', `${escBanco(la.banco || 'Pix/débito')}${la.categoria && la.categoria !== 'Outros' ? ' · ' + escBanco(la.categoria) : ''}${la.data ? ' · ' + focoData(la.data) : ''}`, Number(la.valor) || 0)).join('');
+  } else if(focoTipo === 'vista'){
+    const itens = [];
+    (state.cartoesTracker || []).forEach(c=>{ const m = faturaAbertaMes(c); (c.credoVista || []).filter(cv=>cv.mKey === m && !cv.ajuste).forEach(cv=>itens.push({ ...cv, cartao: c.nome, m })); });
+    itens.sort((a, b)=>String(b.data || '').localeCompare(String(a.data || '')));
+    const total = itens.reduce((s, cv)=>s + (Number(cv.valor) || 0), 0);
+    placa = focoPlacaHtml('Na fatura aberta', total, [`${itens.length} compra${itens.length === 1 ? '' : 's'}`, ...focoPorCategoria(itens.map(cv=>[cv.categoria, cv.valor]))]);
+    lista = itens.map(cv=>focoLinha(focoIco('vista', cv.categoria || cv.descricao), cv.descricao || 'Compra', `Cartão ${escBanco(cv.cartao)} · fatura ${monthLabel(cv.m)}${cv.categoria && cv.categoria !== 'Outros' ? ' · ' + escBanco(cv.categoria) : ''}${cv.data ? ' · ' + focoData(cv.data) : ''}`, Number(cv.valor) || 0)).join('');
+  } else if(focoTipo === 'parcelado'){
+    const itens = [];
+    (state.cartoesTracker || []).forEach(c=>{
+      const m = faturaAbertaMes(c);
+      (state.comprasTracker || []).filter(x=>x.cartaoId === c.id && !x.pago && x.mesInicio).forEach(x=>{
+        const v = compraTrackerValorNoMes(x, m); if(!v) return;
+        const n = Math.max(1, Number(x.parcelas) || 1); let k = 1; while(k < n && addMonths(x.mesInicio, k - 1) !== m) k++;
+        itens.push({ nome: x.nome || 'Compra', cartao: c.nome, k, n, v, falta: v * (n - k), total: Number(x.valorTotal) || v * n });
+      });
+    });
+    itens.sort((a, b)=>(a.n - a.k) - (b.n - b.k));
+    const mensal = itens.reduce((s, x)=>s + x.v, 0), resta = itens.reduce((s, x)=>s + x.falta, 0);
+    placa = focoPlacaHtml('Parcelas desta fatura', mensal, [`${itens.length} compra${itens.length === 1 ? '' : 's'}`, `Ainda faltam <b>${fmtMoney(resta)}</b> depois desta`]);
+    lista = itens.map(x=>focoLinha(focoIco('parcelada'), x.nome, `Cartão ${escBanco(x.cartao)} · <b>${x.k} de ${x.n}</b>${x.n - x.k ? ' · faltam ' + (x.n - x.k) : ' · última'}`, x.v, `de ${fmtMoney(x.total)}`)).join('');
+  }
+  document.getElementById('focoPlaca').innerHTML = placa;
+  document.getElementById('focoLista').innerHTML = lista || '<div class="gm-vazio">Nada aqui neste mês.</div>';
+}
+function focoPlacaHtml(rotulo, total, partes){
+  return `<span class="placa-lbl" style="margin-top:0">${rotulo}</span><b class="ext-total">${fmtMoney(total)}</b><div class="ext-partes">${partes.map(p=>`<span>${p}</span>`).join('')}</div>`;
+}
+/* as 3 categorias que mais pesaram, para a placa */
+function focoPorCategoria(pares){
+  const s = {}; pares.forEach(([c, v])=>{ c = c || 'Outros'; s[c] = (s[c] || 0) + (Number(v) || 0); });
+  return Object.entries(s).sort((a, b)=>b[1] - a[1]).slice(0, 3).map(([c, v])=>`${escBanco(c)} <b>${fmtMoney(v)}</b>`);
+}
+function focoGrupo(nome, total, html){
+  return `<div class="ext-dia"><div class="ext-dia-topo"><span class="ext-dia-txt"><b>${nome}</b></span><em>${fmtMoney(total)}</em></div>${html}</div>`;
 }
