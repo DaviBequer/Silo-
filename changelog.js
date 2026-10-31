@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.8', itens: [
+    'Assistente, passo a passo: a pergunta fica no alto (no lugar da placa), curta e com a logo ("Saldo do Nubank?"); responder só o número já vale como resposta (até zero)',
+    'Saldos dos bancos e faturas dos cartões bem pequenos no alto, com o antes e o depois, no passo a passo e na conversa'
+  ] },
   { versao: 'v15.7', itens: [
     'Fixos, Pix, Crédito à vista e Parcelado com visual novo: uma coluna por grupo no computador e barra na placa mostrando quanto cada grupo soma',
     'Fixos: tocar numa conta marca como paga, tocar de novo desmarca; as pagas ficam separadas embaixo de cada grupo'

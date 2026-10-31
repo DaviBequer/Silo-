@@ -270,7 +270,7 @@ function atzItensParaIA(){
    Um só cartão (ou um só banco) = usa esse. Apelido aprendido manda na categoria. */
 function atzNormalizarItens(lista){
   const bancos = bancosDoUsuario(), contas = vozContasAbertas(), cats = vozCategoriasCartao(), apelidos = state.iaApelidos || {};
-  return (lista || []).filter(i=>i && ATZ_TIPOS[i.tipo] && Number(i.valor) > 0).map(i=>{
+  return (lista || []).filter(i=>i && ATZ_TIPOS[i.tipo] && (Number(i.valor) > 0 || (['saldo','fatura'].includes(i.tipo) && Number(i.valor) === 0))).map(i=>{
     const c = ['vista','parcelada','fatura'].includes(i.tipo) ? (vozAchaCartao(i.cartao) || (vozCartoes().length === 1 ? vozCartoes()[0] : null)) : null;
     const b = bancos.find(x=>vozSemAcento(x.nome) === vozSemAcento(i.banco)) || bancos.find(x=>i.banco && vozSemAcento(i.banco).includes(vozSemAcento(x.nome)))
       || (['pix','recebi','saldo'].includes(i.tipo) && bancos.length === 1 ? bancos[0] : null);
@@ -360,6 +360,9 @@ async function atzEnviar(texto){
   if(!texto || atzOcupado || !atzTemIA()) return;
   const inp = document.getElementById('atzTexto'); inp.value = ''; inp.style.height = 'auto';
   const msg = { quem:'eu', texto };
+  /* passo a passo: só um número = resposta da pergunta (saldo do banco / fatura do cartão) */
+  const p = atzAba === 'passo' ? atzPassos()[atzPassoI] : null;
+  if(p && p.tipo !== 'contas' && /^\s*(r\$)?\s*-?[\d.,]+\s*$/i.test(texto)) msg.paraIA = (p.tipo === 'banco' ? `O saldo do ${p.nome} está ` : `A fatura do cartão ${p.nome} está `) + texto.replace(/r\$/i, '').trim();
   atzConversa.push(msg);
   await atzPerguntar(msg, null);
 }
@@ -383,7 +386,7 @@ async function atzPerguntar(msg, audio){
   if(atzAba === 'resumo') atzAba = 'conversa'; atzOcupado = true; renderAtualizar(); atzRenderConversa(audio ? 'Ouvindo o áudio…' : 'Entendendo…', true);
   try{
     const historico = atzConversa.filter(m=>m !== msg).slice(-16).map(m=>(m.quem === 'eu' ? 'Pessoa: ' : 'Você: ') + m.texto).join('\n')
-      + '\nPessoa: ' + (audio ? '[a fala está no ÁUDIO anexado]' : msg.texto);
+      + '\nPessoa: ' + (audio ? '[a fala está no ÁUDIO anexado]' : (msg.paraIA || msg.texto));
     const partes = [{ type:'text', text:
       `Você é o assistente de finanças do app Siloé (Brasil, reais). A pessoa está atualizando os gastos falando em texto corrido, numa conversa com você.\n` +
       (audio ? `A última fala veio em ÁUDIO (anexado): ouça com atenção os valores e os nomes de banco e cartão (estão no contexto) e escreva em transcricao o que ela disse. ` +
@@ -620,6 +623,7 @@ function atzFaixaHtml(){
     </div>
     ${!atzFaixaMin && cats.length ? `<div class="atz-fx-barra">${cats.map(x=>`<i style="width:${Math.max(2, x.v / total * 100)}%;background:${x.cor}"></i>`).join('')}</div>
       <div class="atz-fx-cats">${cats.map(x=>`<span><em style="background:${x.cor}"></em>${escBanco(x.c)} <b>${fmtMoney(x.v)}</b> <small>${x.p}%</small></span>`).join('')}</div>` : ''}
+    ${window.atzConfAtual ? atzMiniHtml(window.atzConfAtual) : ''}
     ${!atzFaixaMin && atzItens.length ? `<div class="atz-fx-its">${[...gastos, ...outros].map(i=>`<span class="atz-fx-it${i.ok ? ' ok' : ''}">${atzIcoItem(i, 10)}${escBanco(i.descricao || ATZ_TIPOS[i.tipo])} <b>${fmtMoney(i.valor)}</b></span>`).join('')}</div>` : ''}
   </div>`;
 }
@@ -650,8 +654,20 @@ function atzPassoHtml(conf){
   if(p.tipo === 'cartao'){ const x = conf.cartoes.find(c=>c.c.id === p.id); if(x && x.informado !== null) st = Math.abs(x.falta) < 0.01 ? '<span class="atz-pill ok">bateu ✓</span>' : x.falta > 0 ? `<span class="atz-pill err">faltam ${fmtMoney(x.falta)}: que compras faltam?</span> <button type="button" class="link-txt" onclick="atzSemExplicar('cartao','${p.id}')">Não lembro</button>` : `<span class="atz-pill err">passou ${fmtMoney(-x.falta)}: algum valor errado?</span>`; }
   const chips = p.tipo === 'contas' ? `<div class="atz-passo-chips">${vozContasAbertas().map((c, n)=>{ const tem = atzItens.some(i=>i.tipo === 'conta' && i.conta === c.key);
     return `<button type="button" class="${tem ? 'on' : ''}" onclick="atzPassoConta(${n})">${escBanco(c.desc)} <small>${fmtMoney(c.valor)}</small></button>`; }).join('')}</div>` : '';
-  return `<div class="atz-passo">${barra}<span class="atz-passo-n">${atzPassoI + 1} de ${passos.length}</span><b>${lvEsc(atzPassoPergunta(p))}</b>${st ? `<div class="atz-passo-st">${st}</div>` : ''}${chips}
-    <div class="atz-passo-acoes">${atzPassoI ? '<button type="button" class="link-txt" onclick="atzPassoIr(-1)">Voltar</button>' : '<span></span>'}<button type="button" class="btn btn-sm" onclick="atzPassoIr(1)">${/bateu/.test(st) ? 'Próximo' : 'Pular'}</button></div></div>`;
+  /* v15.8: pergunta curta com a logo ("Saldo do Nubank?") */
+  const obj = p.tipo === 'banco' ? bancosDoUsuario().find(b=>b.id === p.id) : p.tipo === 'cartao' ? (state.cartoesTracker || []).find(c=>c.id === p.id) : null;
+  const logo = obj && obj.logoUrl ? `<img src="${obj.logoUrl}" class="atz-passo-logo" alt="">` : '';
+  const curta = p.tipo === 'banco' ? `Saldo do ${p.nome}?` : p.tipo === 'cartao' ? `Fatura do ${p.nome}${obj ? ' · ' + monthLabel(faturaAbertaMes(obj)) : ''}?` : 'Quais contas você pagou?';
+  const gravaveis = atzItens.filter(atzGravavel), ok = gravaveis.filter(atzConfirmado).length;
+  return `<div class="atz-passo atz-passo-topo">${barra}<span class="atz-passo-n">${atzPassoI + 1} de ${passos.length}</span><b class="atz-passo-q">${logo}${lvEsc(curta)}</b>${atzMiniHtml(conf, p)}${st ? `<div class="atz-passo-st">${st}</div>` : ''}${chips}
+    <div class="atz-passo-acoes">${atzPassoI ? '<button type="button" class="link-txt" onclick="atzPassoIr(-1)">Voltar</button>' : '<span></span>'}<span style="display:flex;gap:8px">${ok ? `<button type="button" class="btn btn-sm atz-gravar" onclick="atzGravar()">Gravar ${ok}</button>` : ''}<button type="button" class="btn btn-sm" onclick="atzPassoIr(1)">${/bateu/.test(st) ? 'Próximo' : 'Pular'}</button></span></div></div>`;
+}
+/* v15.8: saldos dos bancos e faturas dos cartões bem pequenos (antes → depois desta conversa) */
+function atzMiniHtml(conf, p){
+  const chip = (nome, logo, antes, agora, on)=>`<span class="atz-mini${on ? ' on' : ''}${Math.abs(agora - antes) > 0.004 ? ' mud' : ''}">${logo ? `<img src="${logo}" alt="">` : ''}${escBanco(nome)} ${Math.abs(agora - antes) > 0.004 ? `<s>${fmtMoney(antes)}</s> ` : ''}<b>${fmtMoney(agora)}</b></span>`;
+  const bs = conf.bancos.map(x=>chip(x.b.nome, x.b.logoUrl, Number(x.b.valor) || 0, x.informado !== null ? x.informado : x.esperado, p && p.tipo === 'banco' && p.id === x.b.id));
+  const cs = conf.cartoes.map(x=>chip('Cartão ' + x.c.nome, x.c.logoUrl, x.noApp, x.informado !== null ? x.informado : x.noApp + x.novos, p && p.tipo === 'cartao' && p.id === x.c.id));
+  return bs.length || cs.length ? `<div class="atz-minis">${bs.join('')}${cs.join('')}</div>` : '';
 }
 function atzPassoIr(d){ atzPassoI = Math.max(0, Math.min(atzPassos().length, atzPassoI + d)); atzRenderConversa(); }
 /* v15.3: a resposta mexeu no banco/cartão da pergunta → vai sozinho para o próximo.
@@ -755,6 +771,7 @@ function atzRenderConversa(pensando, rolar){
       </div>`).join('')
     + (soltos.length ? `<div class="atz-msg ia">${lista(soltos)}</div>` : '');
   const passo = atzAba === 'passo' ? atzPassoHtml(conf) : '';
+  window.atzConfAtual = conf;
   el.classList.toggle('det', atzDetalhes);
   /* editando no celular: a placa, os detalhes e a barra de digitar saem do caminho (o teclado tampava tudo) */
   document.getElementById('pageAtualizar').classList.toggle('atz-editando', atzEditando >= 0);
@@ -764,13 +781,12 @@ function atzRenderConversa(pensando, rolar){
     ${atzItens.some(i=>atzGravavel(i) && !i.ok) ? '<button type="button" class="atz-ferr-todos" onclick="atzConfirmarTodos()">Confirmar todos</button>' : ''}</div>` : '';
   const corpoMsgs = lista2 ? `<div class="atz-msg ia atz-lista-tudo">${lista(atzItens.map((_, k)=>k))}</div>` : msgs;
   el.innerHTML = `
-    ${atzFaixaHtml()}
+    ${atzAba === 'passo' && passo ? passo : atzFaixaHtml()}
     <div class="atz-corpo">
       ${atzDetalhes ? `<div class="atz-det">${atzDetalhesHtml(conf)}</div>` : ''}
       <div class="atz-chat">${ferr}<div class="atz-msgs">${corpoMsgs || (passo ? '' : `<div class="atz-msg ia">Fale ou escreva o que você gastou.</div>`)}
         ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div>
         ${atzConferenciasHtml(conf)}
-        ${passo}
         ${atzConversa.length && !pensando ? '<button type="button" class="link-txt atz-limpar" onclick="atzLimpar()">Começar de novo</button>' : ''}</div>
     </div>`;
   /* fala nova: a última mensagem fica logo abaixo da faixa (a resposta inteira à vista) */
