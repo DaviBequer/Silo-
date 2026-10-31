@@ -79,6 +79,7 @@ function lerCopiaLocalQualquer(){
 function apagarCopiaLocal(){
   if(MODO_TESTE_LOCAL) return;
   try{ localStorage.removeItem(LOCAL_COPIA_KEY); localStorage.removeItem(LOCAL_META_KEY); localStorage.removeItem(LOCAL_BASE_KEY); }catch(e){}
+  try{ if(self.caches) caches.delete('siloe-imagens'); }catch(e){}   // as imagens guardadas no aparelho saem junto
 }
 function lerCopiaLocalBase(){
   try{ const st = JSON.parse(localStorage.getItem(LOCAL_BASE_KEY) || 'null'); return (st && typeof st === 'object' && st.users) ? st : null; }catch(e){ return null; }
@@ -496,7 +497,7 @@ async function carregarDaNuvem(){
 }
 /* ===== ABERTURA (logo animada) ===== */
 /* fica pelo menos o tempo da animação de entrada, para não "piscar" quando os dados chegam rápido */
-const SPLASH_MINIMO_MS = 2600;   // + 1,4 s da saída suave = abertura de 4 s
+const SPLASH_MINIMO_MS = 1600;   // + 0,6 s da saída suave (v15.2: mais rápida)
 function fecharSplash(imediato){
   const el = document.getElementById('splash');
   const sair = ()=>{
@@ -504,7 +505,7 @@ function fecharSplash(imediato){
     document.getElementById('metaCorTema')?.setAttribute('content', '#f3f2ee');   // barra de status creme, igual ao app
     if(!el) return;
     el.classList.add('saindo');
-    setTimeout(()=>el.classList.add('oculta'), 1450);
+    setTimeout(()=>el.classList.add('oculta'), 750);
     /* enquanto a abertura some: cartões entram e os números contam */
     setTimeout(()=>{
       const aba = document.querySelector('.aba.active');

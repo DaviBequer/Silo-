@@ -1,5 +1,5 @@
-const CACHE_NAME = 'siloe-cache-v151';
-const APP_VERSION = '15.1';
+const CACHE_NAME = 'siloe-cache-v152';
+const APP_VERSION = '15.2';
 /* arquivos do app: guardados na instalação para abrir sem internet */
 const ARQUIVOS = [
   './',
@@ -57,7 +57,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const nomes = await caches.keys();
-    await Promise.all(nomes.filter((n) => n !== CACHE_NAME && n !== 'siloe-compartilhado').map((n) => caches.delete(n)));
+    await Promise.all(nomes.filter((n) => n !== CACHE_NAME && n !== 'siloe-compartilhado' && n !== 'siloe-imagens').map((n) => caches.delete(n)));
     await self.clients.claim();
   })());
 });
@@ -87,6 +87,21 @@ self.addEventListener('fetch', (event) => {
   const daCasa = url.origin === self.location.origin;
   const guardavel = daCasa || EXTERNOS.some(e => req.url.startsWith(e)) || url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com');
   if (!guardavel) return;
+  /* v15.2 (velocidade): o que tem versão no endereço (?v=15.2, bibliotecas com número, letras do Google) nunca muda:
+     abre direto da cópia do aparelho, sem esperar a internet. Uma versão nova do app muda o ?v= e vem da rede. */
+  const fixo = (daCasa && url.searchParams.has('v')) || EXTERNOS.some(e => req.url.startsWith(e)) || url.hostname.endsWith('fonts.gstatic.com')
+    || (daCasa && /\.(png|ttf|woff2?)$/.test(url.pathname));
+  if (fixo) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const g = await cache.match(req, { ignoreVary:true });
+      if (g) return g;
+      const resp = await fetch(req);
+      if (resp && (resp.ok || resp.type === 'opaque')) cache.put(req, resp.clone()).catch(() => {});
+      return resp;
+    })());
+    return;
+  }
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     const guardada = () => cache.match(req, { ignoreVary:true }).then(r => r || (req.mode === 'navigate' ? cache.match('./index.html') : undefined));
@@ -94,7 +109,8 @@ self.addEventListener('fetch', (event) => {
       if (resp && (resp.ok || resp.type === 'opaque')) cache.put(req, resp.clone()).catch(() => {});
       return resp;
     });
-    const espera = new Promise(resolve => setTimeout(resolve, 3000));
+    /* a página em si (index) continua vindo da rede para pegar versão nova; se demorar 1,5 s, abre a guardada */
+    const espera = new Promise(resolve => setTimeout(resolve, 1500));
     try {
       const primeiro = await Promise.race([rede, espera.then(() => null)]);
       if (primeiro) return primeiro;

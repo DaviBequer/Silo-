@@ -1,6 +1,12 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.2', itens: [
+    'App mais rápido para abrir: os arquivos de cada versão abrem direto do celular, sem esperar a internet',
+    'As logos e imagens ficam guardadas no aparelho (antes eram baixadas de novo a cada abertura)',
+    'Abertura mais curta (1,6 a 3 s; um toque pula) e saída mais rápida',
+    'Trocar de aba e abrir telas mais ágil: animações e números contando mais curtos'
+  ] },
   { versao: 'v15.1', itens: [
     'Extrato: botão Editar no alto — com ele ligado, tocar numa compra abre a janela para mudar nome, valor, categoria e data, ou apagar (com Desfazer)'
   ] },

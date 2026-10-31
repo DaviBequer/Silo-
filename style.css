@@ -1583,8 +1583,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 
 /* ===== ABERTURA (preta: o cordeiro surge do desfoque, o nome entra letra por letra) ===== */
 /* abertura (v12, escolha C): mármore, o nome grande, a saudação e a barra em onda que ondula enquanto enche (~4 s) */
-.splash{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg) var(--marmore) center/cover;transition:opacity 1.2s var(--ease),visibility 1.2s}
-.splash-conteudo{position:relative;display:flex;flex-direction:column;align-items:center;transition:transform 1.4s var(--ease),filter 1.4s var(--ease)}
+.splash{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg) var(--marmore) center/cover;transition:opacity .6s var(--ease),visibility .6s}
+.splash-conteudo{position:relative;display:flex;flex-direction:column;align-items:center;transition:transform .7s var(--ease),filter .7s var(--ease)}
 .splash-nome{display:flex;font-family:var(--font-body);font-weight:200;font-size:56px;line-height:1;letter-spacing:-.02em;color:var(--text)}
 .splash-nome span{display:inline-block;opacity:0;animation:splashLetra .9s var(--mola) both}
 .splash-nome span:nth-child(1){animation-delay:.15s}
@@ -2186,11 +2186,11 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-btn-marca.pendente .marca-aviso{display:block}
 /* ---------- 6. EFEITOS ---------- */
 /* telas e janelas entrando */
-.aba.active{animation:abaEntra .5s var(--mola) backwards}
+.aba.active{animation:abaEntra .3s var(--mola) backwards}
 /* aba com botão flutuante (+ do Louvor): só esmaece — o deslize faria o botão nascer no lugar errado e pular */
 .aba.active:has(> .receita-fab){animation-name:abaEsmaece}
 @keyframes abaEsmaece{from{opacity:0}to{opacity:1}}
-.fullpage.active{animation:fpEntra .45s var(--mola) backwards}
+.fullpage.active{animation:fpEntra .32s var(--mola) backwards}
 .modal-overlay.active{animation:veuEntra .25s var(--ease)}
 .modal{animation:modalSobe .5s cubic-bezier(.2,1.15,.35,1)}
 @media(min-width:640px){ .modal{animation:modalPop .35s var(--mola)} }
@@ -2198,7 +2198,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 /* toque: tudo que é botão afunda um pouco */
 .btn:active,.dash-tab:active,.user-tab:active,.nav-item:active,.header-btn:active,.resumo-btn:active,.dif-chip:active,.btn-icon-sm:active,.voz-mic:active,.section-add:active,.lv-barra-btn:active,.filter-chip:active,.inclui-chip:active,.lv-icone-btn:active,.lv-filtro-toggle:active{transform:scale(.96)}
 /* cartões entrando um depois do outro (efeitoEntradaCartoes) */
-.efeito-entra{animation:efeitoEntra .7s var(--mola) both;animation-delay:calc(var(--i,0) * 60ms)}
+.efeito-entra{animation:efeitoEntra .45s var(--mola) both;animation-delay:calc(var(--i,0) * 35ms)}
 /* "feito": anel que abre + ✓ no ponto do toque */
 .efeito-feito{position:fixed;z-index:3000;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;pointer-events:none;animation:efeitoFeito .6s var(--mola) forwards}
 .efeito-feito::before{content:'';position:absolute;inset:0;border-radius:50%;background:var(--gold);opacity:.9;animation:efeitoAnel .6s ease-out forwards}
@@ -2695,7 +2695,7 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 .bottom-nav .nav-item{z-index:1}
 .nav-pilula{position:absolute;z-index:0;border-radius:14px;background:var(--graf);pointer-events:none;transition:left .45s cubic-bezier(.3,1.3,.5,1),top .45s cubic-bezier(.3,1.3,.5,1),width .45s cubic-bezier(.3,1.3,.5,1),height .45s cubic-bezier(.3,1.3,.5,1)}
 /* F2 telas cheias chegam com profundidade */
-.fullpage.active{animation:efTela .5s cubic-bezier(.3,1.15,.5,1) backwards;box-shadow:-18px 0 40px rgba(20,22,26,.12)}
+.fullpage.active{animation:efTela .34s cubic-bezier(.3,1.15,.5,1) backwards;box-shadow:-18px 0 40px rgba(20,22,26,.12)}
 @keyframes efTela{from{transform:translateX(38px) scale(.985);opacity:.35}}
 /* F3 janelas com o fundo mais desfocado */
 .modal-overlay{backdrop-filter:blur(7px) saturate(.9);-webkit-backdrop-filter:blur(7px) saturate(.9)}

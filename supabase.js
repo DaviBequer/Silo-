@@ -60,6 +60,21 @@
     const leve = json.replace(/"(data:image\/[^"\\]*(?:\\.[^"\\]*)*)"/g, (m, dentro) => troca.has(dentro) ? '"' + troca.get(dentro) + '"' : m);
     return { leve, novas };
   }
+  /* cópia das imagens no aparelho (Cache Storage "siloe-imagens", uma entrada por hash) */
+  const IMG_CACHE = 'siloe-imagens';
+  async function imagensDoAparelho(hashes){
+    const out = new Map();
+    if (!hashes.length || !self.caches) return out;
+    try {
+      const c = await caches.open(IMG_CACHE);
+      await Promise.all(hashes.map(async h => { const r = await c.match('./img/' + h); if (r) out.set(h, await r.text()); }));
+    } catch (e) {}
+    return out;
+  }
+  function guardarImagensNoAparelho(linhas){
+    if (!linhas.length || !self.caches) return;
+    caches.open(IMG_CACHE).then(c => Promise.all(linhas.map(r => c.put('./img/' + r.hash, new Response(r.data, { headers: { 'Content-Type': 'text/plain' } }))))).catch(() => {});
+  }
   /* registro do banco -> mesmo registro com as imagens de volta no lugar */
   async function juntarImagens(dados){
     if (!dados) return dados;
@@ -67,11 +82,17 @@
     const procurar = o => { if (!o || typeof o !== 'object') return; for (const k in o) { const v = o[k]; if (typeof v === 'string') { if (/^img:[0-9a-f]{64}$/.test(v)) refs.add(v.slice(4)); } else procurar(v); } };
     procurar(dados);
     if (!refs.size) return dados;
-    const faltam = [...refs].filter(h => !imagensConhecidas.has(h));
+    let faltam = [...refs].filter(h => !imagensConhecidas.has(h));
+    /* v15.2 (velocidade): as imagens ficam guardadas no aparelho (o nome é o hash do conteúdo, então nunca ficam velhas);
+       antes todas eram baixadas de novo a cada abertura do app */
+    const guardadas = await imagensDoAparelho(faltam);
+    guardadas.forEach((v, h) => imagensConhecidas.set(h, v));
+    faltam = faltam.filter(h => !imagensConhecidas.has(h));
     if (faltam.length) {
       const { data, error } = await client.from('app_imagens').select('hash, data').eq('user_id', USER_ID).in('hash', faltam);
       if (error) throw error;
       (data || []).forEach(r => imagensConhecidas.set(r.hash, r.data));
+      guardarImagensNoAparelho(data || []);
     }
     const repor = o => { if (!o || typeof o !== 'object') return; for (const k in o) { const v = o[k]; if (typeof v === 'string') { if (/^img:[0-9a-f]{64}$/.test(v) && imagensConhecidas.has(v.slice(4))) o[k] = imagensConhecidas.get(v.slice(4)); } else repor(v); } };
     repor(dados);

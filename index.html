@@ -12,8 +12,9 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Siloé</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=15.1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=15.2">
 </head>
 <body class="carregando">
 
@@ -24,7 +25,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:600;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 151</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 152</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1940,10 +1941,10 @@
   ];
   const hoje = new Date(), dia = Math.floor((hoje - new Date(hoje.getFullYear(), 0, 0)) / 864e5);
   const [txt, ref] = VS[dia % VS.length], palavras = txt.split(' ');
-  document.getElementById('splashVs').innerHTML = palavras.map((w, i)=>'<span style="animation-delay:' + (0.55 + i * 0.12).toFixed(2) + 's">' + w + '</span>').join(' ');
+  document.getElementById('splashVs').innerHTML = palavras.map((w, i)=>'<span style="animation-delay:' + (0.35 + i * 0.07).toFixed(2) + 's">' + w + '</span>').join(' ');
   document.getElementById('splashRef').textContent = ref;
-  document.getElementById('splashRef').style.animationDelay = (0.75 + palavras.length * 0.12).toFixed(2) + 's';
-  window.splashMinimo = Math.min(6000, Math.max(2600, 1700 + palavras.length * 120 + 1300));
+  document.getElementById('splashRef').style.animationDelay = (0.5 + palavras.length * 0.07).toFixed(2) + 's';
+  window.splashMinimo = Math.min(3000, Math.max(1600, 600 + palavras.length * 70 + 900));   /* v15.2: mais rápida (era 2,6 a 6 s) */
   document.getElementById('splash').addEventListener('click', ()=>{ window.splashMinimo = 0; });
 }catch(e){} })();</script>
 
@@ -1998,30 +1999,30 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=15.1"></script>
-<script src="core.js?v=15.1"></script>
-<script src="layout.js?v=15.1"></script>
-<script src="changelog.js?v=15.1"></script>
-<script src="app.js?v=15.1"></script>
-<script src="app-recursos.js?v=15.1"></script>
-<script src="panorama.js?v=15.1"></script>
-<script src="planner.js?v=15.1"></script>
-<script src="voz.js?v=15.1"></script>
-<script src="ponto.js?v=15.1"></script>
-<script src="louvor.js?v=15.1"></script>
-<script src="louvor-extra.js?v=15.1"></script>
-<script src="ia.js?v=15.1"></script>
-<script src="louvor-cifraclub.js?v=15.1"></script>
-<script src="louvor-medley.js?v=15.1"></script>
-<script src="louvor-culto.js?v=15.1"></script>
-<script src="louvor-drive.js?v=15.1"></script>
-<script src="atualizar.js?v=15.1"></script>
-<script src="louvor-comparar.js?v=15.1"></script>
-<script src="fatura-pdf.js?v=15.1"></script>
-<script src="emprestimo.js?v=15.1"></script>
-<script src="vendas.js?v=15.1"></script>
-<script src="efeitos.js?v=15.1"></script>
-<script src="digital.js?v=15.1"></script>
+<script src="supabase.js?v=15.2"></script>
+<script src="core.js?v=15.2"></script>
+<script src="layout.js?v=15.2"></script>
+<script src="changelog.js?v=15.2"></script>
+<script src="app.js?v=15.2"></script>
+<script src="app-recursos.js?v=15.2"></script>
+<script src="panorama.js?v=15.2"></script>
+<script src="planner.js?v=15.2"></script>
+<script src="voz.js?v=15.2"></script>
+<script src="ponto.js?v=15.2"></script>
+<script src="louvor.js?v=15.2"></script>
+<script src="louvor-extra.js?v=15.2"></script>
+<script src="ia.js?v=15.2"></script>
+<script src="louvor-cifraclub.js?v=15.2"></script>
+<script src="louvor-medley.js?v=15.2"></script>
+<script src="louvor-culto.js?v=15.2"></script>
+<script src="louvor-drive.js?v=15.2"></script>
+<script src="atualizar.js?v=15.2"></script>
+<script src="louvor-comparar.js?v=15.2"></script>
+<script src="fatura-pdf.js?v=15.2"></script>
+<script src="emprestimo.js?v=15.2"></script>
+<script src="vendas.js?v=15.2"></script>
+<script src="efeitos.js?v=15.2"></script>
+<script src="digital.js?v=15.2"></script>
 <script>carregar();</script>
 </body>
 </html>

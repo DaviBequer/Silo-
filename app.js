@@ -695,7 +695,7 @@ function efeitoEntradaCartoes(raiz){
     void el.offsetWidth;
     el.style.setProperty('--i', i);
     el.classList.add('efeito-entra');
-    setTimeout(()=>el.classList.remove('efeito-entra'), 800 + i*60);
+    setTimeout(()=>el.classList.remove('efeito-entra'), 500 + i*35);
   });
 }
 function efeitoContarNumeros(raiz){
@@ -706,7 +706,7 @@ function efeitoContarNumeros(raiz){
     if(!m) return;
     const alvo = Number(m[2].replace(/\./g,'').replace(',','.')) * (m[1] ? -1 : 1);
     if(Math.abs(alvo) < 1) return;
-    const ini = performance.now(), dur = 1400;   // devagar o bastante para ver contar
+    const ini = performance.now(), dur = 800;   // v15.2: mais rápido (era 1,4 s)
     let escrito = '';
     const passo = t=>{
       if(escrito && el.textContent !== escrito) return;   // a tela foi redesenhada: para
@@ -724,7 +724,7 @@ function efeitoContarSaldo(){
   if(!efeitosLigados || !inp || document.activeElement === inp) return;
   const alvoTxt = inp.value, alvo = parseMoney(alvoTxt);
   if(!(Math.abs(alvo) >= 1)) return;
-  const ini = performance.now(), dur = 2200;   // o saldo conta mais devagar: é o número principal
+  const ini = performance.now(), dur = 1100;   // o saldo conta um pouco mais devagar (v15.2: era 2,2 s)
   const passo = t=>{
     if(document.activeElement === inp){ inp.value = alvoTxt; return; }
     const p = Math.min(1, (t - ini)/dur), e = 1 - Math.pow(1 - p, 3);
