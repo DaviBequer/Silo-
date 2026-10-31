@@ -846,6 +846,8 @@ const CHAVE_TRABALHO = 'siloe-trabalho';
 function switchAba(aba){
   if(aba==='trabalho'){ try{ aba = localStorage.getItem(CHAVE_TRABALHO)==='vendas' ? 'vendas' : 'ponto'; }catch(e){ aba = 'ponto'; } }
   if(aba==='ponto' || aba==='vendas'){ try{ localStorage.setItem(CHAVE_TRABALHO, aba); }catch(e){} }
+  /* v15.3 (sem abas em Finanças): tocar em Finanças estando em Cartões/Empréstimo volta para a tela principal */
+  if(aba==='planner' && typeof dashTabAtiva!=='undefined' && dashTabAtiva!=='geral' && typeof switchDashTab==='function') switchDashTab('geral');
   document.querySelectorAll('.aba').forEach(el=>el.classList.remove('active'));
   document.getElementById('aba-'+aba).classList.add('active');
   /* trocar de aba fecha todas as telas cheias (música, Comparar, medley, Culto, contas...) */

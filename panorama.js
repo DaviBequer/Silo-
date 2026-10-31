@@ -7,6 +7,7 @@ function switchDashTab(tab){
   const aba = document.getElementById('aba-planner');
   if(aba) aba.dataset.tab = tab;
   document.querySelectorAll('.dash-tab').forEach(el=>el.classList.toggle('active', el.dataset.dtab===tab));
+  const nomeV = document.getElementById('dashVoltarNome'); if(nomeV) nomeV.textContent = tab === 'cartao' ? 'Cartões' : tab === 'emprestimo' ? 'Empréstimo' : '';
   renderPanorama();
   if(tab==='emprestimo' && typeof renderEmprestimos==='function') renderEmprestimos();
   window.scrollTo(0,0);
@@ -650,10 +651,20 @@ function desenharTimeline(wrapId, months, vals, onclickFn, estilo){
   const ult = pts[pts.length - 1] || { v:0, mKey:hoje };
   const area = pts.length ? `${pts[0].x.toFixed(1)},${chartBottom} ${line} ${ult.x.toFixed(1)},${chartBottom}` : '';
   if(estilo === 'placa'){
+    /* v15.3: colunas por mês (valor + barra + mês), legível em qualquer largura; antes era uma linha pequena esticada */
+    const maxAbs = Math.max(1, ...vals.map(v=>Math.abs(v)));
+    const temPos = vals.some(v=>v >= 0), temNeg = vals.some(v=>v < 0);
+    const cols = pts.map(p=>{
+      const alt = (Math.abs(p.v) / maxAbs * 100).toFixed(1), neg = p.v < 0;
+      const cls = (p.mKey === state.focusMonth ? ' sel' : '') + (p.mKey === hoje ? ' hoje' : '');
+      return `<button type="button" class="tlb-col${cls}" onclick="${onclickFn(p.mKey)}" title="${monthLabelLong(p.mKey)}: ${fmtMoneySigned(p.v)}">
+        <span class="tlb-v${neg ? ' neg' : ''}">${fmtMoneyCompactSigned(p.v)}</span>
+        <span class="tlb-area${temPos && temNeg ? ' dupla' : ''}">${temPos ? `<span class="tlb-pos">${neg ? '' : `<i style="height:${alt}%"></i>`}</span>` : ''}${temNeg ? `<span class="tlb-neg">${neg ? `<i style="height:${alt}%"></i>` : ''}</span>` : ''}</span>
+        <span class="tlb-m">${monthLabel(p.mKey).slice(0, 3)}</span></button>`;
+    }).join('');
     wrap.innerHTML = `
     <div class="placa tl-placa"><span class="placa-lbl" style="margin-top:0">Em ${monthLabelLong(ult.mKey).toLowerCase()}</span><b class="${ult.v >= 0 ? '' : 'neg'}">${fmtMoneySigned(ult.v)}</b>
-      <svg viewBox="0 0 300 ${chartBottom+6}" width="100%" height="${chartBottom+6}" style="overflow:visible"><polyline points="${line}" fill="none" stroke="#c9a86a" stroke-width="2" vector-effect="non-scaling-stroke"/>${dots}</svg></div>
-    <div class="acum-timeline-meses">${meses}</div>`;
+      <div class="tlb" style="--n:${pts.length}">${cols}</div></div>`;
     return;
   }
   wrap.innerHTML = `

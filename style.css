@@ -2888,3 +2888,66 @@ body{font-weight:400;letter-spacing:.005em}
 #pageExtrato.editando .ext-valor::after{content:'';display:inline-block;width:13px;height:13px;margin-left:8px;vertical-align:-1px;background:currentColor;opacity:.45;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat}
 .ext-edit-onde{margin:12px 0 4px;font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
 .ext-apagar{color:var(--danger)!important}
+
+/* ===== v15.3: Assistente no celular ===== */
+@media (max-width:1023px){
+  /* editando um item: a placa, os detalhes, as abas e a barra de digitar saem; fica só a conversa e o editor */
+  #pageAtualizar.atz-editando .atz-placa,#pageAtualizar.atz-editando .atz-det,#pageAtualizar.atz-editando .atz-barra,
+  #pageAtualizar.atz-editando .atz-abas,#pageAtualizar.atz-editando .atz-ferr{display:none!important}
+  #pageAtualizar.atz-editando #atzConteudo{padding-bottom:45vh}
+}
+.atz-ed{scroll-margin-top:12px}
+/* Conversa | Lista + Confirmar todos */
+.atz-ferr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:6px 0}
+.atz-ferr-seg{display:inline-flex;padding:3px;border-radius:99px;background:var(--card-2)}
+.atz-ferr-seg button{padding:6px 14px;border:0;border-radius:99px;background:none;color:var(--text-dim);font:500 13px/1.2 var(--font-body);cursor:pointer}
+.atz-ferr-seg button.on{background:var(--graf);color:var(--latao)}
+.atz-ferr-seg small{margin-left:3px;opacity:.75}
+.atz-ferr-todos{padding:7px 14px;border:1px solid var(--fio);border-radius:99px;background:var(--vidro);color:var(--text);font:600 12.5px/1.2 var(--font-body);cursor:pointer}
+.atz-lista-tudo{max-width:none}
+/* fala tocável para corrigir */
+.atz-msg.eu[role=button]{cursor:pointer}
+.atz-msg.eu[role=button]::after{content:'tocar para corrigir';display:block;margin-top:3px;font-size:10.5px;opacity:.55}
+/* v15.3: Finanças sem abas — Cartões e Empréstimo abrem pelos atalhos e mostram o voltar */
+.dash-switches .dash-tabs{display:none}
+.dash-voltar{display:flex;align-items:center;gap:10px}
+.dash-voltar span{font-size:14px;color:var(--text-faint)}
+.dash-voltar b{font-weight:300;font-size:22px;color:var(--text)}
+.dash-voltar b::before{content:'·';margin-right:10px;color:var(--text-faint)}
+#aba-planner:not([data-tab="cartao"]):not([data-tab="emprestimo"]) .dash-switches{display:none}
+@media (min-width:1024px){ .dash-switches:has(.dash-voltar){display:flex;justify-content:flex-start} }
+/* v15.3: cartão no computador — o cartão à esquerda e, ao lado, a fatura e os 13 meses em grade (como no empréstimo) */
+@media (min-width:1024px){
+  .cartao-card-item{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);column-gap:32px;align-items:start}
+  .cartao-card-item > *{grid-column:2}
+  .cartao-card-item > .ct-face{grid-column:1;grid-row:1 / span 3;margin:0}
+  .cartao-card-item > .ct-toggle-compras,.cartao-card-item > .compras-do-cartao{grid-column:1 / -1}
+  .cartao-card-item .ct-fatura-mensal{margin-top:0}
+  .cartao-card-item .ct-fatura-mensal > .btn-icon-sm{display:none}
+  .cartao-card-item .ct-fatura-mensal-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;overflow:visible}
+  .cartao-card-item .ct-fatura-chip{min-width:0}
+}
+/* v15.3: "Sobra depois da fatura" em colunas por mês */
+.tlb{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px;margin-top:14px}
+.tlb-col{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:6px 2px;border:0;border-radius:10px;background:none;color:var(--graf-tx);font:inherit;cursor:pointer;transition:background .15s}
+.tlb-col:hover,.tlb-col.sel{background:rgba(255,255,255,.07)}
+.tlb-v{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:#e6cd8f}
+.tlb-v.neg{color:#f0a08c}
+.tlb-area{display:flex;flex-direction:column;width:100%;height:84px}
+.tlb-area > span{flex:1;display:flex;justify-content:center}
+.tlb-pos{align-items:flex-end}.tlb-neg{align-items:flex-start}
+.tlb-area.dupla .tlb-pos{border-bottom:1px solid rgba(241,239,233,.25)}
+.tlb-area i{display:block;width:min(26px,70%);min-height:2px;border-radius:5px 5px 2px 2px;background:linear-gradient(#e6cd8f,#c9a86a)}
+.tlb-neg i{border-radius:2px 2px 5px 5px;background:linear-gradient(#b0483a,#f0a08c)}
+.tlb-m{font:600 10px/1.2 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--graf-dim)}
+.tlb-col.hoje .tlb-m{color:var(--latao)}
+@media (max-width:420px){ .tlb{gap:2px} .tlb-v{font-size:9.5px} .tlb-area{height:70px} }
+/* v15.3: Extrato no computador em 3 colunas (os dias correm de cima para baixo em cada coluna) */
+@media (min-width:1024px){
+  .fullpage-content.ext{max-width:none}
+  #extLista{column-count:3;column-gap:32px}
+  #extLista .ext-dia{break-inside:avoid;margin-bottom:22px}
+  .ext-mes,.ext-abas,.ext-placa{max-width:760px;margin-left:auto;margin-right:auto}
+  .ext-abas{display:flex;justify-content:center;width:fit-content}
+}
+@media (min-width:1024px) and (max-width:1279px){ #extLista{column-count:2} }

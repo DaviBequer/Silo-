@@ -1,6 +1,16 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.3', itens: [
+    'Assistente no celular: ao editar um item, a placa e a barra de digitar saem do caminho e o editor fica acima do teclado',
+    'Assistente: "Lista" mostra todos os itens juntos e "Confirmar todos" confirma de uma vez',
+    'Assistente: tocar na sua fala põe o texto na caixa para corrigir o que foi entendido',
+    'Passo a passo: quando a fala atualiza o banco ou cartão da pergunta, vai sozinho para o próximo',
+    'Finanças sem as abas Geral/Cartão/Empréstimo: os atalhos abrem Cartões e Empréstimo, com o voltar no alto',
+    'Cartão no computador: as faturas dos meses ficam ao lado do cartão',
+    'Sobra depois da fatura: colunas por mês com o valor de cada um',
+    'Extrato no computador em 3 colunas; "Simular compra" ficou só no atalho'
+  ] },
   { versao: 'v15.2', itens: [
     'App mais rápido para abrir: os arquivos de cada versão abrem direto do celular, sem esperar a internet',
     'As logos e imagens ficam guardadas no aparelho (antes eram baixadas de novo a cada abertura)',

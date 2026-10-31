@@ -411,6 +411,7 @@ async function atzPerguntar(msg, audio){
     atzConversa.push({ quem:'ia', texto: String(r.resposta || 'Anotado.').trim(),
       novos: atzItens.filter(i=>!ks.has(atzChave(i))).map(atzChave), tirados: antes.filter(i=>!kn.has(atzChave(i))), contas,
       aprendeu: aprendeu.map(a=>`${a.nome.trim()} → ${a.categoria}`) });
+    if(atzAba === 'passo') atzPassoAvancar(antes);
   }catch(e){
     if(audio && !msg.texto) msg.texto = '(áudio)';
     atzConversa.push({ quem:'ia', texto: 'Não consegui falar com a IA agora (' + ((e && e.message) || 'erro') + '). Tente de novo.', erro: true });
@@ -512,11 +513,17 @@ function atzConferenciasHtml(conf){
 /* editar um item (toque no nome): nome, valor, categoria, parcelas, cartão ou banco */
 const ATZ_ICO_LAPIS = '<svg class="atz-lapis" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>';
 let atzEditando = -1;
-function atzEditar(k){ atzEditando = k; atzRenderConversa(); const el = document.getElementById('atzEdNome'); if(el) el.focus(); }
+function atzEditar(k){
+  atzEditando = k; atzRenderConversa();
+  const ed = document.querySelector('.atz-ed'), el = document.getElementById('atzEdNome');
+  /* o editor vai para o alto da tela antes do teclado abrir */
+  if(ed) ed.scrollIntoView({ block:'start' });
+  if(el) el.focus({ preventScroll: true });
+}
 function atzEditorHtml(i, k){
   const opc = (lista, atual)=>lista.map(x=>`<option value="${escBanco(x.id)}"${x.id === atual ? ' selected' : ''}>${escBanco(x.nome)}</option>`).join('');
   const comCat = ['vista','pix'].includes(i.tipo), comCartao = ['vista','parcelada','fatura'].includes(i.tipo), comBanco = ['pix','recebi','saldo','conta'].includes(i.tipo);
-  return `<form class="atz-ed" onsubmit="event.preventDefault();atzSalvarEdicao(${k})">
+  return `<form class="atz-ed" onsubmit="event.preventDefault();atzSalvarEdicao(${k})" onfocusin="atzEdVisivel(event.target)">
     <label class="atz-ed-l"><span>Nome</span><input id="atzEdNome" type="text" value="${escBanco(i.descricao)}" autocomplete="off"></label>
     <label class="atz-ed-l"><span>${i.tipo === 'parcelada' ? 'Valor total' : 'Valor'}</span><input id="atzEdValor" type="text" inputmode="decimal" value="${String(i.valor.toFixed(2)).replace('.', ',')}"></label>
     ${comCat ? `<label class="atz-ed-l"><span>Categoria</span><select id="atzEdCat">${vozCategoriasCartao().map(c=>`<option${c === i.categoria ? ' selected' : ''}>${escBanco(c)}</option>`).join('')}</select></label>` : ''}
@@ -629,6 +636,38 @@ function atzPassoHtml(conf){
     <div class="atz-passo-acoes">${atzPassoI ? '<button type="button" class="link-txt" onclick="atzPassoIr(-1)">Voltar</button>' : '<span></span>'}<button type="button" class="btn btn-sm" onclick="atzPassoIr(1)">${/bateu/.test(st) ? 'Próximo' : 'Pular'}</button></div></div>`;
 }
 function atzPassoIr(d){ atzPassoI = Math.max(0, Math.min(atzPassos().length, atzPassoI + d)); atzRenderConversa(); }
+/* v15.3: a resposta mexeu no banco/cartão da pergunta → vai sozinho para o próximo.
+   Fica só se o saldo/fatura informado não bateu (aí a pergunta do que falta aparece no próprio passo) */
+function atzPassoAvancar(antes){
+  const p = atzPassos()[atzPassoI]; if(!p || p.tipo === 'contas') return;
+  const ks = new Set(antes.map(atzChave));
+  const mexeu = atzItens.some(i=>!ks.has(atzChave(i)) && (p.tipo === 'banco' ? i.bancoId === p.id : i.cartaoId === p.id));
+  if(!mexeu) return;
+  const conf = atzConferencia();
+  const x = p.tipo === 'banco' ? conf.bancos.find(b=>b.b.id === p.id) : conf.cartoes.find(c=>c.c.id === p.id);
+  const falta = x && x.informado !== null ? Math.abs(p.tipo === 'banco' ? x.dif : x.falta) : 0;
+  if(falta >= 0.01) return;
+  atzPassoI = Math.min(atzPassos().length, atzPassoI + 1);
+}
+/* v15.3: ver todos os itens numa lista só (sem a conversa no meio) e confirmar todos de uma vez */
+let atzSoLista = false;
+function atzVerLista(v){ atzSoLista = v; atzEditando = -1; atzRenderConversa(); }
+function atzConfirmarTodos(){
+  let n = 0;
+  atzItens.forEach(i=>{ if(atzGravavel(i) && !atzFaltaNoItem(i) && !i.ok){ i.ok = true; n++; } });
+  renderAtualizar();
+  showToast(n ? `${n} ${n === 1 ? 'item confirmado' : 'itens confirmados'}` : 'Os que faltam precisam de resposta antes (cartão, banco…)');
+}
+/* v15.3: a transcrição do áudio saiu errada → tocar na fala põe o texto na caixa para corrigir e mandar de novo */
+function atzCorrigirFala(mi){
+  const m = atzConversa[mi]; if(!m || m.quem !== 'eu' || !m.texto || /^\(/.test(m.texto)) return;
+  if(atzEditando >= 0){ atzEditando = -1; atzRenderConversa(); }   // a caixa de digitar some enquanto edita
+  const inp = document.getElementById('atzTexto');
+  inp.value = 'Corrigindo o que eu disse: ' + m.texto;
+  inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 140) + 'px';
+  inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+  showToast('Corrija o texto e envie: a lista é ajustada');
+}
 /* conta tocada no passo a passo: entra (ou sai) da lista sem passar pela IA */
 function atzPassoConta(n){
   const c = vozContasAbertas()[n]; if(!c) return;
@@ -679,7 +718,7 @@ function atzRenderConversa(pensando, rolar){
     + ks.filter(k=>dups[k]).map(k=>`<div class="atz-aviso-dup">${lvEsc(dups[k].texto)}</div>`).join('') : '';
   const tirado = i=>`<li>${escBanco(i.descricao || ATZ_TIPOS[i.tipo])} <b>${fmtMoney(i.valor)}</b></li>`;
   const msgs = atzConversa.map((m, mi)=>m.quem === 'eu'
-      ? `<div class="atz-msg eu${m.voz ? ' voz' : ''}">${m.voz ? `<span class="atz-aud">${ATZ_ICO_MIC} ${atzTempo(m.dur || 0)}</span>` : ''}${m.texto ? lvEsc(m.texto) : '<span class="atz-aud-espera">…</span>'}</div>`
+      ? `<div class="atz-msg eu${m.voz ? ' voz' : ''}"${m.texto && m.texto[0] !== '(' ? ` role="button" tabindex="0" title="Tocar para corrigir o que foi entendido" onclick="atzCorrigirFala(${mi})"` : ''}>${m.voz ? `<span class="atz-aud">${ATZ_ICO_MIC} ${atzTempo(m.dur || 0)}</span>` : ''}${m.texto ? lvEsc(m.texto) : '<span class="atz-aud-espera">…</span>'}</div>`
     : m.erro ? `<div class="atz-msg ia erro">${lvEsc(m.texto)}</div>`
     : `<div class="atz-msg ia">
         ${m.texto ? `<p>${lvEsc(m.texto)}</p>` : ''}
@@ -690,11 +729,18 @@ function atzRenderConversa(pensando, rolar){
     + (soltos.length ? `<div class="atz-msg ia">${lista(soltos)}</div>` : '');
   const passo = atzAba === 'passo' ? atzPassoHtml(conf) : '';
   el.classList.toggle('det', atzDetalhes);
+  /* editando no celular: a placa, os detalhes e a barra de digitar saem do caminho (o teclado tampava tudo) */
+  document.getElementById('pageAtualizar').classList.toggle('atz-editando', atzEditando >= 0);
+  /* com 2+ itens: Conversa ou Lista (todos juntos) + Confirmar todos */
+  const lista2 = atzSoLista && atzItens.length;
+  const ferr = atzItens.length >= 2 ? `<div class="atz-ferr"><div class="atz-ferr-seg"><button type="button" class="${lista2 ? '' : 'on'}" onclick="atzVerLista(false)">Conversa</button><button type="button" class="${lista2 ? 'on' : ''}" onclick="atzVerLista(true)">Lista <small>${atzItens.length}</small></button></div>
+    ${atzItens.some(i=>atzGravavel(i) && !i.ok) ? '<button type="button" class="atz-ferr-todos" onclick="atzConfirmarTodos()">Confirmar todos</button>' : ''}</div>` : '';
+  const corpoMsgs = lista2 ? `<div class="atz-msg ia atz-lista-tudo">${lista(atzItens.map((_, k)=>k))}</div>` : msgs;
   el.innerHTML = `
     ${atzFaixaHtml()}
     <div class="atz-corpo">
       ${atzDetalhes ? `<div class="atz-det">${atzDetalhesHtml(conf)}</div>` : ''}
-      <div class="atz-chat"><div class="atz-msgs">${msgs || (passo ? '' : `<div class="atz-msg ia">Fale ou escreva o que você gastou.</div>`)}
+      <div class="atz-chat">${ferr}<div class="atz-msgs">${corpoMsgs || (passo ? '' : `<div class="atz-msg ia">Fale ou escreva o que você gastou.</div>`)}
         ${pensando ? `<div class="atz-msg ia pensando"><i></i><i></i><i></i><span>${lvEsc(typeof pensando === 'string' ? pensando : '')}</span></div>` : ''}</div>
         ${atzConferenciasHtml(conf)}
         ${passo}
@@ -922,3 +968,5 @@ async function atzAudioParaEnviar(blob){
     return { b64: paraB64(bruto), mime: String(blob.type || 'audio/webm').split(';')[0] };
   }
 }
+/* campo do editor em foco: espera o teclado abrir e deixa o campo à vista */
+function atzEdVisivel(campo){ setTimeout(()=>{ try{ campo.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(e){} }, 320); }
