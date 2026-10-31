@@ -2973,11 +2973,49 @@ body{font-weight:400;letter-spacing:.005em}
 .foco .ext-placa{margin-bottom:18px}
 .foco-extra{display:block;font-size:11px;font-weight:400;color:var(--text-faint);text-align:right}
 .ext-linha.foco-pago{opacity:.6}
+.ext-linha.foco-toca{cursor:pointer;border-radius:10px;transition:background .15s,opacity .2s;-webkit-tap-highlight-color:transparent}
+.ext-linha.foco-toca:active{background:var(--gold-tint)}
+@media (hover:hover){ .ext-linha.foco-toca:hover{background:var(--gold-tint)} }
 .ext-como.foco-ok{background:var(--success-tint);color:var(--success)}
 .foco .ext-linha > .conta-logo,.foco .ext-linha > .cal{width:32px;height:32px}
+/* v15.7: layout L2 — placa com totais lado a lado + barra por grupo (L4), uma coluna por grupo, pagas separadas (L5) */
+.foco-placa-topo{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 30px}
+.foco-placa-total{display:flex;flex-direction:column;flex:1 1 100%;min-width:0}
+.foco-stat{display:flex;flex-direction:column;gap:3px}
+.foco-stat span{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--graf-dim)}
+.foco-stat b{font-weight:300;font-size:19px;color:var(--graf-tx);font-variant-numeric:tabular-nums}
+.foco-stat.so b{font-size:13px;font-weight:400;color:var(--graf-dim)}
+.foco-stat b.foco-latao{color:var(--latao)}
+.foco-seg{display:flex;gap:2px;height:9px;border-radius:99px;overflow:hidden;margin-top:18px;background:rgba(241,239,233,.1)}
+.foco-seg span{display:block;height:100%;min-width:3px}
+.foco-leg{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12px;color:var(--graf-dim)}
+.foco-leg i{display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:6px;vertical-align:1px}
+.foco-leg b{font-weight:500;color:var(--graf-tx)}
+.foco-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+.foco-col{display:flex;flex-direction:column;min-width:0}
+.foco-col-topo{display:flex;align-items:center;gap:8px;padding:0 0 9px;border-bottom:2px solid var(--graf)}
+.foco-col-topo i{width:8px;height:8px;border-radius:99px;flex-shrink:0}
+.foco-col-topo b{flex:1;min-width:0;font-size:12.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foco-col-topo em{font-style:normal;font-size:13px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.foco-col-sep{margin-top:14px;padding:0 0 6px;border-bottom:1px solid var(--fio);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--success)}
+.foco-linha{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--fio)}
+.foco-linha > .conta-logo,.foco-linha > .cal,.foco-linha > svg,.foco-linha > span:first-child{width:32px;height:32px}
+.foco-meio{display:flex;flex-direction:column;gap:3px;min-width:0}
+.foco-l1{display:flex;justify-content:space-between;gap:8px;min-width:0}
+.foco-l1 b{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.foco-val{font-weight:500;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.foco-l2{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-faint)}
+.foco-l2 small{font-size:12px}
+.foco-l2 .foco-extra{font-size:11.5px}
+.foco-falta{color:var(--gold);font-weight:500}
+.foco-linha.foco-pago{opacity:1}
+.foco-linha.foco-pago .foco-l1 b,.foco-linha.foco-pago .foco-val{color:var(--text-faint)}
+.foco-linha.foco-toca{cursor:pointer;border-radius:10px;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.foco-linha.foco-toca:active{background:var(--gold-tint)}
+@media (hover:hover){ .foco-linha.foco-toca:hover{background:var(--gold-tint)} }
 @media (min-width:1024px){
   .fullpage-content.foco{max-width:none}
-  #focoLista{column-count:2;column-gap:40px}
-  #focoLista > .ext-linha,#focoLista > .ext-dia{break-inside:avoid}
-  .foco .ext-placa{max-width:760px;margin-left:auto;margin-right:auto}
+  .foco .ext-placa{padding:22px 28px;max-width:none;width:auto;margin-left:0;margin-right:0}
+  .foco-placa-total{flex:0 1 auto;margin-right:24px}
+  .foco-cols{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px;align-items:start}
 }

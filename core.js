@@ -1110,7 +1110,7 @@ function gastosDoMes(user, mKey){
       if(item.mesInicio && mKey < item.mesInicio) return;
       const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id, valor = Number(item.valor)||0;
       const pago = !!state.paid[paidKey];
-      out.push({ cat, desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
+      out.push({ cat, paidKey, desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
     });
   });
   ex.futuro.forEach(item=>{
@@ -1118,7 +1118,7 @@ function gastosDoMes(user, mKey){
     if(valor<=0) return;
     const paidKey = mKey+'_'+user+'_futuro_'+item.id;
     const pago = !!state.paid[paidKey];
-    out.push({ cat:'futuro', desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
+    out.push({ cat:'futuro', paidKey, desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
   });
   return out;
 }

@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.7', itens: [
+    'Fixos, Pix, Crédito à vista e Parcelado com visual novo: uma coluna por grupo no computador e barra na placa mostrando quanto cada grupo soma',
+    'Fixos: tocar numa conta marca como paga, tocar de novo desmarca; as pagas ficam separadas embaixo de cada grupo'
+  ] },
   { versao: 'v15.6', itens: [
     'Blocos de Finanças abrem telas só deles: Fixos (contas do mês pagas e em aberto), Pix no mês, Crédito à vista e Parcelado (parcela k de n e quanto falta), com soma e quantidade',
     'Cartõezinhos dos bancos: saldo maior; no computador ficam na mesma linha do saldo em conta',
