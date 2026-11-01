@@ -270,7 +270,14 @@ function lvcmpAlinhar(ev){
   /* qual vez é essa frase deste lado (refrão que aparece 3x → a 2ª vez procura a 2ª vez do outro lado) */
   const iguaisA = [...colA.querySelectorAll('.lvcmp-l')].filter(x=>lvcmpParecido(lvcmpPalavras(x), alvo) >= .8);
   const vez = Math.max(0, iguaisA.indexOf(linha));
-  const cands = [...colB.querySelectorAll('.lvcmp-l')].map(x=>({ x, s: lvcmpParecido(lvcmpPalavras(x), alvo) })).filter(c=>c.s >= .5);
+  /* o lado original procura SEMPRE na cifra (Cifra Club); o Letras só se a frase não estiver na cifra.
+     Na cifra a parte pode ter outro nome que no app: se não achar com o mesmo nome, compara só as palavras */
+  const linhasB = [...colB.querySelectorAll('.lvcmp-l')];
+  const daCifra = linhasB.filter(x=>!x.closest('.lvcmp-letras'));
+  const pontuar = (lista, semRot)=>lista.map(x=>{ const p = lvcmpPalavras(x); return { x, s: lvcmpParecido(semRot && p ? { ...p, rot: alvo.rot } : p, alvo) }; }).filter(c=>c.s >= .5);
+  let cands = pontuar(daCifra);
+  if(!cands.length) cands = pontuar(daCifra, true);
+  if(!cands.length) cands = pontuar(linhasB.filter(x=>x.closest('.lvcmp-letras')));
   if(!cands.length){ showToast('Não achei essa frase do outro lado'); return; }
   const melhor = Math.max(...cands.map(c=>c.s));
   const bons = cands.filter(c=>c.s >= melhor - .05);

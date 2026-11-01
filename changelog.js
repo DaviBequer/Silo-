@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.4', itens: [
+    'Comparar: tocar numa linha do app alinha sempre com a cifra do Cifra Club (o Letras só se a frase não estiver na cifra)'
+  ] },
   { versao: 'v16.3', itens: [
     'Spotify: outras versões no tocador mostra até 10 versões da música (ao vivo, acústico, com participação) com o álbum e o ano'
   ] },
