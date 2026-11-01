@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.1', itens: [
+    'Spotify: o botão acha a música sozinho e toca dentro do app (tocador que minimiza numa bolinha verde e continua tocando; trocar mostra outras versões)'
+  ] },
   { versao: 'v16.0', itens: [
     'Spotify na música e no Comparar: o 1º toque abre a música no Spotify; copie o link dela lá e toque de novo. Depois o botão abre o tocador dentro do app (tocar, pausar, ir para qualquer tempo)'
   ] },

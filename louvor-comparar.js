@@ -298,37 +298,61 @@ function lvcmpRolar(col, destino){
 }
 document.addEventListener('click', ev=>{ if(ev.target.closest && ev.target.closest('#lvcmpGrade')) lvcmpAlinhar(ev); });
 
-/* ---------- Spotify (v16.0): botão na música e no Comparar ----------
-   Sem a música ligada: abre a busca no Spotify (o app instalado abre sozinho) com "título cantor";
-   copie o link da música lá ("Compartilhar → Copiar link") e toque de novo: o link é lido e fica guardado em l.spotify.
-   Com a música ligada: abre o tocador do Spotify dentro do app (tocar, pausar, ir para qualquer tempo), preso embaixo,
-   e ele continua aberto no Comparar. Segurar o botão (ou o "trocar" do tocador) troca a música. */
+
+/* ---------- Spotify (v16.1): botão na música e no Comparar ----------
+   Toque: o app acha a faixa pelo nome e cantor (função "cifra" do Supabase, com SPOTIFY_ID/SPOTIFY_SECRET) e abre o
+   tocador do Spotify DENTRO do app (tocar, pausar, ir para qualquer tempo; o login do Spotify é feito no próprio tocador).
+   A faixa fica em l.spotify. O tocador pode ser minimizado (bolinha verde) e continua tocando; "trocar" mostra outras faixas.
+   Sem a função configurada: lê um link copiado do Spotify ou abre a busca no app do Spotify instalado. */
 function lvSpotifyId(txt){ const m = String(txt || '').match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/([A-Za-z0-9]{22})/) || String(txt || '').match(/spotify:track:([A-Za-z0-9]{22})/); return m ? m[1] : ''; }
+let lvSpotifyFaixas = [];
 async function lvSpotify(trocar){
   const l = getLouvorAtual(); if(!l) return;
   if(l.spotify && !trocar){ lvSpotifyTocador(l); return; }
-  let texto = '';
-  try{ texto = await navigator.clipboard.readText(); }catch(e){}
-  const id = lvSpotifyId(texto);
-  if(id && id !== l.spotify && (!trocar || await iosConfirm('Usar o link do Spotify que você copiou?'))){
-    l.spotify = id; persist(); showToast('Spotify ligado a esta música'); lvSpotifyTocador(l); return;
-  }
   const q = [l.titulo, l.artista].filter(Boolean).join(' ');
-  window.open('https://open.spotify.com/search/' + encodeURIComponent(q), '_blank', 'noopener');
+  try{
+    const r = await ccChamar({ spotify: q });
+    lvSpotifyFaixas = (r && r.faixas) || [];
+    if(!lvSpotifyFaixas.length){ showToast('Não achei essa música no Spotify'); return; }
+    if(trocar){ lvSpotifyEscolher(l); return; }
+    l.spotify = lvSpotifyFaixas[0].id; persist(); lvSpotifyTocador(l); return;
+  }catch(e){}
+  /* plano B (função sem o Spotify): link copiado ou busca no app instalado */
+  let texto = ''; try{ texto = await navigator.clipboard.readText(); }catch(e){}
+  const id = lvSpotifyId(texto);
+  if(id && id !== l.spotify){ l.spotify = id; persist(); lvSpotifyTocador(l); return; }
+  location.href = 'spotify:search:' + encodeURIComponent(q);
   showToast('No Spotify: Compartilhar → Copiar link da música, e toque de novo no botão');
+}
+function lvSpotifyCaixa(){
+  let box = document.getElementById('lvSpotifyBox');
+  if(!box){ box = document.createElement('div'); box.id = 'lvSpotifyBox'; box.className = 'lv-spotify-box'; document.body.appendChild(box); }
+  return box;
 }
 function lvSpotifyTocador(l){
   let box = document.getElementById('lvSpotifyBox');
-  if(box && box.dataset.id === l.spotify){ box.remove(); return; }   // tocar de novo fecha
-  if(!box){ box = document.createElement('div'); box.id = 'lvSpotifyBox'; box.className = 'lv-spotify-box'; document.body.appendChild(box); }
+  if(box && box.dataset.id === l.spotify){ box.classList.toggle('mini'); return; }   // tocar de novo minimiza/abre
+  box = lvSpotifyCaixa(); box.classList.remove('mini');
   box.dataset.id = l.spotify;
-  box.innerHTML = `<div class="lv-spotify-acoes"><button type="button" onclick="lvSpotify(true)">trocar</button><button type="button" aria-label="Fechar o Spotify" title="Fechar" onclick="document.getElementById('lvSpotifyBox').remove()">×</button></div>
-    <iframe src="https://open.spotify.com/embed/track/${encodeURIComponent(l.spotify)}?utm_source=generator&theme=0" width="100%" height="80" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify"></iframe>`;
+  box.innerHTML = `<button type="button" class="lv-spotify-bolha" aria-label="Abrir o Spotify" title="Abrir o Spotify" onclick="document.getElementById('lvSpotifyBox').classList.remove('mini')">${document.querySelector('.lv-spotify-btn').innerHTML}</button>
+    <div class="lv-spotify-acoes"><button type="button" onclick="lvSpotify(true)">trocar</button><button type="button" aria-label="Minimizar" title="Minimizar" onclick="document.getElementById('lvSpotifyBox').classList.add('mini')">–</button><button type="button" aria-label="Fechar o Spotify" title="Fechar" onclick="document.getElementById('lvSpotifyBox').remove()">×</button></div>
+    <div class="lv-spotify-lista"></div>
+    <iframe src="https://open.spotify.com/embed/track/${encodeURIComponent(l.spotify)}?utm_source=generator&theme=0" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="Spotify"></iframe>`;
+}
+function lvSpotifyEscolher(l){
+  if(!document.getElementById('lvSpotifyBox')){ l.spotify = l.spotify || lvSpotifyFaixas[0].id; lvSpotifyTocador(l); }
+  const box = document.getElementById('lvSpotifyBox'); box.classList.remove('mini');
+  box.querySelector('.lv-spotify-lista').innerHTML = lvSpotifyFaixas.map((f, i)=>`<button type="button" onclick="lvSpotifyUsar(${i})">${f.capa ? `<img src="${lvEsc(f.capa)}" alt="" width="32" height="32">` : ''}<span><b>${lvEsc(f.nome)}</b><small>${lvEsc(f.artista)}</small></span></button>`).join('');
+}
+function lvSpotifyUsar(i){
+  const l = getLouvorAtual(), f = lvSpotifyFaixas[i]; if(!l || !f) return;
+  l.spotify = f.id; persist();
+  document.getElementById('lvSpotifyBox').remove(); lvSpotifyTocador(l);
 }
 /* trocou de música ou saiu do Louvor: o tocador de outra música fecha */
 document.addEventListener('click', ()=>setTimeout(()=>{
   const box = document.getElementById('lvSpotifyBox'); if(!box) return;
   const l = typeof getLouvorAtual === 'function' ? getLouvorAtual() : null;
   const noLouvor = document.querySelector('#aba-louvor.active, #pageLvComparar.active');
-  if(!l || l.spotify !== box.dataset.id || !noLouvor) box.remove();
+  if(!l || !noLouvor || (l.spotify && l.spotify !== box.dataset.id)) box.remove();
 }, 50), true);
