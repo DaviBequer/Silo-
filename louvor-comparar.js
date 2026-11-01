@@ -334,14 +334,14 @@ function lvSpotifyTocador(l){
   box = lvSpotifyCaixa(); box.classList.remove('mini');
   box.dataset.id = l.spotify;
   box.innerHTML = `<button type="button" class="lv-spotify-bolha" aria-label="Abrir o Spotify" title="Abrir o Spotify" onclick="document.getElementById('lvSpotifyBox').classList.remove('mini')">${document.querySelector('.lv-spotify-btn').innerHTML}</button>
-    <div class="lv-spotify-acoes"><button type="button" onclick="lvSpotify(true)">trocar</button><button type="button" aria-label="Minimizar" title="Minimizar" onclick="document.getElementById('lvSpotifyBox').classList.add('mini')">–</button><button type="button" aria-label="Fechar o Spotify" title="Fechar" onclick="document.getElementById('lvSpotifyBox').remove()">×</button></div>
+    <div class="lv-spotify-acoes"><button type="button" onclick="lvSpotify(true)">outras versões</button><button type="button" aria-label="Minimizar" title="Minimizar" onclick="document.getElementById('lvSpotifyBox').classList.add('mini')">–</button><button type="button" aria-label="Fechar o Spotify" title="Fechar" onclick="document.getElementById('lvSpotifyBox').remove()">×</button></div>
     <div class="lv-spotify-lista"></div>
     <iframe src="https://open.spotify.com/embed/track/${encodeURIComponent(l.spotify)}?utm_source=generator&theme=0" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="Spotify"></iframe>`;
 }
 function lvSpotifyEscolher(l){
   if(!document.getElementById('lvSpotifyBox')){ l.spotify = l.spotify || lvSpotifyFaixas[0].id; lvSpotifyTocador(l); }
   const box = document.getElementById('lvSpotifyBox'); box.classList.remove('mini');
-  box.querySelector('.lv-spotify-lista').innerHTML = lvSpotifyFaixas.map((f, i)=>`<button type="button" onclick="lvSpotifyUsar(${i})">${f.capa ? `<img src="${lvEsc(f.capa)}" alt="" width="32" height="32">` : ''}<span><b>${lvEsc(f.nome)}</b><small>${lvEsc(f.artista)}</small></span></button>`).join('');
+  box.querySelector('.lv-spotify-lista').innerHTML = lvSpotifyFaixas.map((f, i)=>`<button type="button" onclick="lvSpotifyUsar(${i})">${f.capa ? `<img src="${lvEsc(f.capa)}" alt="" width="32" height="32">` : ''}<span><b>${lvEsc(f.nome)}</b><small>${lvEsc(f.artista)}${f.album && f.album !== f.nome ? ' · ' + lvEsc(f.album) : ''}${f.ano ? ' · ' + f.ano : ''}</small></span></button>`).join('');
 }
 function lvSpotifyUsar(i){
   const l = getLouvorAtual(), f = lvSpotifyFaixas[i]; if(!l || !f) return;
