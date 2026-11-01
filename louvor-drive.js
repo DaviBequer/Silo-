@@ -155,7 +155,7 @@ async function cultoEnviarDrive(){
 }
 function driveBotaoWhats(){
   const el = document.getElementById('driveLog'); if(!el) return;
-  el.insertAdjacentHTML('beforeend', `<button type="button" class="drive-whats" title="Mandar no grupo do WhatsApp" aria-label="Mandar no grupo do WhatsApp" onclick="closeModal('modalDrive');cultoMandarWhatsApp()">${LOGO_WHATS}</button><div class="drive-linha drive-whats-dica">toque para mandar no grupo</div>`);
+  el.insertAdjacentHTML('beforeend', `<button type="button" class="drive-whats" title="Mandar no grupo do WhatsApp" aria-label="Mandar no grupo do WhatsApp" onclick="closeModal('modalDrive');cultoMandarWhatsApp()">${LOGO_WHATS}</button><div class="drive-linha drive-whats-dica">toque para mandar (slides + texto)</div><input class="drive-zap-num" type="tel" inputmode="tel" placeholder="Número da igreja (DDD + número)" value="${lvEsc(state.cultoZapNumero || '')}" onchange="cultoZapSalvar(this.value)" aria-label="Número da igreja no WhatsApp">`);
   el.scrollTop = el.scrollHeight;
 }
 /* arquivos de uma música (PDF + slides) e a "chave" que identifica a música no nome, sem o tom:

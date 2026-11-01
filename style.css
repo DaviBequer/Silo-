@@ -3049,3 +3049,6 @@ body{font-weight:400;letter-spacing:.005em}
 .lv-spotify-box.mini .lv-spotify-bolha{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border:0;background:#121212;cursor:pointer}
 .lv-spotify-box.mini .lv-spotify-bolha svg{width:30px;height:30px}
 @media(min-width:1024px){.lv-spotify-box{left:auto;right:20px;bottom:20px;width:380px}}
+
+/* número da igreja no WhatsApp (v16.8) */
+.drive-zap-num{display:block;width:100%;max-width:260px;margin:8px auto 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;font-size:14px;text-align:center}

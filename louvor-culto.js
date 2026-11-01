@@ -232,19 +232,27 @@ function cultoTexto(c){
 }async function cultoMandarWhatsApp(){
   const texto = cultoTexto(cultoAtual());
   cultoGravar();
-  /* depois do envio ao Drive: os slides desta data vão junto (o WhatsApp abre a lista de conversas para escolher o grupo) */
-  const arquivos = (typeof driveSlidesZap !== 'undefined' ? driveSlidesZap : []).map(x=>new File([x.blob], x.nome, { type: DRIVE_PPTX_MIME }));
-  if(arquivos.length && navigator.canShare && navigator.canShare({ files: arquivos })){
-    try{ await navigator.clipboard.writeText(texto); }catch(e){}   // se o WhatsApp não levar o texto junto, é só colar
+  const num = cultoZapNumero();
+  const slides = typeof driveSlidesZap !== 'undefined' ? driveSlidesZap : [];
+  const arquivos = slides.map(x=>new File([x.blob], x.nome, { type: DRIVE_PPTX_MIME }));
+  try{ await navigator.clipboard.writeText(texto); }catch(e){}   // o texto fica copiado: se faltar, é só colar
+  /* celular (ou navegador que compartilha arquivos): os slides + o texto vão juntos pela janela de compartilhar */
+  const toque = matchMedia('(pointer: coarse)').matches;
+  if(toque && arquivos.length && navigator.canShare && navigator.canShare({ files: arquivos })){
     try{ await navigator.share({ files: arquivos, text: texto }); return; }
     catch(e){ if(e && e.name === 'AbortError') return; }
   }
-  if(navigator.share){
-    try{ await navigator.share({ text: texto }); return; }
-    catch(e){ if(e && e.name === 'AbortError') return; }
-  }
-  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+  /* computador: os slides são baixados (arrastar para a conversa) e o WhatsApp instalado abre na conversa do número com o texto */
+  slides.forEach((x, i)=>setTimeout(()=>{
+    const a = document.createElement('a'); a.href = URL.createObjectURL(x.blob); a.download = x.nome;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  }, i * 400));
+  if(slides.length) showToast(`${slides.length} slide${slides.length > 1 ? 's' : ''} baixado${slides.length > 1 ? 's' : ''}: arraste para a conversa`);
+  setTimeout(()=>{ location.href = 'whatsapp://send?' + (num ? 'phone=' + num + '&' : '') + 'text=' + encodeURIComponent(texto); }, slides.length * 400 + 300);
 }
+/* número da igreja para o WhatsApp do Culto (só números, com 55 + DDD) */
+function cultoZapNumero(){ let n = String(state.cultoZapNumero || '').replace(/\D/g, ''); if(n && n.length <= 11) n = '55' + n; return n; }
+function cultoZapSalvar(v){ state.cultoZapNumero = String(v || '').replace(/\D/g, ''); persist(); showToast(state.cultoZapNumero ? 'Número salvo' : 'Número apagado'); }
 
 /* ---------- histórico: músicas mais tocadas ---------- */
 function cultoHistoricoDados(){
