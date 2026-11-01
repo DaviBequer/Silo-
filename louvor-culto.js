@@ -232,6 +232,13 @@ function cultoTexto(c){
 }async function cultoMandarWhatsApp(){
   const texto = cultoTexto(cultoAtual());
   cultoGravar();
+  /* depois do envio ao Drive: os slides desta data vão junto (o WhatsApp abre a lista de conversas para escolher o grupo) */
+  const arquivos = (typeof driveSlidesZap !== 'undefined' ? driveSlidesZap : []).map(x=>new File([x.blob], x.nome, { type: DRIVE_PPTX_MIME }));
+  if(arquivos.length && navigator.canShare && navigator.canShare({ files: arquivos })){
+    try{ await navigator.clipboard.writeText(texto); }catch(e){}   // se o WhatsApp não levar o texto junto, é só colar
+    try{ await navigator.share({ files: arquivos, text: texto }); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
   if(navigator.share){
     try{ await navigator.share({ text: texto }); return; }
     catch(e){ if(e && e.name === 'AbortError') return; }

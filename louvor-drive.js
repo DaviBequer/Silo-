@@ -260,9 +260,19 @@ async function driveMoverSlideDaMusica(l, nomePdf, base){
     if(melhor.pai === base.slide) driveLog(`Slide já está na pasta: ${melhor.f.name}`, 'ok');
     else { await driveMover(melhor.f.id, melhor.pai, base.slide); driveLog(`Slide movido para ${DRIVE_PASTAS_SLIDE[0]}: ${melhor.f.name}`, 'ok'); }
     l.drive = { ...(l.drive || {}), slide: melhor.f.id };
+    driveSlideAchado.set(l.id, melhor.f);   // vai junto no WhatsApp (driveEnviarLouvores)
   }catch(e){ driveLog(`Não consegui mover o slide de "${l.titulo}": ${(e && e.message) || 'erro'}`, 'erro'); }
 }
+let driveSlidesZap = [], driveSlideAchado = new Map();   // slides desta data, para mandar no WhatsApp junto com o texto (cultoMandarWhatsApp)
+async function driveBaixarSlide(f){
+  const google = f.mimeType === "application/vnd.google-apps.presentation";
+  const url = "https://www.googleapis.com/drive/v3/files/" + f.id + (google ? "/export?mimeType=" + encodeURIComponent(DRIVE_PPTX_MIME) : "?alt=media");
+  const r = await fetch(url, { headers: { Authorization: "Bearer " + driveToken } });
+  if(!r.ok) throw new Error("Drive: " + r.status);
+  return { nome: google ? f.name + ".pptx" : f.name, blob: await r.blob() };
+}
 async function driveEnviarLouvores(louvores){
+  driveSlidesZap = []; const slidesBaixar = [];
   /* 1. arquivos novos (as músicas só com o arquivo do Drive não geram nada: o arquivo delas é movido no passo 4) */
   const soArquivo = louvores.filter(driveSoArquivo), gerar = louvores.filter(l=>!driveSoArquivo(l));
   if(gerar.length) driveLog(`Gerando ${gerar.length} PDF${gerar.length > 1 ? 's' : ''} e slides…`);
@@ -291,7 +301,10 @@ async function driveEnviarLouvores(louvores){
   await arquivar(base.slide, base.slidesSoltos, DRIVE_SLIDE_POR_CATEGORIA, 'slide');
   /* 4. envia os da data (o arquivo antigo da mesma música é substituído) */
   for(const x of novos) await driveEnviarArquivo(x, base);
-  for(const l of soArquivo) await driveMoverOriginal(l, base);
+  for(const x of novos) if(x.tipo === "slide") driveSlidesZap.push({ nome: x.nome, blob: x.blob });
+  for(const l of soArquivo){ await driveMoverOriginal(l, base); if(driveSlideAchado.has(l.id)) slidesBaixar.push(driveSlideAchado.get(l.id)); }
+  for(const f of slidesBaixar){ try{ driveSlidesZap.push(await driveBaixarSlide(f)); }catch(e){ driveLog("Não consegui baixar o slide " + f.name + " para o WhatsApp", "erro"); } }
+  if(driveSlidesZap.length) driveLog(driveSlidesZap.length + " slide" + (driveSlidesZap.length > 1 ? "s" : "") + " pronto" + (driveSlidesZap.length > 1 ? "s" : "") + " para o WhatsApp", "ok");
   louvores.forEach(l=>{ delete l.driveDesatualizado; });
   persist();
 }

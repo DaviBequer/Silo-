@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.7', itens: [
+    'Culto: depois de enviar ao Drive, o botão do WhatsApp manda os slides da data junto com o texto das músicas (o texto também fica copiado)'
+  ] },
   { versao: 'v16.6', itens: [
     'Louvor: mexeu no acorde de uma linha amarela (no editor, na folha ou no Comparar), o amarelo sai sozinho'
   ] },
