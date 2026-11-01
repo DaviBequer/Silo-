@@ -316,13 +316,12 @@ async function lvSpotify(trocar){
     if(!lvSpotifyFaixas.length){ showToast('Não achei essa música no Spotify'); return; }
     if(trocar){ lvSpotifyEscolher(l); return; }
     l.spotify = lvSpotifyFaixas[0].id; persist(); lvSpotifyTocador(l); return;
-  }catch(e){}
-  /* plano B (função sem o Spotify): link copiado ou busca no app instalado */
+  }catch(e){ var erro = (e && e.message) || 'erro'; }
+  /* plano B: link do Spotify copiado (o app do Spotify não é aberto: o Davi quer tocar dentro do Siloé) */
   let texto = ''; try{ texto = await navigator.clipboard.readText(); }catch(e){}
   const id = lvSpotifyId(texto);
   if(id && id !== l.spotify){ l.spotify = id; persist(); lvSpotifyTocador(l); return; }
-  location.href = 'spotify:search:' + encodeURIComponent(q);
-  showToast('No Spotify: Compartilhar → Copiar link da música, e toque de novo no botão');
+  showToast('Spotify: ' + erro);
 }
 function lvSpotifyCaixa(){
   let box = document.getElementById('lvSpotifyBox');

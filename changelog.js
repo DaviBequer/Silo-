@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.2', itens: [
+    'Spotify: o botão não abre mais o aplicativo do Spotify; se não achar a música, mostra o motivo'
+  ] },
   { versao: 'v16.1', itens: [
     'Spotify: o botão acha a música sozinho e toca dentro do app (tocador que minimiza numa bolinha verde e continua tocando; trocar mostra outras versões)'
   ] },
