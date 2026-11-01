@@ -3031,3 +3031,11 @@ body{font-weight:400;letter-spacing:.005em}
 .atz-mini.on{border-color:var(--graf);background:var(--graf);color:var(--graf-dim)}.atz-mini.on b{color:var(--graf-tx)}
 .atz-placa .atz-mini{border-color:rgba(241,239,233,.16);color:var(--graf-dim)}.atz-placa .atz-mini b{color:var(--graf-tx)}
 @media(min-width:1280px){ #atzConversa>.atz-passo-topo{grid-column:2;grid-row:1;top:12px;margin-top:12px} }
+
+/* Spotify (v16.0) */
+.lv-spotify-btn svg{display:block}
+.lv-spotify-box{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:650;border-radius:14px;overflow:hidden;background:#121212;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.lv-spotify-box iframe{display:block;border:0}
+.lv-spotify-acoes{display:flex;justify-content:flex-end;gap:4px;padding:4px 6px 0}
+.lv-spotify-acoes button{background:none;border:0;color:#b3b3b3;font:inherit;font-size:12px;padding:4px 8px;cursor:pointer}
+@media(min-width:1024px){.lv-spotify-box{left:auto;right:20px;bottom:20px;width:380px}}

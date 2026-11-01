@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.0', itens: [
+    'Spotify na música e no Comparar: o 1º toque abre a música no Spotify; copie o link dela lá e toque de novo. Depois o botão abre o tocador dentro do app (tocar, pausar, ir para qualquer tempo)'
+  ] },
   { versao: 'v15.9', itens: [
     'Drive: música só com o arquivo do Drive agora leva junto o slide dela para a pasta Slide, com os outros slides'
   ] },
