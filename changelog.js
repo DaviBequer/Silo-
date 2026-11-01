@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.3', itens: [
+    'Spotify: outras versões no tocador mostra até 10 versões da música (ao vivo, acústico, com participação) com o álbum e o ano'
+  ] },
   { versao: 'v16.2', itens: [
     'Spotify: o botão não abre mais o aplicativo do Spotify; se não achar a música, mostra o motivo'
   ] },
