@@ -78,7 +78,19 @@ const CU_ICO = {
 const CU_TINTAS = ['#f1e1d2','#e2ead8','#dce6ec','#efdfe6','#ece5cc','#e4e0ef','#d9ebe6'];
 function cultoTinta(id, partes){ const ids = partes.map(p=>p.id).sort(); return CU_TINTAS[Math.max(0, ids.indexOf(id)) % CU_TINTAS.length]; }
 let cuPartesEntrar = true;   // as partes entram com animação só ao abrir ou trocar a data
+/* música com outra data (ensaio, outro domingo) não fica no culto de hoje/futuro: cada uma vale só no seu dia */
+function cultoTirarDeOutraData(){
+  const hoje = cultoHojeISO(); let mudou = false;
+  const dataDe = id=>{ const l = (state.louvores||[]).find(x=>x.id === id); return l ? l.dataAgendamento || '' : ''; };
+  cultosLista().filter(c=>c.data >= hoje).forEach(c=>c.partes.forEach(p=>{
+    const antes = p.musicas.length;
+    p.musicas = p.musicas.filter(id=>{ const d = dataDe(id); return !d || d === c.data; });
+    if(p.musicas.length !== antes) mudou = true;
+  }));
+  if(mudou) persist();
+}
 function renderCulto(){
+  cultoTirarDeOutraData();
   document.querySelectorAll('#cultoAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.aba === cultoAba));
   document.getElementById('cultoRoteiro').style.display = cultoAba === 'roteiro' ? '' : 'none';
   document.getElementById('cultoHistorico').style.display = cultoAba === 'historico' ? '' : 'none';
@@ -261,6 +273,7 @@ function renderCultoHistorico(){
 
 /* linha de baixo do botão "Culto" na aba Louvor: o próximo culto */
 function renderCultoBotao(){
+  cultoTirarDeOutraData();
   if(typeof atualizarStatusDrive === 'function'){ atualizarStatusDrive(); if(driveClienteId()) drivePreparar(); }
   const el = document.getElementById('lvCultoInfo'); if(!el) return;
   /* placa do próximo culto (v12): data e quanto falta; cada música com a parte, o cantor e o tom */
