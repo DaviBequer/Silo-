@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.6', itens: [
+    'Louvor: mexeu no acorde de uma linha amarela (no editor, na folha ou no Comparar), o amarelo sai sozinho'
+  ] },
   { versao: 'v16.5', itens: [
     'Culto: música marcada para outro dia (ensaio ou outro culto) não entra mais no culto de hoje nem no envio'
   ] },

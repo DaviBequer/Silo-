@@ -333,12 +333,28 @@ function lvEscreverNoEditor(){
   };
   passo();
 }
+/* mexeu no acorde (ou na letra) de uma linha amarela: ela conta como conferida e o amarelo sai */
+function lvRevisarConferido(l, antes, depois){
+  if(!l || !l.revisar || !l.revisar.length) return;
+  const a = String(antes || '').split('\n'), d = String(depois || '').split('\n');
+  if(a.length !== d.length) return;
+  const tirar = new Set();
+  d.forEach((linha, i)=>{
+    if(linha === a[i]) return;
+    if(!isChordLine(linha)){ tirar.add(linha.trim()); tirar.add((a[i] || '').trim()); return; }
+    for(let j = i + 1; j < d.length; j++){ const t = d[j].trim(); if(!t || isChordLine(d[j])) continue; if(/^\[.*\]$/.test(t)) break; tirar.add(t); break; }
+  });
+  if(!tirar.size) return;
+  l.revisar = l.revisar.filter(t=>!tirar.has(String(t).trim()));
+  if(!l.revisar.length) delete l.revisar;
+}
 function salvarLouvorCampo(){
   if(lvEscrevendoParar) lvEscrevendoParar();   // ainda escrevendo: mostra o texto inteiro antes de ler os campos
   const l = getLouvorAtual(); if(!l) return;
   l.titulo = document.getElementById('lvTitulo').value;
   l.artista = document.getElementById('lvArtista').value;
   const conteudoNovo = document.getElementById('lvConteudo').value;
+  lvRevisarConferido(l, l.conteudo, conteudoNovo);
   if(l.medley && conteudoNovo !== l.conteudo) l.medleyEditado = true;   // mexeu à mão: o medley para de acompanhar as originais
   l.conteudo = conteudoNovo;
   lvAtualizarEditor();

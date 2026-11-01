@@ -97,7 +97,9 @@ function lvcmpAcordeMudou(el){
   const linhas = (l.conteudo || '').split('\n'), i = Number(el.dataset.i);
   if(!(i >= 0 && i < linhas.length)) return;
   linhas[i] = el.textContent.replace(/ /g, ' ').replace(/[\r\n]+/g, '');
+  const antes = l.conteudo;
   l.conteudo = linhas.join('\n');
+  lvRevisarConferido(l, antes, l.conteudo);
   delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;   // mexeu à mão: o desfazer do Organizar não vale mais
   clearTimeout(lvcmpSalvarT); lvcmpSalvarT = setTimeout(lvcmpAcordeSalvar, 700);
 }
