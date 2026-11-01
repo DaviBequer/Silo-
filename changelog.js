@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v15.9', itens: [
+    'Drive: música só com o arquivo do Drive agora leva junto o slide dela para a pasta Slide, com os outros slides'
+  ] },
   { versao: 'v15.8', itens: [
     'Assistente, passo a passo: a pergunta fica no alto (no lugar da placa), curta e com a logo ("Saldo do Nubank?"); responder só o número já vale como resposta (até zero)',
     'Saldos dos bancos e faturas dos cartões bem pequenos no alto, com o antes e o depois, no passo a passo e na conversa'

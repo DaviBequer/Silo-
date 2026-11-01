@@ -232,6 +232,35 @@ async function driveMoverOriginal(l, base){
     driveLog(`Movido para ${DRIVE_PASTA_RAIZ}: ${f.name}`, 'ok');
   }
   l.drive = { ...(l.drive || {}), pdf: id };
+  await driveMoverSlideDaMusica(l, f.name, base);
+}
+/* o slide que já existe dessa música (solto em Slide ou arquivado em Louvores/Harpa/Corinhos) vai para a pasta Slide com os outros */
+function driveSlideEhDaMusica(arquivo, l, nomePdf){
+  const n = vozSemAcento(arquivo.name.replace(/\.[^.]+$/, '')).trim();
+  if(l.drive && l.drive.slide === arquivo.id) return 3;
+  if(nomePdf && n === vozSemAcento(nomePdf.replace(/\.[^.]+$/, '')).trim()) return 3;
+  const x = driveChaveSo(l);
+  if(n === x.chave || n.startsWith(x.chave + ' - ')) return 2;
+  const t = vozSemAcento(l.titulo || '').trim();
+  return t.length >= 4 && n.includes(t) && (!l.artista || n.includes(vozSemAcento(l.artista).trim())) ? 1 : 0;
+}
+async function driveMoverSlideDaMusica(l, nomePdf, base){
+  try{
+    const pastas = [base.slide, ...(await driveListar(`'${base.slide}' in parents and mimeType='${DRIVE_PASTA_MIME}'`)).map(p=>p.id)];
+    let melhor = null;
+    for(const p of pastas){
+      const arquivos = await driveListar(`'${p}' in parents and mimeType != '${DRIVE_PASTA_MIME}'`);
+      for(const f of arquivos){
+        if(!/\.pptx?$/i.test(f.name) && f.mimeType !== 'application/vnd.google-apps.presentation') continue;
+        const nota = driveSlideEhDaMusica(f, l, nomePdf);
+        if(nota && (!melhor || nota > melhor.nota)) melhor = { f, pai: p, nota };
+      }
+    }
+    if(!melhor){ driveLog(`Slide de "${l.titulo}" não encontrado no Drive`); return; }
+    if(melhor.pai === base.slide) driveLog(`Slide já está na pasta: ${melhor.f.name}`, 'ok');
+    else { await driveMover(melhor.f.id, melhor.pai, base.slide); driveLog(`Slide movido para ${DRIVE_PASTAS_SLIDE[0]}: ${melhor.f.name}`, 'ok'); }
+    l.drive = { ...(l.drive || {}), slide: melhor.f.id };
+  }catch(e){ driveLog(`Não consegui mover o slide de "${l.titulo}": ${(e && e.message) || 'erro'}`, 'erro'); }
 }
 async function driveEnviarLouvores(louvores){
   /* 1. arquivos novos (as músicas só com o arquivo do Drive não geram nada: o arquivo delas é movido no passo 4) */
@@ -250,7 +279,7 @@ async function driveEnviarLouvores(louvores){
     const destaData = novos.filter(x=>x.tipo === tipo);
     for(const f of soltos){
       if(destaData.some(x=>driveEhDaMusica(f, x))) continue;
-      if(soArquivo.some(l=>l.origem.id === f.id || driveEhDaMusica(f, driveChaveSo(l)))) continue;   // é de uma música desta data: fica (o repetido vai para a lixeira no passo 4)
+      if(soArquivo.some(l=>l.origem.id === f.id || driveEhDaMusica(f, driveChaveSo(l)) || (tipo === 'slide' && driveSlideEhDaMusica(f, l, l.origem.nome) >= 2))) continue;   // é de uma música desta data: fica (o repetido vai para a lixeira no passo 4)
       const cat = driveCategoriaDoArquivo(f.name), destino = await pastaCategoria(pai, porCat[cat]);
       const repetidos = await driveListar(`name='${driveAspas(f.name)}' and '${destino}' in parents`);
       for(const r of repetidos) await driveLixeira(r.id);
