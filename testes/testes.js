@@ -96,6 +96,12 @@ async function rodarTestes(){
     igual('vezes: Repete logo depois vira 2x', lvNormalizarVezes('[Refrão]\nL1\n--\n[Repete - Refrão]\n--\n[Ponte]\nP\n--\n[Repete - Refrão 2x]'), '[Refrão | 2x]\nL1\n--\n[Ponte]\nP\n--\n[Repete - Refrão | 2x]');
     igual('vezes: organizar junta bloco repetido e "(3x)"', lviBlocosParaTexto(lviMontaBlocos(lviTextoParaLinhas('[Refrão]\nsanto\ndigno\nsanto\ndigno\n\n[Ponte]\nglória\n(3x)')).secoes), '[Refrão | 2x]\nSanto\nDigno\n--\n[Ponte | 3x]\nGlória');
     igual('vezes: slide sabe o 2x (e o Repete usa o dele)', lvParseContent('[Refrão | 2x]\nL1\n--\n[Ponte]\nP\n--\n[Repete - Refrão]').slides.map(s=>s.vezes), [2,1,1]);
+    /* module Cifra (v17.3): um lugar só sabe o que é cada linha */
+    const cifraT = '[Intro]\nG  D/F#  Em\n\n[Refrão | 2x]\n   C        G\nSanto é o Senhor\n-\nDigno de louvor\n--\n---';
+    igual('cifra: tipo de cada linha', cifraT.split('\n').map(lvTipoLinha), ['parte','acorde','vazia','parte','acorde','letra','marca','letra','marca','marca']);
+    igual('cifra: nomes das partes', lvRotulosDe(cifraT), ['Intro', 'Refrão | 2x']);
+    igual('cifra: só a letra', lvSoLetra(cifraT), ['Santo é o Senhor', 'Digno de louvor']);
+    igual('cifra: realce do editor', ['[Intro]', 'G  D', '-', 'Santo'].map(x=>lvRealceLinha(x, new Set(['Santo'])).replace(/>.*$/, '>')), ['<span class="rl-bloco">', '<span class="rl-acorde">', '<span class="rl-marca">', '<span class="rl-olhar">']);
     igual('créditos saem, letra fica', ['Composta por Fulano','feat. Ciclano','Ministério: Zoe','(Ao vivo)','@cantor.oficial','Autor da minha fé','Santo, santo','Instrumental'].map(lviEhInfoNaoLetra), [true,true,true,true,true,false,false,false]);
     const comIntro = lviBlocosParaTexto(lviMontaBlocos(lviTextoParaLinhas('[Introdução]\nD   A   G\n\nComposição: Fulano\nOlha eu aqui\n\n[Refrão]\nSanto é o Senhor')).secoes);
     igual('Introdução fica; créditos no meio saem', comIntro, '[Introdução]\nD   A   G\n--\n[Primeira Parte]\nOlha eu aqui\n--\n[Refrão]\nSanto é o Senhor');

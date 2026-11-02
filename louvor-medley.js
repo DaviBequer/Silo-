@@ -8,9 +8,9 @@ function lmPartes(src){
   const partes = []; let atual = null;
   (src && src.conteudo || '').split('\n').forEach(raw=>{
     const t = raw.trim();
-    const m = t.match(/^\[(.+)\]$/);
-    if(m){ const r = lvVezesDoRotulo(m[1]); atual = { nome: r.nome, vezes: r.vezes, linhas: [] }; partes.push(atual); return; }   // "Refrão | 2x" = Refrão, 2 vezes
-    if(/^-{1,3}$/.test(t)) return;   // marcadores de slide/linha/coluna: o medley põe os dele
+    const rot = lvRotuloDaLinha(t);
+    if(rot){ const r = lvVezesDoRotulo(rot); atual = { nome: r.nome, vezes: r.vezes, linhas: [] }; partes.push(atual); return; }   // "Refrão | 2x" = Refrão, 2 vezes
+    if(lvTipoLinha(t) === 'marca') return;   // marcadores de slide/linha/coluna: o medley põe os dele
     if(!atual){ if(!t) return; atual = { nome: 'Início', linhas: [] }; partes.push(atual); }
     atual.linhas.push(raw.replace(/\s+$/,''));
   });
@@ -150,7 +150,7 @@ function lmRender(){
         const usados = nums[m.id + '|' + p.nome] || [];
         return `<button type="button" class="lm-parte${usados.length?' usada':''}" onclick="lmAddParte(${mi},${pi})">${lvEsc(p.nome)}${usados.map(n=>`<i>${n}</i>`).join('')}</button>`;
       }).join('')}</div>
-      ${lmVer.has(m.id) && !semPartes ? `<div class="lm-ver">${partes.map((p, pi)=>`<button type="button" class="lm-ver-parte" onclick="lmAddParte(${mi},${pi})"><b>${lvEsc(p.nome)}${p.vezes > 1 ? ' · ' + p.vezes + 'x' : ''}</b><pre>${p.linhas.map(x=>x.trim() && isChordLine(x.trim()) ? `<span class="rl-acorde">${lvEsc(x)}</span>` : lvEsc(x)).join('\n')}</pre></button>`).join('')}</div>` : ''}
+      ${lmVer.has(m.id) && !semPartes ? `<div class="lm-ver">${partes.map((p, pi)=>`<button type="button" class="lm-ver-parte" onclick="lmAddParte(${mi},${pi})"><b>${lvEsc(p.nome)}${p.vezes > 1 ? ' · ' + p.vezes + 'x' : ''}</b><pre>${p.linhas.map(x=>lvTipoLinha(x) === 'acorde' ? `<span class="rl-acorde">${lvEsc(x)}</span>` : lvEsc(x)).join('\n')}</pre></button>`).join('')}</div>` : ''}
       ${!partes.length ? '<div class="lm-dica">Essa música ainda está sem letra.</div>'
         : semPartes ? `<div class="lm-dica">Sem partes separadas. <a onclick="lmOrganizarOriginal('${m.id}')">Abrir e organizar</a> para escolher Refrão, Estrofes…</div>` : ''}
     </div>`;
@@ -170,12 +170,10 @@ function lmRender(){
 
   const texto = lmGerarTexto(lmEdit);
   document.getElementById('lmPrevia').innerHTML = texto ? texto.split('\n').map(linha=>{
-    const t = linha.trim(), esc = lvEsc(linha) || ' ';
+    const t = linha.trim();
     if(/^\[♪/.test(t)) return `<span class="lm-pv-musica">${lvEsc(t.slice(1,-1).replace(/^♪\s*/,''))}</span>`;
-    if(/^\[.+\]$/.test(t)) return `<span class="rl-bloco">${esc}</span>`;
     if(t === '--') return '<span class="lm-pv-linha"></span>';
-    if(t && isChordLine(t)) return `<span class="rl-acorde">${esc}</span>`;
-    return esc;
+    return lvRealceLinha(linha) || ' ';
   }).join('\n') : '<span class="lm-pv-vazio">A prévia aparece aqui enquanto você monta.</span>';
   document.getElementById('lmSalvarBtn').textContent = lmEdit.id ? 'Salvar' : 'Criar';
 }
@@ -341,7 +339,7 @@ function lviLogResultado(prog, r){
   if(!prog || !prog.log) return;
   const tom = r.tom && r.tom.tomOriginal ? (r.tom.tomModoMenor ? lvRelativoMenor(r.tom.tomOriginal) + 'm' : r.tom.tomOriginal) : '';
   if(r.titulo || r.artista) prog.log(`Música: ${r.titulo || '—'}${r.artista ? ' · ' + r.artista : ''}${tom ? ' · Tom ' + tom : ''}`, 'ok');
-  const rotulos = ((r.conteudo || '').match(/^\[(.+)\]$/gm) || []).map(s=>s.slice(1,-1));
+  const rotulos = lvRotulosDe(r.conteudo);
   const partes = rotulos.filter(s=>!/^repete\b/i.test(s)), reps = rotulos.length - partes.length;
   if(partes.length) prog.log(`Partes: ${partes.slice(0, 8).join(', ')}${partes.length > 8 ? '…' : ''}${reps ? ` (+ ${reps} repetição${reps>1?'ões':''})` : ''}`, 'ok');
   const c = r.conferencia || {};
@@ -356,7 +354,7 @@ function lviRelatorioHtml(r, final){
   const it = [];
   const perdidas = (c.faltando || []).length, olhar = (c.olhar || []).length;
   if(c.linhas) it.push(ok(`${c.linhas} linhas da letra${c.comPdf && r.usouIA && !perdidas ? ', nenhuma ficou de fora' : ''}`));
-  const rotulos = ((r.conteudo || '').match(/^\[(.+)\]$/gm) || []).map(s=>s.slice(1,-1));
+  const rotulos = lvRotulosDe(r.conteudo);
   const nPartes = rotulos.filter(s=>!/^repete\b/i.test(s)).length || r.blocos, nReps = rotulos.length - rotulos.filter(s=>!/^repete\b/i.test(s)).length;
   if(nPartes) it.push(ok(`${nPartes} parte${nPartes>1?'s':''} separada${nPartes>1?'s':''}${nReps ? ` e ${nReps} repetição${nReps>1?'ões':''} marcada${nReps>1?'s':''}` : ''}`));
   if(c.acordes){

@@ -162,7 +162,7 @@ async function ccMontar(url, passo, tirar){
       passo(`✓ Letras: "${lt.titulo}" · ${lt.artista} · ${lt.estrofes.length} estrofes`, 'ok');
       const j = lviJuntarComLetras(texto, lt.estrofes);
       /* a cifra é obrigatória: se a letra do Letras perdeu os acordes, fica só o Cifra Club */
-      const acordes = t=>t.split('\n').filter(x=>x.trim() && isChordLine(x.trim())).length;
+      const acordes = t=>t.split('\n').filter(x=>lvTipoLinha(x) === 'acorde').length;
       if(j && acordes(j.texto) < acordes(texto) * .6){ passo('A letra do Letras perdia os acordes: fiquei com a cifra do Cifra Club', 'erro'); }
       else if(j){
         texto = j.texto; revisar = j.revisar; comLetras = true;

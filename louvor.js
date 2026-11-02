@@ -286,14 +286,7 @@ function lvAtualizarEditor(){
   const ta = document.getElementById('lvConteudo'), realce = document.getElementById('lvConteudoRealce');
   if(!ta || !realce) return;
   const olhar = typeof lvLinhasRevisar==='function' ? lvLinhasRevisar() : new Set();   // linhas que a importação não conseguiu conferir
-  realce.innerHTML = ta.value.split('\n').map(linha=>{
-    const t = linha.trim(), esc = lvEsc(linha) || '';
-    if(t && olhar.has(t)) return `<span class="rl-olhar">${esc}</span>`;
-    if(/^\[.+\]$/.test(t)) return `<span class="rl-bloco">${esc}</span>`;
-    if(/^-{1,3}$/.test(t)) return `<span class="rl-marca">${esc}</span>`;
-    if(t && isChordLine(t)) return `<span class="rl-acorde">${esc}</span>`;
-    return esc;
-  }).join('\n') + '\n';   // linha extra: a camada acompanha o cursor numa linha nova vazia
+  realce.innerHTML = ta.value.split('\n').map(linha=>lvRealceLinha(linha, olhar)).join('\n') + '\n';   // linha extra: a camada acompanha o cursor numa linha nova vazia
   if(!ta.offsetParent) return;   // painel escondido: mede quando voltar para a Edição
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
@@ -342,7 +335,7 @@ function lvRevisarConferido(l, antes, depois){
   d.forEach((linha, i)=>{
     if(linha === a[i]) return;
     if(!isChordLine(linha)){ tirar.add(linha.trim()); tirar.add((a[i] || '').trim()); return; }
-    for(let j = i + 1; j < d.length; j++){ const t = d[j].trim(); if(!t || isChordLine(d[j])) continue; if(/^\[.*\]$/.test(t)) break; tirar.add(t); break; }
+    for(let j = i + 1; j < d.length; j++){ const tipo = lvTipoLinha(d[j]); if(tipo === 'vazia' || tipo === 'acorde') continue; if(tipo === 'parte') break; tirar.add(d[j].trim()); break; }
   });
   if(!tirar.size) return;
   l.revisar = l.revisar.filter(t=>!tirar.has(String(t).trim()));
@@ -665,6 +658,34 @@ const LV_CHORD_SUFFIXES = ['maj7','majsus4','madd9','madd11','msus2','msus4','md
 const LV_CHORD_SUFFIX_RE = LV_CHORD_SUFFIXES.sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
 /* aceita também extensões entre parênteses, ex.: E(9), A7(4) */
 const LV_CHORD_RE = new RegExp(`^[A-G](##|bb|#|b)?(${LV_CHORD_SUFFIX_RE})?(\\([^)]*\\))?(\\/[A-G](##|bb|#|b)?)?$`);
+/* ================= FORMATO DA CIFRA (o module) =================
+   O texto de uma música tem 5 tipos de linha — todo arquivo do Louvor pergunta aqui em vez de repetir as regras:
+   - 'parte'  [Refrão | 2x]        lvRotuloDaLinha(linha) → "Refrão | 2x" (lvVezesDoRotulo separa nome e vezes)
+   - 'marca'  -  --  ---            próximo slide · linha divisória · próxima coluna
+   - 'acorde' linha só de acordes  (isChordLine)
+   - 'letra'  o resto com texto
+   - 'vazia'
+   lvSoLetra(conteudo) = só as linhas de letra · lvRotulosDe(conteudo) = os nomes das partes, em ordem
+   lvRealceLinha(linha, olhar) = a linha pintada para o editor (parte, marca, acorde, amarela) */
+function lvTipoLinha(linha){
+  const t = String(linha || '').trim();
+  if(!t) return 'vazia';
+  if(/^\[.+\]$/.test(t)) return 'parte';
+  if(/^-{1,3}$/.test(t)) return 'marca';
+  if(isChordLine(t)) return 'acorde';
+  return 'letra';
+}
+function lvRotuloDaLinha(linha){ const m = /^\[(.+)\]$/.exec(String(linha || '').trim()); return m ? m[1] : null; }
+function lvRotulosDe(conteudo){ return String(conteudo || '').split('\n').map(lvRotuloDaLinha).filter(Boolean); }
+function lvSoLetra(conteudo){ return String(conteudo || '').split('\n').filter(x=>lvTipoLinha(x) === 'letra').map(x=>x.trim()); }
+function lvRealceLinha(linha, olhar){
+  const t = linha.trim(), esc = lvEsc(linha) || '', tipo = lvTipoLinha(t);
+  if(olhar && t && olhar.has(t)) return `<span class="rl-olhar">${esc}</span>`;
+  if(tipo === 'parte') return `<span class="rl-bloco">${esc}</span>`;
+  if(tipo === 'marca') return `<span class="rl-marca">${esc}</span>`;
+  if(tipo === 'acorde') return `<span class="rl-acorde">${esc}</span>`;
+  return esc;
+}
 function isChordLine(line){
   const trimmed = line.trim();
   if(!trimmed) return false;
@@ -1425,7 +1446,7 @@ function renderLouvorSlidePreview(){
 function lvSlidesAppRender(l, slides){
   const el = document.getElementById('lvSlidesApp'); if(!el) return;
   const linhas = (l.conteudo || '').split('\n');
-  const ehLetra = t=>t && !/^\[.+\]$/.test(t) && !/^-{1,3}$/.test(t) && !isChordLine(t);
+  const ehLetra = t=>lvTipoLinha(t) === 'letra';
   const ondeCai = {};
   let ptr = 0;
   slides.forEach((s, k)=>s.lines.forEach(txt=>{
@@ -1437,7 +1458,7 @@ function lvSlidesAppRender(l, slides){
   const atual = lvSlideIndex;   // 0 = slide do título
   el.innerHTML = `<div class="lvs-tit"><b>No app</b><small>${atual ? 'slide ' + (atual + 1) + ' marcado' : 'slide 1 (título)'}</small></div>` + linhas.map((x, n)=>{
     const t = x.trim();
-    if(/^\[.+\]$/.test(t)) return `<div class="lvs-l rot">${lvEsc(t.slice(1, -1))}</div>`;
+    if(lvTipoLinha(t) === 'parte') return `<div class="lvs-l rot">${lvEsc(lvRotuloDaLinha(t))}</div>`;
     if(t === '-') return '<div class="lvs-l corte"></div>';
     if(!ehLetra(t)) return '';
     const ks = ondeCai[n] || [];

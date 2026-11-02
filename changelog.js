@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.3', itens: [
+    'Louvor: um lugar só sabe ler a cifra (parte, acorde, letra e os marcadores) e todas as telas usam ele: editor, medley, Comparar, slides, Culto e Cifra Club'
+  ] },
   { versao: 'v17.2', itens: [
     'Gastos: Assistente, Falar, fatura em PDF, janelas do cartão e Contas do mês agora gravam compras e contas pagas do mesmo jeito (mesmo formato, data e arredondamento)'
   ] },

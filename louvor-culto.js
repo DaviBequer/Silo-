@@ -333,7 +333,7 @@ async function cultoSugerir(){
   cultoHistoricoDados().forEach(h=>{ ultimas[h.l.id] = Math.round((hoje - calParse(h.ultima)) / 864e5); });
   const ja = new Set(cultoAtual().partes.flatMap(p=>p.musicas));
   const lista = (state.louvores||[]).filter(l=>!ja.has(l.id)).map(l=>({ id:l.id, onde:'app', titulo:l.titulo, artista:l.artista||'', categoria:l.categoria||'', tom: lvTomAtual(l), tocadaHaDias: ultimas[l.id] ?? null,
-    letra: (l.conteudo||'').split('\n').filter(x=>x.trim() && !isChordLine(x.trim()) && !/^\[.*\]$/.test(x.trim()) && !/^-+$/.test(x.trim())).slice(0, 8).join(' / ').slice(0, 300) }));
+    letra: lvSoLetra(l.conteudo).slice(0, 8).join(' / ').slice(0, 300) }));
   /* PDFs do Drive que ainda não estão no app (só o nome; a IA usa o que conhece da música) */
   const noApp = new Set((state.louvores||[]).map(l=>cuNorm(l.titulo)));
   const vistos = new Set();

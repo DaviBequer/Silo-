@@ -79,7 +79,7 @@ function lvCompararRenderApp(l){
   /* linhas de acorde dá para editar aqui mesmo, olhando o original ao lado (a letra e as partes não) */
   const linhas = (l.conteudo || '').split('\n').map((x, i)=>{
     const t = x.trim();
-    const cls = /^\[.+\]$/.test(t) ? 'rot' : isChordLine(t) ? 'ac' : olhar.has(t) ? 'olhar' : /^-{1,3}$/.test(t) ? 'marca' : '';
+    const tipo = lvTipoLinha(t), cls = tipo === 'parte' ? 'rot' : tipo === 'acorde' ? 'ac' : olhar.has(t) ? 'olhar' : tipo === 'marca' ? 'marca' : '';
     if(cls === 'ac') return `<div class="lvcmp-l ac lvcmp-edita" contenteditable="plaintext-only" spellcheck="false" autocapitalize="off" data-i="${i}" oninput="lvcmpAcordeMudou(this)" onblur="lvcmpAcordeSalvar()">${lvEsc(x)}</div>`;
     return `<div class="lvcmp-l ${cls}">${lvEsc(x) || '&nbsp;'}</div>`;
   }).join('');
@@ -161,7 +161,7 @@ async function lvCompararRenderOriginal(l){
   const o = l.origem;
   const olhar = new Set((l.revisar || []).map(lvcmpNorm));
   if(o.tipo === 'cifraclub'){
-    const cifra = (o.texto || '').split('\n').map(x=>`<div class="lvcmp-l${isChordLine(x.trim()) ? ' ac' : /^\[.+\]$/.test(x.trim()) ? ' rot' : ''}">${lvEsc(x) || '&nbsp;'}</div>`).join('');
+    const cifra = (o.texto || '').split('\n').map(x=>`<div class="lvcmp-l${({ acorde: ' ac', parte: ' rot' })[lvTipoLinha(x)] || ''}">${lvEsc(x) || '&nbsp;'}</div>`).join('');
     const marcado = v=>{ const n = lvcmpNorm(v); return [...olhar].some(o=>o && n.includes(o)); };   // no Letras o verso pode vir junto com outro
     const letras = o.letras ? o.letras.estrofes.map(est=>`<div class="lvcmp-estrofe">${est.map(v=>`<div class="lvcmp-l${marcado(v) ? ' olhar' : ''}">${lvEsc(v)}</div>`).join('')}</div>`).join('') : '';
     /* Cifra Club primeiro e o Letras embaixo (pedido do Davi) */
@@ -252,9 +252,10 @@ async function lvSoPdfRender(l){
    Cada coluna rola sozinha; linhas de acorde não contam (a do app é editável). Frase repetida (refrão): vale a mesma vez (1ª, 2ª…) */
 function lvcmpPalavras(el){
   const t = el.textContent.trim();
-  if(!t || isChordLine(t) || /^-{1,3}$/.test(t)) return null;
-  const rot = /^\[(.+)\]$/.exec(t);
-  return { rot: !!rot, p: lvcmpNorm(rot ? lvVezesDoRotulo(rot[1]).nome : t).split(' ').filter(Boolean) };
+  const tipo = lvTipoLinha(t);
+  if(tipo !== 'parte' && tipo !== 'letra') return null;
+  const rot = lvRotuloDaLinha(t);
+  return { rot: !!rot, p: lvcmpNorm(rot ? lvVezesDoRotulo(rot).nome : t).split(' ').filter(Boolean) };
 }
 function lvcmpParecido(a, b){
   if(!a || !b || a.rot !== b.rot || !a.p.length || !b.p.length) return 0;
