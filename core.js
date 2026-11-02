@@ -1152,7 +1152,6 @@ function incluiNoGeral(tipo, mKey){
   return (m && typeof m[tipo]==='boolean') ? m[tipo] : cfg[tipo] !== false;
 }
 function cartaoValorGeralNoMes(mKey){
-  if(typeof faturaRestanteNoMes!=='function') return 0;
   return (state.cartoesTracker||[]).reduce((s,c)=>s+faturaRestanteNoMes(c, mKey), 0);
 }
 function emprestimoValorGeralNoMes(mKey){

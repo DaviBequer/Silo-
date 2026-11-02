@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.1', itens: [
+    'Cartões: tudo sobre a fatura (em qual fatura cai a compra, o que tem nela, situação e vencimento) agora segue uma regra só em todas as telas e no Assistente'
+  ] },
   { versao: 'v17.0', itens: [
     'Finanças: as contas do mês agora seguem uma regra só em todas as telas (Contas do mês, blocos, Para onde vai, seções, Falar)',
     'Conta arquivada não aparece mais no painel nem em Contas do mês'

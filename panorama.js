@@ -125,14 +125,10 @@ function blocosMesDados(u, mKey){
   const pix = (state.lancamentos || []).filter(la=>la.mKey === mKey && (la.usuario || 'davi') === u).reduce((s, la)=>s + (Number(la.valor) || 0), 0);
   let vista = 0, parcelado = 0, parcTot = 0, parcPagas = 0;
   if(u === 'davi') (state.cartoesTracker || []).forEach(c=>{
-    const m = faturaAbertaMes(c);
-    vista += (c.credoVista || []).filter(cv=>cv.mKey === m).reduce((s, cv)=>s + (Number(cv.valor) || 0), 0);
-    (state.comprasTracker || []).filter(x=>x.cartaoId === c.id && !x.pago && x.mesInicio).forEach(x=>{
-      const v = compraTrackerValorNoMes(x, m); if(!v) return;
-      parcelado += v;
-      const n = Math.max(1, Number(x.parcelas) || 1); let k = 1; while(k < n && addMonths(x.mesInicio, k - 1) !== m) k++;   // parcela k de n neste mês
-      parcTot += n; parcPagas += k - 1;
-    });
+    const f = faturaPartes(c, faturaAbertaMes(c));
+    vista += f.totalVista;
+    parcelado += f.totalParcelas;
+    f.parcelas.forEach(p=>{ parcTot += p.n; parcPagas += p.k - 1; });   // parcela k de n neste mês
   });
   return { entra, sobra, totContas, faltaContas, pix, vista, parcelado, parcTot, parcPagas };
 }
@@ -1148,9 +1144,8 @@ function ondeVaiDados(u, mKey){
   const sa = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if(u === 'davi'){
     (state.cartoesTracker||[]).forEach(c=>{
-      if(typeof cartaoForaDoControle === 'function' && cartaoForaDoControle(c, mKey)) return;   // antes do controle do cartão: fica de fora
       Object.entries(cartaoGastosPorMes(c, mKey).porCategoria).forEach(([cat, v])=>soma(vista, cat === 'Ajuste' ? 'Ajuste da fatura' : cat, v));
-      soma(g, 'Parcelas no cartão', (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id).reduce((s,cp)=>s + compraTrackerValorNoMes(cp, mKey), 0));
+      soma(g, 'Parcelas no cartão', faturaPartes(c, mKey).totalParcelas);   // antes do controle do cartão: fica tudo de fora
     });
   }
   /* compras faladas no Pix/débito */

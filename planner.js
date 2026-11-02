@@ -615,16 +615,15 @@ function compraTrackerCalc(item){
   const restante = valorParcela*restam;
   return { total, parcelas, valorParcela, parcelaAtual, pagas, restam, mesFim, percentPago, status, restante };
 }
-/* Valor da parcela de uma compra do cartão (Tracker) num mês qualquer, não só "hoje" */
-function compraTrackerValorNoMes(item, mKey){
-  if(item.pago) return 0;
-  const parcelas = Math.min(120, Math.max(1, Number(item.parcelas)||1));
-  if(!item.mesInicio) return 0;
-  const valorParcela = (Number(item.valorTotal)||0) / parcelas;
-  const meses = [];
-  for(let i=0;i<parcelas;i++) meses.push(addMonths(item.mesInicio, i));
-  return meses.includes(mKey) ? valorParcela : 0;
+/* parcela de uma compra parcelada num mês: { valor, k, n } (k de n), ou null se não cai nesse mês (ou já foi quitada) */
+function compraParcelaNoMes(item, mKey){
+  if(item.pago || !item.mesInicio) return null;
+  const n = Math.min(120, Math.max(1, Number(item.parcelas)||1));
+  for(let i = 0; i < n; i++) if(addMonths(item.mesInicio, i) === mKey) return { valor: (Number(item.valorTotal)||0) / n, k: i + 1, n };
+  return null;
 }
+/* Valor da parcela de uma compra do cartão (Tracker) num mês qualquer, não só "hoje" */
+function compraTrackerValorNoMes(item, mKey){ const p = compraParcelaNoMes(item, mKey); return p ? p.valor : 0; }
 function popularSelectCartoes(selectId, selecionado){
   const el = document.getElementById(selectId);
   if(!el) return;
@@ -647,14 +646,41 @@ function cartaoControleDesde(cartao){
   return meses[0] || '';
 }
 function cartaoForaDoControle(cartao, mKey){ const d = cartaoControleDesde(cartao); return !!(d && mKey < d); }
+/* ================= FATURA DO CARTÃO (o module) =================
+   Tudo sobre faturas passa por aqui:
+   - faturaDaData(cartao, data)      em qual fatura cai uma compra feita nesse dia (regra do fechamento)
+   - faturaAbertaMes(cartao, hoje)   a fatura aberta agora (compra nova entra nela)
+   - faturaDoVencimento(cartao, iso) de qual fatura é um vencimento (fatura em PDF)
+   - faturaPartes(cartao, mKey)      o que tem na fatura: à vista, parcelas (k de n), assinaturas e os totais
+   - faturaStatus(cartao, mKey, hoje) aberta / fechada / vencida / parcial / paga, com total, pago e quanto falta
+   Antes do "controle desde" do cartão a fatura fica vazia. */
+function faturaPartes(cartao, mKey){
+  const out = { vista: [], parcelas: [], assinaturas: [], totalVista: 0, totalParcelas: 0, totalAssinaturas: 0, total: 0, fora: cartaoForaDoControle(cartao, mKey) };
+  if(out.fora) return out;
+  out.vista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey);
+  (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id).forEach(compra=>{ const p = compraParcelaNoMes(compra, mKey); if(p) out.parcelas.push(Object.assign({ compra }, p)); });
+  (cartao.assinaturas||[]).forEach(a=>{ const valor = assinaturaValorNoMes(a, mKey); if(valor) out.assinaturas.push({ assinatura: a, valor }); });
+  out.totalVista = out.vista.reduce((s,cv)=>s+Number(cv.valor||0), 0);
+  out.totalParcelas = out.parcelas.reduce((s,p)=>s+p.valor, 0);
+  out.totalAssinaturas = out.assinaturas.reduce((s,a)=>s+a.valor, 0);
+  out.total = out.totalParcelas + out.totalVista + out.totalAssinaturas;
+  return out;
+}
 /* Fatura de um cartão num mês: parcelas + à vista + assinaturas (0 antes do controle começar) */
-function faturaCartaoNoMes(cartao, mKey){
-  if(cartaoForaDoControle(cartao, mKey)) return 0;
-  const compras = (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id);
-  const totalParcelas = compras.reduce((s,item)=>s+compraTrackerValorNoMes(item, mKey), 0);
-  const totalVista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).reduce((s,cv)=>s+Number(cv.valor||0), 0);
-  const totalAssinaturas = (cartao.assinaturas||[]).reduce((s,a)=>s+assinaturaValorNoMes(a, mKey), 0);
-  return totalParcelas + totalVista + totalAssinaturas;
+function faturaCartaoNoMes(cartao, mKey){ return faturaPartes(cartao, mKey).total; }
+/* compra feita no dia "data": no dia do fechamento (ou depois) já cai na fatura do mês seguinte */
+function faturaDaData(cartao, data){
+  const d = typeof data === 'string' ? calParse(data) : data;
+  const fech = parseInt(cartao && cartao.fechamento)||0;
+  if(!fech || !d || isNaN(d)) return null;
+  const m = monthKey(d);
+  return d.getDate() >= Math.min(fech, daysInMonth(m)) ? addMonths(m, 1) : m;
+}
+/* fatura M vence no mês M, ou no seguinte quando o vencimento vem antes do fechamento */
+function faturaDoVencimento(cartao, iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
+  const m = iso.slice(0, 7);
+  return (parseInt(cartao.vencimento)||0) <= (parseInt(cartao.fechamento)||0) ? addMonths(m, -1) : m;
 }
 /* ================= STATUS DA FATURA DO CARTÃO ================= */
 /* Fatura "M" = a que fecha no dia de fechamento do mês M e vence no dia de vencimento (no mesmo mês, ou no seguinte se o vencimento é menor que o fechamento) */
@@ -678,12 +704,12 @@ function faturaRestanteNoMes(cartao, mKey){
   return Math.max(0, faturaCartaoNoMes(cartao, mKey) - faturaPagaValor(cartao, mKey));
 }
 /* st: aberto | fechado (aguardando pagamento) | vencido (gerando juros) | parcial (pago em parte) | pago | vazio */
-function faturaStatus(cartao, mKey){
+function faturaStatus(cartao, mKey, agora){
   const total = faturaCartaoNoMes(cartao, mKey), pago = faturaPagaValor(cartao, mKey);
   const quitada = faturaQuitada(cartao, mKey);
   const resta = quitada ? 0 : Math.max(0, total - pago);
   const datas = cartaoDatasFatura(cartao, mKey);
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const hoje = new Date(agora || Date.now()); hoje.setHours(0,0,0,0);
   let st;
   if(quitada) st = 'pago';
   else if(total < 0.005 && pago < 0.005) st = 'vazio';
@@ -695,13 +721,7 @@ function faturaStatus(cartao, mKey){
   return { st, total, pago, resta, datas };
 }
 /* fatura que está aberta hoje: a compra nova entra nela. No dia do fechamento ela já fecha e abre a do mês seguinte. */
-function faturaAbertaMes(cartao){
-  const hoje = new Date();
-  const mReal = monthKey(hoje);
-  const fech = parseInt(cartao && cartao.fechamento)||0;
-  if(!fech) return mesFinanceiroAtual();
-  return hoje.getDate() >= Math.min(fech, daysInMonth(mReal)) ? addMonths(mReal, 1) : mReal;
-}
+function faturaAbertaMes(cartao, agora){ return faturaDaData(cartao, agora || new Date()) || mesFinanceiroAtual(); }
 /* fatura em destaque no cartão: a escolhida na faixa de meses, senão a mais antiga ainda por pagar, senão a aberta */
 function faturaFocoMes(cartao){
   const sel = faturaMesSelecionado[cartao.id];
@@ -1392,19 +1412,10 @@ function assinaturaValorNoMes(item, mKey){
 
 /* --- Dashboard de gastos do cartão: à vista + assinaturas do mês, por categoria e por nome --- */
 function cartaoGastosPorMes(cartao, mKey){
-  const porCategoria = {}, porNome = {};
-  (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey).forEach(cv=>{
-    const cat = cv.categoria || 'Outros', nome = cv.descricao || 'Crédito à vista';
-    porCategoria[cat] = (porCategoria[cat]||0) + Number(cv.valor||0);
-    porNome[nome] = (porNome[nome]||0) + Number(cv.valor||0);
-  });
-  (cartao.assinaturas||[]).forEach(a=>{
-    const valor = assinaturaValorNoMes(a, mKey);
-    if(!valor) return;
-    const cat = a.categoria || 'Outros';
-    porCategoria[cat] = (porCategoria[cat]||0) + valor;
-    porNome[a.nome] = (porNome[a.nome]||0) + valor;
-  });
+  const porCategoria = {}, porNome = {}, f = faturaPartes(cartao, mKey);
+  const somar = (cat, nome, v)=>{ porCategoria[cat] = (porCategoria[cat]||0) + v; porNome[nome] = (porNome[nome]||0) + v; };
+  f.vista.forEach(cv=>somar(cv.categoria || 'Outros', cv.descricao || 'Crédito à vista', Number(cv.valor||0)));
+  f.assinaturas.forEach(({ assinatura: a, valor })=>somar(a.categoria || 'Outros', a.nome, valor));
   return { porCategoria, porNome };
 }
 let gastosDashboardAberto = {};

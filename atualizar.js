@@ -297,12 +297,7 @@ function atzDataValida(s){
 }
 /* em qual fatura cai uma compra feita no dia: no dia do fechamento ou depois, a fatura daquele mês já fechou → vai para a do mês seguinte
    (mesma regra do faturaAbertaMes). Sem fechamento no cartão: a aberta. */
-function atzFaturaDaData(c, iso){
-  const fech = parseInt(c && c.fechamento) || 0, d = iso ? calParse(iso) : null;
-  if(!fech || !d || isNaN(d)) return faturaAbertaMes(c);
-  const m = monthKey(d);
-  return d.getDate() >= Math.min(fech, daysInMonth(m)) ? addMonths(m, 1) : m;
-}
+function atzFaturaDaData(c, iso){ return (iso && faturaDaData(c, iso)) || faturaAbertaMes(c); }
 function atzFaturaDoItem(c, i){
   let m = atzFaturaDaData(c, i.data);
   if(i.proximaFatura && m === faturaAbertaMes(c)) m = addMonths(m, 1);

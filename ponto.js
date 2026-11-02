@@ -836,7 +836,7 @@ function resumoCompletoDoMes(mKey){
   const contas = { moradia:0, assinatura:0, fixo:0, futuro:0 };
   gastosDoMes(u, mKey).forEach(g=>{ contas[g.cat] = (contas[g.cat]||0) + g.valor; });
   const dizimo = dizimoValorCheio(u, mKey);
-  const cartao = incluiNoGeral('cartao', mKey) && typeof faturaCartaoNoMes==='function'
+  const cartao = incluiNoGeral('cartao', mKey)
     ? (state.cartoesTracker||[]).reduce((s,c)=>s+faturaCartaoNoMes(c, mKey), 0) : 0;
   const emprestimo = incluiNoGeral('emprestimo', mKey) && typeof empVencimento==='function'
     ? (state.emprestimos||[]).reduce((s,emp)=>{

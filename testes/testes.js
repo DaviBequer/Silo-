@@ -227,6 +227,17 @@ async function rodarTestes(){
     state.comprasTracker = [{ id:'cp9', nome:'TV', cartaoId:'cf', valorTotal:300, parcelas:3, mesInicio: addMonths(M, -1) }];
     perto('fatura: à vista + parcela + assinatura', faturaCartaoNoMes(cF, M), 100 + 100 + 20);
     perto('fatura: parcela acaba depois da 3ª', faturaCartaoNoMes(cF, addMonths(M, 2)), 20);
+    /* module Fatura (v17.1): partes, data, vencimento e situação num lugar só */
+    igual('fatura: partes (à vista, parcela k de n, assinatura)', (f=>[f.totalVista, f.parcelas.map(p=>[p.k, p.n, p.valor]), f.totalAssinaturas])(faturaPartes(cF, M)), [100, [[2, 3, 100]], 20]);
+    igual('fatura: em qual fatura cai a compra', ['2026-10-05', '2026-10-06', '2026-12-31'].map(d=>faturaDaData(cF, d)), ['2026-10', '2026-11', '2027-01']);
+    igual('fatura: aberta hoje', faturaAbertaMes(cF, new Date(2026, 9, 6)), '2026-11');
+    igual('fatura: mês pelo vencimento (vence depois do fechamento)', faturaDoVencimento(cF, '2026-11-12'), '2026-11');
+    igual('fatura: mês pelo vencimento (vence antes do fechamento)', faturaDoVencimento({ fechamento:25, vencimento:3 }, '2026-11-03'), '2026-10');
+    const dM = keyToDate(M), diaM = d=>new Date(dM.getFullYear(), dM.getMonth(), d);
+    igual('fatura: situação antes, depois do fechamento e vencida', [faturaStatus(cF, M, diaM(3)).st, faturaStatus(cF, M, diaM(8)).st, faturaStatus(cF, M, diaM(20)).st], ['aberto', 'fechado', 'vencido']);
+    state.faturasCartao = { ['cf_' + M]: { pago: 50 } };
+    igual('fatura: pagou uma parte', (s=>[s.st, s.resta])(faturaStatus(cF, M, diaM(8))), ['parcial', 170]);
+    state.faturasCartao = {};
     state.comprasTracker = []; state.cartoesTracker.pop();
 
     /* ---------- proteção contra perda ---------- */

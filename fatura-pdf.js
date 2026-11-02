@@ -44,11 +44,8 @@ async function fpdfArquivoEscolhido(ev){
     fpdf.total = Math.round((Number(j.total)||0)*100)/100;
     fpdf.itens = (j.itens||[]).filter(i=>Number(i.valor)).map((i, n)=>({ n, data: i.data || '', descricao: String(i.descricao||'').trim() || 'Lançamento', valor: Math.round(Number(i.valor)*100)/100, parcela: String(i.parcela||'').trim() }));
     /* mês da fatura pelo vencimento (fatura M vence no mês M, ou no seguinte se o vencimento é antes do fechamento) */
-    if(/^\d{4}-\d{2}-\d{2}$/.test(j.vencimento||'')){
-      let m = j.vencimento.slice(0, 7);
-      if((parseInt(cartao.vencimento)||0) <= (parseInt(cartao.fechamento)||0)) m = addMonths(m, -1);
-      fpdf.mKey = m;
-    }
+    const mVenc = faturaDoVencimento(cartao, j.vencimento);
+    if(mVenc) fpdf.mKey = mVenc;
     fpdfConferir();
   }catch(e){
     document.getElementById('fpdfConteudo').innerHTML = `<div class="drive-linha erro">Não consegui ler a fatura: ${lvEsc(String(e && e.message || e))}</div>`;
