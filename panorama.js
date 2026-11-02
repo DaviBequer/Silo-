@@ -97,7 +97,7 @@ function corDoCartaoBanco(b){
 function renderCarteira(){
   const el = document.getElementById('resumoCarteira'); if(!el) return;
   const us = state.users[state.currentUser] || {};
-  let lista = (us.bancos || []).map((b, i)=>({ ...b, i })).sort((a, b)=>(b.valor || 0) - (a.valor || 0));
+  let lista = (us.bancos || []).map((b, i)=>({ ...b, i }));   // na ordem escolhida na janela dos bancos (setas)
   if(us.esconderZerados) lista = lista.filter(b=>Math.abs(b.valor || 0) > 0.004);
   if(!lista.length){ el.innerHTML = '<span class="cc-vazio">toque para separar o saldo por banco</span>'; return; }
   el.innerHTML = lista.map(b=>{

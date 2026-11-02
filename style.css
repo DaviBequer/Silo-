@@ -634,7 +634,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .saldo-bancos-lista b{font-weight:600;color:var(--text-dim);font-variant-numeric:tabular-nums}
 .saldo-bancos-aviso{flex-shrink:0;padding:3px 9px;border-radius:999px;background:var(--warning-tint);color:var(--warning);font-size:11.5px;font-weight:600}
 .bancos-lista{display:flex;flex-direction:column}
-.banco-linha{display:grid;grid-template-columns:34px minmax(0,.85fr) minmax(0,1.15fr) 28px 30px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.banco-linha{display:grid;grid-template-columns:34px minmax(0,.85fr) minmax(0,1.15fr) 28px 22px 30px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
 .banco-linha input{width:100%;min-height:46px;padding:11px 12px;border:1.5px solid transparent;border-radius:12px;background:var(--card-2);color:var(--text);font:inherit;font-size:16px;font-weight:500;outline:none;transition:all var(--dur) var(--ease)}
 .banco-linha input::placeholder{color:var(--text-faint);font-weight:400}
 .banco-linha input:focus{border-color:var(--gold);background:var(--card);box-shadow:0 0 0 4px var(--gold-tint)}
@@ -648,7 +648,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .banco-cor{position:relative;width:28px;height:28px;border-radius:50%;overflow:hidden;border:1px solid var(--line);cursor:pointer}
 .banco-linha .banco-cor input{position:absolute;inset:-8px;width:44px;height:44px;min-height:0;padding:0;border:none;background:none;cursor:pointer}
 .bancos-zerados span small{display:block;font-size:12px;font-weight:400;color:var(--text-faint)}
-@media(max-width:420px){ .banco-linha{grid-template-columns:32px minmax(0,.8fr) minmax(0,1.2fr) 26px 24px;gap:6px} .banco-linha .input-money input{padding-left:34px!important} }
+@media(max-width:420px){ .banco-linha{grid-template-columns:30px minmax(0,.8fr) minmax(0,1.2fr) 24px 22px 22px;gap:5px} .banco-linha .input-money input{padding-left:34px!important} }
 .bancos-add{display:inline-flex;align-items:center;gap:7px;margin:12px 0 16px;padding:6px 0;border:none;background:none;color:var(--gold-dim);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 /* microfone ao lado do saldo */
 
@@ -3059,8 +3059,13 @@ body{font-weight:400;letter-spacing:.005em}
 .slides-novo textarea{width:100%;font:inherit;font-size:14px;line-height:1.45;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;resize:vertical}
 .drive-criar-slides{margin-top:10px}
 
-/* v17.5: carteira mostra TODOS os bancos (antes rolava para o lado e, no computador, cortava os da esquerda sem dar para rolar) */
-.carteira{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin:14px 0 0;padding-right:0;overflow:visible;scroll-snap-type:none}
-.carteira .cc,.fin-placa .carteira .cc{flex:none;min-width:0;max-width:none;width:100%}
-.carteira .cc-vazio{grid-column:1 / -1}
-@media (min-width:1024px){ .fin-placa > .carteira{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));justify-content:stretch;align-self:center} }
+/* v17.6: cartões dos bancos de volta embaixo do saldo, numa linha só, todos à mostra (encolhem para caber; muitos bancos = rola para o lado) */
+@media (min-width:1024px){
+  .fin-placa{display:block}
+  .fin-placa > .carteira{margin:14px 0 0;justify-content:flex-start}
+}
+.carteira{justify-content:flex-start;margin:14px 0 0;padding-right:0}
+.carteira .cc,.fin-placa .carteira .cc{flex:1 1 0;min-width:92px;max-width:190px}
+.banco-ordem{display:flex;flex-direction:column;gap:0}
+.banco-ordem .btn-icon-sm{width:22px!important;height:18px!important;min-width:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+.banco-linha:first-child .banco-ordem button:first-child,.banco-linha:last-child .banco-ordem button:last-child{visibility:hidden}

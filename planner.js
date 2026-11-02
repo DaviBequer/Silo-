@@ -172,9 +172,16 @@ function adicionarBancoLinha(focar, b){
     <input type="text" class="banco-nome" placeholder="Banco" value="${escBanco(b ? b.nome : '')}" autocomplete="off">
     <div class="input-money banco-valor"><input type="text" inputmode="numeric" placeholder="0,00" value="${valor}" oninput="maskMoneyInput(this);atualizarTotalBancos()"></div>
     <label class="banco-cor" title="Cor do cartão" aria-label="Cor do cartão"><input type="color" value="${(b && b.cor) || corDoBanco(b && b.nome, i)}" onchange="bancoCorMudou(this)"></label>
+    <span class="banco-ordem"><button type="button" class="btn-icon-sm" title="Subir" aria-label="Subir na ordem" onclick="bancoMover(this, -1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></button><button type="button" class="btn-icon-sm" title="Descer" aria-label="Descer na ordem" onclick="bancoMover(this, 1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></span>
     <button type="button" class="btn-icon-sm banco-del" aria-label="Remover banco" onclick="this.closest('.banco-linha').remove();atualizarTotalBancos()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>`;
   el.appendChild(linha);
   if(focar) linha.querySelector('.banco-nome').focus();
+}
+/* ordem dos cartões no saldo em conta: a ordem das linhas desta janela */
+function bancoMover(btn, dir){
+  const linha = btn.closest('.banco-linha'), outra = dir < 0 ? linha.previousElementSibling : linha.nextElementSibling;
+  if(!outra) return;
+  if(dir < 0) outra.before(linha); else outra.after(linha);
 }
 let bancoLogoLinha = null;
 function bancoLogoEscolher(btn){
