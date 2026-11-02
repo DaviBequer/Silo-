@@ -79,7 +79,7 @@ function sinoRenderLista(){
     <button type="button" class="sino-item ${a.tipo}${vistos.has(a.id)?'':' novo'}" style="animation-delay:${i*0.05}s" onclick="sinoIr(${i})">
       <span class="sino-ico">${SINO_ICONES[a.tipo] || ''}</span>
       <span class="sino-txt"><b>${a.titulo}</b><span>${a.corpo}</span></span>
-      <span class="sino-quando">${a.quando}</span>
+      <span class="sino-quando">${a.quando}<i class="sino-acao">${a.tipo === 'ponto' ? 'Bater agora' : 'Ver'}</i></span>
     </button>`).join('')
     : `<div class="sino-vazio"><div class="sino-vazio-ico">✓</div><b>Tudo em dia</b><span>Quando faltar bater o ponto ou vender para a meta, aparece aqui.</span></div>`;
 }

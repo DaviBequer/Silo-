@@ -301,6 +301,13 @@ function renderCultoBotao(){
   const prontas = itens.filter(x=>x.l.status === 'finalizada').length;
   const lbl = document.querySelector('#lvCultoPlaca .placa-lbl'); if(lbl) lbl.textContent = cultoDataTexto(d, true) + ' · culto';
   el.innerHTML = `${quando}${itens.length ? ` · <b>${itens.length}</b> ${itens.length === 1 ? 'música' : 'músicas'} · ${prontas} pronta${prontas === 1 ? '' : 's'}` : ' · toque para montar o roteiro'}`;
+  /* computador: o lado direito vazio mostra o culto inteiro, cada música abre ao tocar */
+  const pv = document.getElementById('lvPainelVazio');
+  if(pv) pv.innerHTML = `<div class="lpv-placa"><span class="placa-lbl" style="margin-top:0">${lvEsc(cultoDataTexto(d, true))} · culto</span>
+    <div class="lpv-quando">${quando}${itens.length ? ` · ${prontas} de ${itens.length} pronta${prontas === 1 ? '' : 's'}` : ''}</div>
+    ${itens.length ? `<div class="lpv-lista">${itens.map((x, i)=>`<button type="button" class="lpv-item" onclick="abrirLouvorDetalhe('${x.l.id}')"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}">${i + 1}</i><span>${lvEsc(x.l.titulo || 'Sem título')}<small>${lvEsc([x.parte, x.l.artista].filter(Boolean).join(' · '))}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></button>`).join('')}</div>`
+      : `<p class="lpv-dica">Nenhuma música marcada para esse culto ainda.</p>`}
+  </div><p class="lpv-dica">Ou escolha uma música na lista ao lado.</p>`;
   const pe = document.getElementById('lvCultoPartes');
   if(pe) pe.innerHTML = itens.slice(0, 6).map((x, i)=>`<span class="lvcp"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}" title="${x.l.status === 'finalizada' ? 'Pronta' : 'Em produção'}">${i + 1}</i><span>${lvEsc([x.parte, x.l.titulo || 'Sem título'].filter(Boolean).join(' · '))}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></span>`).join('');
 }

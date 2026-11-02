@@ -1,6 +1,13 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.7', itens: [
+    'Botões pequenos com área de toque maior e letras mais legíveis',
+    'Atalhos de Finanças: 4 e Mais no celular, todos numa linha no computador',
+    'Extrato vazio com caminho, aviso do sino com Bater agora',
+    'Louvor no computador mostra o próximo culto e marca a música aberta',
+    'Texto do fechamento do Ponto que sumia no grafite'
+  ] },
   { versao: 'v17.6', itens: [
     'Finanças: cartões dos bancos de volta embaixo do saldo, numa linha só',
     'Saldo por banco: setas para escolher a ordem dos cartões'

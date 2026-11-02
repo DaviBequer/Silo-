@@ -114,7 +114,7 @@ function renderLouvorLista(){
     const finalizada = l.status === 'finalizada';
     const quem = l.medley ? `Medley · ${l.medley.musicas.length} música${l.medley.musicas.length===1?'':'s'}` : (l.artista || (l.categoria === 'Harpa Cristã' ? 'Harpa Cristã' : l.categoria === 'Corinhos' ? 'Corinho de fogo' : 'Artista desconhecido'));
     const dia = l.dataAgendamento ? Number(l.dataAgendamento.split('-')[2]) : 0;
-    return `<div class="lv-card" onclick="abrirLouvorDetalhe('${l.id}')">
+    return `<div class="lv-card${l.id === louvorAtualId ? ' sel' : ''}" onclick="abrirLouvorDetalhe('${l.id}')">
       ${lvCapaHtml(l.categoria, tomAtual)}
       <div class="lv-card-info">
         <div class="lv-card-titulo">${lvEsc(l.titulo||'Sem título')}</div>
@@ -211,6 +211,7 @@ function abrirLouvorDetalhe(id){
   louvorAtualId = id;
   const l = getLouvorAtual();
   if(!l) return;
+  document.querySelectorAll('.lv-card').forEach(c=>c.classList.toggle('sel', (c.getAttribute('onclick') || '').includes(`'${id}'`)));   // a aberta fica marcada na lista (computador)
   lvPdfCarregarFonte();   // fonte do PDF já pronta quando tocar em PDF, Drive ou WhatsApp
   if(typeof lvAtualizarBtnDrive === 'function') setTimeout(lvAtualizarBtnDrive, 0);
   if(typeof lvAtualizarBtnComparar === 'function') lvAtualizarBtnComparar(l);

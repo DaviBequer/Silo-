@@ -30,10 +30,11 @@ function renderPanorama(){
   if(cp && cp.classList.contains('active')) renderContasPagar();
 }
 
-/* atalhos redondos: o esmaecido da direita some quando chega ao fim (ou quando cabe tudo) */
-function atalhosFim(el){
-  if(!el) return;
-  el.classList.toggle('no-fim', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+/* atalhos redondos: no celular aparecem 4 + "Mais", que abre a 2ª linha com o resto (no computador ficam todos à mostra) */
+function atalhosFim(){}
+function atalhosMais(btn){
+  const aberto = document.getElementById('resumoAtalhos').classList.toggle('aberto');
+  btn.setAttribute('aria-expanded', String(aberto));
 }
 
 /* Resumo do mês no topo de Finanças (v12): placa grafite com o saldo, a sobra prevista, os dias que faltam e os bancos; depois os blocos do mês */
@@ -41,7 +42,6 @@ function renderResumoMes(){
   const elMes = document.getElementById('resumoMesLabel');
   if(!elMes || !state.users) return;
   if(typeof renderHeaderHoje==='function') renderHeaderHoje();   // "falta pagar" do cabeçalho acompanha
-  requestAnimationFrame(()=> atalhosFim(document.getElementById('resumoAtalhos')));
   const u = userDash(), mKey = mesFinanceiroAtual();
   const sobra = saldoForMonth(u, mKey);
   elMes.textContent = monthLabelLong(mKey);
@@ -1253,7 +1253,16 @@ function renderExtrato(){
   document.getElementById('extTotal').innerHTML = `<span class="placa-lbl" style="margin-top:0">${extFiltro === 'tudo' ? 'Gasto no mês' : extFiltro === 'cartao' ? 'No cartão' : 'No Pix e débito'}</span>
     <b class="ext-total">${fmtMoney(total)}</b>
     <div class="ext-partes"><span>Cartão <b>${fmtMoney(soma('cartao'))}</b></span><span>Pix e débito <b>${fmtMoney(soma('pix'))}</b></span><span>${itens.length} compra${itens.length === 1 ? '' : 's'}</span></div>`;
-  if(!itens.length){ document.getElementById('extLista').innerHTML = `<div class="gm-vazio">Nenhuma compra em ${monthLabelLong(extMes).toLowerCase()}${extFiltro === 'tudo' ? '' : ' nesta aba'}.</div>`; return; }
+  /* vazio com caminho: lançar pelo Assistente ou olhar o mês anterior */
+  if(!itens.length){
+    const mesAntes = monthLabelLong(addMonths(extMes, -1)).split(' ')[0].toLowerCase();
+    document.getElementById('extLista').innerHTML = `<div class="ext-vazio">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+      <p>Nenhuma compra em ${monthLabelLong(extMes).toLowerCase()}${extFiltro === 'tudo' ? '' : ' nesta aba'}.</p>
+      <div class="ext-vazio-acoes"><button type="button" class="btn" onclick="fecharExtrato(); abrirAtualizar()">Lançar gasto</button><button type="button" class="btn btn-outline" onclick="extratoMes(-1)">Ver ${mesAntes}</button></div>
+    </div>`;
+    return;
+  }
   /* um grupo por dia, do mais novo para o mais antigo */
   const dias = {};
   itens.forEach(x=>{ (dias[x.data] = dias[x.data] || []).push(x); });

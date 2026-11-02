@@ -3069,3 +3069,66 @@ body{font-weight:400;letter-spacing:.005em}
 .banco-ordem{display:flex;flex-direction:column;gap:0}
 .banco-ordem .btn-icon-sm{width:22px!important;height:18px!important;min-width:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
 .banco-linha:first-child .banco-ordem button:first-child,.banco-linha:last-child .banco-ordem button:last-child{visibility:hidden}
+
+/* v17.7: avaliação de design (Impeccable) — legível, fácil de tocar, atalhos 4 + Mais */
+/* J: caixa do Ponto no grafite — o texto herdava a cor escura e sumia */
+#pontoFecharBox .pf-info{color:inherit}
+#pontoFecharBox .pf-info small{color:var(--graf-dim)}
+#pontoFecharBox .ponto-fechar.fechado .pf-info b{color:#9fd3b2}
+/* D: cinza dos rótulos mais escuro e letras de no mínimo ~11,5px */
+:root{--text-faint:#6a6e74}
+.nav-item{font-size:11.5px}
+.field label,.prox-contas-topo,.placa-mes,.placa-lbl,.fb em,.money-table th,.ph-item .ph-lbl,.foco-stat span{font-size:11.5px}
+.fb small{font-size:11px}
+.ponto-placa .ponto-stats-placa .resumo-stat-lbl,.lv-card-status,.lv-status-btn{font-size:10.5px}
+@media (max-width:420px){ .nav-item{font-size:11px} }
+/* B, C: área de toque de 44px sem mudar o desenho (ícone puro, sem caixa) */
+.placa-lapis{position:relative;color:var(--latao)}
+.placa-lapis::before{content:'';position:absolute;inset:-14px}
+.placa-seg .user-tab{padding:9px 16px;font-size:11.5px}
+.header-btn,.fullpage-header .header-btn{width:40px;height:40px;position:relative}
+.header-btn::before{content:'';position:absolute;inset:-2px}
+.prox-contas-topo button{position:relative;padding:12px 0;margin:-12px 0}
+.resumo-tudo{width:64px;height:40px;margin:2px auto -10px}
+/* A: atalhos — celular: 4 + Mais (a 2ª linha abre embaixo); computador: todos em grade 4 × 2 */
+.atalhos{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px 4px;overflow:visible;margin:16px 0 2px;padding:4px 0 6px;mask-image:none;-webkit-mask-image:none}
+.atalho{min-width:0;font-size:12px}
+.atalho.extra{display:none;order:10}
+.atalhos.aberto .atalho.extra{display:flex;animation:atalhoEntra .22s var(--mola) both}
+.atalho-mais span{background:none;border-style:dashed}
+.atalhos.aberto .atalho-mais span{background:var(--graf);border:1px solid var(--graf);color:var(--latao)}
+@keyframes atalhoEntra{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (min-width:1024px){
+  .atalhos{grid-template-columns:repeat(auto-fit,minmax(78px,1fr))}   /* largo: os 8 numa linha; estreito: quebra em 2 */
+  .atalho.extra{display:flex;order:0}
+  .atalho-mais{display:none}
+}
+@media (prefers-reduced-motion:reduce){ .atalhos.aberto .atalho.extra{animation:none} }
+/* E: Extrato vazio com caminho */
+.ext-vazio{display:flex;flex-direction:column;align-items:center;gap:6px;margin:18px 0;padding:26px 16px;border:1px dashed var(--fio);border-radius:16px;text-align:center;color:var(--latao)}
+.ext-vazio p{margin:0 0 8px;font-size:14px;color:var(--text-dim)}
+.ext-vazio-acoes{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.ext-vazio-acoes .btn{min-height:44px;padding:10px 18px}
+/* F1: aviso do sino mostra o que tocar faz */
+.sino-quando{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.sino-acao{font-style:normal;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;background:var(--graf);color:var(--graf-tx);white-space:nowrap}
+/* G: Louvor no computador — a música aberta marcada na lista e, sem música aberta, o próximo culto à direita */
+.lv-painel-vazio{display:none}
+@media(min-width:1100px){
+  .lv-card.sel{background:var(--graf);border-radius:12px;padding-left:10px;padding-right:10px}
+  .lv-card.sel .lv-card-titulo{color:var(--graf-tx)}
+  .lv-card.sel .lv-card-meta{color:var(--graf-dim)}
+  body:has(#aba-louvor.active):not(:has(.fullpage.active)) .lv-painel-vazio{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;position:fixed;left:calc(var(--sidebar-w) + 380px);right:0;top:var(--header-h,64px);bottom:0;padding:48px 40px;overflow-y:auto;border-left:1px solid var(--line)}
+  .lpv-placa{width:100%;max-width:640px;padding:22px 24px;border-radius:20px;background:var(--graf);color:var(--graf-tx)}
+  .lpv-quando{margin:6px 0 14px;font-size:14px;color:var(--graf-dim)}
+  .lpv-lista{display:flex;flex-direction:column}
+  .lpv-item{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:14px;align-items:center;width:100%;padding:12px 6px;border:0;border-top:1px solid var(--graf-line);border-radius:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background var(--dur) var(--ease)}
+  .lpv-item:hover{background:rgba(255,255,255,.04)}
+  .lpv-item i{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--latao);color:var(--latao);font-style:normal;font-size:13px}
+  .lpv-item i.pronta{border-color:#7fc79a;color:#9fd3b2}
+  .lpv-item span{min-width:0;font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lpv-item small{display:block;margin-top:2px;font-size:12.5px;font-weight:400;color:var(--graf-dim);overflow:hidden;text-overflow:ellipsis}
+  .lpv-item em{font-style:normal;font-weight:600;font-size:15px;color:var(--latao)}
+  .lpv-placa .lpv-dica{color:var(--graf-dim)}
+  .lpv-dica{margin:0;font-size:13.5px;color:var(--text-faint)}
+}
