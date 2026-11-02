@@ -3052,3 +3052,9 @@ body{font-weight:400;letter-spacing:.005em}
 
 /* número da igreja no WhatsApp (v16.8) */
 .drive-zap-num{display:block;width:100%;max-width:260px;margin:8px auto 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;font-size:14px;text-align:center}
+
+/* slides novos para música só com o PDF do Drive (v16.9) */
+.slides-novo{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-top:1px solid var(--fio)}
+.slides-novo small{color:var(--text-dim);font-size:12px}
+.slides-novo textarea{width:100%;font:inherit;font-size:14px;line-height:1.45;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;resize:vertical}
+.drive-criar-slides{margin-top:10px}

@@ -272,7 +272,7 @@ async function driveBaixarSlide(f){
   return { nome: google ? f.name + ".pptx" : f.name, blob: await r.blob() };
 }
 async function driveEnviarLouvores(louvores){
-  driveSlidesZap = []; const slidesBaixar = [];
+  driveSlidesZap = []; driveSemSlide = []; const slidesBaixar = [];
   /* 1. arquivos novos (as músicas só com o arquivo do Drive não geram nada: o arquivo delas é movido no passo 4) */
   const soArquivo = louvores.filter(driveSoArquivo), gerar = louvores.filter(l=>!driveSoArquivo(l));
   if(gerar.length) driveLog(`Gerando ${gerar.length} PDF${gerar.length > 1 ? 's' : ''} e slides…`);
@@ -282,6 +282,7 @@ async function driveEnviarLouvores(louvores){
   /* 2. pastas */
   driveLog('Achando as pastas…');
   const base = await drivePastasBase();
+  drivePastaSlide = base.slide;
   const cachePastas = {};
   const pastaCategoria = async (pai, nome)=>(cachePastas[pai + nome] = cachePastas[pai + nome] || await drivePasta(nome, pai, true));
   /* 3. arquiva os soltos que não são das músicas desta data */
@@ -302,11 +303,15 @@ async function driveEnviarLouvores(louvores){
   /* 4. envia os da data (o arquivo antigo da mesma música é substituído) */
   for(const x of novos) await driveEnviarArquivo(x, base);
   for(const x of novos) if(x.tipo === "slide") driveSlidesZap.push({ nome: x.nome, blob: x.blob });
-  for(const l of soArquivo){ await driveMoverOriginal(l, base); if(driveSlideAchado.has(l.id)) slidesBaixar.push(driveSlideAchado.get(l.id)); }
+  for(const l of soArquivo){ driveSlideAchado.delete(l.id); await driveMoverOriginal(l, base); if(driveSlideAchado.has(l.id)) slidesBaixar.push(driveSlideAchado.get(l.id)); else driveSemSlide.push(l); }
   for(const f of slidesBaixar){ try{ driveSlidesZap.push(await driveBaixarSlide(f)); }catch(e){ driveLog("Não consegui baixar o slide " + f.name + " para o WhatsApp", "erro"); } }
   if(driveSlidesZap.length) driveLog(driveSlidesZap.length + " slide" + (driveSlidesZap.length > 1 ? "s" : "") + " pronto" + (driveSlidesZap.length > 1 ? "s" : "") + " para o WhatsApp", "ok");
   louvores.forEach(l=>{ delete l.driveDesatualizado; });
   persist();
+  if(driveSemSlide.length){
+    const el = document.getElementById('driveLog');
+    if(el) el.insertAdjacentHTML('beforeend', `<button type="button" class="btn btn-block drive-criar-slides" onclick="driveCriarSlidesAbrir()">Criar slide de ${driveSemSlide.length} música${driveSemSlide.length > 1 ? 's' : ''} sem slide</button>`);
+  }
 }
 
 /* ---------- uma música só (botões dentro da música) ---------- */
@@ -450,4 +455,67 @@ async function driveUsarPdf(id){
       lvImportarNoAtual({ ...ev, semConfirmar: true, novo: true });
     }
   }catch(e){ showToast('Não consegui baixar: ' + (e && e.message || e)); }
+}
+
+/* ---------- slide para música que só tem o PDF no Drive (v16.9) ----------
+   Lê a letra do PDF do jeito fiel (sem reorganizar), mostra os slides para conferir/corrigir e só cria
+   depois do "Criar" — nada sobe sem o Davi ver. Na caixa: cada slide separado por uma linha em branco. */
+let driveSemSlide = [], drivePastaSlide = null;
+const driveNada = new Proxy(function(){}, { get: ()=>()=>{} });   // "status" mudo para a leitura do PDF
+function driveSlidesTextoDe(conteudo){
+  return lvParseContent(conteudo).slides.map(s=>s.lines.join('\n').trim()).filter(Boolean).join('\n\n');
+}
+async function driveCriarSlidesAbrir(){
+  let ov = document.getElementById('modalSlidesNovos');
+  if(!ov){
+    ov = document.createElement('div'); ov.className = 'modal-overlay'; ov.id = 'modalSlidesNovos';
+    ov.innerHTML = `<div class="modal modal-alto"><div class="modal-header"><h3>Conferir os slides</h3></div>
+      <div class="drive-log" id="slidesNovosLista"></div>
+      <div class="modal-actions"><button class="btn" onclick="closeModal('modalSlidesNovos')">Cancelar</button><button class="btn btn-primary" id="slidesNovosCriar" onclick="driveCriarSlidesConfirmar()" disabled>Criar slides</button></div></div>`;
+    document.body.appendChild(ov);
+  }
+  const lista = document.getElementById('slidesNovosLista');
+  lista.innerHTML = '<div class="drive-linha">Lendo a letra dos PDFs…</div>';
+  document.getElementById('slidesNovosCriar').disabled = true;
+  ov.classList.add('active');
+  const itens = [];
+  for(const l of driveSemSlide){
+    let texto = '', erro = '';
+    try{
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${l.origem.id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
+      if(!res.ok) throw new Error('Drive ' + res.status);
+      const file = new File([await res.blob()], l.origem.nome || 'cifra.pdf', { type:'application/pdf' });
+      const antes = lviModoFiel; lviModoFiel = true;
+      try{ texto = driveSlidesTextoDe((await lviImportar(file, driveNada)).conteudo); } finally { lviModoFiel = antes; }
+      if(!texto) erro = 'não achei a letra no PDF';
+    }catch(e){ erro = (e && e.message) || 'erro'; }
+    itens.push({ l, texto, erro });
+  }
+  window.driveSlidesItens = itens;
+  lista.innerHTML = itens.map((x, i)=>`<div class="slides-novo">
+    <b>${lvEsc([x.l.artista, x.l.titulo].filter(Boolean).join(' - '))}</b>
+    ${x.erro ? `<div class="drive-linha erro">Não deu para ler: ${lvEsc(x.erro)}</div>` : `<small>${x.texto.split('\n\n').length} slides · confira a letra; linha em branco = próximo slide</small>
+    <textarea id="slidesNovo${i}" rows="10">${lvEsc(x.texto)}</textarea>`}</div>`).join('');
+  document.getElementById('slidesNovosCriar').disabled = !itens.some(x=>x.texto);
+}
+async function driveCriarSlidesConfirmar(){
+  const btn = document.getElementById('slidesNovosCriar'); btn.disabled = true; btn.textContent = 'Criando…';
+  let feitos = 0;
+  for(const [i, x] of (window.driveSlidesItens || []).entries()){
+    const ta = document.getElementById('slidesNovo' + i); if(!ta || !ta.value.trim()) continue;
+    const conteudo = ta.value.trim().split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean).join('\n-\n');
+    try{
+      const sl = await lvMontarSlides({ ...x.l, conteudo });
+      if(!sl) throw new Error('gerador de slides');
+      const blob = await sl.pres.write({ outputType:'blob' });
+      const r = await driveSubir(blob, sl.nome, DRIVE_PPTX_MIME, drivePastaSlide);
+      x.l.drive = { ...(x.l.drive || {}), slide: r.id };
+      driveSlidesZap.push({ nome: sl.nome, blob });
+      driveLog(`Slide criado: ${sl.nome}`, 'ok'); feitos++;
+    }catch(e){ driveLog(`Não consegui criar o slide de "${x.l.titulo}": ${(e && e.message) || 'erro'}`, 'erro'); }
+  }
+  persist();
+  closeModal('modalSlidesNovos'); btn.textContent = 'Criar slides';
+  document.querySelector('.drive-criar-slides')?.remove();
+  showToast(feitos ? `${feitos} slide${feitos > 1 ? 's' : ''} criado${feitos > 1 ? 's' : ''} na pasta Slide` : 'Nenhum slide criado');
 }

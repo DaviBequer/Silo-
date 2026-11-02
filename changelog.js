@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v16.9', itens: [
+    'Drive: música só com o PDF e sem slide ganha o botão Criar slide; o app lê a letra do PDF, mostra os slides para conferir e corrigir e só cria na pasta Slide depois do seu ok (vão junto no WhatsApp)'
+  ] },
   { versao: 'v16.8', itens: [
     'Culto: campo com o número da igreja ao lado do WhatsApp; no computador os slides são baixados e o WhatsApp instalado abre direto na conversa com o texto; no celular slides e texto vão juntos'
   ] },
