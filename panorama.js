@@ -788,8 +788,6 @@ async function finalizarContasPagar(){
 }
 function cpAtualizarTudo(){
   persist();
-  renderPlanner();
-  renderPanorama();   // redesenha também esta tela (ela está aberta)
 }
 function cpToggleSalario(u, mKey){
   setSalarioRecebido(u, mKey, !salarioRecebidoNoMes(u, mKey));
@@ -1002,15 +1000,11 @@ function confirmarEArquivarConta(paidKey){
   if(!state.contasArquivadas) state.contasArquivadas = {};
   state.contasArquivadas[paidKey] = true;
   persist();
-  renderPlanner();
-  renderPanorama();
   if(navigator.vibrate) navigator.vibrate([10,30,10]);
 }
 function togglePaid(paidKey){
   marcarContaPaga(paidKey, !state.paid[paidKey]);
   persist();
-  renderPlanner();   // listas do Dashboard (paga/aberta e o resumo de cada bloco)
-  renderPanorama();
 }
 
 function getGastoItemRef(user, cat, id){
@@ -1087,8 +1081,6 @@ function salvarPagamentoConta(){
   }
   persist();
   closeEditarConta();
-  renderPanorama();
-  renderPlanner();
   showToast('Conta atualizada');
 }
 
@@ -1214,7 +1206,7 @@ function abrirLancamentos(mKey){
 function excluirLancamento(id, mKey){
   comDesfazer('Compra excluída (o saldo do banco não muda)', ()=>{
     state.lancamentos = (state.lancamentos||[]).filter(la=>la.id !== id);
-    persist(); renderPanorama(); abrirLancamentos(mKey);
+    persist(); abrirLancamentos(mKey);
   }, ()=>{ if(document.getElementById('modalResumoDetalhe').dataset.modo === 'lancamentos') abrirLancamentos(mKey); });
 }
 /* ================= EXTRATO (v14.8): cada compra que entrou no app, pela DATA DA COMPRA (a que foi dita no Assistente),

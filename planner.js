@@ -1024,7 +1024,6 @@ function confirmarAjusteFatura(){
   persist();
   closeModal('modalAjusteFatura');
   renderCartaoTrackerList();
-  renderPanorama();
   showToast('Ajuste de '+(dif>0?'+':'−')+fmtMoney(Math.abs(dif))+' lançado em '+monthLabel(mKey));
 }
 function toggleQuitadasCartao(cartaoId){
@@ -1245,7 +1244,6 @@ function toggleCompraPago(id){
     item.pago = !item.pago;
     persist();
     renderCartaoTrackerList();
-    renderPanorama();
   }
 }
 const CREDOVISTA_CATEGORIAS = ['Alimentação','Transporte','Farmácia','Lazer','Mercado','Outros'];
@@ -1305,7 +1303,6 @@ function salvarCredoVista(){
   persist();
   closeModal('modalCredoVista');
   renderCartaoTrackerList();
-  renderPanorama();
   showToast('Crédito salvo');
 }
 /* Total de crédito à vista por categoria, num mês de referência (fallback 'Outros'/mês atual pra itens antigos) */
@@ -1327,7 +1324,6 @@ function excluirCredoVista(cartaoId, credoId){
     if(cartao) cartao.credoVista = (cartao.credoVista||[]).filter(cv=>cv.id!==credoId);
     persist();
     renderCartaoTrackerList();
-    renderPanorama();
   });
 }
 
@@ -1441,7 +1437,6 @@ function excluirCompraTracker(id){
     state.comprasTracker = (state.comprasTracker||[]).filter(i=>i.id!==id);
     persist();
     renderCartaoTrackerList();
-    renderPanorama();
   });
 }
 

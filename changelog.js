@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.4', itens: [
+    'Finanças se redesenha sozinha depois de qualquer mudança (uma vez só, mesmo com várias mudanças seguidas) e espera você sair do campo antes de redesenhar'
+  ] },
   { versao: 'v17.3', itens: [
     'Louvor: um lugar só sabe ler a cifra (parte, acorde, letra e os marcadores) e todas as telas usam ele: editor, medley, Comparar, slides, Culto e Cifra Club'
   ] },

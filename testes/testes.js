@@ -96,6 +96,12 @@ async function rodarTestes(){
     igual('vezes: Repete logo depois vira 2x', lvNormalizarVezes('[Refrão]\nL1\n--\n[Repete - Refrão]\n--\n[Ponte]\nP\n--\n[Repete - Refrão 2x]'), '[Refrão | 2x]\nL1\n--\n[Ponte]\nP\n--\n[Repete - Refrão | 2x]');
     igual('vezes: organizar junta bloco repetido e "(3x)"', lviBlocosParaTexto(lviMontaBlocos(lviTextoParaLinhas('[Refrão]\nsanto\ndigno\nsanto\ndigno\n\n[Ponte]\nglória\n(3x)')).secoes), '[Refrão | 2x]\nSanto\nDigno\n--\n[Ponte | 3x]\nGlória');
     igual('vezes: slide sabe o 2x (e o Repete usa o dele)', lvParseContent('[Refrão | 2x]\nL1\n--\n[Ponte]\nP\n--\n[Repete - Refrão]').slides.map(s=>s.vezes), [2,1,1]);
+    /* salvar e redesenhar (v17.4): várias mudanças seguidas = um aviso só, depois da ação */
+    let avisos = 0; aoMudarEstado(()=>{ avisos++; });
+    avisarMudanca(); avisarMudanca(); avisarMudanca();
+    const avisosNaHora = avisos; await Promise.resolve(); await Promise.resolve();
+    igual('salvar: 3 mudanças seguidas → 1 redesenho, depois da ação', [avisosNaHora, avisos], [0, 1]);
+    ouvintesEstado.pop();
     /* module Cifra (v17.3): um lugar só sabe o que é cada linha */
     const cifraT = '[Intro]\nG  D/F#  Em\n\n[Refrão | 2x]\n   C        G\nSanto é o Senhor\n-\nDigno de louvor\n--\n---';
     igual('cifra: tipo de cada linha', cifraT.split('\n').map(lvTipoLinha), ['parte','acorde','vazia','parte','acorde','letra','marca','letra','marca','marca']);

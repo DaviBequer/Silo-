@@ -235,7 +235,6 @@ function vozConfirmarCartao(){
   const total = itens.reduce((s,i)=>s + Number(i.valor), 0);
   persist();
   vozFechar();
-  renderPlanner(); renderPanorama();
   showToast(`${itens.length} ${itens.length === 1 ? 'compra' : 'compras'} no ${c.nome} · ${fmtMoney(total)} na fatura de ${monthLabel(mKey)}`);
 }
 function vozConfirmar(){
@@ -254,7 +253,6 @@ function vozConfirmar(){
   if(pl.acao === 'compra') lancarPix({ descricao: pl.descricao, valor: pl.valor, categoria: pl.categoria, banco: banco ? banco.nome : '' });
   persist();
   vozFechar();
-  renderPlanner(); renderPanorama();
   showToast(`${pl.acao==='recebimento'?'+':'−'} ${fmtMoney(pl.valor)}${banco?' · '+banco.nome:''} · saldo ${fmtMoney(us.saldoAtual)}`);
 }
 

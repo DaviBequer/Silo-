@@ -136,13 +136,49 @@ function atualizarStatusSalvo(estado, detalhe){
   }
 }
 
+/* ================= SALVAR E REDESENHAR (o module) =================
+   Quem muda o state chama só persist(): ele grava (meio segundo depois) e avisa as telas inscritas com aoMudarEstado(fn).
+   Os avisos de várias mudanças seguidas viram UM redesenho, logo depois da ação (microtask, antes da tela pintar).
+   Inscritos: Finanças (renderPlanner + renderPanorama, só com a aba aberta: ao abrir a aba ela redesenha) e o sino. */
+const ouvintesEstado = [];
+let redesenhoMarcado = false, redesenhando = false;   // persist() dentro de um redesenho não pede outro (sem laço)
+function aoMudarEstado(fn){ ouvintesEstado.push(fn); }
+function avisarMudanca(){
+  if(redesenhoMarcado || redesenhando) return;
+  redesenhoMarcado = true;
+  queueMicrotask(()=>{
+    redesenhoMarcado = false;
+    redesenhando = true;
+    ouvintesEstado.forEach(fn=>{ try{ fn(); }catch(e){ console.error(e); } });
+    redesenhando = false;
+  });
+}
+/* Finanças: com um campo de texto em uso, espera sair dele (redesenhar no meio apagaria o que está sendo digitado) */
+let financasPendente = false;
+function digitandoAgora(){
+  const el = document.activeElement;
+  return !!el && (el.tagName === 'TEXTAREA' || el.isContentEditable || (el.tagName === 'INPUT' && !['checkbox','radio','button','submit','range','color','file'].includes(el.type)));
+}
+function redesenharFinancas(){
+  if(!document.getElementById('aba-planner')?.classList.contains('active')){ financasPendente = false; return; }   // ao abrir a aba ela redesenha
+  if(digitandoAgora()){
+    if(!financasPendente) setTimeout(function confere(){ if(!financasPendente) return; if(digitandoAgora()) setTimeout(confere, 500); else redesenharFinancas(); }, 500);
+    financasPendente = true;
+    return;
+  }
+  financasPendente = false;
+  renderPlanner(); renderPanorama();
+}
+aoMudarEstado(redesenharFinancas);
+document.addEventListener('focusout', ()=>{ if(financasPendente) setTimeout(()=>{ if(financasPendente && !digitandoAgora()) redesenharFinancas(); }, 0); });
+aoMudarEstado(()=>{ if(typeof atualizarSino==='function') atualizarSino(); });   // marcou o ponto, vendeu...: o sino acompanha
 function persist(){
+  avisarMudanca();
   if(!remoteReady){ atualizarStatusSalvo('offline'); return; }   // evita sobrescrever a nuvem com estado vazio
   /* resumo que o serviço de notificações lê (só se alguém ativou as notificações) */
   if((state.pushInscricoes||[]).length && typeof calcularAvisosVendas==='function'){
     try{ state.avisos = { vendas: calcularAvisosVendas(), t: Date.now() }; }catch(e){}
   }
-  if(typeof atualizarSino==='function') atualizarSino();   // marcou o ponto, vendeu...: o sino acompanha
   salvarPendente = true;
   espelharLocal();
   clearTimeout(persistTimer);
@@ -920,7 +956,6 @@ function toggleExtraRecebido(id){
   persist();
   renderRendaExtraLista();
   renderRendaTable();
-  renderPanorama();
 }
 /* "Recebi": salário já está dentro do saldo em conta, então para de somar */
 function salarioRecebidoNoMes(user, mKey){ return !!(state.salarioRecebido && state.salarioRecebido[user+'_'+mKey]); }
@@ -1048,7 +1083,6 @@ function excluirExtraItem(id){
     persist();
     renderRendaExtraLista();
     renderRendaTable();
-    renderPanorama();
   }, ()=>{ if(typeof renderRendaExtraLista==='function') renderRendaExtraLista(); });
 }
 function closeRendaExtraModal(){
@@ -1171,14 +1205,14 @@ function toggleGeralMes(tipo, mKey){
   if(!cfg.meses[mKey]) cfg.meses[mKey] = {};
   if(novo === (cfg[tipo] !== false)) delete cfg.meses[mKey][tipo]; else cfg.meses[mKey][tipo] = novo;
   if(!Object.keys(cfg.meses[mKey]).length) delete cfg.meses[mKey];
-  persist(); renderPlanner(); renderPanorama();
+  persist();
 }
 /* liga/desliga em todos os meses (zera as exceções daquele tipo) */
 function toggleGeralTudo(tipo){
   const cfg = geralCfg();
   cfg[tipo] = cfg[tipo] === false;
   Object.keys(cfg.meses).forEach(m=>{ delete cfg.meses[m][tipo]; if(!Object.keys(cfg.meses[m]).length) delete cfg.meses[m]; });
-  persist(); renderPlanner(); renderPanorama();
+  persist();
   showToast((tipo==='cartao'?'Cartão':'Empréstimo')+(cfg[tipo]?' entra':' sai')+' do Geral em todos os meses');
 }
 function saldoForMonth(user, mKey){ return incomeForMonth(user,mKey) - expensesForMonth(user,mKey); }
