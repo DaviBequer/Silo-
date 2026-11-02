@@ -110,16 +110,16 @@ function fpdfConfirmar(){
     const p = /^(\d+)\s*\/\s*(\d+)$/.exec(i.parcela);
     if(p && +p[2] > 1){
       /* parcela k/n: compra parcelada que começou k-1 meses antes */
-      state.comprasTracker.push({ id:'cp'+agora+'_'+k, nome: i.descricao, descricao:'', logoUrl:null, cartaoId: cartao.id, valorTotal: Math.round(i.valor * +p[2] * 100)/100, parcelas: +p[2], mesInicio: addMonths(mKey, -(+p[1] - 1)) });
+      lancarParcelada(cartao, { nome: i.descricao, valorTotal: i.valor * +p[2], parcelas: +p[2], mesInicio: addMonths(mKey, -(+p[1] - 1)) });
     } else {
-      cartao.credoVista.push({ id:'cv'+agora+'_'+k, descricao: i.descricao, valor: i.valor, categoria: i.categoria || 'Outros', mKey, criadoEm: agora });
+      lancarVista(cartao, { descricao: i.descricao, valor: i.valor, categoria: i.categoria, mKey });
     }
     n++;
   });
   /* o que ainda não bate vira "Ajuste de fatura" (some o ajuste antigo do mês, para não somar dois) */
   cartao.credoVista = cartao.credoVista.filter(cv=>!(cv.ajuste && cv.mKey === mKey));
   const dif = Math.round((fpdf.total - faturaCartaoNoMes(cartao, mKey))*100)/100;
-  if(Math.abs(dif) >= 0.01) cartao.credoVista.push({ id:'cv'+agora+'_aj', descricao:'Ajuste de fatura (PDF)', valor: dif, categoria:'Ajuste', mKey, ajuste:true, criadoEm: agora });
+  if(Math.abs(dif) >= 0.01) lancarVista(cartao, { descricao:'Ajuste de fatura (PDF)', valor: dif, categoria:'Ajuste', mKey, ajuste:true });
   persist();
   closeModal('modalFaturaPdf');
   renderCartaoTrackerList(); renderPanorama();

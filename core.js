@@ -1205,3 +1205,42 @@ function garantirJsPDF(){
   if(!jsPdfPedido) jsPdfPedido = carregarScript(JSPDF_URLS[0]).then(()=>carregarScript(JSPDF_URLS[1])).then(()=>true).catch(()=>{ jsPdfPedido = null; return false; });
   return jsPdfPedido;
 }
+
+/* ================= LANÇAMENTOS (o module) =================
+   Toda gravação de gasto passa por aqui — Assistente, Falar, fatura em PDF, janelas do cartão, Contas do mês:
+   - lancarVista(cartao, {descricao, valor, categoria, data?, mKey?, ajuste?})   compra à vista (fatura pela data ou a aberta)
+   - lancarParcelada(cartao, {nome, valorTotal, parcelas, data?, mesInicio?})   compra parcelada (1ª parcela na fatura da data)
+   - lancarPix({descricao, valor, categoria, banco, data?, mKey?})              Pix/débito (só o registro: o saldo do banco é de quem chama)
+   - marcarContaPaga(paidKey, pago = true)                                       conta paga (o pagamento parcial sai)
+   Cada registro sai sempre no mesmo formato: id único, valor arredondado, data e criadoEm. Não salva nem redesenha. */
+let lancSeq = 0;
+function lancId(prefixo){ return prefixo + Date.now() + '_' + (lancSeq++); }
+const lancValor = v=>Math.round((Number(v)||0)*100)/100;
+function lancarVista(cartao, o){
+  if(!cartao.credoVista) cartao.credoVista = [];
+  const data = o.data || calISO(new Date());
+  const cv = { id: lancId('cv'), descricao: String(o.descricao||'').trim() || 'Crédito à vista', valor: lancValor(o.valor), categoria: o.categoria || 'Outros',
+    mKey: o.mKey || (o.data && faturaDaData(cartao, o.data)) || faturaAbertaMes(cartao), data, criadoEm: Date.now() };
+  if(o.ajuste) cv.ajuste = true;
+  cartao.credoVista.push(cv);
+  return cv;
+}
+function lancarParcelada(cartao, o){
+  if(!state.comprasTracker) state.comprasTracker = [];
+  const cp = { id: lancId('cp'), nome: String(o.nome||'').trim() || 'Compra', descricao: o.descricao || '', logoUrl: o.logoUrl || '', cartaoId: cartao.id,
+    valorTotal: lancValor(o.valorTotal), parcelas: Math.max(1, Number(o.parcelas)||1),
+    mesInicio: o.mesInicio || (o.data && faturaDaData(cartao, o.data)) || faturaAbertaMes(cartao), data: o.data || calISO(new Date()), criadoEm: Date.now() };
+  state.comprasTracker.push(cp);
+  return cp;
+}
+function lancarPix(o){
+  if(!state.lancamentos) state.lancamentos = [];
+  const la = { id: lancId('la'), mKey: o.mKey || mesFinanceiroAtual(), data: o.data || calISO(new Date()), descricao: String(o.descricao||'').trim() || 'Compra',
+    valor: lancValor(o.valor), categoria: o.categoria || 'Outros', banco: o.banco || '', usuario: o.usuario || state.currentUser };
+  state.lancamentos.push(la);
+  return la;
+}
+function marcarContaPaga(paidKey, pago = true){
+  state.paid[paidKey] = !!pago;
+  if(pago && state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
+}

@@ -1020,8 +1020,7 @@ function confirmarAjusteFatura(){
   if(Math.abs(dif) < 0.01){ closeModal('modalAjusteFatura'); showToast('A fatura já bate com o app'); return; }
   const hoje = new Date();
   const data = String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0');
-  if(!cartao.credoVista) cartao.credoVista = [];
-  cartao.credoVista.push({ id:'cv'+Date.now(), descricao:'Ajuste de fatura · '+data, valor:dif, categoria:'Ajuste', mKey, ajuste:true, criadoEm:Date.now() });
+  lancarVista(cartao, { descricao:'Ajuste de fatura · '+data, valor:dif, categoria:'Ajuste', mKey, ajuste:true });
   persist();
   closeModal('modalAjusteFatura');
   renderCartaoTrackerList();
@@ -1232,7 +1231,8 @@ function salvarCompraTracker(){
     const item = state.comprasTracker.find(i=>i.id===id);
     if(item) Object.assign(item, { nome, descricao, logoUrl, cartaoId, valorTotal, parcelas, mesInicio });
   } else {
-    state.comprasTracker.push({ id: 'cp'+Date.now(), nome, descricao, logoUrl, cartaoId, valorTotal, parcelas, mesInicio });
+    const cartaoP = (state.cartoesTracker||[]).find(c=>c.id===cartaoId) || { id: cartaoId };
+    lancarParcelada(cartaoP, { nome, descricao, logoUrl, valorTotal, parcelas, mesInicio });
   }
   persist();
   closeModal('modalCompraTracker');
@@ -1300,7 +1300,7 @@ function salvarCredoVista(){
     const item = cartao.credoVista.find(cv=>cv.id===credoId);
     if(item) Object.assign(item, { descricao, valor, categoria, mKey });
   } else {
-    cartao.credoVista.push({ id: 'cv'+Date.now(), descricao, valor, categoria, mKey });
+    lancarVista(cartao, { descricao, valor, categoria, mKey });
   }
   persist();
   closeModal('modalCredoVista');

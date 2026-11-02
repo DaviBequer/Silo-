@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.2', itens: [
+    'Gastos: Assistente, Falar, fatura em PDF, janelas do cartão e Contas do mês agora gravam compras e contas pagas do mesmo jeito (mesmo formato, data e arredondamento)'
+  ] },
   { versao: 'v17.1', itens: [
     'Cartões: tudo sobre a fatura (em qual fatura cai a compra, o que tem nela, situação e vencimento) agora segue uma regra só em todas as telas e no Assistente'
   ] },

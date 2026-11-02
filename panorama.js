@@ -998,18 +998,16 @@ function contaTapCancel(){
   clearTimeout(contaTapTimer);
 }
 function confirmarEArquivarConta(paidKey){
-  state.paid[paidKey] = true;
+  marcarContaPaga(paidKey);
   if(!state.contasArquivadas) state.contasArquivadas = {};
   state.contasArquivadas[paidKey] = true;
-  if(state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
   persist();
   renderPlanner();
   renderPanorama();
   if(navigator.vibrate) navigator.vibrate([10,30,10]);
 }
 function togglePaid(paidKey){
-  state.paid[paidKey] = !state.paid[paidKey];
-  if(state.paid[paidKey] && state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
+  marcarContaPaga(paidKey, !state.paid[paidKey]);
   persist();
   renderPlanner();   // listas do Dashboard (paga/aberta e o resumo de cada bloco)
   renderPanorama();
@@ -1079,8 +1077,7 @@ function salvarPagamentoConta(){
 
   if(!state.pagamentosParciais) state.pagamentosParciais = {};
   if(pagaIntegral || valorPago >= valorTotal){
-    state.paid[paidKey] = true;
-    delete state.pagamentosParciais[paidKey];
+    marcarContaPaga(paidKey);
   } else if(valorPago > 0){
     state.paid[paidKey] = false;
     state.pagamentosParciais[paidKey] = valorPago;

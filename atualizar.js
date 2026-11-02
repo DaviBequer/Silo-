@@ -887,28 +887,24 @@ async function atzGravar(){
     const mexe = (id, v)=>{ const b = banco(id); if(b && !comSaldo.has(id)) b.valor = Math.round(((Number(b.valor) || 0) + v) * 100) / 100; };
     if(!state.lancamentos) state.lancamentos = [];
     if(!state.comprasTracker) state.comprasTracker = [];
-    itens.forEach((i, k)=>{
-      const id = agora + '_' + k;
+    itens.forEach(i=>{
+      const c = (state.cartoesTracker || []).find(x=>x.id === i.cartaoId);
       if(i.tipo === 'vista'){
-        const c = (state.cartoesTracker || []).find(x=>x.id === i.cartaoId); if(!c) return;
-        if(!c.credoVista) c.credoVista = [];
-        c.credoVista.push({ id:'cv' + id, descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria || 'Outros', mKey: atzFaturaDoItem(c, i), data: i.data || hoje, criadoEm: agora });
+        if(c) lancarVista(c, { descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria, mKey: atzFaturaDoItem(c, i), data: i.data || hoje });
       } else if(i.tipo === 'parcelada'){
-        const c = (state.cartoesTracker || []).find(x=>x.id === i.cartaoId); if(!c) return;
-        state.comprasTracker.push({ id:'cp' + id, nome: i.descricao || 'Compra', descricao:'', logoUrl:'', cartaoId: c.id, valorTotal: i.valor, parcelas: i.parcelas, mesInicio: atzFaturaDoItem(c, i), data: i.data || hoje, criadoEm: agora });
+        if(c) lancarParcelada(c, { nome: i.descricao, valorTotal: i.valor, parcelas: i.parcelas, mesInicio: atzFaturaDoItem(c, i), data: i.data || hoje });
       } else if(i.tipo === 'pix'){
         const b = banco(i.bancoId);
-        state.lancamentos.push({ id:'la' + id, mKey, data: i.data || hoje, descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria || 'Outros', banco: b ? b.nome : '', usuario: state.currentUser });
+        lancarPix({ mKey, data: i.data || hoje, descricao: i.descricao, valor: i.valor, categoria: i.categoria, banco: b ? b.nome : '' });
         mexe(i.bancoId, -i.valor);
       } else if(i.tipo === 'recebi'){
         mexe(i.bancoId, i.valor);
       } else if(i.tipo === 'conta'){
-        state.paid[i.conta] = true;
-        if(state.pagamentosParciais) delete state.pagamentosParciais[i.conta];
+        marcarContaPaga(i.conta);
         if(i.bancoId) mexe(i.bancoId, -i.valor);
       }
     });
-    pagas.forEach(p=>{ state.paid[p.key] = true; if(state.pagamentosParciais) delete state.pagamentosParciais[p.key]; });
+    pagas.forEach(p=>marcarContaPaga(p.key));
     /* saldo confirmado: vale o do banco (o "não identificado" só entra se a pessoa pediu: vira item Pix na lista) */
     conf.bancos.filter(x=>x.informado !== null).forEach(x=>{ const b = banco(x.b.id); if(b) b.valor = x.informado; });
     if(bancos.length) us.saldoAtual = totalBancos(bancos);

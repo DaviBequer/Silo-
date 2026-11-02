@@ -238,6 +238,20 @@ async function rodarTestes(){
     state.faturasCartao = { ['cf_' + M]: { pago: 50 } };
     igual('fatura: pagou uma parte', (s=>[s.st, s.resta])(faturaStatus(cF, M, diaM(8))), ['parcial', 170]);
     state.faturasCartao = {};
+    /* module Lançamentos (v17.2): toda gravação de gasto sai no mesmo formato */
+    state.comprasTracker = [];
+    const cvA = lancarVista(cF, { descricao:'Pão', valor:10.006, categoria:'Mercado', data:'2026-10-05' }), cvB = lancarVista(cF, { valor:5, data:'2026-10-06' });
+    igual('lançar à vista: fatura pela data, nome padrão, valor arredondado', [cvA.mKey, cvB.mKey, cvB.descricao, cvA.valor, cvA.id !== cvB.id], ['2026-10', '2026-11', 'Crédito à vista', 10.01, true]);
+    const cpA = lancarParcelada(cF, { nome:'Sofá', valorTotal:1200, parcelas:4, data:'2026-10-06' });
+    igual('lançar parcelada: 1ª parcela na fatura da data', [cpA.mesInicio, cpA.cartaoId, compraParcelaNoMes(cpA, '2026-11').valor], ['2026-11', 'cf', 300]);
+    const laA = lancarPix({ descricao:'Feira', valor:30, banco:'Nubank', mKey:M });
+    igual('lançar Pix: registro com usuário e banco', [laA.mKey, laA.usuario, laA.banco, laA.categoria], [M, state.currentUser, 'Nubank', 'Outros']);
+    state.pagamentosParciais = { ['x_k']: 20 };
+    marcarContaPaga('x_k');
+    igual('pagar conta: paga e tira o pagamento parcial', [state.paid['x_k'], 'x_k' in state.pagamentosParciais], [true, false]);
+    marcarContaPaga('x_k', false);
+    igual('desmarcar conta paga', state.paid['x_k'], false);
+    state.lancamentos = state.lancamentos.filter(l=>l !== laA); cF.credoVista = cF.credoVista.filter(cv=>cv !== cvA && cv !== cvB);
     state.comprasTracker = []; state.cartoesTracker.pop();
 
     /* ---------- proteção contra perda ---------- */

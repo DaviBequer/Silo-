@@ -230,9 +230,8 @@ function vozConfirmarCartao(){
   if(!c){ showToast('Escolha o cartão'); return; }
   const itens = pl.itens.filter(i=>Number(i.valor) > 0);
   if(!itens.length){ showToast('Diga ou digite o valor'); return; }
-  const mKey = faturaAbertaMes(c), agora = Date.now();
-  if(!c.credoVista) c.credoVista = [];
-  itens.forEach((i, n)=>c.credoVista.push({ id:'cv'+agora+'_'+n, descricao: String(i.descricao||'').trim() || 'Crédito à vista', valor: Math.round(Number(i.valor)*100)/100, categoria: i.categoria || 'Outros', mKey, criadoEm: agora }));
+  const mKey = faturaAbertaMes(c);
+  itens.forEach(i=>lancarVista(c, { descricao: i.descricao, valor: i.valor, categoria: i.categoria, mKey }));
   const total = itens.reduce((s,i)=>s + Number(i.valor), 0);
   persist();
   vozFechar();
@@ -250,12 +249,9 @@ function vozConfirmar(){
   const banco = bancos.find(b=>b.id === pl.bancoId);
   if(banco){ banco.valor = Math.round(((Number(banco.valor)||0) + sinal*pl.valor)*100)/100; us.saldoAtual = totalBancos(bancos); }
   else us.saldoAtual = Math.round(((us.saldoAtual||0) + sinal*pl.valor)*100)/100;
-  if(pl.acao === 'pagar_conta'){ state.paid[pl.conta] = true; if(state.pagamentosParciais) delete state.pagamentosParciais[pl.conta]; }
+  if(pl.acao === 'pagar_conta') marcarContaPaga(pl.conta);
   /* compra no Pix/débito fica registrada (com categoria) para aparecer em "Para onde vai o dinheiro" */
-  if(pl.acao === 'compra'){
-    if(!state.lancamentos) state.lancamentos = [];
-    state.lancamentos.push({ id:'la'+Date.now(), mKey: mesFinanceiroAtual(), data: calISO(new Date()), descricao: String(pl.descricao||'').trim() || 'Compra', valor: pl.valor, categoria: pl.categoria || 'Outros', banco: banco ? banco.nome : '', usuario: state.currentUser });
-  }
+  if(pl.acao === 'compra') lancarPix({ descricao: pl.descricao, valor: pl.valor, categoria: pl.categoria, banco: banco ? banco.nome : '' });
   persist();
   vozFechar();
   renderPlanner(); renderPanorama();
