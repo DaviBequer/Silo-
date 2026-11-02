@@ -3058,3 +3058,9 @@ body{font-weight:400;letter-spacing:.005em}
 .slides-novo small{color:var(--text-dim);font-size:12px}
 .slides-novo textarea{width:100%;font:inherit;font-size:14px;line-height:1.45;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;resize:vertical}
 .drive-criar-slides{margin-top:10px}
+
+/* v17.5: carteira mostra TODOS os bancos (antes rolava para o lado e, no computador, cortava os da esquerda sem dar para rolar) */
+.carteira{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin:14px 0 0;padding-right:0;overflow:visible;scroll-snap-type:none}
+.carteira .cc,.fin-placa .carteira .cc{flex:none;min-width:0;max-width:none;width:100%}
+.carteira .cc-vazio{grid-column:1 / -1}
+@media (min-width:1024px){ .fin-placa > .carteira{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));justify-content:stretch;align-self:center} }

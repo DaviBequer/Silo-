@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.5', itens: [
+    'Finanças: os cartões dos bancos no saldo em conta aparecem todos (em grade), sem cortar nenhum no computador nem no celular'
+  ] },
   { versao: 'v17.4', itens: [
     'Finanças se redesenha sozinha depois de qualquer mudança (uma vez só, mesmo com várias mudanças seguidas) e espera você sair do campo antes de redesenhar'
   ] },
