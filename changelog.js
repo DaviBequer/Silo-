@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.0', itens: [
+    'Finanças: as contas do mês agora seguem uma regra só em todas as telas (Contas do mês, blocos, Para onde vai, seções, Falar)',
+    'Conta arquivada não aparece mais no painel nem em Contas do mês'
+  ] },
   { versao: 'v16.9', itens: [
     'Drive: música só com o PDF e sem slide ganha o botão Criar slide; o app lê a letra do PDF, mostra os slides para conferir e corrigir e só cria na pasta Slide depois do seu ok (vão junto no WhatsApp)'
   ] },

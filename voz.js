@@ -39,10 +39,7 @@ function vozOuvir(){
 /* contas do mês ainda abertas (para "paguei a ...") */
 function vozContasAbertas(){
   const mKey = mesFinanceiroAtual(), u = state.currentUser;
-  return getContasDoMes(mKey, u).map(it=>{
-    const key = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
-    return { key, desc: it.desc || 'Conta', valor: state.paid[key] ? 0 : restanteConta(key, Number(it.valor)||0) };
-  }).filter(c=>!state.paid[c.key] && c.valor > 0.004);
+  return getContasDoMes(mKey, u).filter(it=>!it.pago && it.restante > 0.004).map(it=>({ key: it.paidKey, desc: it.desc || 'Conta', valor: it.restante }));
 }
 function vozSemAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 /* sem IA: número + banco citado + palavras-chave */

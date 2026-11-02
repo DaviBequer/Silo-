@@ -1100,48 +1100,41 @@ function contaUsadaNoCartao(paidKey){
   });
   return Math.round(usado*100)/100;
 }
-/* cada gasto (Moradia, Assinaturas, Fixos, Contas futuras) que vale no mês, com quanto falta pagar.
-   Mesma regra de expensesForMonth: é a lista que soma na linha "Gastos" do Fluxo Mensal */
+/* CONTAS DO MÊS — a única regra de "quais contas valem neste mês" (Moradia, Assinaturas, Fixos, Contas futuras).
+   Tudo que mostra ou soma contas usa esta lista: Fluxo Mensal, Contas do mês, blocos, "Para onde vai", seções, Falar.
+   Fica de fora: conta arquivada e conta que ainda não começou (mesInicio). Cada item já vem com pago e quanto falta. */
 function gastosDoMes(user, mKey){
   const ex = state.users[user].expenses, out = [];
+  const conta = (cat, item, valor, extra)=>{
+    const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id, pago = !!state.paid[paidKey];
+    return Object.assign({ cat, user, id:item.id, paidKey, desc:item.desc||'Conta', logoUrl:item.logoUrl||null, dia:item.dia, mesInicio:item.mesInicio||null,
+      valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) }, extra);
+  };
   ['moradia','assinatura','fixo'].forEach(cat=>{
     ex[cat].forEach(item=>{
       if(item.arquivado) return;
       if(item.mesInicio && mKey < item.mesInicio) return;
-      const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id, valor = Number(item.valor)||0;
-      const pago = !!state.paid[paidKey];
-      out.push({ cat, paidKey, desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
+      out.push(conta(cat, item, Number(item.valor)||0, { tipo:item.tipo||'fixa', essencial:item.essencial!==false, historico:item.historico||[] }));
     });
   });
   ex.futuro.forEach(item=>{
+    if(item.arquivado) return;
     const valor = futuroValorNoMes(item, mKey);
     if(valor<=0) return;
-    const paidKey = mKey+'_'+user+'_futuro_'+item.id;
-    const pago = !!state.paid[paidKey];
-    out.push({ cat:'futuro', paidKey, desc:item.desc||'Conta', logoUrl:item.logoUrl, dia:item.dia, valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) });
+    out.push(conta('futuro', item, valor, { parcela: futuroParcelaNoMes(item, mKey) }));
   });
   return out;
 }
+/* parcela k de n de uma conta futura neste mês (null se não é parcelada) */
+function futuroParcelaNoMes(item, mKey){
+  const n = item.parcelas || 1;
+  if(item.recorrente || n <= 1 || !item.mesInicio) return null;
+  for(let i = 0; i < n; i++) if(addMonths(item.mesInicio, i) === mKey) return { atual: i + 1, total: n };
+  return null;
+}
 function gastosRestantesNoMes(user, mKey){ return gastosDoMes(user, mKey).reduce((s,g)=>s+g.restante, 0); }
 function expensesForMonth(user, mKey){
-  const ex = state.users[user].expenses;
-  let total = 0;
-  ['moradia','assinatura','fixo'].forEach(cat=>{
-    ex[cat].forEach(item=>{
-      if(item.arquivado) return;
-      if(item.mesInicio && mKey < item.mesInicio) return; // ainda não começou a contar
-      const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
-      if(state.paid[paidKey]) return; // já pago neste mês, não conta mais
-      total += restanteConta(paidKey, Number(item.valor)||0);
-    });
-  });
-  ex.futuro.forEach(item=>{
-    const v = futuroValorNoMes(item, mKey);
-    if(v<=0) return;
-    const paidKey = mKey+'_'+user+'_futuro_'+item.id;
-    if(state.paid[paidKey]) return;
-    total += restanteConta(paidKey, v);
-  });
+  let total = gastosRestantesNoMes(user, mKey);   // o que falta pagar das contas do mês
   total += dizimoForMonth(user, mKey);
   total += extrasGeralNoMes(user, mKey).total;
   return total;

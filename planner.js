@@ -438,12 +438,7 @@ function renderResumoSecaoGasto(cat){
   const u = state.currentUser, mKey = mesFinanceiroAtual();
   const contas = getContasDoMes(mKey, u).filter(it=>it.cat===cat);
   let total = 0, falta = 0;
-  contas.forEach(it=>{
-    const v = Number(it.valor)||0;
-    const pk = mKey+'_'+u+'_'+cat+'_'+it.id;
-    total += v;
-    if(!state.paid[pk]) falta += restanteConta(pk, v);
-  });
+  contas.forEach(it=>{ total += it.valor; falta += it.restante; });
   const pago = Math.max(0, total - falta);
   /* total do mês em dourado no cabeçalho da seção (v12, mistura B do Davi) */
   const head = secao.querySelector('.section-head');

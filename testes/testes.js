@@ -33,6 +33,12 @@ async function rodarTestes(){
     perto('aluguel começa no mês seguinte', expensesForMonth('davi', addMonths(M, 1)), 100 + 80 + 900 + 300);
     perto('parcela acaba depois da 3ª', expensesForMonth('davi', addMonths(M, 2)), 100 + 80 + 900);
     igual('lista de gastos do mês', gastosDoMes('davi', M).map(g=>[g.desc, g.restante]), [['Luz', 60], ['Água', 0], ['Geladeira', 300]]);
+    /* todas as telas leem a mesma lista (v17.0): conta arquivada some de todas; parcela k/n no nome */
+    ex.fixo.push({ id:'fa', desc:'Academia', valor:50, arquivado:true });
+    igual('Contas do mês sem a arquivada, em ordem, com a parcela', getContasDoMes(M, 'davi').map(c=>c.desc), ['Luz', 'Água', 'Geladeira (2/3)']);
+    perto('"Para onde vai" bate com o que falta', (b=>b.fixo + b.futuro)(expenseBreakdownForMonth('davi', M)), 360);
+    igual('contas em aberto', contasEmAbertoNoMes(M), 2);
+    perto('blocos: total e falta das contas', (d=>d.totContas * 1000 + d.faltaContas)(blocosMesDados('davi', M)), 480 * 1000 + 360);
     state.users.davi.saldoAtual = 1000;
     perto('saldo do mês = saldo em conta − o que falta', saldoForMonth('davi', M), 1000 - 360);
 

@@ -120,10 +120,7 @@ function finIco(d){ return `<span class="fb-ico"><svg width="15" height="15" vie
 function blocosMesDados(u, mKey){
   const saldo = state.users[u].saldoAtual || 0;
   const entra = incomeForMonth(u, mKey) - saldo, sobra = saldoForMonth(u, mKey);
-  const contas = getContasDoMes(mKey, u).map(it=>{
-    const k = mKey + '_' + it.user + '_' + it.cat + '_' + it.id;
-    return { valor: Number(it.valor) || 0, falta: state.paid[k] ? 0 : (typeof restanteConta === 'function' ? restanteConta(k, it.valor) : it.valor) };
-  });
+  const contas = gastosDoMes(u, mKey).map(g=>({ valor: g.valor, falta: g.restante }));
   const totContas = contas.reduce((s, c)=>s + c.valor, 0), faltaContas = contas.reduce((s, c)=>s + Math.max(0, c.falta), 0);
   const pix = (state.lancamentos || []).filter(la=>la.mKey === mKey && (la.usuario || 'davi') === u).reduce((s, la)=>s + (Number(la.valor) || 0), 0);
   let vista = 0, parcelado = 0, parcTot = 0, parcPagas = 0;
@@ -546,23 +543,8 @@ function abrirDetalheCategoria(cat, mKey){
 }
 
 function expenseBreakdownForMonth(user, mKey){
-  const ex = state.users[user].expenses;
   const breakdown = { moradia:0, assinatura:0, fixo:0, futuro:0, cartao:0, dizimo:0 };
-  ['moradia','assinatura','fixo'].forEach(cat=>{
-    ex[cat].forEach(item=>{
-      if(item.mesInicio && mKey < item.mesInicio) return;
-      const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id;
-      if(state.paid[paidKey]) return;
-      breakdown[cat] += restanteConta(paidKey, Number(item.valor)||0);
-    });
-  });
-  ex.futuro.forEach(item=>{
-    const v = futuroValorNoMes(item, mKey);
-    if(v<=0) return;
-    const paidKey = mKey+'_'+user+'_futuro_'+item.id;
-    if(state.paid[paidKey]) return;
-    breakdown.futuro += restanteConta(paidKey, v);
-  });
+  gastosDoMes(user, mKey).forEach(g=>{ breakdown[g.cat] += g.restante; });
   (state.users[user].cartoes||[]).forEach(c=>{ breakdown.cartao += Number((c.gastos||{})[mKey]) || 0; });
   breakdown.dizimo = dizimoForMonth(user, mKey);
   breakdown.total = breakdown.moradia + breakdown.assinatura + breakdown.fixo + breakdown.futuro + breakdown.cartao + breakdown.dizimo;
@@ -740,35 +722,11 @@ function shiftPanoWindow(delta){
   persist();
 }
 
-function futuroParcelaNoMes(item, mKey){
-  if(item.recorrente) return null;
-  const parcelas = item.parcelas || 1;
-  if(parcelas<=1 || !item.mesInicio) return null;
-  const meses = [];
-  for(let i=0;i<parcelas;i++) meses.push(addMonths(item.mesInicio,i));
-  const idx = meses.indexOf(mKey);
-  if(idx===-1) return null;
-  return { atual: idx+1, total: parcelas };
-}
+/* as contas do mês (gastosDoMes) em ordem de vencimento, com "(k/n)" no nome das parceladas */
 function getContasDoMes(mKey, usuario){
-  let items = [];
-  [usuario || 'davi'].forEach(u=>{
-    ['moradia','assinatura','fixo'].forEach(cat=>{
-      state.users[u].expenses[cat].forEach(item=>{
-        if(item.mesInicio && mKey < item.mesInicio) return;
-        items.push({ user:u, cat, id:item.id, desc:item.desc, valor:item.valor, dia:item.dia||1, logoUrl:item.logoUrl||null, mesInicio:item.mesInicio||null, tipo:item.tipo||'fixa', essencial:item.essencial!==false, historico:item.historico||[] });
-      });
-    });
-    state.users[u].expenses.futuro.forEach(item=>{
-      const v = futuroValorNoMes(item, mKey);
-      if(v > 0){
-        const p = futuroParcelaNoMes(item, mKey);
-        items.push({ user:u, cat:'futuro', id:item.id, desc:item.desc + (p?' ('+p.atual+'/'+p.total+')':''), valor:v, dia:item.dia||1, logoUrl:item.logoUrl||null, mesInicio:item.mesInicio||null });
-      }
-    });
-  });
-  items.sort((a,b)=> (a.dia||1) - (b.dia||1));
-  return items;
+  return gastosDoMes(usuario || 'davi', mKey)
+    .map(g=>Object.assign({}, g, { dia: g.dia||1, desc: g.desc + (g.parcela ? ' ('+g.parcela.atual+'/'+g.parcela.total+')' : '') }))
+    .sort((a,b)=> a.dia - b.dia);
 }
 
 /* ================= COMPARATIVO COM MESES ANTERIORES ================= */
@@ -794,10 +752,7 @@ function diasParaVencimento(it, mKey){
   return Math.round((alvo - hoje) / 86400000);
 }
 function contasEmAbertoNoMes(mKey){
-  return getContasDoMes(mKey).filter(it=>{
-    const paidKey = mKey+'_'+it.user+'_'+it.cat+'_'+it.id;
-    return !state.paid[paidKey];
-  }).length;
+  return getContasDoMes(mKey).filter(it=>!it.pago).length;
 }
 /* ================= CONTAS A PAGAR DO MÊS (recebi / paguei / contas) ================= */
 let contasPagarMes = null;
