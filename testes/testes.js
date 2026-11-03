@@ -266,6 +266,27 @@ async function rodarTestes(){
     state.lancamentos = state.lancamentos.filter(l=>l !== laA); cF.credoVista = cF.credoVista.filter(cv=>cv !== cvA && cv !== cvB);
     state.comprasTracker = []; state.cartoesTracker.pop();
 
+    /* importar planilha (v17.8): ler as linhas, gravar no mês escolhido e "do zero" */
+    const cImp = { id:'cimp', nome:'Nubank', fechamento:5, vencimento:12, credoVista:[] };
+    state.cartoesTracker.push(cImp);
+    igual('planilha: valor e data em vários jeitos', [impValor('R$ 1.234,56'), impValor(23.5), impValor('10.5'), impData('05/10/2026'), impData('5/1/26'), impData(46300)], [1234.56, 23.5, 10.5, '2026-10-05', '2026-01-05', '2026-10-05']);
+    const impL = impInterpretar([
+      ['Data', 'Nome', 'Categoria', 'Valor total', 'Forma', 'Cartão ou banco', 'Tipo', 'Parcelas'],
+      ['05/10/2026', 'Mercado', 'Mercado', 'R$ 100,00', 'Cartão', 'nubank', 'À vista', ''],
+      ['12/10/2026', 'Tênis', 'Lazer', 300, 'Cartão', 'Nubank', 'Parcelado', 3],
+      ['18/10/2026', 'Padaria', '', 20, 'Pix', 'Banco X', '', ''],
+      ['', 'Sem valor', '', '', 'Cartão', 'Nubank', '', ''],
+      ['', 'Cartão errado', '', 50, 'Cartão', 'Itaú Black', '', ''] ]);
+    igual('planilha: tipo de cada linha e o que tem problema', impL.map(l=>[l.tipo, l.parcelas, l.cat, !!l.erro]), [['vista', 1, 'Mercado', false], ['parcelada', 3, 'Lazer', false], ['pix', 1, 'Outros', false], ['vista', 1, 'Outros', true], ['vista', 1, 'Outros', true]]);
+    const laVelho = lancarPix({ descricao:'Antigo', valor:9, mKey:M }), laOutro = lancarPix({ descricao:'Outro mês', valor:9, mKey:addMonths(M, -1) });
+    lancarVista(cImp, { descricao:'Velho', valor:1, mKey:M });
+    impApagarGastos(M);
+    igual('planilha: do zero no mês apaga só aquele mês', [state.lancamentos.includes(laVelho), state.lancamentos.includes(laOutro), cImp.credoVista.length], [false, true, 0]);
+    impGravarLinhas(impL.filter(l=>!l.erro), M);
+    igual('planilha: tudo entra no mês escolhido', [cImp.credoVista.map(cv=>[cv.mKey, cv.valor]), state.comprasTracker.map(cp=>[cp.mesInicio, cp.valorTotal, cp.parcelas]), state.lancamentos.filter(l=>l.descricao === 'Padaria').map(l=>l.mKey)], [[[M, 100]], [[M, 300, 3]], [M]]);
+    state.lancamentos = state.lancamentos.filter(l=>l !== laOutro && l.descricao !== 'Padaria');
+    state.comprasTracker = []; state.cartoesTracker.pop();
+
     /* ---------- proteção contra perda ---------- */
     const baseP = JSON.stringify({ louvores: [1,2,3,4,5,6].map(i=>({ id:'l'+i, revisar:[1,2,3,4,5,6] })), cultos:[{ id:'c1' }, { id:'c2' }, { id:'c3' }] });
     igual('perda: apagar todas as músicas pede confirmação', perdaGrande(baseP, { louvores:[], cultos:[{ id:'c1' }, { id:'c2' }, { id:'c3' }] }).map(x=>[x.p, x.n0, x.n1]), [['louvores', 6, 0]]);

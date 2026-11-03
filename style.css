@@ -3132,3 +3132,28 @@ body{font-weight:400;letter-spacing:.005em}
   .lpv-placa .lpv-dica{color:var(--graf-dim)}
   .lpv-dica{margin:0;font-size:13.5px;color:var(--text-faint)}
 }
+/* importar planilha (Assistente → Resumo) */
+.atz-importar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;padding:14px 16px;border:1px solid var(--fio);border-radius:14px;background:var(--vidro)}
+.atz-importar > div:first-child{flex:1 1 240px;min-width:0}
+.atz-importar b{display:block;font-size:15px;font-weight:600}
+.atz-importar small{display:block;margin-top:2px;font-size:13px;color:var(--text-dim)}
+.atz-importar-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.atz-importar-acoes .btn{min-height:44px;padding:10px 16px}
+.imp-resumo{margin:0 0 12px;font-size:15px}
+.imp-erro{color:var(--danger)}
+.imp-campo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-size:14px;color:var(--text-dim)}
+.imp-campo select{min-height:44px;padding:0 12px;border:1px solid var(--fio);border-radius:10px;background:var(--card);font:inherit;color:var(--text)}
+.imp-modos{display:flex;flex-direction:column;gap:6px}
+.imp-modos label{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--fio);border-radius:12px;cursor:pointer}
+.imp-modos label:has(input:checked){border-color:var(--graf);background:var(--primary-tint)}
+.imp-modos input{margin-top:3px;accent-color:var(--graf)}
+.imp-modos b{display:block;font-size:14px;font-weight:600}
+.imp-modos small{display:block;font-size:12.5px;color:var(--text-dim)}
+.imp-nota{margin:10px 0;font-size:12.5px;color:var(--text-faint)}
+.imp-lista{max-height:40vh;overflow-y:auto;border-top:1px solid var(--fio)}
+.imp-linha{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--fio);font-size:14px}
+.imp-linha span{min-width:0}
+.imp-linha b{font-weight:500;white-space:nowrap}
+.imp-linha small{display:block;font-size:12px;color:var(--text-faint)}
+.imp-linha.ruim{opacity:.7}
+.imp-linha em{font-style:normal;color:var(--danger)}

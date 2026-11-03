@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.8', itens: [
+    'Assistente: importar planilha com os gastos do mês (LibreOffice ou Excel), com opção de começar do zero',
+    'Botão Baixar modelo da planilha no Resumo',
+    'Aba Passo a passo retirada'
+  ] },
   { versao: 'v17.7', itens: [
     'Botões pequenos com área de toque maior e letras mais legíveis',
     'Atalhos de Finanças: 4 e Mais no celular, todos numa linha no computador',
