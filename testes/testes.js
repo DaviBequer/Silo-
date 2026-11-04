@@ -295,6 +295,7 @@ async function rodarTestes(){
     const sImp = impLerSaldos([['Banco', 'Saldo atual'], ['banco teste', 'R$ 0,00'], ['Não Existe', 10], ['Outro', '']]);
     igual('planilha: aba Saldos (vazio não mexe, banco errado avisa)', sImp.map(x=>[x.valor, !!x.banco, !!x.erro]), [[0, true, false], [10, false, true]]);
     impGravarSaldos(sImp.filter(x=>!x.erro));
+    igual('planilha: recebido e transferência não viram gasto', impInterpretar([['Valor', 'Forma'], [100, 'Recebido'], [50, 'Transferência'], [20, 'Pix']]).map(l=>!!l.erro), [true, true, false]);
     igual('planilha: saldo do banco fica o da planilha', bImp.find(b=>b.id === 'bimp').valor, 0);
     bImp.pop(); bImp.forEach((b, i)=>{ b.valor = bAntes[i]; }); state.users[state.currentUser].saldoAtual = saldoAntes;
 

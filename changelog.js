@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.1', itens: [
+    'Assistente: o saldo que você informa vale como está, sem pedir justificativa nem criar gasto não identificado',
+    'Planilha: linhas de recebido ou transferência entre contas não viram gasto'
+  ] },
   { versao: 'v18.0', itens: [
     'Planilha com a aba Saldos: o saldo de cada banco fica o da planilha, sem pedir justificativa',
     'Assistente responde perguntas (saldo, fatura, Pix do mês) em vez de perguntar de volta',

@@ -350,7 +350,7 @@ function atzManterConfirmados(antes, novos){
   return novos;
 }
 const atzGravavel = i=>i.tipo !== 'fatura';
-const atzConfirmado = i=>atzGravavel(i) && i.ok && !atzFaltaNoItem(i);
+const atzConfirmado = i=>atzGravavel(i) && (i.ok || i.tipo === 'saldo') && !atzFaltaNoItem(i);   // saldo informado vale como está
 
 function atzTemIA(){
   if(typeof lviChaveIA === 'function' && lviChaveIA()) return true;
@@ -405,8 +405,8 @@ async function atzPerguntar(msg, audio){
       `depois "nomesJaUsados" (o que ela já lançou e em que categoria), depois o que você sabe de lojas do Brasil. Se ainda não tiver certeza, escolha a mais provável e marque categoriaDuvida true. ` +
       `Se a pessoa disser a categoria junto com o nome ("120 no Top, mercado") ou ensinar ("Top é mercado"), use essa categoria e ponha {nome, categoria} em aprendidos.\n` +
       `NÃO faça contas de quanto falta para bater a fatura ou o saldo: o app calcula e escreve logo depois da sua resposta. ` +
-      `O app já pergunta o que falta explicar (fatura e saldo): não repita esses valores. Quando a pessoa contar o que gastou para explicar a diferença, lance como pix (banco) ou vista (cartão). ` +
-      `Se ela disser que não lembra o resto ("não sei", "o resto não lembro"), lance um pix "Gasto não identificado" (categoria Outros) no banco com o valor que falta (diferenca do contexto, em positivo), ou uma vista "Compra não identificada" no cartão com faltaParaBater. ` +
+      `SALDO E FATURA: o app aceita o saldo e a fatura que a pessoa informar como estão (os gastos vêm por planilha). NÃO peça para explicar diferença, não pergunte o que mais saiu e não crie "não identificado" sozinho. Se a pessoa contar gastos, lance como pix (banco) ou vista (cartão). ` +
+      `Só se ela PEDIR para lançar a diferença como não identificada, lance um pix "Gasto não identificado" (categoria Outros) no banco com o valor que falta (diferenca do contexto, em positivo), ou uma vista "Compra não identificada" no cartão com faltaParaBater. ` +
       `PERGUNTAS: se a pessoa perguntar algo ("qual o saldo do Nubank?", "quanto está a fatura?", "quanto gastei no Pix?"), responda em resposta com os números do CONTEXTO (saldoNoApp, faturaNoApp, pixNoMes, contasAbertas) e devolva a LISTA ATUAL sem mudar. Nunca responda uma pergunta com outra pergunta. JÁ EXPLICADO: se a pessoa disser que a diferença do saldo ou da fatura já está lançada (importou a planilha, já lançou antes) ou que é só para acertar o saldo, lance só o item saldo/fatura e NÃO crie "não identificado". A pessoa pode corrigir ou tirar itens ("tira a farmácia", "o mercado foi 130"): devolva sempre a lista completa já corrigida. Não invente itens.\n\n` +
       (atzAba === 'passo' && atzPassos()[atzPassoI] ? `O APP PERGUNTOU À PESSOA: "${atzPassoPergunta(atzPassos()[atzPassoI])}" (a fala responde isso).
 ` : '') +
@@ -427,8 +427,8 @@ async function atzPerguntar(msg, audio){
     atzItens = atzManterConfirmados(antes, atzNormalizarItens(r.itens)); atzEditando = -1;
     /* a conta da falta é do app (a IA erra soma): a resposta ganha as linhas com os números certos (aparecem nos Detalhes) */
     const conf = atzConferencia(), contas = [];
-    conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.falta) < 0.01 ? `Fatura ${x.c.nome}: bateu ✓` : x.falta > 0 ? `Fatura ${x.c.nome}: faltam ${fmtMoney(x.falta)} para bater. Que compras faltam?` : `Fatura ${x.c.nome}: passou ${fmtMoney(-x.falta)} do valor do banco. Algum valor ficou errado?`));
-    conf.bancos.filter(x=>x.informado !== null).forEach(x=>contas.push(Math.abs(x.dif) < 0.01 ? `Saldo ${x.b.nome}: bateu ✓` : x.dif < 0 ? `${x.b.nome}: faltam ${fmtMoney(-x.dif)} para fechar o saldo. O que mais saiu dele?` : `Saldo ${x.b.nome}: entrou ${fmtMoney(x.dif)} a mais. Recebeu algum valor?`));
+    conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(`Fatura ${x.c.nome}: fica ${fmtMoney(x.informado)}`));
+    conf.bancos.filter(x=>x.informado !== null).forEach(x=>contas.push(`Saldo ${x.b.nome}: fica ${fmtMoney(x.informado)}`));
     const ks = new Set(antes.map(atzChave)), kn = new Set(atzItens.map(atzChave));
     atzConversa.push({ quem:'ia', texto: String(r.resposta || 'Anotado.').trim(),
       novos: atzItens.filter(i=>!ks.has(atzChave(i))).map(atzChave), tirados: antes.filter(i=>!kn.has(atzChave(i))), contas,
@@ -519,17 +519,13 @@ function atzConferenciasHtml(conf){
       <div class="atz-linha atz-total"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>
       ${(()=>{ const fora = atzItens.filter(i=>i.cartaoId === x.c.id && (i.tipo === 'vista' || i.tipo === 'parcelada') && atzFaturaDoItem(x.c, i) !== x.m);
         return fora.length ? `<div class="atz-fat-fora">${fora.map(i=>`${escBanco(i.descricao || 'Compra')} ${fmtMoney(i.valor)} vai para a ${escBanco(atzFaturaOutra(i))}`).join('<br>')}: não conta nesta.</div>` : ''; })()}
-      ${x.falta > 0.009 ? `<div class="atz-fat-falta">Faltam <b>${fmtMoney(x.falta)}</b> para chegar em ${fmtMoney(x.informado)}. Fale as compras que faltam desse cartão.</div>
-        <button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('cartao','${x.c.id}')">Não lembro: lançar ${fmtMoney(x.falta)} como compra não identificada</button>`
-        : x.falta < -0.009 ? `<div class="atz-fat-falta">O app passou ${fmtMoney(-x.falta)} do valor do banco. Veja se algum item está repetido ou com o valor errado.</div>` : ''}
+
     </div>`;
   }).join('');
   const bancos = conf.bancos.filter(x=>x.informado !== null).map(x=>`<div class="atz-fat">
-      <div class="atz-det-topo"><span>Saldo ${escBanco(x.b.nome)}</span>${st(-x.dif, 'falta explicar ' + fmtMoney(-x.dif), 'entrou ' + fmtMoney(x.dif) + ' a mais')}</div>
-      <div class="atz-linha"><span>Esperado pelo app</span><b>${fmtMoney(x.esperado)}</b></div>
-      <div class="atz-linha atz-total"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>
-      ${x.dif < -0.009 ? `<div class="atz-fat-falta">Saíram <b>${fmtMoney(-x.dif)}</b> que o app não sabe. O que mais você gastou no ${escBanco(x.b.nome)}?</div>
-        <button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('banco','${x.b.id}')">Não lembro: lançar ${fmtMoney(-x.dif)} como gasto não identificado</button>` : ''}
+      <div class="atz-det-topo"><span>Saldo ${escBanco(x.b.nome)}</span></div>
+      <div class="atz-linha"><span>No app</span><b>${fmtMoney(Number(x.b.valor) || 0)}</b></div>
+      <div class="atz-linha atz-total"><span>Fica</span><b>${fmtMoney(x.informado)}</b></div>
     </div>`).join('');
   return cartoes || bancos ? `<div class="atz-fats">${cartoes}${bancos}</div>` : '';
 }
@@ -725,16 +721,14 @@ function atzDetalhesHtml(conf){
       <div class="atz-linha"><span>Fatura de ${monthLabel(x.m)} no app</span><b>${fmtMoney(x.noApp)}</b></div>
       ${x.novos > 0.009 ? `<div class="atz-linha"><span>Desta conversa</span><b>+ ${fmtMoney(x.novos)}</b></div>` : ''}
       ${x.informado !== null ? `<div class="atz-linha"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>` : ''}
-      ${x.falta > 0.009 ? `<button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('cartao','${x.c.id}')">Não lembro: lançar ${fmtMoney(x.falta)} como compra não identificada</button>` : ''}
     </div>`; }).join('');
   const bancos = conf.bancos.filter(x=>x.mexeu).map(x=>{
     const antes = Number(x.b.valor) || 0;
-    const st = x.informado === null ? '' : Math.abs(x.dif) < 0.01 ? pill('ok', 'bateu ✓') : x.dif < 0 ? pill('err', 'falta explicar ' + fmtMoney(-x.dif)) : pill('err', 'entrou ' + fmtMoney(x.dif) + ' a mais');
+    const st = '';
     return `<div class="atz-det-bloco"><div class="atz-det-topo"><span>${escBanco(x.b.nome)}</span>${st}</div>
       <div class="atz-linha"><span>Agora no app</span><b>${fmtMoney(antes)}</b></div>
       ${Math.abs(x.esperado - antes) > 0.009 ? `<div class="atz-linha"><span>Depois desta conversa</span><b>${fmtMoney(x.esperado)}</b></div>` : ''}
       ${x.informado !== null ? `<div class="atz-linha"><span>No banco</span><b>${fmtMoney(x.informado)}</b></div>` : ''}
-      ${x.dif < -0.009 ? `<button type="button" class="link-txt atz-naolembro" onclick="atzSemExplicar('banco','${x.b.id}')">Não lembro: lançar ${fmtMoney(-x.dif)} como gasto não identificado</button>` : ''}
     </div>`; }).join('');
   const abertas = vozContasAbertas();
   const contas = abertas.length ? `<div class="atz-det-bloco"><div class="atz-det-topo"><span>Contas em aberto</span><small>${abertas.length}</small></div>
@@ -815,21 +809,6 @@ function atzTrocarCategoria(k, cat){
   atzAprender(i.descricao, cat);
   renderAtualizar();
 }
-/* "Não lembro": o que falta explicar vira um item (Pix "Gasto não identificado" no banco, ou compra no cartão) */
-function atzSemExplicar(onde, id){
-  const conf = atzConferencia();
-  let item = null;
-  if(onde === 'banco'){
-    const x = conf.bancos.find(b=>b.b.id === id); if(!x || !(x.dif < -0.009)) return;
-    item = { tipo:'pix', descricao:'Gasto não identificado', valor: Math.round(-x.dif * 100) / 100, categoria:'Outros', cartaoId:'', cartaoNome:'', bancoId: x.b.id, bancoNome: x.b.nome, parcelas:1, proximaFatura:false, conta:'', ok:false };
-  } else {
-    const x = conf.cartoes.find(c=>c.c.id === id); if(!x || !(x.falta > 0.009)) return;
-    item = { tipo:'vista', descricao:'Compra não identificada', valor: Math.round(x.falta * 100) / 100, categoria:'Outros', cartaoId: x.c.id, cartaoNome: x.c.nome, bancoId:'', bancoNome:'', parcelas:1, proximaFatura:false, conta:'', ok:false };
-  }
-  atzItens.push(item);
-  atzConversa.push({ quem:'ia', texto:'Lancei o que faltou como não identificado. Confirme se está certo.', novos:[atzChave(item)] });
-  renderAtualizar(true);
-}
 function atzLimpar(){ atzConversa = []; atzItens = []; renderAtualizar(); }
 
 /* ---------- apelidos de categoria ("Top" → Mercado), aprendidos na conversa ---------- */
@@ -878,10 +857,6 @@ async function atzGravar(){
   const itens = atzItens.filter(atzConfirmado);
   if(!itens.length) return;
   const conf = atzConferencia([...itens, ...atzItens.filter(i=>i.tipo === 'fatura')]), agora = Date.now(), hoje = calISO(new Date()), mKey = mesFinanceiroAtual();
-  /* ainda tem diferença sem explicar: avisa antes (o saldo fica o do banco, mas sem dizer onde foi o dinheiro) */
-  const soltas = [...conf.bancos.filter(x=>x.informado !== null && x.dif < -0.009).map(x=>`${fmtMoney(-x.dif)} no ${x.b.nome}`),
-    ...conf.cartoes.filter(x=>x.informado !== null && x.falta > 0.009).map(x=>`${fmtMoney(x.falta)} na fatura ${x.c.nome}`)];
-  if(soltas.length && !(await iosConfirm(`Ainda falta explicar ${soltas.join(' e ')}. Gravar assim mesmo?`))) return;
   /* repetidos confirmados: pergunta de novo antes de lançar em dobro */
   const dups = atzDuplicados(), repetidos = itens.filter(i=>dups[atzItens.indexOf(i)]);
   if(repetidos.length && !(await iosConfirm(`${repetidos.length === 1 ? 'Um item parece repetido' : repetidos.length + ' itens parecem repetidos'} (${repetidos.map(i=>(i.descricao || 'Item') + ' ' + fmtMoney(i.valor)).join(', ')}): já estão no app. Gravar mesmo assim?`))) return;
@@ -1056,12 +1031,14 @@ function impInterpretar(linhas){
   return linhas.slice(ih + 1).filter(r=>r.some(c=>String(c).trim() !== '')).map(r=>{
     const valor = impValor(pega(r, 'valor')), onde = String(pega(r, 'onde')).trim(), forma = vozSemAcento(pega(r, 'forma'));
     const cartao = impAchar(vozCartoes(), onde), banco = impAchar(bancosDoUsuario(), onde);
-    const ehPix = /pix|debito|dinheiro|transf|boleto/.test(forma) || (!/cart|credito/.test(forma) && !cartao);
+    const naoGasto = /receb|entrada|ganhei|transf/.test(forma + ' ' + vozSemAcento(pega(r, 'tipo')));   // recebido e transferência entre contas não são gasto: o saldo vem da aba Saldos
+    const ehPix = /pix|debito|dinheiro|boleto/.test(forma) || (!/cart|credito/.test(forma) && !cartao);
     const parcelas = Math.max(1, Math.round(Number(String(pega(r, 'parcelas')).replace(/\D/g, '')) || 1));
     const tipo = ehPix ? 'pix' : (parcelas > 1 || /parcel/.test(vozSemAcento(pega(r, 'tipo')))) ? 'parcelada' : 'vista';
     const cat = String(pega(r, 'cat')).trim() || 'Outros';
     const l = { mes: impMes(pega(r, 'mes')), data: impData(pega(r, 'data')), nome: String(pega(r, 'nome')).trim() || cat, cat, valor, tipo, parcelas: tipo === 'parcelada' ? Math.max(2, parcelas) : 1, cartao, banco, onde };
-    if(!(valor > 0)) l.erro = 'sem valor';
+    if(naoGasto) l.erro = 'recebido ou transferência: não é gasto';
+    else if(!(valor > 0)) l.erro = 'sem valor';
     else if(tipo !== 'pix' && !cartao) l.erro = onde ? `cartão "${onde}" não existe no app` : 'falta o cartão';
     return l;
   });
