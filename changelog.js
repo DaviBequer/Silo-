@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.4', itens: [
+    'Pix, crédito à vista, parcelado e fixos: setas para ver os outros meses'
+  ] },
   { versao: 'v18.3', itens: [
     'Assistente: banco com valor (Nubank Inter zero) é informar o saldo, não pergunta; vale para todos os bancos falados'
   ] },

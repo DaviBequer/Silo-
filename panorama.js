@@ -1356,9 +1356,10 @@ async function extratoApagar(k){
 
 /* ================= FOCO (v15.6): tocar num bloco de Finanças abre só aquilo — Fixos, Pix no mês, Crédito à vista, Parcelado —
    com a soma e a quantidade no alto (mesmo visual do Extrato) ================= */
-let focoTipo = null, focoMes = null;
+/* focoDesloc: meses para trás/frente com as setas (cartão: a partir da fatura aberta de cada um) */
+let focoTipo = null, focoMes = null, focoDesloc = 0;
 function abrirFoco(tipo, mKey){
-  focoTipo = tipo; focoMes = mKey || mesFinanceiroAtual();
+  focoTipo = tipo; focoMes = mKey || mesFinanceiroAtual(); focoDesloc = 0;
   document.getElementById('pageFoco').classList.add('active');
   document.body.style.overflow = 'hidden';
   renderFoco();
@@ -1369,6 +1370,7 @@ function focoPagar(paidKey){
   if(navigator.vibrate) navigator.vibrate(state.paid[paidKey] ? [10,30,10] : 10);
   renderFoco();
 }
+function focoMudarMes(d){ focoDesloc += d; renderFoco(); }
 function fecharFoco(){ document.getElementById('pageFoco').classList.remove('active'); document.body.style.overflow = ''; }
 /* v15.7 (layout L2 escolhido): uma coluna por grupo; a placa tem a barra de quanto cada grupo pesa (L4);
    no Fixos, em cada coluna as em aberto vêm primeiro e as pagas ficam separadas embaixo (L5) */
@@ -1392,9 +1394,10 @@ function focoAgrupar(itens, max){
   return grupos;
 }
 function renderFoco(){
-  const u = state.currentUser, mKey = focoMes;
+  const u = state.currentUser, mKey = addMonths(focoMes, focoDesloc), mesCartao = c=>addMonths(faturaAbertaMes(c), focoDesloc);
   const titulo = { fixos:'Fixos', pix:'Pix no mês', vista:'Crédito à vista', parcelado:'Parcelado' }[focoTipo] || '';
   document.getElementById('focoTitulo').textContent = titulo;
+  document.getElementById('focoMesLabel').textContent = (focoTipo === 'vista' || focoTipo === 'parcelado') && !focoDesloc ? 'Fatura aberta' : monthLabelLong(focoTipo === 'vista' || focoTipo === 'parcelado' ? addMonths(mesFinanceiroAtual(), focoDesloc) : mKey);
   let rotulo = '', total = 0, stats = [], grupos = [];
   if(focoTipo === 'fixos'){
     const contas = gastosDoMes(u, mKey);
@@ -1420,10 +1423,10 @@ function renderFoco(){
       html: focoLinha(focoIco('pix', la.categoria || la.descricao), la.descricao || 'Compra', `${escBanco(la.banco || 'Pix/débito')}${la.data ? ' · ' + focoData(la.data) : ''}`, Number(la.valor) || 0) })), 6);
   } else if(focoTipo === 'vista'){
     const itens = [];
-    (state.cartoesTracker || []).forEach(c=>{ const m = faturaAbertaMes(c); (c.credoVista || []).filter(cv=>cv.mKey === m && !cv.ajuste).forEach(cv=>itens.push({ ...cv, cartao: c.nome, m })); });
+    (state.cartoesTracker || []).forEach(c=>{ const m = mesCartao(c); (c.credoVista || []).filter(cv=>cv.mKey === m && !cv.ajuste).forEach(cv=>itens.push({ ...cv, cartao: c.nome, m })); });
     itens.sort((a, b)=>String(b.data || '').localeCompare(String(a.data || '')));
     total = itens.reduce((s, cv)=>s + (Number(cv.valor) || 0), 0);
-    rotulo = 'Na fatura aberta';
+    rotulo = focoDesloc ? 'Na fatura de ' + monthLabelLong(addMonths(mesFinanceiroAtual(), focoDesloc)).toLowerCase() : 'Na fatura aberta';
     const cartoes = new Set(itens.map(cv=>cv.cartao)).size;
     stats = [['', `${itens.length} compra${itens.length === 1 ? '' : 's'}`], ...(cartoes > 1 ? [['', `${cartoes} cartões`]] : [])];
     grupos = focoAgrupar(itens.map(cv=>({ grupo: cv.categoria, valor: Number(cv.valor) || 0,
@@ -1431,7 +1434,7 @@ function renderFoco(){
   } else if(focoTipo === 'parcelado'){
     const itens = [];
     (state.cartoesTracker || []).forEach(c=>{
-      const m = faturaAbertaMes(c);
+      const m = mesCartao(c);
       (state.comprasTracker || []).filter(x=>x.cartaoId === c.id && !x.pago && x.mesInicio).forEach(x=>{
         const v = compraTrackerValorNoMes(x, m); if(!v) return;
         const n = Math.max(1, Number(x.parcelas) || 1); let k = 1; while(k < n && addMonths(x.mesInicio, k - 1) !== m) k++;
