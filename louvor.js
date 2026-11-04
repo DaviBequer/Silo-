@@ -592,6 +592,69 @@ function lvTransposeConteudoTexto(conteudo, delta, tom, tomAntes){
     return line;
   }).join('\n');
 }
+/* ---------- trocar entre maior e menor: acorde por acorde, pelo GRAU (decisão do Davi, v18.5) ----------
+   Cm Ab Eb Bb em Dó menor (I VI III VII) → em Mi♭ maior: Eb Cm Gm Dº. Volta igual.
+   Acorde do campo troca a qualidade (Cm7 → Eb7M); o que tem outra qualidade (G7 em Dó menor) ou está fora do campo mantém o sufixo. */
+const LV_QUAL_MAIOR = ['', 'm', 'm', '', '', 'm', 'º'], LV_QUAL_MENOR = ['m', 'º', '', 'm', 'm', '', ''];
+function lvEscalaModo(maior, menor){
+  const e = lvEscalaDoTom(maior);
+  return e && (menor ? [...e.slice(5), ...e.slice(0, 5)] : e);
+}
+function lvQualidadeDoSufixo(suf){
+  if(/^(º|°|dim|m7b5)/.test(suf)) return 'º';
+  return /^m(?!aj)/.test(suf) ? 'm' : '';
+}
+function lvSufixoNoGrau(suf, de, para){
+  if(de === para) return suf;
+  const comSetima = /7|9|11|13/.test(suf);
+  if(para === 'º') return comSetima ? 'm7b5' : 'º';
+  if(de === 'º') return comSetima ? (para === 'm' ? 'm7' : '7M') : para;
+  if(para === 'm'){
+    if(/^(7M|maj7|7)$/.test(suf)) return 'm7';
+    return /^(sus|5$|2$|4$)/.test(suf) ? suf : 'm' + suf;   // sem terça: não tem como ser menor
+  }
+  if(/^(m7|m7M)$/.test(suf)) return '7M';
+  return suf.replace(/^(min|m)/, '');
+}
+/* a nota no mesmo grau do tom novo; fora do campo, a mesma distância da tônica */
+function lvNotaNoGrau(nota, escDe, escPara, maiorPara){
+  const pc = lvPc(nota), i = escDe.findIndex(n=>lvPc(n) === pc);
+  if(i >= 0) return { nome: escPara[i], grau: i };
+  return { nome: lvNomeNoTom(((pc - lvPc(escDe[0]) + lvPc(escPara[0])) % 12 + 12) % 12, maiorPara), grau: -1 };
+}
+function lvAcordeNoGrau(token, escDe, escPara, menorDe, menorPara, maiorPara){
+  const abre = token.match(/^\(*/)[0];
+  let core = token.slice(abre.length), fecha = '';
+  while(core.endsWith(')') && (core.match(/\)/g) || []).length > (core.match(/\(/g) || []).length){ core = core.slice(0, -1); fecha += ')'; }
+  if(!LV_CHORD_RE.test(core)) return token;
+  const [, raiz, resto] = core.match(/^([A-G](?:##|bb|#|b)?)(.*)$/);
+  const barra = resto.indexOf('/'), semBaixo = barra < 0 ? resto : resto.slice(0, barra), baixo = barra < 0 ? '' : resto.slice(barra + 1);
+  const par = semBaixo.indexOf('('), suf = par < 0 ? semBaixo : semBaixo.slice(0, par), extra = par < 0 ? '' : semBaixo.slice(par);
+  const n = lvNotaNoGrau(raiz, escDe, escPara, maiorPara);
+  let sufNovo = suf;
+  if(n.grau >= 0){
+    const de = (menorDe ? LV_QUAL_MENOR : LV_QUAL_MAIOR)[n.grau], para = (menorPara ? LV_QUAL_MENOR : LV_QUAL_MAIOR)[n.grau];
+    const dominante = n.grau === 4 && /^7(?!M)/.test(suf);   // V7 continua dominante nos dois modos
+    if(!dominante && lvQualidadeDoSufixo(suf) === de) sufNovo = lvSufixoNoGrau(suf, de, para);
+  }
+  const baixoNovo = baixo ? '/' + lvNotaNoGrau(baixo, escDe, escPara, maiorPara).nome : '';
+  return abre + n.nome + sufNovo + extra + baixoNovo + fecha;
+}
+function lvMudarModoTexto(conteudo, maiorDe, menorDe, maiorPara, menorPara){
+  const escDe = lvEscalaModo(maiorDe, menorDe), escPara = lvEscalaModo(maiorPara, menorPara);
+  if(!escDe || !escPara) return conteudo;
+  return (conteudo || '').split('\n').map(line=>{
+    if(!isChordLine(line.trim())) return line;
+    let out = '';
+    const re = /\S+/g; let m;
+    while((m = re.exec(line))){   // cada acorde na mesma coluna, como no lvTransposeChordLine
+      const pos = Math.max(m.index, out.length ? out.length + 1 : 0);
+      while(out.length < pos) out += ' ';
+      out += lvAcordeNoGrau(m[0], escDe, escPara, menorDe, menorPara, maiorPara);
+    }
+    return out;
+  }).join('\n');
+}
 function lvTomGridEscolher(nota, modoMenor){
   if(lvTomPickerModo==='medley'){ lmTomEscolhido(nota, modoMenor); return; }
   if(lvTomPickerModo==='novo'){
@@ -609,6 +672,29 @@ function lvTomGridEscolher(nota, modoMenor){
     return;
   }
   ensureLouvorConfig(l);
+  /* maior ↔ menor com tom já definido: troca pelos graus (com Desfazer, caso só quisesse corrigir o nome do tom) */
+  const porGrau = !l.medley && !!lvTomMaiorAtual(l) && !!modoMenor !== !!l.tomModoMenor && !!(l.conteudo || '').trim();
+  const redesenhar = ()=>{
+    const a = getLouvorAtual(); if(!a) return;   // o Desfazer troca o state: busca a música de novo
+    const el = document.getElementById('lvConteudo');
+    if(el){ el.value = a.conteudo; lvAtualizarEditor(); }
+    atualizarLvTomBox();
+    renderLouvorPdfPreview();
+    if(typeof driveTomMudou === 'function') driveTomMudou(a);   // já estava no Drive: troca o arquivo pelo do tom novo
+    lvAtualizarTelas();
+  };
+  if(porGrau){
+    comDesfazer('Acordes trocados pelos graus de ' + (modoMenor ? lvRelativoMenor(nota) + 'm' : nota), ()=>{
+      l.conteudo = lvMudarModoTexto(l.conteudo, lvFormaMaior(l), !!l.tomModoMenor, lvFormaDe(nota, lvCapo(l)), !!modoMenor);
+      l.tomOriginal = nota;
+      l.transpose = 0;
+      l.tomModoMenor = modoMenor;
+      persist();
+    }, redesenhar);
+    redesenhar();
+    closeModal('modalLvTom');
+    return;
+  }
   /* sobe/desce a cifra até o tom novo e escreve tudo com os nomes desse tom
      (mesmo de F# para Gb, que soa igual, os nomes mudam). Sem tom anterior: só ajusta os nomes. */
   const pcNota = lvPc(nota), pcAntes = lvPc(lvTomMaiorAtual(l));
@@ -622,22 +708,22 @@ function lvTomGridEscolher(nota, modoMenor){
     if(primeira){ primeira.tom = nota; primeira.menor = modoMenor; }
     if(!l.medleyEditado) l.conteudo = lmGerarTexto(l.medley);
   }
-  const conteudoEl = document.getElementById('lvConteudo');
-  if(conteudoEl){ conteudoEl.value = l.conteudo; lvAtualizarEditor(); }
   l.tomOriginal = nota;
   l.transpose = 0;
   l.tomModoMenor = modoMenor;
   persist();
-  atualizarLvTomBox();
-  renderLouvorPdfPreview();
+  redesenhar();
   closeModal('modalLvTom');
-  if(typeof driveTomMudou === 'function') driveTomMudou(l);   // já estava no Drive: troca o arquivo pelo do tom novo
-  lvAtualizarTelas();
 }
 /* muda o tom de uma música sem abrir a tela (roteiro colado do WhatsApp): sobe/desce a cifra e escreve no tom novo */
-function lvAplicarTom(l, nota, modoMenor){
+function lvAplicarTom(l, nota, modoMenor, porGrau){
   if(!l || !nota || l.medley) return;
   ensureLouvorConfig(l);
+  if(porGrau && lvTomMaiorAtual(l) && !!modoMenor !== !!l.tomModoMenor){
+    if(l.conteudo) l.conteudo = lvMudarModoTexto(l.conteudo, lvFormaMaior(l), !!l.tomModoMenor, lvFormaDe(nota, lvCapo(l)), !!modoMenor);
+    l.tomOriginal = nota; l.transpose = 0; l.tomModoMenor = !!modoMenor;
+    return;
+  }
   const pcNota = lvPc(nota), pcAntes = lvPc(lvTomMaiorAtual(l));
   const delta = (pcAntes===-1 || pcNota===-1) ? 0 : ((pcNota - pcAntes)%12+12)%12;
   if(l.conteudo) l.conteudo = lvTransposeConteudoTexto(l.conteudo, delta, lvFormaDe(nota, lvCapo(l)), lvFormaMaior(l));

@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.5', itens: [
+    'Louvor: trocar entre tom maior e menor reescreve os acordes pelos graus (Cm vira Eb, Ab vira Cm), com botão Desfazer'
+  ] },
   { versao: 'v18.4', itens: [
     'Pix, crédito à vista, parcelado e fixos: setas para ver os outros meses'
   ] },

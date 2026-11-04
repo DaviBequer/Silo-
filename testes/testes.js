@@ -299,6 +299,13 @@ async function rodarTestes(){
     igual('planilha: saldo do banco fica o da planilha', bImp.find(b=>b.id === 'bimp').valor, 0);
     bImp.pop(); bImp.forEach((b, i)=>{ b.valor = bAntes[i]; }); state.users[state.currentUser].saldoAtual = saldoAntes;
 
+    /* maior ↔ menor pelos graus (v18.5) */
+    const grauT = (t, a, ma, b, mb)=>lvMudarModoTexto(t, a, ma, b, mb);
+    igual('graus: Cm Ab Eb Bb → Eb Cm Gm Dº e volta', [grauT('Cm  Ab  Eb  Bb', 'Eb', true, 'Eb', false), grauT('Eb  Cm  Gm  Dº', 'Eb', false, 'Eb', true)], ['Eb  Cm  Gm  Dº', 'Cm  Ab  Eb  Bb']);
+    igual('graus: sétima e baixo', grauT('Cm7  Ab/C  Fm7', 'Eb', true, 'Eb', false), 'Eb7M Cm/Eb Ab7M');
+    igual('graus: G7 continua dominante e nota fora do campo mantém o sufixo', [grauT('G7', 'Eb', true, 'Eb', false), grauT('Bb7', 'Eb', false, 'Eb', true), grauT('B7', 'Eb', true, 'Eb', false)], ['Bb7', 'G7', 'D7']);
+    igual('graus: letra não muda e maior vai para outro menor', [grauT('Cm Ab\nCantarei a Ti', 'Eb', true, 'Eb', false).split('\n')[1], grauT('G  Em  C', 'G', false, 'Bb', true)], ['Cantarei a Ti', 'Gm Eb  Cm']);
+
     /* ---------- proteção contra perda ---------- */
     const baseP = JSON.stringify({ louvores: [1,2,3,4,5,6].map(i=>({ id:'l'+i, revisar:[1,2,3,4,5,6] })), cultos:[{ id:'c1' }, { id:'c2' }, { id:'c3' }] });
     igual('perda: apagar todas as músicas pede confirmação', perdaGrande(baseP, { louvores:[], cultos:[{ id:'c1' }, { id:'c2' }, { id:'c3' }] }).map(x=>[x.p, x.n0, x.n1]), [['louvores', 6, 0]]);

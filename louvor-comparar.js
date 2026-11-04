@@ -145,7 +145,7 @@ async function lvConverterDoDrive(tomNovo){
   await lvImportarNoAtual({ target:{ files:[file], value:'' }, semConfirmar: true, origem, fiel: pronta || !!tomNovo });
   const lv = getLouvorAtual(); if(lv && lv.origem) delete lv.origem.soArquivo;
   if(lv && tomNovo && (lv.conteudo || '').trim()){
-    lvAplicarTom(lv, tomNovo.nota, tomNovo.modoMenor);
+    lvAplicarTom(lv, tomNovo.nota, tomNovo.modoMenor, true);
     if(pronta) delete lv.revisar;
     persist();
     atualizarLvTomBox(); renderLouvorPdfPreview();
