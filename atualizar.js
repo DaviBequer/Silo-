@@ -203,7 +203,7 @@ function atzCortarHtml(){
 /* ---------- aba Conversa ---------- */
 const ATZ_ESQUEMA = { type:'object', properties:{
   transcricao:{ type:'string', description:'Se a última fala veio em ÁUDIO: o que a pessoa disse, escrito certinho (valores em algarismos, nomes de banco/cartão como na lista). Se veio em texto: repita o texto.' },
-  resposta:{ type:'string', description:'Curtíssima: só "Anotado." (ou "Corrigido.", "Tirei."). O app mostra tudo na tela: não liste itens nem valores. Só quando faltar algo de verdade (banco ou cartão quando há mais de um, parcelas, valor confuso) faça UMA pergunta curta.' },
+  resposta:{ type:'string', description:'Se a pessoa PERGUNTOU algo (saldo de um banco, fatura, contas, quanto gastou): responda com os números do CONTEXTO em 1 ou 2 frases, sem devolver a pergunta. Senão, curtíssima: só "Anotado." (ou "Corrigido.", "Tirei."). O app mostra tudo na tela: não liste itens nem valores. Só quando faltar algo de verdade (banco ou cartão quando há mais de um, parcelas, valor confuso) faça UMA pergunta curta.' },
   aprendidos:{ type:'array', description:'Quando a pessoa ensinar a categoria de um nome ("Top é mercado", "120 no Top, mercado"): {nome, categoria}. Vazio se não ensinou nada.', items:{ type:'object', properties:{
     nome:{ type:'string' }, categoria:{ type:'string', description:'uma categoria exata da lista' }
   }, required:['nome','categoria'] } },
@@ -219,8 +219,9 @@ const ATZ_ESQUEMA = { type:'object', properties:{
     data:{ type:'string', description:'dia da compra, AAAA-MM-DD. "No dia 25…" vale para essa compra e para as próximas até a pessoa falar outro dia. Dia sem mês = o mais recente que já passou (nunca no futuro). Sem dia falado = hoje' },
     proximaFatura:{ type:'boolean', description:'true SÓ se a pessoa disse que foi para a próxima fatura (o app já decide a fatura pela data e o fechamento do cartão)' },
     conta:{ type:'string', description:'chave exata da conta da lista (tipo conta); vazio nos outros' }
-  }, required:['tipo','descricao','valor','categoria','categoriaDuvida','cartao','banco','parcelas','data','proximaFatura','conta'] } }
-}, required:['transcricao','resposta','aprendidos','itens'] };
+  }, required:['tipo','descricao','valor','categoria','categoriaDuvida','cartao','banco','parcelas','data','proximaFatura','conta'] } },
+  gravar:{ type:'boolean', description:'true só se a pessoa mandou gravar/salvar agora ("grava", "pode gravar", "salva")' }
+}, required:['transcricao','resposta','aprendidos','itens','gravar'] };
 
 /* o que a lista muda em cada cartão e banco (para a IA e para os Detalhes) */
 function atzConferencia(itens){
@@ -259,7 +260,7 @@ function atzContexto(){
   }
   return {
     hoje: calISO(new Date()), diaDaSemana: ATZ_DIAS[new Date().getDay()],
-    bancos: bancosDoUsuario().map(b=>({ nome: b.nome, saldoNoApp: Number(b.valor) || 0 })),
+    bancos: bancosDoUsuario().map(b=>({ nome: b.nome, saldoNoApp: Number(b.valor) || 0, pixNoMes: Math.round((state.lancamentos || []).filter(la=>la.mKey === mesFinanceiroAtual() && (la.usuario || 'davi') === state.currentUser && vozSemAcento(la.banco) === vozSemAcento(b.nome)).reduce((t, la)=>t + (Number(la.valor) || 0), 0) * 100) / 100 })),
     cartoes: conf.cartoes.map(x=>({ nome: x.c.nome, fechamentoDia: parseInt(x.c.fechamento) || null, vencimentoDia: parseInt(x.c.vencimento) || null, faturaAberta: monthLabel(x.m), faturaNoApp: Math.round(x.noApp * 100) / 100, novosNestaConversa: Math.round(x.novos * 100) / 100, faturaInformada: x.informado, faltaParaBater: x.falta })),
     conferenciaDosBancos: conf.bancos.filter(x=>x.informado !== null).map(x=>({ banco: x.b.nome, saldoEsperado: x.esperado, saldoInformado: x.informado, diferenca: x.dif })),
     contasAbertas: vozContasAbertas().map(c=>({ chave: c.key, conta: c.desc, valor: c.valor })),
@@ -406,7 +407,7 @@ async function atzPerguntar(msg, audio){
       `NÃO faça contas de quanto falta para bater a fatura ou o saldo: o app calcula e escreve logo depois da sua resposta. ` +
       `O app já pergunta o que falta explicar (fatura e saldo): não repita esses valores. Quando a pessoa contar o que gastou para explicar a diferença, lance como pix (banco) ou vista (cartão). ` +
       `Se ela disser que não lembra o resto ("não sei", "o resto não lembro"), lance um pix "Gasto não identificado" (categoria Outros) no banco com o valor que falta (diferenca do contexto, em positivo), ou uma vista "Compra não identificada" no cartão com faltaParaBater. ` +
-      `A pessoa pode corrigir ou tirar itens ("tira a farmácia", "o mercado foi 130"): devolva sempre a lista completa já corrigida. Não invente itens.\n\n` +
+      `PERGUNTAS: se a pessoa perguntar algo ("qual o saldo do Nubank?", "quanto está a fatura?", "quanto gastei no Pix?"), responda em resposta com os números do CONTEXTO (saldoNoApp, faturaNoApp, pixNoMes, contasAbertas) e devolva a LISTA ATUAL sem mudar. Nunca responda uma pergunta com outra pergunta. JÁ EXPLICADO: se a pessoa disser que a diferença do saldo ou da fatura já está lançada (importou a planilha, já lançou antes) ou que é só para acertar o saldo, lance só o item saldo/fatura e NÃO crie "não identificado". A pessoa pode corrigir ou tirar itens ("tira a farmácia", "o mercado foi 130"): devolva sempre a lista completa já corrigida. Não invente itens.\n\n` +
       (atzAba === 'passo' && atzPassos()[atzPassoI] ? `O APP PERGUNTOU À PESSOA: "${atzPassoPergunta(atzPassos()[atzPassoI])}" (a fala responde isso).
 ` : '') +
       `CONTEXTO: ${JSON.stringify(atzContexto())}\n\nLISTA ATUAL: ${JSON.stringify(atzItensParaIA())}\n\nCONVERSA:\n${historico}` }];
@@ -433,6 +434,7 @@ async function atzPerguntar(msg, audio){
       novos: atzItens.filter(i=>!ks.has(atzChave(i))).map(atzChave), tirados: antes.filter(i=>!kn.has(atzChave(i))), contas,
       aprendeu: aprendeu.map(a=>`${a.nome.trim()} → ${a.categoria}`) });
     if(atzAba === 'passo') atzPassoAvancar(antes);
+    if(r.gravar) setTimeout(()=>{ atzItens.forEach(i=>{ if(atzGravavel(i) && !atzFaltaNoItem(i)) i.ok = true; }); atzGravar(); }, 0);
   }catch(e){
     if(audio && !msg.texto) msg.texto = '(áudio)';
     atzConversa.push({ quem:'ia', texto: 'Não consegui falar com a IA agora (' + ((e && e.message) || 'erro') + '). Tente de novo.', erro: true });
@@ -1013,12 +1015,12 @@ function atzEdVisivel(campo){ setTimeout(()=>{ try{ campo.scrollIntoView({ block
 /* ---------- importar planilha (Resumo): os gastos de vários meses de uma vez, feitos no LibreOffice/Excel ----------
    Colunas (a ordem não importa, o nome sim): Fatura (mês: 10/2026, out/2026…) · Data · Nome · Categoria · Valor total · Forma (Cartão/Pix) · Cartão ou banco · Tipo (À vista/Parcelado) · Parcelas.
    Cada linha entra no mês da coluna Fatura (cartão: na fatura desse mês; Pix: nesse mês do app); sem Fatura, no mês escolhido na janela.
-   Saldo dos bancos não muda: depois confira o saldo em Finanças.
+   Aba Saldos (Banco | Saldo atual): o saldo de cada banco fica o da planilha; sem ela, o saldo não muda.
    "Do zero" apaga antes os gastos de cartão e Pix dos meses que estão na planilha (ou de todos); contas fixas, bancos, cartões e assinaturas ficam. */
 const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 const IMP_COLUNAS = { mes:/^(fatura|mes)/, data:/^data/, nome:/^(nome|descri|o que|compra)/, cat:/^categ/, valor:/^valor/, forma:/^(forma|pagamento|pago)/, onde:/^(cartao|banco|onde)/, tipo:/^tipo/, parcelas:/^parcela/ };
 const IMP_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-let impLinhas = [];
+let impLinhas = [], impSaldos = [];
 async function impGarantirXlsx(){
   if(!window.XLSX) await carregarScript(XLSX_URL);
   return window.XLSX;
@@ -1037,9 +1039,11 @@ async function impLer(arquivo){
     const wb = X.read(await arquivo.arrayBuffer(), { cellDates: true });
     const aba = wb.SheetNames.find(n=>/gastos/i.test(n)) || wb.SheetNames[0];
     linhas = X.utils.sheet_to_json(wb.Sheets[aba], { header: 1, raw: true, defval: '' });
+    const abaS = wb.SheetNames.find(n=>/saldo/i.test(n));
+    impSaldos = abaS ? impLerSaldos(X.utils.sheet_to_json(wb.Sheets[abaS], { header: 1, raw: true, defval: '' })) : [];
   }catch(e){ showToast('Não consegui ler essa planilha'); return; }
   impLinhas = impInterpretar(linhas);
-  if(!impLinhas.length){ showToast('Não achei nenhum gasto na planilha (a 1ª linha precisa ter os nomes das colunas)'); return; }
+  if(!impLinhas.length && !impSaldos.length){ showToast('Não achei nenhum gasto na planilha (a 1ª linha precisa ter os nomes das colunas)'); return; }
   impMostrar();
 }
 /* linhas cruas da planilha → gastos; cada um com .erro quando não dá para gravar */
@@ -1075,6 +1079,15 @@ function impData(v){
   const m = String(v).trim().match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/);
   if(m){ const a = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : String(new Date().getFullYear()); return `${a}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; }
   return /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).slice(0, 10) : '';
+}
+/* aba Saldos: Banco | Saldo atual (saldo vazio = não mexe naquele banco) */
+function impLerSaldos(linhas){
+  return linhas.filter(r=>String(r[1] ?? '').trim() !== '' && !/saldo/i.test(String(r[1]))).map(r=>{
+    const nome = String(r[0]).trim(), v = r[1];
+    const valor = typeof v === 'number' ? Math.round(v * 100) / 100 : (String(v).trim().startsWith('-') ? -1 : 1) * impValor(v);
+    const banco = impAchar(bancosDoUsuario(), nome);
+    return { nome, valor, banco, erro: banco ? '' : `banco "${nome}" não existe no app` };
+  });
 }
 /* coluna Fatura → "2026-10": 10/2026, 10/26, out/2026, outubro 2026, "out" (ano atual), 2026-10 ou uma data (o mês dela) */
 function impMes(v){
@@ -1118,10 +1131,12 @@ function impMostrar(){
       <label><input type="radio" name="impModo" value="mes"><span><b>Atualizar esses meses do zero</b><small>Apaga os gastos de cartão e Pix já lançados só nos meses da planilha; os outros meses ficam</small></span></label>
       <label><input type="radio" name="impModo" value="tudo"><span><b>Do zero em tudo</b><small>Apaga os gastos de cartão e Pix de todos os meses</small></span></label>
     </div>
-    <p class="imp-nota">Contas fixas, bancos, cartões e assinaturas não mudam. O saldo dos bancos também não: confira em Finanças depois.</p>
+    ${impSaldos.length ? `<div class="imp-meses">${impSaldos.map(x=>`<div${x.erro ? ' class="imp-erro"' : ''}><span>Saldo ${escBanco(x.banco ? x.banco.nome : x.nome)}${x.erro ? ' · ' + escBanco(x.erro) : ' · era ' + fmtMoney(Number(x.banco.valor) || 0)}</span><b>${fmtMoney(x.valor)}</b></div>`).join('')}</div>` : ''}
+    <p class="imp-nota">Contas fixas, bancos, cartões e assinaturas não mudam.${impSaldos.length ? ' O saldo dos bancos fica o da aba Saldos.' : ' O saldo dos bancos também não: preencha a aba Saldos da planilha ou confira em Finanças depois.'}</p>
     <div class="imp-lista">${impLinhas.map(l=>`<div class="imp-linha${l.erro ? ' ruim' : ''}"><span><b>${escBanco(l.nome)}</b><small>${l.mes ? monthLabel(l.mes) + ' · ' : ''}${l.data ? atzDiaCurto(l.data) + ' · ' : ''}${escBanco(tipoTxt(l))} · ${escBanco(l.cat)}${l.erro ? ` · <em>${escBanco(l.erro)}</em>` : ''}</small></span><b>${fmtMoney(l.valor)}</b></div>`).join('')}</div>`;
-  document.getElementById('impGravarBtn').disabled = !boas.length;
-  document.getElementById('impGravarBtn').textContent = `Importar ${boas.length}`;
+  const saldosOk = impSaldos.filter(x=>!x.erro).length;
+  document.getElementById('impGravarBtn').disabled = !boas.length && !saldosOk;
+  document.getElementById('impGravarBtn').textContent = boas.length ? `Importar ${boas.length}` : 'Atualizar saldos';
   ov.classList.add('active');
 }
 /* "do zero": tira os gastos de cartão (à vista e parcelados que começam no mês) e de Pix do usuário; mKey null = todos os meses */
@@ -1142,21 +1157,27 @@ function impGravarLinhas(linhas, mPadrao){
 }
 async function impGravar(){
   const mPadrao = document.getElementById('impMes').value, modo = (document.querySelector('input[name="impModo"]:checked') || {}).value || 'somar';
-  const boas = impLinhas.filter(l=>!l.erro);
-  if(!boas.length) return;
+  const boas = impLinhas.filter(l=>!l.erro), saldos = impSaldos.filter(x=>!x.erro);
+  if(!boas.length && !saldos.length) return;
   const meses = [...new Set(boas.map(l=>l.mes || mPadrao))].sort(), nomes = meses.map(m=>monthLabel(m)).join(', ');
   if(modo === 'tudo' && !(await iosConfirm('Apagar TODOS os gastos de cartão e Pix, de todos os meses, e ficar só com os da planilha?'))) return;
   if(modo === 'mes' && !(await iosConfirm(`Apagar os gastos de cartão e Pix já lançados em ${nomes} e ficar só com os da planilha? Os outros meses não mudam.`))) return;
   closeModal('modalImportar');
-  comDesfazer(`${boas.length} ${boas.length === 1 ? 'gasto importado' : 'gastos importados'} · ${nomes}`, ()=>{
+  comDesfazer(boas.length ? `${boas.length} ${boas.length === 1 ? 'gasto importado' : 'gastos importados'} · ${nomes}${saldos.length ? ' · saldos atualizados' : ''}` : 'Saldos atualizados', ()=>{
     if(modo === 'tudo') impApagarGastos(null);
     else if(modo === 'mes') meses.forEach(impApagarGastos);
     impGravarLinhas(boas, mPadrao);
+    impGravarSaldos(saldos);
     state.ultimaAtualizacao = Date.now();
     persist();
   }, ()=>{ if(document.getElementById('pageAtualizar').classList.contains('active')) renderAtualizar(); });
-  impLinhas = [];
+  impLinhas = []; impSaldos = [];
   renderAtualizar();
+}
+/* saldo de cada banco = o da planilha; o saldo em conta acompanha */
+function impGravarSaldos(saldos){
+  saldos.forEach(x=>{ x.banco.valor = x.valor; });
+  if(saldos.length) state.users[state.currentUser].saldoAtual = totalBancos(bancosDoUsuario());
 }
 /* modelo para preencher: aba Gastos (vazia), Exemplo e Listas (categorias e os cartões/bancos do app) */
 async function impBaixarModelo(){
@@ -1170,6 +1191,6 @@ async function impBaixarModelo(){
   const n = Math.max(cats.length, cartoes.length, bancos.length, 2);
   const listas = [['Categorias', 'Cartões', 'Bancos', 'Forma', 'Tipo'], ...Array.from({ length: n }, (_, i)=>[cats[i] || '', (cartoes[i] || {}).nome || '', (bancos[i] || {}).nome || '', ['Cartão', 'Pix'][i] || '', ['À vista', 'Parcelado'][i] || ''])];
   const wb = X.utils.book_new(), larg = [10, 12, 28, 16, 12, 10, 18, 12, 10].map(wch=>({ wch }));
-  [['Gastos', [cab]], ['Exemplo', exemplo], ['Listas', listas]].forEach(([nome, d])=>{ const ws = X.utils.aoa_to_sheet(d); ws['!cols'] = larg; X.utils.book_append_sheet(wb, ws, nome); });
+  [['Gastos', [cab]], ['Saldos', [['Banco', 'Saldo atual'], ...bancos.map(b=>[b.nome, ''])]], ['Exemplo', exemplo], ['Listas', listas]].forEach(([nome, d])=>{ const ws = X.utils.aoa_to_sheet(d); ws['!cols'] = larg; X.utils.book_append_sheet(wb, ws, nome); });
   X.writeFile(wb, 'siloe-gastos-modelo.xlsx');
 }

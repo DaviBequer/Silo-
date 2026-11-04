@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.0', itens: [
+    'Planilha com a aba Saldos: o saldo de cada banco fica o da planilha, sem pedir justificativa',
+    'Assistente responde perguntas (saldo, fatura, Pix do mês) em vez de perguntar de volta',
+    'Falar grava no Assistente grava de verdade'
+  ] },
   { versao: 'v17.9', itens: [
     'Planilha com a coluna Fatura: cada gasto entra no mês dele, dá para lançar vários meses antigos de uma vez',
     'Atualizar do zero só os meses que estão na planilha'

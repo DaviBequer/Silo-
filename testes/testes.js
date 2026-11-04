@@ -290,6 +290,13 @@ async function rodarTestes(){
     igual('planilha: cada linha no mês da Fatura; sem Fatura, no mês padrão', [cImp.credoVista.map(cv=>cv.mKey), state.lancamentos.filter(l=>l.valor === 21 && l.mKey === M).length], [['2026-08'], 1]);
     state.lancamentos = state.lancamentos.filter(l=>l !== laOutro && l.descricao !== 'Padaria' && l.valor !== 21);
     state.comprasTracker = []; state.cartoesTracker.pop();
+    const bImp = bancosDoUsuario(), bAntes = bImp.map(b=>b.valor), saldoAntes = state.users[state.currentUser].saldoAtual;
+    bImp.push({ id:'bimp', nome:'Banco Teste', valor:500 });
+    const sImp = impLerSaldos([['Banco', 'Saldo atual'], ['banco teste', 'R$ 0,00'], ['Não Existe', 10], ['Outro', '']]);
+    igual('planilha: aba Saldos (vazio não mexe, banco errado avisa)', sImp.map(x=>[x.valor, !!x.banco, !!x.erro]), [[0, true, false], [10, false, true]]);
+    impGravarSaldos(sImp.filter(x=>!x.erro));
+    igual('planilha: saldo do banco fica o da planilha', bImp.find(b=>b.id === 'bimp').valor, 0);
+    bImp.pop(); bImp.forEach((b, i)=>{ b.valor = bAntes[i]; }); state.users[state.currentUser].saldoAtual = saldoAntes;
 
     /* ---------- proteção contra perda ---------- */
     const baseP = JSON.stringify({ louvores: [1,2,3,4,5,6].map(i=>({ id:'l'+i, revisar:[1,2,3,4,5,6] })), cultos:[{ id:'c1' }, { id:'c2' }, { id:'c3' }] });
