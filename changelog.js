@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.3', itens: [
+    'Assistente: banco com valor (Nubank Inter zero) é informar o saldo, não pergunta; vale para todos os bancos falados'
+  ] },
   { versao: 'v18.2', itens: [
     'Assistente: Inter 0 muda só o saldo da conta; a fatura do cartão só muda falando cartão, fatura ou crédito'
   ] },
