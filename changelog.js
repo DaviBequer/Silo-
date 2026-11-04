@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.2', itens: [
+    'Assistente: Inter 0 muda só o saldo da conta; a fatura do cartão só muda falando cartão, fatura ou crédito'
+  ] },
   { versao: 'v18.1', itens: [
     'Assistente: o saldo que você informa vale como está, sem pedir justificativa nem criar gasto não identificado',
     'Planilha: linhas de recebido ou transferência entre contas não viram gasto'

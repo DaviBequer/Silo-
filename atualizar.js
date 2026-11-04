@@ -395,6 +395,7 @@ async function atzPerguntar(msg, audio){
       `Tipos de item: vista (compra no cartão de crédito à vista), parcelada (compra no cartão em N vezes; valor = TOTAL), pix (compra no Pix ou débito, com o banco), ` +
       `recebi (dinheiro que entrou num banco), conta (pagou uma conta da lista contasAbertas: use a chave), saldo (o saldo que a pessoa viu no banco: "o Inter está 2.300"), ` +
       `fatura (o total que a pessoa viu na fatura aberta do cartão: "a fatura do Nubank está 1.850").\n` +
+      `BANCO x CARTÃO: o nome do banco sozinho com um valor ("Inter 0", "o Nubank está 2.300") é SÓ o saldo daquele banco: nunca mexa na fatura do cartão de mesmo nome. Fatura só quando a pessoa falar cartão, fatura ou crédito ("cartão Inter 0", "a fatura do Inter está 900").\n` +
       `Regras: "no Pix do Nubank"/"no débito do Inter" = pix com aquele banco. "No cartão"/"no crédito" = vista, ou parcelada se falou em vezes. ` +
       `"Foi para a próxima fatura" = proximaFatura true. Valores por extenso viram número. ` +
       `DATAS: cada item tem a data da compra. "No dia 25 comprei…" vale para aquela compra e para as seguintes até a pessoa falar outro dia ("já no dia 24…"). "Ontem", "anteontem", "sábado" contam a partir de hoje (no contexto). Sem dia falado = hoje. O app decide em qual fatura cai pela data e pelo fechamento do cartão: não marque proximaFatura por causa da data.
@@ -425,6 +426,8 @@ async function atzPerguntar(msg, audio){
     if(aprendeu.length) persist();
     const antes = atzItens;
     atzItens = atzManterConfirmados(antes, atzNormalizarItens(r.itens)); atzEditando = -1;
+    /* "Inter 0" é o saldo do banco: fatura nova só quando a fala diz cartão/fatura/crédito (a IA às vezes zera os dois) */
+    if(!/cart|fatura|credito/.test(vozSemAcento(msg.paraIA || msg.texto))){ const ja = new Set(antes.map(atzChave)); atzItens = atzItens.filter(i=>i.tipo !== 'fatura' || ja.has(atzChave(i))); }
     /* a conta da falta é do app (a IA erra soma): a resposta ganha as linhas com os números certos (aparecem nos Detalhes) */
     const conf = atzConferencia(), contas = [];
     conf.cartoes.filter(x=>x.informado !== null).forEach(x=>contas.push(`Fatura ${x.c.nome}: fica ${fmtMoney(x.informado)}`));
