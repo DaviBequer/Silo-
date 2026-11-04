@@ -1010,12 +1010,14 @@ async function atzAudioParaEnviar(blob){
 /* campo do editor em foco: espera o teclado abrir e deixa o campo à vista */
 function atzEdVisivel(campo){ setTimeout(()=>{ try{ campo.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(e){} }, 320); }
 
-/* ---------- importar planilha (Resumo): os gastos de um mês de uma vez, feitos no LibreOffice/Excel ----------
-   Colunas (a ordem não importa, o nome sim): Data · Nome · Categoria · Valor total · Forma (Cartão/Pix) · Cartão ou banco · Tipo (À vista/Parcelado) · Parcelas.
-   Tudo entra no mês do app escolhido (cartão: na fatura desse mês). Saldo dos bancos não muda: depois confira o saldo em Finanças.
-   "Do zero" apaga antes os gastos de cartão e Pix (desse mês ou de todos); contas fixas, bancos, cartões e assinaturas ficam. */
+/* ---------- importar planilha (Resumo): os gastos de vários meses de uma vez, feitos no LibreOffice/Excel ----------
+   Colunas (a ordem não importa, o nome sim): Fatura (mês: 10/2026, out/2026…) · Data · Nome · Categoria · Valor total · Forma (Cartão/Pix) · Cartão ou banco · Tipo (À vista/Parcelado) · Parcelas.
+   Cada linha entra no mês da coluna Fatura (cartão: na fatura desse mês; Pix: nesse mês do app); sem Fatura, no mês escolhido na janela.
+   Saldo dos bancos não muda: depois confira o saldo em Finanças.
+   "Do zero" apaga antes os gastos de cartão e Pix dos meses que estão na planilha (ou de todos); contas fixas, bancos, cartões e assinaturas ficam. */
 const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-const IMP_COLUNAS = { data:/^data/, nome:/^(nome|descri|o que|compra)/, cat:/^categ/, valor:/^valor/, forma:/^(forma|pagamento|pago)/, onde:/^(cartao|banco|onde)/, tipo:/^tipo/, parcelas:/^parcela/ };
+const IMP_COLUNAS = { mes:/^(fatura|mes)/, data:/^data/, nome:/^(nome|descri|o que|compra)/, cat:/^categ/, valor:/^valor/, forma:/^(forma|pagamento|pago)/, onde:/^(cartao|banco|onde)/, tipo:/^tipo/, parcelas:/^parcela/ };
+const IMP_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 let impLinhas = [];
 async function impGarantirXlsx(){
   if(!window.XLSX) await carregarScript(XLSX_URL);
@@ -1054,7 +1056,7 @@ function impInterpretar(linhas){
     const parcelas = Math.max(1, Math.round(Number(String(pega(r, 'parcelas')).replace(/\D/g, '')) || 1));
     const tipo = ehPix ? 'pix' : (parcelas > 1 || /parcel/.test(vozSemAcento(pega(r, 'tipo')))) ? 'parcelada' : 'vista';
     const cat = String(pega(r, 'cat')).trim() || 'Outros';
-    const l = { data: impData(pega(r, 'data')), nome: String(pega(r, 'nome')).trim() || cat, cat, valor, tipo, parcelas: tipo === 'parcelada' ? Math.max(2, parcelas) : 1, cartao, banco, onde };
+    const l = { mes: impMes(pega(r, 'mes')), data: impData(pega(r, 'data')), nome: String(pega(r, 'nome')).trim() || cat, cat, valor, tipo, parcelas: tipo === 'parcelada' ? Math.max(2, parcelas) : 1, cartao, banco, onde };
     if(!(valor > 0)) l.erro = 'sem valor';
     else if(tipo !== 'pix' && !cartao) l.erro = onde ? `cartão "${onde}" não existe no app` : 'falta o cartão';
     return l;
@@ -1074,6 +1076,19 @@ function impData(v){
   if(m){ const a = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : String(new Date().getFullYear()); return `${a}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; }
   return /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).slice(0, 10) : '';
 }
+/* coluna Fatura → "2026-10": 10/2026, 10/26, out/2026, outubro 2026, "out" (ano atual), 2026-10 ou uma data (o mês dela) */
+function impMes(v){
+  if(v instanceof Date || typeof v === 'number') return (impData(v) || '').slice(0, 7);
+  const s = vozSemAcento(v).trim();
+  if(!s) return '';
+  let m = s.match(/^(\d{4})[\/.-](\d{1,2})$/);
+  if(m) return `${m[1]}-${m[2].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})[\/.-](\d{2}|\d{4})$/);
+  if(m && +m[1] >= 1 && +m[1] <= 12) return `${m[2].length === 2 ? '20' + m[2] : m[2]}-${m[1].padStart(2, '0')}`;
+  m = s.match(/^([a-z]{3})[a-z]*[\s\/.-]*(?:de\s+)?(\d{2}|\d{4})?$/);
+  if(m && IMP_MESES.includes(m[1])) return `${m[2] ? (m[2].length === 2 ? '20' + m[2] : m[2]) : new Date().getFullYear()}-${String(IMP_MESES.indexOf(m[1]) + 1).padStart(2, '0')}`;
+  return (impData(v) || '').slice(0, 7);
+}
 /* "nubank", "Nu", "cartão Inter" → o cartão/banco do app com esse nome */
 function impAchar(lista, nome){
   const n = vozSemAcento(nome).replace(/cartao|banco/g, '').trim();
@@ -1088,20 +1103,23 @@ function impMostrar(){
       <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('modalImportar')">Cancelar</button><button class="btn" id="impGravarBtn" onclick="impGravar()">Importar</button></div></div>`;
     document.body.appendChild(ov);
   }
-  const atual = mesFinanceiroAtual(), meses = [-3, -2, -1, 0, 1].map(d=>addMonths(atual, d));
-  const boas = impLinhas.filter(l=>!l.erro), ruins = impLinhas.length - boas.length;
+  const atual = mesFinanceiroAtual(), meses = Array.from({ length: 26 }, (_, i)=>addMonths(atual, 1 - i));
+  const boas = impLinhas.filter(l=>!l.erro), ruins = impLinhas.length - boas.length, semMes = boas.filter(l=>!l.mes).length;
   const total = boas.reduce((s, l)=>s + l.valor, 0);
+  const porMes = {};
+  boas.forEach(l=>{ const k = l.mes || ''; (porMes[k] = porMes[k] || { n: 0, v: 0 }); porMes[k].n++; porMes[k].v += l.valor; });
   const tipoTxt = l=>l.tipo === 'pix' ? 'Pix' + (l.banco ? ' · ' + l.banco.nome : '') : (l.cartao ? l.cartao.nome : l.onde) + (l.tipo === 'parcelada' ? ` · ${l.parcelas}x de ${fmtMoney(l.valor / l.parcelas)}` : ' · à vista');
   document.getElementById('impCorpo').innerHTML = `
     <p class="imp-resumo"><b>${boas.length}</b> ${boas.length === 1 ? 'gasto' : 'gastos'} · ${fmtMoney(total)}${ruins ? ` · <span class="imp-erro">${ruins} com problema (não entram)</span>` : ''}</p>
-    <label class="imp-campo"><span>Entram no mês do app</span><select id="impMes">${meses.map(m=>`<option value="${m}"${m === atual ? ' selected' : ''}>${monthLabelLong(m)}</option>`).join('')}</select></label>
+    <div class="imp-meses">${Object.keys(porMes).filter(Boolean).sort().map(k=>`<div><span>Fatura de ${monthLabelLong(k).toLowerCase()}</span><b>${porMes[k].n} · ${fmtMoney(porMes[k].v)}</b></div>`).join('')}</div>
+    <label class="imp-campo"${semMes ? '' : ' style="display:none"'}><span>${semMes} sem a coluna Fatura entram em</span><select id="impMes">${meses.map(m=>`<option value="${m}"${m === atual ? ' selected' : ''}>${monthLabelLong(m)}</option>`).join('')}</select></label>
     <div class="imp-modos" role="radiogroup" aria-label="Como importar">
       <label><input type="radio" name="impModo" value="somar" checked><span><b>Somar ao que já tem</b><small>Os gastos já lançados ficam</small></span></label>
-      <label><input type="radio" name="impModo" value="mes"><span><b>Do zero neste mês</b><small>Apaga os gastos de cartão e Pix já lançados no mês escolhido</small></span></label>
+      <label><input type="radio" name="impModo" value="mes"><span><b>Atualizar esses meses do zero</b><small>Apaga os gastos de cartão e Pix já lançados só nos meses da planilha; os outros meses ficam</small></span></label>
       <label><input type="radio" name="impModo" value="tudo"><span><b>Do zero em tudo</b><small>Apaga os gastos de cartão e Pix de todos os meses</small></span></label>
     </div>
     <p class="imp-nota">Contas fixas, bancos, cartões e assinaturas não mudam. O saldo dos bancos também não: confira em Finanças depois.</p>
-    <div class="imp-lista">${impLinhas.map(l=>`<div class="imp-linha${l.erro ? ' ruim' : ''}"><span><b>${escBanco(l.nome)}</b><small>${l.data ? atzDiaCurto(l.data) + ' · ' : ''}${escBanco(tipoTxt(l))} · ${escBanco(l.cat)}${l.erro ? ` · <em>${escBanco(l.erro)}</em>` : ''}</small></span><b>${fmtMoney(l.valor)}</b></div>`).join('')}</div>`;
+    <div class="imp-lista">${impLinhas.map(l=>`<div class="imp-linha${l.erro ? ' ruim' : ''}"><span><b>${escBanco(l.nome)}</b><small>${l.mes ? monthLabel(l.mes) + ' · ' : ''}${l.data ? atzDiaCurto(l.data) + ' · ' : ''}${escBanco(tipoTxt(l))} · ${escBanco(l.cat)}${l.erro ? ` · <em>${escBanco(l.erro)}</em>` : ''}</small></span><b>${fmtMoney(l.valor)}</b></div>`).join('')}</div>`;
   document.getElementById('impGravarBtn').disabled = !boas.length;
   document.getElementById('impGravarBtn').textContent = `Importar ${boas.length}`;
   ov.classList.add('active');
@@ -1113,24 +1131,27 @@ function impApagarGastos(mKey){
   state.comprasTracker = (state.comprasTracker || []).filter(cp=>!doMes(cp.mesInicio));
   state.lancamentos = (state.lancamentos || []).filter(la=>(la.usuario || 'davi') !== state.currentUser || !doMes(la.mKey));
 }
-function impGravarLinhas(linhas, m){
+/* cada linha no mês da coluna Fatura; sem ela, no mês padrão */
+function impGravarLinhas(linhas, mPadrao){
   linhas.forEach(l=>{
-    const data = l.data || calISO(new Date());
+    const m = l.mes || mPadrao, data = l.data || calISO(new Date());
     if(l.tipo === 'pix') lancarPix({ mKey: m, data, descricao: l.nome, valor: l.valor, categoria: l.cat, banco: l.banco ? l.banco.nome : l.onde });
     else if(l.tipo === 'parcelada') lancarParcelada(l.cartao, { nome: l.nome, valorTotal: l.valor, parcelas: l.parcelas, mesInicio: m, data });
     else lancarVista(l.cartao, { descricao: l.nome, valor: l.valor, categoria: l.cat, mKey: m, data });
   });
 }
 async function impGravar(){
-  const m = document.getElementById('impMes').value, modo = (document.querySelector('input[name="impModo"]:checked') || {}).value || 'somar';
+  const mPadrao = document.getElementById('impMes').value, modo = (document.querySelector('input[name="impModo"]:checked') || {}).value || 'somar';
   const boas = impLinhas.filter(l=>!l.erro);
   if(!boas.length) return;
+  const meses = [...new Set(boas.map(l=>l.mes || mPadrao))].sort(), nomes = meses.map(m=>monthLabel(m)).join(', ');
   if(modo === 'tudo' && !(await iosConfirm('Apagar TODOS os gastos de cartão e Pix, de todos os meses, e ficar só com os da planilha?'))) return;
-  if(modo === 'mes' && !(await iosConfirm(`Apagar os gastos de cartão e Pix já lançados em ${monthLabelLong(m)} e ficar só com os da planilha?`))) return;
+  if(modo === 'mes' && !(await iosConfirm(`Apagar os gastos de cartão e Pix já lançados em ${nomes} e ficar só com os da planilha? Os outros meses não mudam.`))) return;
   closeModal('modalImportar');
-  comDesfazer(`${boas.length} ${boas.length === 1 ? 'gasto importado' : 'gastos importados'} em ${monthLabel(m)}`, ()=>{
-    if(modo !== 'somar') impApagarGastos(modo === 'tudo' ? null : m);
-    impGravarLinhas(boas, m);
+  comDesfazer(`${boas.length} ${boas.length === 1 ? 'gasto importado' : 'gastos importados'} · ${nomes}`, ()=>{
+    if(modo === 'tudo') impApagarGastos(null);
+    else if(modo === 'mes') meses.forEach(impApagarGastos);
+    impGravarLinhas(boas, mPadrao);
     state.ultimaAtualizacao = Date.now();
     persist();
   }, ()=>{ if(document.getElementById('pageAtualizar').classList.contains('active')) renderAtualizar(); });
@@ -1141,14 +1162,14 @@ async function impGravar(){
 async function impBaixarModelo(){
   let X;
   try{ X = await impGarantirXlsx(); }catch(e){ showToast('Sem internet para montar o modelo'); return; }
-  const cab = ['Data', 'Nome', 'Categoria', 'Valor total', 'Forma', 'Cartão ou banco', 'Tipo', 'Parcelas'];
+  const cab = ['Fatura', 'Data', 'Nome', 'Categoria', 'Valor total', 'Forma', 'Cartão ou banco', 'Tipo', 'Parcelas'];
   const cartoes = vozCartoes(), bancos = bancosDoUsuario();
   const cartao = (cartoes[0] || {}).nome || 'Nubank', banco = (bancos[0] || {}).nome || 'Inter';
-  const exemplo = [cab, ['05/10/2026', 'Mercado do mês', 'Mercado', 412.35, 'Cartão', cartao, 'À vista', ''], ['12/10/2026', 'Tênis', 'Lazer', 300, 'Cartão', cartao, 'Parcelado', 3], ['18/10/2026', 'Padaria', 'Alimentação', 23.5, 'Pix', banco, '', '']];
+  const exemplo = [cab, ['10/2026', '05/10/2026', 'Mercado do mês', 'Mercado', 412.35, 'Cartão', cartao, 'À vista', ''], ['10/2026', '12/10/2026', 'Tênis', 'Lazer', 300, 'Cartão', cartao, 'Parcelado', 3], ['09/2026', '18/09/2026', 'Padaria', 'Alimentação', 23.5, 'Pix', banco, '', '']];
   const cats = [...new Set(vozCategoriasCartao())];
   const n = Math.max(cats.length, cartoes.length, bancos.length, 2);
   const listas = [['Categorias', 'Cartões', 'Bancos', 'Forma', 'Tipo'], ...Array.from({ length: n }, (_, i)=>[cats[i] || '', (cartoes[i] || {}).nome || '', (bancos[i] || {}).nome || '', ['Cartão', 'Pix'][i] || '', ['À vista', 'Parcelado'][i] || ''])];
-  const wb = X.utils.book_new(), larg = [12, 28, 16, 12, 10, 18, 12, 10].map(wch=>({ wch }));
+  const wb = X.utils.book_new(), larg = [10, 12, 28, 16, 12, 10, 18, 12, 10].map(wch=>({ wch }));
   [['Gastos', [cab]], ['Exemplo', exemplo], ['Listas', listas]].forEach(([nome, d])=>{ const ws = X.utils.aoa_to_sheet(d); ws['!cols'] = larg; X.utils.book_append_sheet(wb, ws, nome); });
   X.writeFile(wb, 'siloe-gastos-modelo.xlsx');
 }

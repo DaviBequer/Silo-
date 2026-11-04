@@ -3157,3 +3157,6 @@ body{font-weight:400;letter-spacing:.005em}
 .imp-linha small{display:block;font-size:12px;color:var(--text-faint)}
 .imp-linha.ruim{opacity:.7}
 .imp-linha em{font-style:normal;color:var(--danger)}
+.imp-meses{display:flex;flex-direction:column;margin:0 0 12px;border-top:1px solid var(--fio)}
+.imp-meses div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--fio);font-size:14px}
+.imp-meses b{font-weight:500;white-space:nowrap}

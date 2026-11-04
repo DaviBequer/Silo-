@@ -284,7 +284,11 @@ async function rodarTestes(){
     igual('planilha: do zero no mês apaga só aquele mês', [state.lancamentos.includes(laVelho), state.lancamentos.includes(laOutro), cImp.credoVista.length], [false, true, 0]);
     impGravarLinhas(impL.filter(l=>!l.erro), M);
     igual('planilha: tudo entra no mês escolhido', [cImp.credoVista.map(cv=>[cv.mKey, cv.valor]), state.comprasTracker.map(cp=>[cp.mesInicio, cp.valorTotal, cp.parcelas]), state.lancamentos.filter(l=>l.descricao === 'Padaria').map(l=>l.mKey)], [[[M, 100]], [[M, 300, 3]], [M]]);
-    state.lancamentos = state.lancamentos.filter(l=>l !== laOutro && l.descricao !== 'Padaria');
+    igual('planilha: coluna Fatura em vários jeitos', ['10/2026', '9/26', 'out/2026', 'Outubro de 2026', '2026-08', '05/10/2026', new Date(2026, 6, 1), ''].map(impMes), ['2026-10', '2026-09', '2026-10', '2026-10', '2026-08', '2026-10', '2026-07', '']);
+    const impF = impInterpretar([['Fatura', 'Valor', 'Forma', 'Cartão'], ['08/2026', 10, 'Cartão', 'Nubank'], ['', 21, 'Pix', '']]);
+    cImp.credoVista = []; impGravarLinhas(impF, M);
+    igual('planilha: cada linha no mês da Fatura; sem Fatura, no mês padrão', [cImp.credoVista.map(cv=>cv.mKey), state.lancamentos.filter(l=>l.valor === 21 && l.mKey === M).length], [['2026-08'], 1]);
+    state.lancamentos = state.lancamentos.filter(l=>l !== laOutro && l.descricao !== 'Padaria' && l.valor !== 21);
     state.comprasTracker = []; state.cartoesTracker.pop();
 
     /* ---------- proteção contra perda ---------- */

@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v17.9', itens: [
+    'Planilha com a coluna Fatura: cada gasto entra no mês dele, dá para lançar vários meses antigos de uma vez',
+    'Atualizar do zero só os meses que estão na planilha'
+  ] },
   { versao: 'v17.8', itens: [
     'Assistente: importar planilha com os gastos do mês (LibreOffice ou Excel), com opção de começar do zero',
     'Botão Baixar modelo da planilha no Resumo',
