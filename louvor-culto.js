@@ -169,7 +169,7 @@ function cultoMoverParte(id, d){
     const dy = (antes[el.dataset.id] ?? 0) - el.getBoundingClientRect().top;
     if(!dy) return;
     el.animate([{ transform:`translateY(${dy}px)` }, { transform:'none' }], { duration: 650, easing:'cubic-bezier(.45,0,.2,1)' });
-    if(el.dataset.id === id) el.animate([{ boxShadow:'0 0 0 0 transparent' }, { boxShadow:'0 10px 26px -12px rgba(43,38,32,.35)' }, { boxShadow:'0 0 0 0 transparent' }], { duration: 650 });
+    if(el.dataset.id === id) el.animate([{ boxShadow:'0 0 0 0 transparent' }, { boxShadow:'0 10px 26px -12px rgba(30,42,62,.35)' }, { boxShadow:'0 0 0 0 transparent' }], { duration: 650 });
   });
 }
 function cultoTirarParte(id){

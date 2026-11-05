@@ -539,7 +539,7 @@ function fecharSplash(imediato){
   const el = document.getElementById('splash');
   const sair = ()=>{
     document.body.classList.remove('carregando');
-    document.getElementById('metaCorTema')?.setAttribute('content', '#f3f2ee');   // barra de status creme, igual ao app
+    document.getElementById('metaCorTema')?.setAttribute('content', '#eef1f5');   // barra de status creme, igual ao app
     if(!el) return;
     el.classList.add('saindo');
     setTimeout(()=>el.classList.add('oculta'), 750);
@@ -557,7 +557,7 @@ function fecharSplash(imediato){
 }
 function mostrarSplash(){
   document.body.classList.add('carregando');
-  document.getElementById('metaCorTema')?.setAttribute('content', '#f3f2ee');
+  document.getElementById('metaCorTema')?.setAttribute('content', '#eef1f5');
   const el = document.getElementById('splash');
   if(el) el.classList.remove('saindo', 'oculta');
 }

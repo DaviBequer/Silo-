@@ -171,7 +171,7 @@ function renderCurvaSaldo(u, mKey){
   const zero = y(0);
   el.innerHTML = `<div class="curva-topo"><span>Saldo nos próximos meses</span><b class="${fim >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(fim)} em ${monthLabel(pts[pts.length - 1].m)}</b></div>
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Saldo previsto mês a mês">
-      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#c9a86a' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#c9a86a' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#9fc1e6' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#9fc1e6' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
       ${min < 0 ? `<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#d2452f" stroke-opacity=".35" stroke-dasharray="3 4"/>` : ''}
       <path d="${d} L${P[P.length - 1][0]},${H} L${P[0][0]},${H} Z" fill="url(#curvaFundo)"/>
       <path class="curva-linha" pathLength="1" d="${d}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
@@ -657,7 +657,7 @@ function desenharTimeline(wrapId, months, vals, onclickFn, estilo){
   wrap.innerHTML = `
     <div class="tl-fim"><span>em ${monthLabelLong(ult.mKey).toLowerCase()}</span><b class="${ult.v >= 0 ? '' : 'neg'}">${fmtMoneySigned(ult.v)}</b></div>
     <svg viewBox="0 0 300 ${chartBottom+6}" width="100%" height="${chartBottom+6}" style="overflow:visible">
-      <polygon points="${area}" fill="rgba(201,168,106,.2)"/>
+      <polygon points="${area}" fill="rgba(159,193,230,.2)"/>
       <polyline points="${line}" fill="none" stroke="var(--gold)" stroke-width="2"/>
       ${labels}
       ${dots}
@@ -1126,7 +1126,7 @@ function hmEscolher(i){
 /* ===== PARA ONDE VAI O DINHEIRO: tudo o que sai no mês (pago ou não), por grupo;
    o cartão entra aberto pelas categorias das compras à vista/assinaturas + parcelas ===== */
 let ondeVaiMes = null;
-const ONDE_VAI_CORES = ['#22252a','#c9a86a','#8b8f95','#9a7a3e','#5a6b7a','#d8cbb0','#3f7d5a','#b0483a','#6e5a8f','#4a4e53'];   // v12: grafite, latão e neutros
+const ONDE_VAI_CORES = ['#1b2638','#9fc1e6','#8b8f95','#3f6ea3','#5a6b7a','#b8c6da','#2f7a63','#b0483a','#6e5a8f','#475165'];   // v12: grafite, latão e neutros
 function ondeVaiDados(u, mKey){
   const g = {}, vista = {}, pix = {}, envelope = {};
   const soma = (obj, nome, v)=>{ v = Number(v)||0; if(v > 0.004) obj[nome] = (obj[nome]||0) + v; };
@@ -1374,7 +1374,7 @@ function focoMudarMes(d){ focoDesloc += d; renderFoco(); }
 function fecharFoco(){ document.getElementById('pageFoco').classList.remove('active'); document.body.style.overflow = ''; }
 /* v15.7 (layout L2 escolhido): uma coluna por grupo; a placa tem a barra de quanto cada grupo pesa (L4);
    no Fixos, em cada coluna as em aberto vêm primeiro e as pagas ficam separadas embaixo (L5) */
-const FOCO_CORES = ['#c9a86a', '#8fa3b8', '#9fb08a', '#b98a7a', '#9a8fb0', '#e2dccd'];
+const FOCO_CORES = ['#9fc1e6', '#8fa3b8', '#9fb08a', '#b98a7a', '#9a8fb0', '#c9d3e2'];
 function focoLinha(ico, nome, sub, valor, extra, pago, paidKey){
   const toque = paidKey ? ` role="button" tabindex="0" title="${pago ? 'Desmarcar pago' : 'Marcar como pago'}" onclick="focoPagar('${paidKey}')"` : '';
   return `<div class="foco-linha${pago ? ' foco-pago' : ''}${paidKey ? ' foco-toca' : ''}"${toque}>${ico}<span class="foco-meio"><span class="foco-l1"><b>${escBanco(nome)}</b><span class="foco-val">${fmtMoney(valor)}</span></span><span class="foco-l2"><small>${sub}</small>${extra ? `<small class="foco-extra">${extra}</small>` : ''}</span></span></div>`;

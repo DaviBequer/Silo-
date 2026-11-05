@@ -21,7 +21,7 @@ function efConfete(){
   cv.className = 'ef-confete'; cv.setAttribute('aria-hidden', 'true');
   document.body.appendChild(cv);
   const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.width = innerWidth * dpr, h = cv.height = innerHeight * dpr, ctx = cv.getContext('2d');
-  const cores = ['#c9a86a', '#f3e2ad', '#22252a', '#9a7a3e', '#8fb3a0'];
+  const cores = ['#9fc1e6', '#dcebfa', '#1b2638', '#3f6ea3', '#8fb3a0'];
   const ps = Array.from({ length: 120 }, ()=>({ x: w / 2 + (Math.random() - .5) * w * .3, y: h * .55, vx: (Math.random() - .5) * 26 * dpr, vy: (-Math.random() * 24 - 10) * dpr,
     r: (Math.random() * 6 + 5) * dpr, c: cores[Math.random() * cores.length | 0], a: Math.random() * 6, va: (Math.random() - .5) * .4 }));
   const t0 = performance.now();
@@ -138,7 +138,7 @@ function efAnelHoje(){
   let el = placa.querySelector('.ef-anel-hoje');
   if(!el){
     el = document.createElement('div'); el.className = 'ef-anel-hoje'; el.setAttribute('aria-label', 'Horas de hoje');
-    el.innerHTML = `<svg viewBox="0 0 68 68" width="68" height="68"><circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="6"/><circle class="f" cx="34" cy="34" r="28" fill="none" stroke="#c9a86a" stroke-width="6" stroke-linecap="round" transform="rotate(-90 34 34)" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/><text x="34" y="35" text-anchor="middle" font-size="13" font-weight="400" fill="#f1efe9"></text><text x="34" y="48" text-anchor="middle" font-size="7.5" letter-spacing=".8" fill="rgba(241,239,233,.6)">HOJE</text></svg>`;
+    el.innerHTML = `<svg viewBox="0 0 68 68" width="68" height="68"><circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="6"/><circle class="f" cx="34" cy="34" r="28" fill="none" stroke="#9fc1e6" stroke-width="6" stroke-linecap="round" transform="rotate(-90 34 34)" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"/><text x="34" y="35" text-anchor="middle" font-size="13" font-weight="400" fill="#eef2f8"></text><text x="34" y="48" text-anchor="middle" font-size="7.5" letter-spacing=".8" fill="rgba(238,242,248,.6)">HOJE</text></svg>`;
     placa.appendChild(el);
   }
   el.querySelector('text').textContent = `${h}h${m}`;

@@ -605,7 +605,7 @@ function atzLimiteHtml(i){
   return `<div class="atz-limite${dif < -0.004 ? ' passou' : ''}"><span>${escBanco(c.desc)}: ${fmtMoney(depois)} de ${fmtMoney(c.limite)}</span><b>${dif < -0.004 ? 'passou ' + fmtMoney(-dif) : 'falta ' + fmtMoney(dif)}</b></div>`;
 }
 /* faixa do alto: total grande, quanto foi para cada categoria (barra + valor + %) e os itens bem pequenos */
-const ATZ_CORES = ['#c9a86a','#8fb3a0','#d39a7a','#a3a9cf','#c7b4d6','#9cc3cf','#d8c38f','#b9a48f'];
+const ATZ_CORES = ['#9fc1e6','#8fb3a0','#d39a7a','#a3a9cf','#c7b4d6','#9cc3cf','#d8c38f','#b9a48f'];
 let atzFaixaMin = false;
 function atzFaixaHtml(){
   const gastos = atzItens.filter(i=>['vista','parcelada','pix','conta'].includes(i.tipo));

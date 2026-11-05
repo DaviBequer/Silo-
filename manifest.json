@@ -6,8 +6,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f3f2ee",
-  "theme_color": "#f3f2ee",
+  "background_color": "#eef1f5",
+  "theme_color": "#eef1f5",
   "share_target": {
     "action": "./?compartilhar=1",
     "method": "POST",
