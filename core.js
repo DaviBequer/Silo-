@@ -952,10 +952,12 @@ function toggleExtraRecebido(id){
   if(!rendaExtraUser) return;
   const e = (state.users[rendaExtraUser].extras||[]).find(x=>x.id===id);
   if(!e) return;
-  setExtraRecebido(rendaExtraUser, id, rendaExtraMes, !extraRecebidoNoMes(e, rendaExtraMes));
-  persist();
-  renderRendaExtraLista();
-  renderRendaTable();
+  const u = rendaExtraUser, m = rendaExtraMes;
+  ganhoAlternar(u, 'ext_'+u+'_'+id+'_'+m, Number(e.valor)||0, e.desc || 'Extra', extraRecebidoNoMes(e, m), on=>{
+    setExtraRecebido(u, id, m, on);
+    renderRendaExtraLista();
+    renderRendaTable();
+  });
 }
 /* "Recebi": salário já está dentro do saldo em conta, então para de somar */
 function salarioRecebidoNoMes(user, mKey){ return !!(state.salarioRecebido && state.salarioRecebido[user+'_'+mKey]); }
@@ -1117,11 +1119,15 @@ function restanteConta(paidKey, valor){
    no cartão (compras à vista dessa categoria na fatura do mês) — essa parte sai da conta para não contar duas vezes
    (ela já está na fatura). paidKey = mês_usuário_categoria_id */
 function semAcentoCore(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+function contaDoPaidKey(paidKey){
+  const p = String(paidKey).split('_'), user = p[1], cat = p[2], id = p.slice(3).join('_');
+  if(!state.users || !state.users[user]) return null;
+  return ((state.users[user].expenses||{})[cat]||[]).find(i=>String(i.id) === id) || null;
+}
 function contaUsadaNoCartao(paidKey){
   const p = String(paidKey).split('_');
-  const mKey = p[0], user = p[1], cat = p[2], id = p.slice(3).join('_');
-  if(!state.users || !state.users[user]) return 0;
-  const item = ((state.users[user].expenses||{})[cat]||[]).find(i=>String(i.id) === id);
+  const mKey = p[0], user = p[1];
+  const item = contaDoPaidKey(paidKey);
   if(!item || !item.desc) return 0;
   const nome = semAcentoCore(item.desc);
   let usado = 0;
@@ -1141,6 +1147,7 @@ function gastosDoMes(user, mKey){
   const ex = state.users[user].expenses, out = [];
   const conta = (cat, item, valor, extra)=>{
     const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id, pago = !!state.paid[paidKey];
+    valor = (state.valoresReais||{})[paidKey] || valor;   // conta variável paga: vale o valor exato daquele mês
     return Object.assign({ cat, user, id:item.id, paidKey, desc:item.desc||'Conta', logoUrl:item.logoUrl||null, dia:item.dia, mesInicio:item.mesInicio||null,
       valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) }, extra);
   };
@@ -1274,7 +1281,25 @@ function lancarPix(o){
   state.lancamentos.push(la);
   return la;
 }
-function marcarContaPaga(paidKey, pago = true){
+function marcarContaPaga(paidKey, pago = true, valorReal){
   state.paid[paidKey] = !!pago;
   if(pago && state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
+  if(!pago && state.valoresReais) delete state.valoresReais[paidKey];
+  if(pago && valorReal > 0 && contaDoPaidKey(paidKey)?.tipo === 'variavel') (state.valoresReais = state.valoresReais || {})[paidKey] = lancValor(valorReal);
+}
+/* Ganho concluído: soma no banco e guarda onde caiu, para devolver ao desmarcar. Banco pelo nome porque salvarBancos troca os ids. */
+function moverNoBanco(user, nomeBanco, delta){
+  const us = state.users[user], bancos = us.bancos || [], b = bancos.find(x=>x.nome === nomeBanco);
+  if(b){ b.valor = lancValor((Number(b.valor)||0) + delta); us.saldoAtual = totalBancos(bancos); }
+  else if(!bancos.length) us.saldoAtual = lancValor((us.saldoAtual||0) + delta);
+}
+function registrarGanho(user, chave, valor, nomeBanco){
+  moverNoBanco(user, nomeBanco, valor);
+  (state.ganhoNoBanco = state.ganhoNoBanco || {})[chave] = { banco: nomeBanco, valor };
+}
+function desfazerGanho(user, chave){
+  const g = (state.ganhoNoBanco||{})[chave];
+  if(!g) return;
+  moverNoBanco(user, g.banco, -g.valor);
+  delete state.ganhoNoBanco[chave];
 }

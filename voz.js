@@ -248,7 +248,7 @@ function vozConfirmar(){
   const banco = bancos.find(b=>b.id === pl.bancoId);
   if(banco){ banco.valor = Math.round(((Number(banco.valor)||0) + sinal*pl.valor)*100)/100; us.saldoAtual = totalBancos(bancos); }
   else us.saldoAtual = Math.round(((us.saldoAtual||0) + sinal*pl.valor)*100)/100;
-  if(pl.acao === 'pagar_conta') marcarContaPaga(pl.conta);
+  if(pl.acao === 'pagar_conta') marcarContaPaga(pl.conta, true, pl.valor);
   /* compra no Pix/débito fica registrada (com categoria) para aparecer em "Para onde vai o dinheiro" */
   if(pl.acao === 'compra') lancarPix({ descricao: pl.descricao, valor: pl.valor, categoria: pl.categoria, banco: banco ? banco.nome : '' });
   persist();

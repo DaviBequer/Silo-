@@ -886,7 +886,7 @@ async function atzGravar(){
       } else if(i.tipo === 'recebi'){
         mexe(i.bancoId, i.valor);
       } else if(i.tipo === 'conta'){
-        marcarContaPaga(i.conta);
+        marcarContaPaga(i.conta, true, i.valor);
         if(i.bancoId) mexe(i.bancoId, -i.valor);
       }
     });

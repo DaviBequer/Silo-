@@ -3160,3 +3160,8 @@ body{font-weight:400;letter-spacing:.005em}
 .imp-meses{display:flex;flex-direction:column;margin:0 0 12px;border-top:1px solid var(--fio)}
 .imp-meses div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--fio);font-size:14px}
 .imp-meses b{font-weight:500;white-space:nowrap}
+
+/* v18.7 pergunta ao concluir: banco do ganho */
+.pg-banco{width:100%;background:none;border:0;border-bottom:1px solid var(--line);font:inherit;text-align:left;cursor:pointer;min-height:52px;color:inherit}
+.pg-banco .gm-nome{flex:1;min-width:0}
+.pg-ja{display:block;margin:16px auto 4px;min-height:44px;font-size:13px}

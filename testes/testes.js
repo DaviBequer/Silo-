@@ -263,6 +263,29 @@ async function rodarTestes(){
     igual('pagar conta: paga e tira o pagamento parcial', [state.paid['x_k'], 'x_k' in state.pagamentosParciais], [true, false]);
     marcarContaPaga('x_k', false);
     igual('desmarcar conta paga', state.paid['x_k'], false);
+
+    /* conta variável: valor exato só no mês pago; conta fixa ignora */
+    const exTeste = state.users.davi.expenses.fixo;
+    exTeste.push({ id:'tvar', desc:'Luz var', valor:100, dia:9, tipo:'variavel' }, { id:'tfix', desc:'Fixa', valor:50, dia:9 });
+    const mProx = addMonths(M, 1), kVar = M+'_davi_fixo_tvar', kFix = M+'_davi_fixo_tfix';
+    const vDe = (m, id)=>gastosDoMes('davi', m).find(g=>g.id === id).valor;
+    marcarContaPaga(kVar, true, 143.2); marcarContaPaga(kFix, true, 70);
+    igual('conta variável: exato no mês pago, aproximado no próximo, fixa não muda', [vDe(M,'tvar'), vDe(mProx,'tvar'), vDe(M,'tfix')], [143.2, 100, 50]);
+    marcarContaPaga(kVar, false);
+    igual('desmarcar conta variável volta ao aproximado', vDe(M,'tvar'), 100);
+    state.users.davi.expenses.fixo = exTeste.filter(i=>i.id !== 'tvar' && i.id !== 'tfix');
+
+    /* ganho: soma no banco escolhido, desmarcar devolve no mesmo banco */
+    const usG = state.users.davi, bancosG = usG.bancos, saldoG = usG.saldoAtual;
+    usG.bancos = [{ id:'a', nome:'A', valor:10 }, { id:'b', nome:'B', valor:20 }];
+    registrarGanho('davi', 'sal_t', 100.5, 'B');
+    igual('ganho soma só no banco escolhido e no saldo', [usG.bancos[0].valor, usG.bancos[1].valor, usG.saldoAtual], [10, 120.5, 130.5]);
+    usG.bancos = usG.bancos.map(b=>({ ...b, id: b.id + 'novo' }));   // salvarBancos troca os ids
+    desfazerGanho('davi', 'sal_t');
+    igual('desmarcar ganho devolve, mesmo com id novo', [usG.bancos[1].valor, usG.saldoAtual, 'sal_t' in state.ganhoNoBanco], [20, 30, false]);
+    desfazerGanho('davi', 'sal_t');
+    igual('ganho antigo sem registro: desmarcar não mexe no saldo', usG.bancos[1].valor, 20);
+    usG.bancos = bancosG; usG.saldoAtual = saldoG;
     state.lancamentos = state.lancamentos.filter(l=>l !== laA); cF.credoVista = cF.credoVista.filter(cv=>cv !== cvA && cv !== cvB);
     state.comprasTracker = []; state.cartoesTracker.pop();
 

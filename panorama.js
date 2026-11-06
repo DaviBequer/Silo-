@@ -790,14 +790,56 @@ function cpAtualizarTudo(){
   persist();
 }
 function cpToggleSalario(u, mKey){
-  setSalarioRecebido(u, mKey, !salarioRecebidoNoMes(u, mKey));
-  cpAtualizarTudo();
+  ganhoAlternar(u, 'sal_'+u+'_'+mKey, rendaBaseForMonth(u, mKey), u==='davi' ? 'Salário' : 'Renda', salarioRecebidoNoMes(u, mKey), on=>setSalarioRecebido(u, mKey, on));
 }
 function cpToggleExtra(u, id, mKey){
   const e = (state.users[u].extras||[]).find(x=>x.id===id);
   if(!e) return;
-  setExtraRecebido(u, id, mKey, !extraRecebidoNoMes(e, mKey));
-  cpAtualizarTudo();
+  ganhoAlternar(u, 'ext_'+u+'_'+id+'_'+mKey, Number(e.valor)||0, e.desc || 'Extra', extraRecebidoNoMes(e, mKey), on=>setExtraRecebido(u, id, mKey, on));
+}
+/* Concluir ganho: pergunta em qual banco caiu e soma lá. Desmarcar devolve. marcar(bool) liga/desliga o "recebido". */
+let ganhoFim = null;
+function ganhoAlternar(u, chave, valor, nome, recebido, marcar){
+  if(recebido){ desfazerGanho(u, chave); marcar(false); persist(); return; }
+  const bancos = state.users[u].bancos || [];
+  ganhoFim = i=>{
+    closeModal('modalPergunta');
+    const b = i === null ? null : bancos[i];
+    comDesfazer(b ? `+${fmtMoney(valor)} no ${b.nome}` : `${nome}: recebido`, ()=>{
+      if(b) registrarGanho(u, chave, valor, b.nome);
+      else if(i !== null) registrarGanho(u, chave, valor, '');
+      marcar(true);
+      persist();
+    });
+  };
+  if(!bancos.length){ ganhoFim(-1); return; }
+  document.getElementById('perguntaTitulo').textContent = 'Em qual banco caiu?';
+  document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>${escBanco(nome)}</span><b>${fmtMoney(valor)}</b></div>
+    ${bancos.map((b, i)=>`<button type="button" class="gm-linha pg-banco" onclick="ganhoFim(${i})">${b.logoUrl ? `<img src="${b.logoUrl}" class="conta-logo" alt="">` : `<span class="gm-inicial">${escBanco((b.nome||'?').charAt(0).toUpperCase())}</span>`}<span class="gm-nome">${escBanco(b.nome)}</span><span class="gm-valor">${fmtMoney(Number(b.valor)||0)}</span></button>`).join('')}
+    <button type="button" class="modal-link pg-ja" onclick="ganhoFim(null)">Já está no saldo, só marcar como recebido</button>`;
+  document.getElementById('modalPergunta').classList.add('active');
+}
+/* Conta variável: ao pagar, pergunta o valor exato (vale só para este mês; o aproximado continua nos outros) */
+function perguntarValorConta(paidKey, aoPagar){
+  const item = contaDoPaidKey(paidKey);
+  const previsto = gastosDoMes(paidKey.split('_')[1], paidKey.split('_')[0]).find(g=>g.paidKey === paidKey)?.valor ?? (Number(item.valor)||0);
+  document.getElementById('perguntaTitulo').textContent = 'Qual foi o valor exato?';
+  document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>${escBanco(item.desc)} · previsto</span><b>${fmtMoney(previsto)}</b></div>
+    <form onsubmit="event.preventDefault();valorContaConfirmar()">
+      <div class="field full"><label for="perguntaValor">Valor pago</label><div class="input-money"><input type="text" id="perguntaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div></div>
+      <div class="modal-actions"><button type="button" class="btn btn-outline btn-block" onclick="closeModal('modalPergunta')">Cancelar</button><button class="btn btn-block">Pagar</button></div>
+    </form>`;
+  valorContaFim = v=>comDesfazer(`${item.desc} paga: ${fmtMoney(v)}`, ()=>{ marcarContaPaga(paidKey, true, v); if(aoPagar) aoPagar(); persist(); });
+  document.getElementById('modalPergunta').classList.add('active');
+  document.getElementById('perguntaValor').focus();
+}
+let valorContaFim = null;
+function valorContaConfirmar(){
+  const inp = document.getElementById('perguntaValor'), v = parseMoney(inp.value);
+  if(!(v > 0)){ showToast('Digite o valor'); inp.focus(); return; }
+  inp.blur();
+  closeModal('modalPergunta');
+  valorContaFim(v);
 }
 function cpToggleDizimo(u, mKey){
   setDizimoPago(u, mKey, !dizimoPagoNoMes(u, mKey));
@@ -996,13 +1038,15 @@ function contaTapCancel(){
   clearTimeout(contaTapTimer);
 }
 function confirmarEArquivarConta(paidKey){
+  const arquivar = ()=>{ if(!state.contasArquivadas) state.contasArquivadas = {}; state.contasArquivadas[paidKey] = true; };
+  if(!state.paid[paidKey] && contaDoPaidKey(paidKey)?.tipo === 'variavel'){ perguntarValorConta(paidKey, arquivar); return; }
   marcarContaPaga(paidKey);
-  if(!state.contasArquivadas) state.contasArquivadas = {};
-  state.contasArquivadas[paidKey] = true;
+  arquivar();
   persist();
   if(navigator.vibrate) navigator.vibrate([10,30,10]);
 }
 function togglePaid(paidKey){
+  if(!state.paid[paidKey] && contaDoPaidKey(paidKey)?.tipo === 'variavel'){ perguntarValorConta(paidKey); return; }
   marcarContaPaga(paidKey, !state.paid[paidKey]);
   persist();
 }
@@ -1016,7 +1060,7 @@ function abrirEditarConta(paidKey, user, cat, id, mKey){
   const item = getGastoItemRef(user, cat, id);
   if(!item) return;
   editandoConta = { paidKey, user, cat, id, mKey };
-  const valorTotal = cat==='futuro' ? futuroValorNoMes(item, mKey) : item.valor;
+  const valorTotal = (state.valoresReais||{})[paidKey] || (cat==='futuro' ? futuroValorNoMes(item, mKey) : item.valor);
   const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
   const isPaid = !!state.paid[paidKey];
 
@@ -1065,18 +1109,18 @@ function salvarPagamentoConta(){
   const { paidKey, user, cat, id, mKey } = editandoConta;
   const item = getGastoItemRef(user, cat, id);
   if(!item) return;
-  const valorTotal = cat==='futuro' ? futuroValorNoMes(item, mKey) : item.valor;
+  const valorTotal = (state.valoresReais||{})[paidKey] || (cat==='futuro' ? futuroValorNoMes(item, mKey) : item.valor);
   const valorPago = parseMoney(document.getElementById('editarContaValorPago').value);
   const pagaIntegral = document.getElementById('editarContaPagaCheck').checked;
 
   if(!state.pagamentosParciais) state.pagamentosParciais = {};
   if(pagaIntegral || valorPago >= valorTotal){
-    marcarContaPaga(paidKey);
+    marcarContaPaga(paidKey, true, valorPago);
   } else if(valorPago > 0){
-    state.paid[paidKey] = false;
+    marcarContaPaga(paidKey, false);
     state.pagamentosParciais[paidKey] = valorPago;
   } else {
-    state.paid[paidKey] = false;
+    marcarContaPaga(paidKey, false);
     delete state.pagamentosParciais[paidKey];
   }
   persist();
@@ -1368,8 +1412,8 @@ function abrirFoco(tipo, mKey){
 function focoPagar(paidKey){
   togglePaid(paidKey);
   if(navigator.vibrate) navigator.vibrate(state.paid[paidKey] ? [10,30,10] : 10);
-  renderFoco();
 }
+aoMudarEstado(()=>{ if(document.getElementById('pageFoco')?.classList.contains('active')) renderFoco(); });
 function focoMudarMes(d){ focoDesloc += d; renderFoco(); }
 function fecharFoco(){ document.getElementById('pageFoco').classList.remove('active'); document.body.style.overflow = ''; }
 /* v15.7 (layout L2 escolhido): uma coluna por grupo; a placa tem a barra de quanto cada grupo pesa (L4);
