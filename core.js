@@ -1287,6 +1287,15 @@ function marcarContaPaga(paidKey, pago = true, valorReal){
   if(!pago && state.valoresReais) delete state.valoresReais[paidKey];
   if(pago && valorReal > 0 && contaDoPaidKey(paidKey)?.tipo === 'variavel') (state.valoresReais = state.valoresReais || {})[paidKey] = lancValor(valorReal);
 }
+/* Histórico das contas variáveis: os valores exatos guardados, do mês mais novo ao mais antigo */
+function historicoVariaveis(user){
+  const ex = state.users[user].expenses, reais = state.valoresReais || {};
+  return ['moradia','assinatura','fixo','futuro'].flatMap(cat=>(ex[cat]||[]).filter(i=>i.tipo === 'variavel').map(item=>{
+    const fim = '_'+user+'_'+cat+'_'+item.id;
+    const meses = Object.keys(reais).filter(k=>k.slice(7) === fim).sort().reverse().map(k=>({ mKey: k.slice(0, 7), valor: reais[k] }));
+    return { desc: item.desc, arquivado: !!item.arquivado, meses, media: meses.length ? lancValor(meses.reduce((s, m)=>s + m.valor, 0) / meses.length) : 0 };
+  })).filter(c=>!c.arquivado || c.meses.length);
+}
 /* Ganho concluído: soma no banco e guarda onde caiu, para devolver ao desmarcar. Banco pelo nome porque salvarBancos troca os ids. */
 function moverNoBanco(user, nomeBanco, delta){
   const us = state.users[user], bancos = us.bancos || [], b = bancos.find(x=>x.nome === nomeBanco);

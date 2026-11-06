@@ -271,6 +271,11 @@ async function rodarTestes(){
     const vDe = (m, id)=>gastosDoMes('davi', m).find(g=>g.id === id).valor;
     marcarContaPaga(kVar, true, 143.2); marcarContaPaga(kFix, true, 70);
     igual('conta variável: exato no mês pago, aproximado no próximo, fixa não muda', [vDe(M,'tvar'), vDe(mProx,'tvar'), vDe(M,'tfix')], [143.2, 100, 50]);
+    const kVarAntes = addMonths(M, -1)+'_davi_fixo_tvar';
+    marcarContaPaga(kVarAntes, true, 100);
+    const hVar = historicoVariaveis('davi').find(c=>c.desc === 'Luz var');
+    igual('histórico da variável: mais novo primeiro, com média; fixa fora', [hVar.meses.map(m=>m.valor), hVar.media, historicoVariaveis('davi').some(c=>c.desc === 'Fixa')], [[143.2, 100], 121.6, false]);
+    marcarContaPaga(kVarAntes, false);
     marcarContaPaga(kVar, false);
     igual('desmarcar conta variável volta ao aproximado', vDe(M,'tvar'), 100);
     state.users.davi.expenses.fixo = exTeste.filter(i=>i.id !== 'tvar' && i.id !== 'tfix');

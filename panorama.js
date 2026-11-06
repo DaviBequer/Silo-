@@ -833,6 +833,14 @@ function perguntarValorConta(paidKey, aoPagar){
   document.getElementById('modalPergunta').classList.add('active');
   document.getElementById('perguntaValor').focus();
 }
+function abrirHistoricoVariaveis(){
+  const contas = historicoVariaveis(state.currentUser);
+  document.getElementById('perguntaTitulo').textContent = 'Histórico das variáveis';
+  document.getElementById('perguntaCorpo').innerHTML = contas.length ? contas.map(c=>`<div class="gm-grupo"><div class="gm-grupo-topo"><span>${escBanco(c.desc)}</span>${c.meses.length > 1 ? `<span>média ${fmtMoney(c.media)}</span>` : ''}</div>
+    ${c.meses.map(m=>`<div class="gm-linha"><div class="gm-info"><div class="gm-nome">${monthLabelLong(m.mKey)}</div></div><div class="gm-valor">${fmtMoney(m.valor)}</div></div>`).join('') || '<div class="gm-vazio">Nenhum valor registrado ainda.</div>'}</div>`).join('')
+    : '<div class="gm-vazio">Nenhuma conta está marcada como Variável.</div>';
+  document.getElementById('modalPergunta').classList.add('active');
+}
 let valorContaFim = null;
 function valorContaConfirmar(){
   const inp = document.getElementById('perguntaValor'), v = parseMoney(inp.value);
@@ -1441,6 +1449,7 @@ function renderFoco(){
   const u = state.currentUser, mKey = addMonths(focoMes, focoDesloc), mesCartao = c=>addMonths(faturaAbertaMes(c), focoDesloc);
   const titulo = { fixos:'Fixos', pix:'Pix no mês', vista:'Crédito à vista', parcelado:'Parcelado' }[focoTipo] || '';
   document.getElementById('focoTitulo').textContent = titulo;
+  document.getElementById('focoHistorico').style.visibility = focoTipo === 'fixos' ? '' : 'hidden';
   document.getElementById('focoMesLabel').textContent = (focoTipo === 'vista' || focoTipo === 'parcelado') && !focoDesloc ? 'Fatura aberta' : monthLabelLong(focoTipo === 'vista' || focoTipo === 'parcelado' ? addMonths(mesFinanceiroAtual(), focoDesloc) : mKey);
   let rotulo = '', total = 0, stats = [], grupos = [];
   if(focoTipo === 'fixos'){

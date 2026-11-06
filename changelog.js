@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.8', itens: [
+    'Fixos: novo botão de histórico das contas variáveis, com o valor exato de cada mês e a média'
+  ] },
   { versao: 'v18.7', itens: [
     'Ganhos: ao concluir, o app pergunta em qual banco caiu e soma no saldo desse banco. Desmarcar devolve',
     'Contas variáveis, como luz e água: ao pagar, o app pergunta o valor exato. Ele vale só naquele mês; o aproximado continua nos outros'
