@@ -71,6 +71,11 @@ function limparLouvorSearch(){
   renderLouvorLista();
 }
 function renderLouvorLista(){
+  lvRenderLista();
+  /* seleção só vale para o que está na tela: trocou o filtro ou a busca, o que sumiu sai da seleção (nada é excluído escondido) */
+  if(lvSel){ const vis = new Set(lvSelVisiveis()); [...lvSel].forEach(id=>{ if(!vis.has(id)) lvSel.delete(id); }); lvSelBarra(); }
+}
+function lvRenderLista(){
   const el = document.getElementById('louvorLista');
   let items = state.louvores.slice();
   if(louvorFiltroAtivo === 'Atual') items = items.filter(lvEstaAtual);
@@ -114,7 +119,9 @@ function renderLouvorLista(){
     const finalizada = l.status === 'finalizada';
     const quem = l.medley ? `Medley · ${l.medley.musicas.length} música${l.medley.musicas.length===1?'':'s'}` : (l.artista || (l.categoria === 'Harpa Cristã' ? 'Harpa Cristã' : l.categoria === 'Corinhos' ? 'Corinho de fogo' : 'Artista desconhecido'));
     const dia = l.dataAgendamento ? Number(l.dataAgendamento.split('-')[2]) : 0;
-    return `<div class="lv-card${l.id === louvorAtualId ? ' sel' : ''}" onclick="abrirLouvorDetalhe('${l.id}')">
+    const marcada = !!lvSel && lvSel.has(l.id);
+    return `<div class="lv-card${l.id === louvorAtualId && !lvSel ? ' sel' : ''}${marcada ? ' marcada' : ''}" data-id="${l.id}" onclick="${lvSel ? `lvSelAlternar('${l.id}')` : `abrirLouvorDetalhe('${l.id}')`}">
+      ${lvSel ? `<span class="lv-check" aria-hidden="true">${marcada ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</span>` : ''}
       ${lvCapaHtml(l.categoria, tomAtual)}
       <div class="lv-card-info">
         <div class="lv-card-titulo">${lvEsc(l.titulo||'Sem título')}</div>
@@ -358,12 +365,79 @@ function salvarLouvorCampo(){
 }
 function salvarLouvorData(v){
   const l = getLouvorAtual(); if(!l) return;
-  /* a data antiga que já passou fica no histórico de tocadas (Culto → Histórico) */
+  lvMudarData(l, v);
+  persist();
+  lvAtualizarTelas();
+}
+/* a data antiga que já passou fica no histórico de tocadas (Culto → Histórico) */
+function lvMudarData(l, v){
   const antiga = l.dataAgendamento, hoje = calISO(new Date());
   if(antiga && antiga !== v && antiga <= hoje){ l.tocadaEm = [...new Set([...(l.tocadaEm||[]), antiga])].sort(); }
   l.dataAgendamento = v || '';
-  persist();
-  lvAtualizarTelas();
+}
+/* ---------- selecionar várias músicas (v19.3, pedido do Davi): mudar data, status ou tipo de todas de uma vez, ou excluir ---------- */
+let lvSel = null;   // null = modo normal; Set de ids = selecionando
+function lvSelecionarModo(on){
+  lvSel = on ? new Set() : null;
+  document.getElementById('louvorLista').classList.toggle('selecionando', !!lvSel);
+  document.getElementById('lvSelBtn')?.classList.toggle('active', !!lvSel);
+  renderLouvorLista();
+  lvSelBarra();
+}
+function lvSelAlternar(id){ lvSel.has(id) ? lvSel.delete(id) : lvSel.add(id); renderLouvorLista(); lvSelBarra(); }
+function lvSelVisiveis(){ return [...document.querySelectorAll('#louvorLista .lv-card[data-id]')].map(e=>e.dataset.id); }
+function lvSelTodas(){
+  const v = lvSelVisiveis(), todas = v.length && v.every(id=>lvSel.has(id));
+  v.forEach(id=>todas ? lvSel.delete(id) : lvSel.add(id));
+  renderLouvorLista(); lvSelBarra();
+}
+function lvSelBarra(){
+  const b = document.getElementById('lvSelBarra'); if(!b) return;
+  b.hidden = !lvSel;
+  document.getElementById('aba-louvor').classList.toggle('lv-selecionando', !!lvSel);
+  if(!lvSel) return;
+  const n = lvSel.size, v = lvSelVisiveis();
+  document.getElementById('lvSelConta').textContent = n ? `${n} selecionada${n > 1 ? 's' : ''}` : 'Toque nas músicas';
+  document.getElementById('lvSelTodasBtn').textContent = v.length && v.every(id=>lvSel.has(id)) ? 'Nenhuma' : 'Todas';
+  b.querySelectorAll('.lv-sel-acao').forEach(x=>{ x.disabled = !n; });
+}
+function lvSelMusicas(){ return (state.louvores || []).filter(l=>lvSel && lvSel.has(l.id)); }
+function lvSelAplicar(msg, mudar){
+  const ls = lvSelMusicas(); if(!ls.length) return;
+  comDesfazer(msg(ls.length), ()=>{ ls.forEach(mudar); persist(); lvAtualizarTelas(); }, ()=>{ lvAtualizarTelas(); lvSelBarra(); });
+}
+const lvSelN = n=>`${n} música${n > 1 ? 's' : ''}`;
+function lvSelData(btn){
+  const inp = document.getElementById('lvSelDataInp');
+  inp.value = '';
+  abrirCalendario(inp, btn);
+}
+function lvSelDataEscolhida(v){
+  lvSelAplicar(n=>v ? `${lvSelN(n)} para ${v.split('-').reverse().join('/')}` : `Data tirada de ${lvSelN(n)}`, l=>lvMudarData(l, v));
+}
+function lvSelEscolher(campo){
+  const ops = campo === 'status' ? [['producao', 'Em produção'], ['finalizada', 'Pronto']] : LOUVOR_CATEGORIAS.map(c=>[c, c]);
+  document.getElementById('perguntaTitulo').textContent = campo === 'status' ? 'Mudar o status' : 'Mudar o tipo';
+  document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>Selecionadas</span><b>${lvSelN(lvSel.size)}</b></div>
+    <div class="pg-bancos">${ops.map(([v, t])=>`<button type="button" class="dif-chip" onclick="lvSelAplicarCampo('${campo}','${v}')">${t}</button>`).join('')}</div>`;
+  document.getElementById('modalPergunta').classList.add('active');
+}
+function lvSelAplicarCampo(campo, v){
+  closeModal('modalPergunta');
+  const nome = campo === 'status' ? (v === 'finalizada' ? 'Pronto' : 'Em produção') : v;
+  lvSelAplicar(n=>`${lvSelN(n)}: ${nome}`, l=>{ if(campo === 'status') l.status = v; else l.categoria = v; });
+}
+async function lvSelExcluir(){
+  const ls = lvSelMusicas(); if(!ls.length) return;
+  if(!(await iosConfirm(`Excluir ${lvSelN(ls.length)}? Elas saem também dos roteiros do Culto.`))) return;
+  const ids = new Set(ls.map(l=>l.id));
+  comDesfazer(`${lvSelN(ls.length)} excluída${ls.length > 1 ? 's' : ''}`, ()=>{
+    state.louvores = state.louvores.filter(l=>!ids.has(l.id));
+    (state.cultos || []).forEach(c=>{ c.partes.forEach(p=>{ p.musicas = p.musicas.filter(id=>!ids.has(id)); }); if(c.ordemWhats) c.ordemWhats = c.ordemWhats.filter(id=>!ids.has(id)); });
+    persist(); lvAtualizarTelas();
+  }, ()=>{ lvAtualizarTelas(); lvSelBarra(); });
+  ids.forEach(id=>lvSel.delete(id));
+  lvSelBarra();
 }
 /* qualquer mudança na música (data, status, tom, tipo) aparece na hora em tudo o que está na tela: lista, placa do culto, Culto aberto */
 function lvAtualizarTelas(){

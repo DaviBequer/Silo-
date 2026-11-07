@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.3', itens: [
+    'Louvor: botão de selecionar várias músicas para mudar a data (no calendário), o status ou o tipo de todas de uma vez, ou excluir',
+    'Comissão de vendas aparece em Contas do mês e só entra no saldo e na previsão quando você marca que recebeu',
+    'A meta de vendas agora considera a fatura do cartão'
+  ] },
   { versao: 'v19.2', itens: [
     'Previsão firme: conta e compra no cartão já contam no mês da fatura, e marcar não muda a sobra',
     'Concluir o mês com fatura, dízimo, parcela, salário ou extra em aberto: eles seguem para o mês novo',

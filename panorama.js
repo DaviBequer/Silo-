@@ -663,6 +663,10 @@ function cpAtualizarTudo(){
 function cpToggleSalario(u, mKey){
   ganhoAlternar(u, 'sal_'+u+'_'+mKey, rendaBaseForMonth(u, mKey), u==='davi' ? 'Salário' : 'Renda', salarioRecebidoNoMes(u, mKey), on=>setSalarioRecebido(u, mKey, on));
 }
+function cpToggleComissao(mKey){
+  const marcar = on=>{ state.comissaoRecebida = state.comissaoRecebida || {}; if(on) state.comissaoRecebida[mKey] = true; else delete state.comissaoRecebida[mKey]; };
+  ganhoAlternar('davi', 'com_davi_'+mKey, vendasComissaoNoMes(mKey), 'Comissão de vendas', !!(state.comissaoRecebida || {})[mKey], marcar);
+}
 function cpToggleExtra(u, id, mKey){
   const e = (state.users[u].extras||[]).find(x=>x.id===id);
   if(!e) return;
@@ -827,6 +831,12 @@ function renderContasPagar(){
     if(!ok) aReceber += Number(e.valor)||0;
     receb += cpItem({ titulo:escBanco(e.desc), sub:'Extra', valor:Number(e.valor)||0, feito:ok, icone:'+', attrs:`onclick="cpToggleExtra('${u}','${e.id}','${mKey}')"` });
   });
+  /* comissão de vendas: só entra no saldo (e na previsão) quando marcada como recebida */
+  if(u === 'davi' && typeof vendasComissaoNoMes === 'function'){
+    const com = vendasComissaoNoMes(mKey), ok = !!(state.comissaoRecebida || {})[mKey];
+    if(com > 0.004 || ok) receb += cpItem({ titulo:'Comissão de vendas', sub: ok ? 'recebida' : 'entra na previsão quando você marcar', icone:'+',
+      valor: ok ? Number(((state.ganhoNoBanco || {})['com_davi_' + mKey] || {}).valor) || com : com, feito: ok, attrs:`onclick="cpToggleComissao('${mKey}')"` });
+  }
   /* o que ficou em aberto dos meses concluídos continua aqui, com o mês na etiqueta */
   const levados = mKey === mesFinanceiroAtual() ? mesesLevados(mKey) : [];
   const tagMes = m=>`<span class="cp-tag">${monthLabel(m)}</span>`;
@@ -1245,6 +1255,7 @@ function extratoMovimentos(u){
     if(tipo === 'pag' || tipo === 'par') desc = ((contaDoPaidKey(resto) || {}).desc || 'Conta') + (tipo === 'par' ? ' (parte)' : '');
     else if(tipo === 'diz') desc = 'Dízimo';
     else if(tipo === 'sal') desc = u === 'davi' ? 'Salário' : 'Renda';
+    else if(tipo === 'com') desc = 'Comissão de vendas';
     else if(tipo === 'ext'){ const id = resto.split('_')[1]; desc = ((state.users[u].extras || []).find(e=>e.id === id) || {}).desc || 'Extra'; }
     item(data, desc, g.banco, Number(g.valor) || 0);
   });

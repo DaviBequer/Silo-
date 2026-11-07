@@ -2,7 +2,7 @@
    Comissão de setup entra no mês da venda; a comissão da mensalidade começa no mês seguinte
    e se repete todo mês enquanto o cliente estiver ativo (cancelado em X = não paga mais a partir de X).
    As comissões aparecem só aqui (não mexem no Dashboard). A sobra base vem do Fluxo Mensal do Davi,
-   com o empréstimo sempre dentro e o cartão sempre fora. */
+   com o empréstimo e o cartão sempre dentro. */
 
 function garantirVendas(){
   if(!state.vendas || typeof state.vendas !== 'object') state.vendas = {};
@@ -49,9 +49,12 @@ function vendasComissaoNoMes(mKey){ return vendasSetupNoMes(mKey) + vendasRecNoM
 
 /* ---------- sobra ---------- */
 /* Sobra estimada do Fluxo (Davi) com o empréstimo sempre dentro e o cartão sempre fora, independente dos interruptores */
+/* v19.3 (Davi): a fatura também entra (cartão e empréstimo sempre dentro, mesmo desligados no Geral).
+   Comissão já recebida está no saldo: sai daqui para não contar duas vezes na meta. */
 function vendasSobraBase(mKey){
   const ex = extrasGeralNoMes('davi', mKey);
-  return saldoForMonth('davi', mKey) + ex.total - emprestimoValorGeralNoMes(mKey);
+  const recebida = Number(((state.ganhoNoBanco || {})['com_davi_' + mKey] || {}).valor) || 0;
+  return saldoForMonth('davi', mKey) + ex.total - cartaoValorGeralNoMes(mKey) - emprestimoValorGeralNoMes(mKey) - recebida;
 }
 function vendasMeses(){ const out = [], ini = mesFinanceiroAtual(); for(let i=0;i<12;i++) out.push(addMonths(ini, i)); return out; }
 function vendasMeta(mKey){ const v = garantirVendas().metas[mKey]; return (v===undefined || v===null || v==='') ? null : Number(v); }

@@ -50,6 +50,12 @@ async function rodarTestes(){
     perto('meta: contas sobram → a meta inteira vem das vendas', vendasAlvoComissao(M, 800), 1500);
     perto('meta: contas faltam → cobre a falta + a meta', vendasAlvoComissao(M, -536.64), 2036.64);
     igual('meta: mês sem meta', vendasAlvoComissao(addMonths(M, 5), 0), null);
+    /* comissão recebida já está no saldo: não conta duas vezes na base da meta */
+    const baseAntes = vendasSobraBase(M), usV = state.users.davi, saldoV = usV.saldoAtual, bancosV = usV.bancos;
+    usV.bancos = []; usV.saldoAtual = (saldoV || 0) + 100;
+    (state.ganhoNoBanco = state.ganhoNoBanco || {})['com_davi_'+M] = { banco:'', valor:100 };
+    perto('comissão recebida não infla a base da meta', vendasSobraBase(M) - baseAntes, 0);
+    delete state.ganhoNoBanco['com_davi_'+M]; usV.saldoAtual = saldoV; usV.bancos = bancosV;
 
     /* ---------- ponto ---------- */
     igual('ponto: dia normal 9h', dayTotalMinutes({ entrada:'07:00', almocoSaida:'12:00', almocoVolta:'13:00', saida:'17:00', extra:0 }), 540);
