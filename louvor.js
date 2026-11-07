@@ -34,6 +34,7 @@ function lvEstaAtual(l){
 }
 
 function renderLouvor(){
+  lvSelBarra();
   renderLouvorFilterChips();
   if(typeof renderCultoBotao==='function') renderCultoBotao();
   renderLouvorLista();
@@ -395,7 +396,7 @@ function lvSelecionarModo(on){
 function lvSelAlternar(id){ if(!lvSel) return; lvSel.has(id) ? lvSel.delete(id) : lvSel.add(id); renderLouvorLista(); lvSelBarra(); }
 function lvSelVisiveis(){ return [...document.querySelectorAll('#louvorLista .lv-card[data-id]')].map(e=>e.dataset.id); }
 function lvSelTodas(){
-  if(!lvSel) return;
+  if(!lvSel) lvSelecionarModo(true);
   const v = lvSelVisiveis(), todas = v.length && v.every(id=>lvSel.has(id));
   v.forEach(id=>todas ? lvSel.delete(id) : lvSel.add(id));
   renderLouvorLista(); lvSelBarra();
@@ -403,20 +404,29 @@ function lvSelTodas(){
 function lvSelBarra(){
   const b = document.getElementById('lvSelBarra'); if(!b) return;
   b.hidden = !lvSel;
+  b.style.display = lvSel ? '' : 'none';   // some de verdade fora da seleção (não depende do CSS do aparelho estar atualizado)
   document.getElementById('aba-louvor').classList.toggle('lv-selecionando', !!lvSel);
   if(!lvSel) return;
   const n = lvSel.size, v = lvSelVisiveis();
   document.getElementById('lvSelConta').textContent = n ? `${n} selecionada${n > 1 ? 's' : ''}` : 'Toque nas músicas';
   document.getElementById('lvSelTodasBtn').textContent = v.length && v.every(id=>lvSel.has(id)) ? 'Desmarcar todas' : 'Marcar todas';
-  b.querySelectorAll('.lv-sel-acao').forEach(x=>{ x.disabled = !n; });
+  b.querySelectorAll('.lv-sel-acao').forEach(x=>{ x.classList.toggle('vazio', !n); });
 }
 function lvSelMusicas(){ return (state.louvores || []).filter(l=>lvSel && lvSel.has(l.id)); }
+/* nenhuma marcada: o botão responde dizendo o que fazer (antes ficava travado e parecia quebrado) */
+function lvSelTemAlguma(){
+  if(lvSelMusicas().length) return true;
+  showToast('Toque nas músicas que quer mudar (ou em Marcar todas)');
+  return false;
+}
 function lvSelAplicar(msg, mudar){
-  const ls = lvSelMusicas(); if(!ls.length) return;
+  if(!lvSelTemAlguma()) return;
+  const ls = lvSelMusicas();
   comDesfazer(msg(ls.length), ()=>{ ls.forEach(mudar); persist(); lvAtualizarTelas(); }, ()=>{ lvAtualizarTelas(); lvSelBarra(); });
 }
 const lvSelN = n=>`${n} música${n > 1 ? 's' : ''}`;
 function lvSelData(btn){
+  if(!lvSelTemAlguma()) return;
   const inp = document.getElementById('lvSelDataInp');
   inp.value = '';
   abrirCalendario(inp, btn);
@@ -425,7 +435,7 @@ function lvSelDataEscolhida(v){
   lvSelAplicar(n=>v ? `${lvSelN(n)} para ${v.split('-').reverse().join('/')}` : `Data tirada de ${lvSelN(n)}`, l=>lvMudarData(l, v));
 }
 function lvSelEscolher(campo){
-  if(!lvSel || !lvSel.size) return;
+  if(!lvSelTemAlguma()) return;
   const ops = campo === 'status' ? [['producao', 'Em produção'], ['finalizada', 'Pronto']] : LOUVOR_CATEGORIAS.map(c=>[c, c]);
   document.getElementById('perguntaTitulo').textContent = campo === 'status' ? 'Mudar o status' : 'Mudar o tipo';
   document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>Selecionadas</span><b>${lvSelN(lvSel.size)}</b></div>
@@ -438,7 +448,8 @@ function lvSelAplicarCampo(campo, v){
   lvSelAplicar(n=>`${lvSelN(n)}: ${nome}`, l=>{ if(campo === 'status') l.status = v; else l.categoria = v; });
 }
 async function lvSelExcluir(){
-  const ls = lvSelMusicas(); if(!ls.length) return;
+  if(!lvSelTemAlguma()) return;
+  const ls = lvSelMusicas();
   if(!(await iosConfirm(`Excluir ${lvSelN(ls.length)}? Elas saem também dos roteiros do Culto.`))) return;
   const ids = new Set(ls.map(l=>l.id));
   comDesfazer(`${lvSelN(ls.length)} excluída${ls.length > 1 ? 's' : ''}`, ()=>{

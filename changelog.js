@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.7', itens: [
+    'Seleção de várias músicas: a barra some de vez fora da seleção, Marcar todas liga a seleção sozinho e cada botão avisa quando nenhuma música está marcada'
+  ] },
   { versao: 'v19.6', itens: [
     'Cifra Club: o app confere o tom pelos acordes; se a página marcou o tom errado, corrige e avisa',
     'Seleção de várias músicas: o botão virou Marcar todas / Desmarcar todas e a música não sai mais da seleção depois de mudar o status',
