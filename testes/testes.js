@@ -161,6 +161,9 @@ async function rodarTestes(){
     igual('colar do WhatsApp: nome, cantor, tom e Harpa', colado.map(i=>[i.titulo, i.artista, i.tom && i.tom.raiz, i.harpaNum]),
       [['passaro livre', '', 'D', ''], ['127', '', 'C', '127'], ['Dia de sol', 'Gerson Rufino', 'G', ''], ['Usa-me', 'Silvan Santos', 'D', '']]);
     igual('colar: "Harpa 127" em qualquer parte vira hino da Harpa', cultoColarParse('Hinos: Harpa Cristã 545 (D)')[0].harpaNum, '545');
+    /* Drive: ✓ no nome = ajustado no app; a mesma música continua sendo achada com ou sem o ✓ */
+    igual('Drive: marca ✓ antes da extensão, sem repetir', [driveComMarca('Ana - Hino - G.pdf'), driveComMarca('Ana - Hino - G ✓.pdf'), driveComMarca('Slide Hino')], ['Ana - Hino - G ✓.pdf', 'Ana - Hino - G ✓.pdf', 'Slide Hino ✓']);
+    igual('Drive: arquivo com ✓ é da mesma música', [driveEhDaMusica({ name:'Ana - Hino ✓.pdf' }, { chave:'ana - hino', l:{}, tipo:'pdf' }), driveEhDaMusica({ name:'Ana - Hino - G ✓.pdf' }, { chave:'ana - hino', l:{}, tipo:'pdf' })], [true, true]);
     igual('sem a página dizer o capo, não inventa capotraste', ccCapoDaCifra({}, 'F#', ousado), 0);
     const tomErrado = ccTomPelosAcordes({ tomOriginal:'F#', tomModoMenor:false }, ousado);
     igual('tom marcado errado na página: corrige pelo tom dos acordes', [tomErrado && tomErrado.tom.tomOriginal, !!(tomErrado && /corrigi/.test(tomErrado.aviso))], ['E', true]);

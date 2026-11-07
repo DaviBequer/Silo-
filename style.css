@@ -1773,6 +1773,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 .drive-linha{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-dim);animation:surgir .3s var(--mola)}
 .drive-linha.ok{color:var(--success)}
 .drive-linha.erro{color:var(--danger);font-weight:500}
+a.drive-falta{display:block;color:var(--text);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+a.drive-falta:hover{color:var(--primary)}
 .cu-busca{width:100%;margin-bottom:8px}
 .cu-escolher{max-height:56vh;overflow-y:auto;border-top:1px solid var(--line)}
 .cu-escolher-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 2px;border:none;border-bottom:1px solid var(--line);background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}

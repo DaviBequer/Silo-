@@ -168,10 +168,15 @@ async function driveArquivosDaMusica(l){
   const sl = await lvMontarSlides(l);
   if(sl) out.push({ l, tipo:'slide', nome: sl.nome, blob: await sl.pres.write({ outputType:'blob' }), mime: DRIVE_PPTX_MIME });
   out.forEach(x=>{ x.chave = vozSemAcento([l.artista, l.titulo || 'Sem título'].filter(Boolean).join(' - ').replace(/[\/\\:*?"<>|]/g, '').trim()); });
+  if(l.status === 'finalizada') out.forEach(x=>{ x.nome = driveComMarca(x.nome); });   // ✓ no nome = já ajustado no app (a varredura usa)
   return out;
 }
+/* ✓ no fim do nome: arquivo feito no app com a música Pronta. O que está no Drive sem ✓ ainda falta ajustar (driveVarrer) */
+const DRIVE_MARCA = '✓', DRIVE_MARCA_RE = /\s*✓(\.[^.]+)?$/;
+function driveComMarca(nome){ return DRIVE_MARCA_RE.test(nome) ? nome : String(nome).replace(/(\.[^.\s]+)?$/, m=>' ' + DRIVE_MARCA + m); }
+const driveNomeSemMarca = nome=>vozSemAcento(String(nome).replace(/\.[^.]+$/, '')).replace(/\s*✓$/, '').trim();
 function driveEhDaMusica(arquivo, x){
-  const n = vozSemAcento(arquivo.name.replace(/\.[^.]+$/, '')).trim();
+  const n = driveNomeSemMarca(arquivo.name);
   const salvo = x.l.drive && x.l.drive[x.tipo];
   return arquivo.id === salvo || n === x.chave || n.startsWith(x.chave + ' - ');
 }
@@ -236,9 +241,9 @@ async function driveMoverOriginal(l, base){
 }
 /* o slide que já existe dessa música (solto em Slide ou arquivado em Louvores/Harpa/Corinhos) vai para a pasta Slide com os outros */
 function driveSlideEhDaMusica(arquivo, l, nomePdf){
-  const n = vozSemAcento(arquivo.name.replace(/\.[^.]+$/, '')).trim();
+  const n = driveNomeSemMarca(arquivo.name);
   if(l.drive && l.drive.slide === arquivo.id) return 3;
-  if(nomePdf && n === vozSemAcento(nomePdf.replace(/\.[^.]+$/, '')).trim()) return 3;
+  if(nomePdf && n === driveNomeSemMarca(nomePdf)) return 3;
   const x = driveChaveSo(l);
   if(n === x.chave || n.startsWith(x.chave + ' - ')) return 2;
   const t = vozSemAcento(l.titulo || '').trim();
@@ -312,6 +317,57 @@ async function driveEnviarLouvores(louvores){
     const el = document.getElementById('driveLog');
     if(el) el.insertAdjacentHTML('beforeend', `<button type="button" class="btn btn-block drive-criar-slides" onclick="driveCriarSlidesAbrir()">Criar slide de ${driveSemSlide.length} música${driveSemSlide.length > 1 ? 's' : ''} sem slide</button>`);
   }
+}
+
+/* ---------- varredura (pedido do Davi): o que no Drive ainda falta ajustar (PDF e slide sem ✓) ----------
+   Antes de listar, os arquivos que o app já enviou de músicas Prontas (e sem mudança depois) ganham o ✓ */
+let driveVarrendo = false;
+function driveVarrer(){
+  if(driveVarrendo) return;
+  if(!driveClienteId()){ showToast('Ligue o Drive em Dados do App → Recursos'); return; }
+  if(!driveTokenCliente){ drivePreparar().then(ok=>showToast(ok ? 'Pronto: toque de novo' : 'Não consegui falar com o Google')); return; }
+  const pedido = drivePedirToken();   // ainda dentro do toque
+  driveVarrendo = true;
+  driveJanela('Drive · o que falta ajustar');
+  driveLog('Pedindo acesso ao Google Drive…');
+  pedido.then(driveVarrerAgora)
+    .catch(e=>driveLog(String(e && e.message || e), 'erro'))
+    .finally(()=>{ driveVarrendo = false; document.getElementById('driveFechar').disabled = false; });
+}
+async function driveVarrerAgora(){
+  driveLog('Procurando os arquivos…');
+  const base = await drivePastasBase();
+  /* 1. o que o app já mandou de música Pronta ganha o ✓ (vale para os enviados antes desta versão) */
+  let marcados = 0;
+  for(const l of (state.louvores || []).filter(l=>l.status === 'finalizada' && l.drive && !l.driveDesatualizado)){
+    for(const tipo of ['pdf', 'slide']){
+      const id = l.drive[tipo]; if(!id) continue;
+      try{
+        const f = await driveApi(`files/${id}?fields=id,name,trashed`);
+        if(f.trashed || DRIVE_MARCA_RE.test(f.name)) continue;
+        await driveApi(`files/${id}?fields=id`, { method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name: driveComMarca(f.name) }) });
+        marcados++;
+      }catch(e){}
+    }
+  }
+  if(marcados) driveLog(`${marcados} arquivo${marcados > 1 ? 's' : ''} já ajustado${marcados > 1 ? 's' : ''} no app ganhou o ✓`, 'ok');
+  /* 2. todos os PDFs (soltos e no Repertório) e slides (soltos e nas pastas de Slide) sem ✓ */
+  const subpastas = async pai=>pai ? (await driveListar(`'${pai}' in parents and mimeType='${DRIVE_PASTA_MIME}'`)).map(p=>p.id) : [];
+  const repertorio = await drivePasta(DRIVE_PASTA_PDF, base.raiz, false);
+  const listar = async (pastas, eh)=>{
+    const out = [];
+    for(const p of pastas) out.push(...(await driveListar(`'${p}' in parents and mimeType != '${DRIVE_PASTA_MIME}'`)).filter(eh));
+    return out.filter(f=>!DRIVE_MARCA_RE.test(f.name)).sort((a, b)=>a.name.localeCompare(b.name));
+  };
+  const pdfs = await listar([base.raiz, ...(repertorio ? [repertorio, ...await subpastas(repertorio)] : [])], f=>f.mimeType === 'application/pdf');
+  const slides = await listar([base.slide, ...await subpastas(base.slide)], f=>/\.pptx?$/i.test(f.name) || f.mimeType === 'application/vnd.google-apps.presentation');
+  const el = document.getElementById('driveLog');
+  const grupo = (titulo, lista)=>`<div class="drive-linha ${lista.length ? '' : 'ok'}"><b>${titulo}: ${lista.length ? lista.length + ' sem ✓' : 'todos com ✓'}</b></div>`
+    + lista.map(f=>`<a class="drive-linha drive-falta" href="https://drive.google.com/file/d/${encodeURIComponent(f.id)}/view" target="_blank" rel="noopener">${lvEsc(f.name)}</a>`).join('');
+  el.insertAdjacentHTML('beforeend', grupo('PDFs (cifra)', pdfs) + grupo('Slides', slides)
+    + `<div class="drive-linha">Para ajustar: puxe a música do Drive, deixe certa, marque como Pronto e envie. Ela volta para o Drive com ✓.</div>`);
+  el.scrollTop = 0;
+  persist();
 }
 
 /* ---------- uma música só (botões dentro da música) ---------- */

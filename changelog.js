@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.0', itens: [
+    'Drive: arquivo enviado de música Pronta ganha ✓ no nome',
+    'Botão O que falta ajustar no Drive (no +): lista PDFs e slides sem ✓ e já marca os que o app enviou antes de músicas Prontas'
+  ] },
   { versao: 'v19.9', itens: [
     'Colar roteiro do WhatsApp: nome com traço (Usa-me) fica inteiro, tom escrito como dó, ré, mi depois do traço é entendido como tom, e Harpa 127 vira hino da Harpa Cristã com o nome vindo da busca'
   ] },
