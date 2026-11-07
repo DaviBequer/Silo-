@@ -451,7 +451,7 @@ function contaComprasDe(pk){
   if(!item || !item.desc) return [];
   const nome = semAcentoCore(item.desc), out = [];
   if(user === 'davi') (state.cartoesTracker || []).forEach(c=>(c.credoVista || []).forEach(cv=>{
-    if(cv.mKey === mKey && !cv.ajuste && semAcentoCore(cv.categoria) === nome) out.push({ data: cv.data || '', desc: cv.descricao || 'Compra', onde: c.nome, tipo: 'cartao', valor: Number(cv.valor) || 0 });
+    if((cv.mesConta || cv.mKey) === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) out.push({ data: cv.data || '', desc: cv.descricao || 'Compra', onde: c.nome, tipo: 'cartao', valor: Number(cv.valor) || 0 });
   }));
   (state.lancamentos || []).forEach(la=>{
     if(la.mKey === mKey && (la.usuario || 'davi') === user && semAcentoCore(la.categoria) === nome) out.push({ data: la.data || '', desc: la.descricao || 'Compra', onde: la.banco || 'Pix/débito', tipo: 'pix', valor: Number(la.valor) || 0 });
@@ -1417,7 +1417,10 @@ function excluirCompraTracker(id){
 function updateGastoFieldsVisibility(){
   const cat = document.getElementById('gastoCat').value;
   const isFuturo = cat === 'futuro';
-  document.getElementById('gastoDiaWrap').style.display = isFuturo ? 'none' : '';
+  const meta = !isFuturo && gastoTipoAtual === 'meta';
+  document.getElementById('gastoDiaWrap').style.display = isFuturo || meta ? 'none' : '';
+  document.getElementById('gastoValorLabel').textContent = meta ? 'Máximo no mês' : 'Valor';
+  document.getElementById('gastoTipoDica').style.display = meta ? '' : 'none';
   document.getElementById('gastoMesInicioSimplesWrap').style.display = isFuturo ? 'none' : '';
   document.getElementById('gastoRecorrenteWrap').style.display = (isFuturo && gastoFuturoModo==='parcelada') ? '' : 'none';
   document.getElementById('gastoMesInicioWrap').style.display = isFuturo ? '' : 'none';
@@ -1493,8 +1496,18 @@ let gastoEssencialAtual = true;
 function renderGastoTipoChips(){
   const el = document.getElementById('gastoTipoChips');
   if(!el) return;
-  el.innerHTML = ['fixa','variavel'].map(t=>
-    `<button type="button" class="dif-chip${gastoTipoAtual===t?' active':''}" onclick="setGastoTipo('${t}')">${t==='fixa'?'Fixa':'Variável'}</button>`
+  el.innerHTML = [['fixa','Fixa'],['variavel','Variável'],['meta','Meta']].map(([t, nome])=>
+    `<button type="button" class="dif-chip${gastoTipoAtual===t?' active':''}" onclick="setGastoTipo('${t}')">${nome}</button>`
+  ).join('');
+}
+let gastoFormaAtual = '';
+function renderGastoFormaChips(){
+  const u = state.currentUser, ops = [['', 'Perguntar na hora'],
+    ...(state.users[u].bancos||[]).map(b=>['b:'+b.nome, 'Pix '+b.nome]),
+    ...(u === 'davi' ? (state.cartoesTracker||[]) : []).map(c=>['c:'+c.id, 'Cartão '+c.nome])];
+  document.getElementById('gastoFormaWrap').style.display = ops.length > 1 ? '' : 'none';
+  document.getElementById('gastoFormaChips').innerHTML = ops.map(([f, nome])=>
+    `<button type="button" class="dif-chip${gastoFormaAtual===f?' active':''}" data-f="${escBanco(f)}" onclick="gastoFormaAtual=this.dataset.f;renderGastoFormaChips()">${escBanco(nome)}</button>`
   ).join('');
 }
 function renderGastoEssencialChips(){
@@ -1512,6 +1525,7 @@ function setGastoTipo(t){
   gastoTipoAtual = t;
   renderGastoTipoChips();
   atualizarGastoMediaHint();
+  updateGastoFieldsVisibility();
 }
 function mediaHistoricoGasto(item){
   if(!item || !item.historico || item.historico.length===0) return null;
@@ -1569,6 +1583,7 @@ function openGastoModal(cat, id, modo){
       document.getElementById('gastoDia').value = item.dia || '';
       gastoTipoAtual = item.tipo || 'fixa';
       gastoEssencialAtual = item.essencial !== false;
+      gastoFormaAtual = item.pgForma || '';
       createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', item.mesInicio || null);
 
       if(cat==='futuro'){
@@ -1592,6 +1607,7 @@ function openGastoModal(cat, id, modo){
     document.getElementById('gastoDia').value = '';
     gastoTipoAtual = 'fixa';
     gastoEssencialAtual = true;
+    gastoFormaAtual = '';
     gastoFuturoModo = modo || 'parcelada';
     createMonthPicker('gastoMesInicioSimplesPicker', 'gastoMesInicioSimples', null);
     document.getElementById('gastoRecorrente').checked = false;
@@ -1603,6 +1619,7 @@ function openGastoModal(cat, id, modo){
   document.getElementById('gastoEssencialWrap').style.display = cat==='futuro' ? 'none' : 'block';
   renderGastoTipoChips();
   renderGastoEssencialChips();
+  renderGastoFormaChips();
   atualizarGastoMediaHint();
   renderGastoLogoPreview();
   updateGastoFieldsVisibility();
@@ -1632,11 +1649,11 @@ function saveGasto(){
         valores[inp.dataset.mes] = parseMoney(inp.value);
       });
     }
-    novo = { desc, descricao, logoUrl, recorrente, mesInicio, parcelas, replicar, valor, valores };
+    novo = { desc, descricao, logoUrl, recorrente, mesInicio, parcelas, replicar, valor, valores, pgForma: gastoFormaAtual };
   }else{
     const valor = parseMoney(document.getElementById('gastoValor').value);
     const mesInicio = document.getElementById('gastoMesInicioSimples').value || null;
-    novo = { desc, descricao, logoUrl, valor, dia, mesInicio, tipo: gastoTipoAtual, essencial: gastoEssencialAtual };
+    novo = { desc, descricao, logoUrl, valor, dia, mesInicio, tipo: gastoTipoAtual, essencial: gastoEssencialAtual, pgForma: gastoFormaAtual };
   }
 
   const list = state.users[state.currentUser].expenses[cat];

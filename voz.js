@@ -39,7 +39,16 @@ function vozOuvir(){
 /* contas do mês ainda abertas (para "paguei a ...") */
 function vozContasAbertas(){
   const mKey = mesFinanceiroAtual(), u = state.currentUser;
-  return getContasDoMes(mKey, u).filter(it=>!it.pago && it.restante > 0.004).map(it=>({ key: it.paidKey, desc: it.desc || 'Conta', valor: it.restante }));
+  return getContasDoMes(mKey, u).filter(it=>!it.pago && it.restante > 0.004 && it.tipo !== 'meta').map(it=>({ key: it.paidKey, desc: it.desc || 'Conta', valor: it.restante }));
+}
+/* contas tipo Meta (Mercado, Gasolina): compra vai pela categoria, nunca marca a conta como paga */
+function vozMetas(){
+  const us = state.users && state.users[state.currentUser], ex = (us && us.expenses) || {};
+  return ['moradia','assinatura','fixo'].flatMap(c=>ex[c]||[]).filter(i=>i.tipo === 'meta' && !i.arquivado);
+}
+function vozFormaTexto(item){
+  const f = contaForma(item, state.currentUser);
+  return !f ? '' : f.cartao ? 'cartão ' + f.cartao.nome : 'Pix ' + f.banco;
 }
 function vozSemAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 /* sem IA: número + banco citado + palavras-chave */
@@ -86,7 +95,11 @@ const VOZ_CATEGORIA_PALAVRAS = [
   ['Lazer', /cinema|netflix|spotify|show|passeio|jogo|viagem/]
 ];
 function vozCartoes(){ return state.cartoesTracker || []; }
-function vozCategoriasCartao(){ return getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom'); }
+function vozCategoriasCartao(){
+  const cats = getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom');
+  const novas = vozMetas().map(i=>i.desc).filter(d=>!cats.some(c=>vozSemAcento(c) === vozSemAcento(d)));   // Gasolina vira categoria para descontar da meta
+  return novas.length ? [...cats, ...novas] : cats;
+}
 function vozAdivinharCategoria(desc){
   const d = vozSemAcento(desc), cats = vozCategoriasCartao();
   const propria = cats.find(c=>c !== 'Outros' && d.includes(vozSemAcento(c)));

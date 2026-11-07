@@ -263,7 +263,8 @@ function atzContexto(){
     bancos: bancosDoUsuario().map(b=>({ nome: b.nome, saldoNoApp: Number(b.valor) || 0, pixNoMes: Math.round((state.lancamentos || []).filter(la=>la.mKey === mesFinanceiroAtual() && (la.usuario || 'davi') === state.currentUser && vozSemAcento(la.banco) === vozSemAcento(b.nome)).reduce((t, la)=>t + (Number(la.valor) || 0), 0) * 100) / 100 })),
     cartoes: conf.cartoes.map(x=>({ nome: x.c.nome, fechamentoDia: parseInt(x.c.fechamento) || null, vencimentoDia: parseInt(x.c.vencimento) || null, faturaAberta: monthLabel(x.m), faturaNoApp: Math.round(x.noApp * 100) / 100, novosNestaConversa: Math.round(x.novos * 100) / 100, faturaInformada: x.informado, faltaParaBater: x.falta })),
     conferenciaDosBancos: conf.bancos.filter(x=>x.informado !== null).map(x=>({ banco: x.b.nome, saldoEsperado: x.esperado, saldoInformado: x.informado, diferenca: x.dif })),
-    contasAbertas: vozContasAbertas().map(c=>({ chave: c.key, conta: c.desc, valor: c.valor })),
+    contasAbertas: vozContasAbertas().map(c=>({ chave: c.key, conta: c.desc, valor: c.valor, formaDePagar: vozFormaTexto(contaDoPaidKey(c.key)) })),
+    metas: vozMetas().map(i=>({ nome: i.desc, maximoNoMes: Number(i.valor) || 0, formaDePagar: vozFormaTexto(i) })),
     categorias: vozCategoriasCartao(),
     apelidos: Object.values(state.iaApelidos || {}).map(a=>`${a.nome} → ${a.categoria}`),
     nomesJaUsados: jaUsados
@@ -276,16 +277,20 @@ function atzItensParaIA(){
    Um só cartão (ou um só banco) = usa esse. Apelido aprendido manda na categoria. */
 function atzNormalizarItens(lista){
   const bancos = bancosDoUsuario(), contas = vozContasAbertas(), cats = vozCategoriasCartao(), apelidos = state.iaApelidos || {};
-  return (lista || []).filter(i=>i && ATZ_TIPOS[i.tipo] && (Number(i.valor) > 0 || (['saldo','fatura'].includes(i.tipo) && Number(i.valor) === 0))).map(i=>{
-    const c = ['vista','parcelada','fatura'].includes(i.tipo) ? (vozAchaCartao(i.cartao) || (vozCartoes().length === 1 ? vozCartoes()[0] : null)) : null;
-    const b = bancos.find(x=>vozSemAcento(x.nome) === vozSemAcento(i.banco)) || bancos.find(x=>i.banco && vozSemAcento(i.banco).includes(vozSemAcento(x.nome)))
+  return (lista || []).filter(i=>i && ATZ_TIPOS[i.tipo] && (Number(i.valor) > 0 || (['saldo','fatura','conta'].includes(i.tipo) && Number(i.valor) === 0))).map(i=>{
+    let c = ['vista','parcelada','fatura'].includes(i.tipo) ? (vozAchaCartao(i.cartao) || (vozCartoes().length === 1 ? vozCartoes()[0] : null)) : null;
+    let b = bancos.find(x=>vozSemAcento(x.nome) === vozSemAcento(i.banco)) || bancos.find(x=>i.banco && vozSemAcento(i.banco).includes(vozSemAcento(x.nome)))
       || (['pix','recebi','saldo'].includes(i.tipo) && bancos.length === 1 ? bancos[0] : null);
-    const conta = i.tipo === 'conta' ? contas.find(x=>x.key === i.conta) : null;
+    const conta = i.tipo === 'conta' ? (contas.find(x=>x.key === i.conta) || atzContaPorNome(i.descricao, contas)) : null;
+    if(conta){   // conta paga: o que a pessoa falou vale; senão, o método do cadastro
+      c = i.cartao ? vozAchaCartao(i.cartao) : null;
+      if(!b && !c){ const f = contaForma(contaDoPaidKey(conta.key), state.currentUser) || {}; c = f.cartao || null; b = f.banco ? bancos.find(x=>x.nome === f.banco) : null; }
+    }
     const comCat = ['vista','pix'].includes(i.tipo);
     const nm = comCat ? atzLimparNome(i.descricao, cats) : { nome: String(i.descricao || '').trim(), cat: '' };
     const ap = apelidos[atzChaveNome(nm.nome)], apOk = ap && cats.includes(ap.categoria);
     return {
-      tipo: i.tipo, descricao: nm.nome || (conta ? conta.desc : ''), valor: Math.round(Number(i.valor) * 100) / 100,
+      tipo: i.tipo, descricao: nm.nome || (conta ? conta.desc : ''), valor: Math.round((Number(i.valor) || (conta ? conta.valor : 0)) * 100) / 100,
       categoria: !comCat ? '' : apOk ? ap.categoria : cats.includes(i.categoria) ? i.categoria : nm.cat || vozAdivinharCategoria(nm.nome),
       duvida: comCat && !apOk && (!!i.categoriaDuvida || !cats.includes(i.categoria)),
       cartaoId: c ? c.id : '', cartaoNome: c ? c.nome : '', bancoId: b ? b.id : '', bancoNome: b ? b.nome : '',
@@ -293,7 +298,7 @@ function atzNormalizarItens(lista){
       data: atzDataValida(i.data),
       proximaFatura: !!i.proximaFatura && ['vista','parcelada'].includes(i.tipo), conta: conta ? conta.key : '', ok: false
     };
-  });
+  }).filter(i=>i.valor > 0 || ['saldo','fatura'].includes(i.tipo));
 }
 /* data da compra: AAAA-MM-DD válida e nunca no futuro (sem data = hoje) */
 function atzDataValida(s){
@@ -402,6 +407,8 @@ async function atzPerguntar(msg, audio){
 ` +
       `CARTÃO E BANCO: se a lista de cartões tem UM só cartão, toda compra no crédito é nele: preencha e NÃO pergunte qual cartão. O mesmo para banco: com um só banco, use ele. ` +
       `Só pergunte o cartão ou o banco quando houver mais de um e a fala não disser qual. Se faltar o número de parcelas ou algo for ambíguo, deixe vazio e PERGUNTE.\n` +
+      `CONTA PAGA: "Netflix paga", "paguei a luz", "Spotify pago" = item conta com a chave da conta de nome igual ou parecido em contasAbertas (procure ali primeiro, o nome não precisa ser exato); sem valor falado, use o valor da lista. Se a conta tem formaDePagar, NÃO pergunte de onde pagou e deixe banco e cartão vazios: o app joga na fatura ou tira do banco sozinho. ` +
+      `METAS: compra de uma conta da lista metas ("mercado 120", "gasolina 200") NUNCA é item conta: é vista ou pix com categoria igual ao nome da meta; se a fala não diz onde, use a formaDePagar da meta (cartão = vista naquele cartão, Pix = pix naquele banco).\n` +
       `CATEGORIA: a descricao é o nome que a pessoa falou ("Top", "JK", "Drogasil"). Para escolher a categoria, veja primeiro "apelidos" (a pessoa ensinou: vale sempre), ` +
       `depois "nomesJaUsados" (o que ela já lançou e em que categoria), depois o que você sabe de lojas do Brasil. Se ainda não tiver certeza, escolha a mais provável e marque categoriaDuvida true. ` +
       `Se a pessoa disser a categoria junto com o nome ("120 no Top, mercado") ou ensinar ("Top é mercado"), use essa categoria e ponha {nome, categoria} em aprendidos.\n` +
@@ -844,18 +851,20 @@ function atzRenderApelidos(){
    Compra menor (Mercado 10 de uma conta de 850) não marca: ela já desconta da conta pela categoria (contaUsadaNoCartao) */
 function atzContasPagasPeloItem(itens){
   const contas = vozContasAbertas(), usadas = new Set(), out = [];
-  const nome = s=>vozSemAcento(s).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   itens.filter(i=>['vista', 'parcelada', 'pix'].includes(i.tipo)).forEach(i=>{
-    const d = nome(i.descricao);
-    if(!d) return;
-    const c = contas.find(c=>{
-      if(usadas.has(c.key)) return false;
-      const n = nome(c.desc);
-      return n && (n === d || (n.length > 3 && (` ${d} `).includes(` ${n} `)) || (d.length > 3 && (` ${n} `).includes(` ${d} `)));
-    });
-    if(c && (Number(i.valor) || 0) >= c.valor * 0.9){ usadas.add(c.key); out.push(c); }
+    const c = atzContaPorNome(i.descricao, contas.filter(x=>!usadas.has(x.key)));
+    if(c && (Number(i.valor) || 0) >= c.valor * 0.9){ usadas.add(c.key); out.push(Object.assign({ item: i }, c)); }
   });
   return out;
+}
+/* conta com o nome igual ou parecido ("Netflix" acha "Netflix Premium") */
+function atzContaPorNome(descricao, contas){
+  const nome = s=>vozSemAcento(s).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(), d = nome(descricao);
+  if(!d) return null;
+  return contas.find(c=>{
+    const n = nome(c.desc);
+    return n && (n === d || (n.length > 3 && (` ${d} `).includes(` ${n} `)) || (d.length > 3 && (` ${n} `).includes(` ${d} `)));
+  }) || null;
 }
 async function atzGravar(){
   const itens = atzItens.filter(atzConfirmado);
@@ -875,19 +884,29 @@ async function atzGravar(){
     if(!state.comprasTracker) state.comprasTracker = [];
     itens.forEach(i=>{
       const c = (state.cartoesTracker || []).find(x=>x.id === i.cartaoId);
+      const paga = pagas.find(p=>p.item === i);
       if(i.tipo === 'vista'){
-        if(c) lancarVista(c, { descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria, mKey: atzFaturaDoItem(c, i), data: i.data || hoje });
+        if(c){
+          const cv = lancarVista(c, { descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria, mKey: atzFaturaDoItem(c, i), data: i.data || hoje });
+          if(paga) contaLigarAoCartao(paga.key, c, cv);
+          if(vozMetas().some(m=>vozSemAcento(m.desc) === vozSemAcento(i.categoria))) cv.mesConta = mKey;   // desconta da meta deste mês, mesmo caindo na próxima fatura
+        }
       } else if(i.tipo === 'parcelada'){
         if(c) lancarParcelada(c, { nome: i.descricao, valorTotal: i.valor, parcelas: i.parcelas, mesInicio: atzFaturaDoItem(c, i), data: i.data || hoje });
       } else if(i.tipo === 'pix'){
         const b = banco(i.bancoId);
         lancarPix({ mKey, data: i.data || hoje, descricao: i.descricao, valor: i.valor, categoria: i.categoria, banco: b ? b.nome : '' });
         mexe(i.bancoId, -i.valor);
+        if(paga && b && !comSaldo.has(i.bancoId)) (state.ganhoNoBanco = state.ganhoNoBanco || {})['pag_'+paga.key] = { banco: b.nome, valor: -i.valor };   // desmarcar devolve
       } else if(i.tipo === 'recebi'){
         mexe(i.bancoId, i.valor);
       } else if(i.tipo === 'conta'){
-        marcarContaPaga(i.conta, true, i.valor);
-        if(i.bancoId) mexe(i.bancoId, -i.valor);
+        const b = banco(i.bancoId);
+        if(!b && c) contaNoCartao(i.conta, c, i.valor);   // no cartão: fica paga, o saldo não muda e entra na fatura
+        else{
+          marcarContaPaga(i.conta, true, i.valor);
+          if(b && !comSaldo.has(i.bancoId)) registrarNoBanco(state.currentUser, 'pag_'+i.conta, -i.valor, b.nome);
+        }
       }
     });
     pagas.forEach(p=>marcarContaPaga(p.key));

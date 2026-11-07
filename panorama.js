@@ -686,18 +686,24 @@ function ganhoAlternar(u, chave, valor, nome, recebido, marcar){
 }
 /* ===== PAGAR: toda conta, dízimo, fatura e parcela tira do banco escolhido ===== */
 /* escolha do banco (já vem o último usado). "Não mexer no saldo" é para quando o saldo informado já desconta. Sem banco cadastrado não pergunta. */
-function pgBancosHtml(u, rotulo){
-  const bancos = state.users[u].bancos || [];
-  if(!bancos.length) return '';
-  const ultimo = (state.ultimoBanco || {})[u], sel = bancos.some(b=>b.nome === ultimo) ? ultimo : bancos[0].nome;
-  return `<div class="field full"><label>${rotulo || 'De qual banco saiu'}</label><div class="pg-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${b.nome === sel ? ' active' : ''}" data-banco="${escBanco(b.nome)}" onclick="pgEscolher(this)">${escBanco(b.nome)}</button>`).join('')}<button type="button" class="dif-chip" data-nao="1" onclick="pgEscolher(this)">Não mexer no saldo</button></div></div>`;
+function pgBancosHtml(u, rotulo, o = {}){
+  const bancos = state.users[u].bancos || [], cartoes = o.comCartao && u === 'davi' ? (state.cartoesTracker || []) : [];
+  if(!bancos.length && !cartoes.length) return '';
+  const ultimo = (state.ultimoBanco || {})[u], selC = o.forma && o.forma.cartao ? o.forma.cartao.id : null;
+  const sel = (o.forma && o.forma.banco) || (bancos.some(b=>b.nome === ultimo) ? ultimo : (bancos[0] || {}).nome);
+  const pre = cartoes.length ? 'Pix ' : '';
+  return `<div class="field full"><label>${rotulo || (cartoes.length ? 'Como pagou' : 'De qual banco saiu')}</label><div class="pg-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${!selC && b.nome === sel ? ' active' : ''}" data-banco="${escBanco(b.nome)}" onclick="pgEscolher(this)">${pre}${escBanco(b.nome)}</button>`).join('')}${cartoes.map(c=>`<button type="button" class="dif-chip${c.id === selC ? ' active' : ''}" data-cartao="${escBanco(c.id)}" onclick="pgEscolher(this)">Cartão ${escBanco(c.nome)}</button>`).join('')}<button type="button" class="dif-chip" data-nao="1" onclick="pgEscolher(this)">Não mexer no saldo</button></div></div>`;
 }
 function pgEscolher(btn){ btn.parentElement.querySelectorAll('.dif-chip').forEach(b=>b.classList.toggle('active', b === btn)); }
 /* nome do banco; null = não mexer no saldo; '' = sem banco cadastrado (mexe só no saldo geral) */
 function pgBancoDe(raiz){
   const on = raiz.querySelector('.pg-bancos .dif-chip.active');
   if(!on) return '';
-  return on.dataset.nao ? null : on.dataset.banco;
+  return on.dataset.nao || on.dataset.cartao ? null : on.dataset.banco;
+}
+function pgCartaoDe(raiz){
+  const on = raiz.querySelector('.pg-bancos .dif-chip.active'), id = on && on.dataset.cartao;
+  return id ? (state.cartoesTracker || []).find(c=>c.id === id) || null : null;
 }
 function pgGuardarUltimo(u, banco){ if(banco) (state.ultimoBanco = state.ultimoBanco || {})[u] = banco; }
 function saiuDoBanco(u, chave, valor, banco){
@@ -710,18 +716,20 @@ function contaDevolver(paidKey){
   const u = paidKey.split('_')[1];
   desfazerNoBanco(u, 'pag_'+paidKey);
   desfazerNoBanco(u, 'par_'+paidKey);
+  contaTirarDoCartao(paidKey);
 }
 let pagarFim = null;
+const pagoMsg = (nome, v, banco, cartao)=>cartao ? `${nome}: ${fmtMoney(v)} na fatura do ${cartao.nome}` : `${nome} pago: ${fmtMoney(v)}${banco ? ' · '+banco : ''}`;
 function pagarPerguntar(o){
   document.getElementById('perguntaTitulo').textContent = o.titulo || 'Pagar';
   const fmt = v=>Number(v).toFixed(2).replace('.', ',');
-  document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>${escBanco(o.nome)}${o.exato ? ' · previsto' : ''}</span><b>${fmtMoney(o.valor)}</b></div>
+  document.getElementById('perguntaCorpo').innerHTML = `${o.extra || `<div class="modal-destaque"><span>${escBanco(o.nome)}${o.exato ? ' · previsto' : ''}</span><b>${fmtMoney(o.valor)}</b></div>`}
     <form onsubmit="event.preventDefault();pagarConfirmar()">
-      <div class="field full"><label for="perguntaValor">${o.exato ? 'Valor exato pago' : 'Valor pago'}</label><div class="input-money"><input type="text" id="perguntaValor" inputmode="numeric" placeholder="0,00" value="${o.exato ? '' : fmt(o.valor)}" oninput="maskMoneyInput(this)"></div></div>
-      ${pgBancosHtml(o.u)}
-      <div class="modal-actions"><button type="button" class="btn btn-outline btn-block" onclick="closeModal('modalPergunta')">Cancelar</button><button class="btn btn-block">Pagar</button></div>
+      <div class="field full"><label for="perguntaValor">${o.rotulo || (o.exato ? 'Valor exato pago' : 'Valor pago')}</label><div class="input-money"><input type="text" id="perguntaValor" inputmode="numeric" placeholder="0,00" value="${o.exato ? '' : fmt(o.valor)}" oninput="maskMoneyInput(this)"></div></div>
+      ${pgBancosHtml(o.u, o.rotuloForma, o)}
+      <div class="modal-actions"><button type="button" class="btn btn-outline btn-block" onclick="closeModal('modalPergunta')">Cancelar</button><button class="btn btn-block">${o.botao || 'Pagar'}</button></div>
     </form>`;
-  pagarFim = (v, banco)=>comDesfazer(`${o.nome} pago: ${fmtMoney(v)}${banco ? ' · '+banco : ''}`, ()=>{ o.aoPagar(v, banco); persist(); });
+  pagarFim = (v, banco, cartao)=>comDesfazer(pagoMsg(o.nome, v, banco, cartao), ()=>{ o.aoPagar(v, banco, cartao); persist(); });
   document.getElementById('modalPergunta').classList.add('active');
   if(o.exato) document.getElementById('perguntaValor').focus();
 }
@@ -731,7 +739,7 @@ function pagarConfirmar(){
   const banco = pgBancoDe(document.getElementById('perguntaCorpo'));
   inp.blur();
   closeModal('modalPergunta');
-  pagarFim(v, banco);
+  pagarFim(v, banco, pgCartaoDe(document.getElementById('perguntaCorpo')));
 }
 function abrirHistoricoVariaveis(){
   const contas = historicoVariaveis(state.currentUser);
@@ -826,7 +834,7 @@ function renderContasPagar(){
   let itemsAtual = getContasDoMes(mKey, u).map(it=>Object.assign({}, it, { mesOrigem: mKey }))
     .filter(it=> !arquivadas[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]);
   let itemsAnterior = getContasDoMes(mesAnteriorKey, u).map(it=>Object.assign({}, it, { mesOrigem: mesAnteriorKey }))
-    .filter(it=>{ const pk = mesAnteriorKey+'_'+it.user+'_'+it.cat+'_'+it.id; return !state.paid[pk] && !arquivadas[pk]; });
+    .filter(it=>{ const pk = mesAnteriorKey+'_'+it.user+'_'+it.cat+'_'+it.id; return !state.paid[pk] && !arquivadas[pk] && it.tipo !== 'meta'; });
   const items = itemsAnterior.concat(itemsAtual).sort((a,b)=> a.mesOrigem!==b.mesOrigem ? (a.mesOrigem<b.mesOrigem?-1:1) : (a.dia||1)-(b.dia||1));
   items.forEach(it=>{
     const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
@@ -835,6 +843,14 @@ function renderContasPagar(){
     const noCartao = isPaid ? 0 : Math.min(Number(it.valor)||0, contaUsadaNoCartao(paidKey));
     const isParcial = !isPaid && (valorPago > 0 || noCartao > 0);
     conta(Number(it.valor)||0, isPaid, valorPago + noCartao);
+    if(it.tipo === 'meta' && !isPaid){
+      const usado = valorPago + contaUsadaNoCartao(paidKey), dif = (Number(it.valor)||0) - usado;
+      contasHtml += cpItem({ titulo: it.desc, logoUrl: it.logoUrl, icone: it.desc.charAt(0).toUpperCase(),
+        sub: usado > 0.004 ? `gastou ${fmtMoney(usado)}` : 'toque para lançar uma compra',
+        valor: Number(it.valor)||0, valorSub: dif < -0.004 ? `passou ${fmtMoney(-dif)}` : `sobra ${fmtMoney(dif)}`, parcial: usado > 0.004,
+        attrs: `onclick="togglePaid('${paidKey}')"` });
+      return;
+    }
     const diasVenc = !isPaid ? diasParaVencimento(it, it.mesOrigem) : null;
     const corDia = diasVenc===null ? '' : (diasVenc<0?' atrasada':(diasVenc<=3?' urgente':''));
     const quando = diasVenc===null ? `dia ${it.dia}` : (diasVenc<0 ? `venceu dia ${it.dia}` : (diasVenc===0 ? 'vence hoje' : (diasVenc<=3 ? `vence em ${diasVenc} dia${diasVenc>1?'s':''}` : `dia ${it.dia}`)));
@@ -913,15 +929,26 @@ function togglePaid(paidKey){
   if(state.paid[paidKey]){ contaDevolver(paidKey); marcarContaPaga(paidKey, false); persist(); return; }
   const [mKey, u] = paidKey.split('_');
   const g = gastosDoMes(u, mKey).find(x=>x.paidKey === paidKey);
-  const variavel = contaDoPaidKey(paidKey)?.tipo === 'variavel';
+  const item = contaDoPaidKey(paidKey), variavel = item?.tipo === 'variavel', forma = contaForma(item, u);
   if(!g){ marcarContaPaga(paidKey); persist(); return; }
+  if(item?.tipo === 'meta'){
+    pagarPerguntar({ u, nome: g.desc, valor: g.restante, exato: true, titulo: g.desc, rotulo: 'Quanto gastou', rotuloForma: 'Como pagou', botao: 'Lançar', comCartao: true, forma,
+      extra: contaDetalheHtml(paidKey, item), aoPagar:(v, banco, cartao)=>{ metaLancar(paidKey, v, banco, cartao); pgGuardarUltimo(u, banco); } });
+    return;
+  }
   if(!variavel && g.restante <= 0.004){ marcarContaPaga(paidKey); persist(); return; }   // já gasta toda no cartão: nada sai do banco
-  pagarPerguntar({ u, nome: g.desc, valor: g.restante, exato: variavel, titulo: variavel ? 'Qual foi o valor exato?' : 'Pagar', aoPagar:(v, banco)=>{
-    saiuDoBanco(u, 'pag_'+paidKey, v, banco);
+  const aoPagar = (v, banco, cartao)=>{
+    if(cartao) contaNoCartao(paidKey, cartao, v);
+    else{ saiuDoBanco(u, 'pag_'+paidKey, v, banco); marcarContaPaga(paidKey); }
     const real = lancValor(g.valor + v - g.restante);   // pagou diferente do previsto: vale o pago, só neste mês
-    marcarContaPaga(paidKey);
     if(variavel || Math.abs(real - g.valor) > 0.004) (state.valoresReais = state.valoresReais || {})[paidKey] = real;
-  } });
+  };
+  /* método já escolhido no cadastro e valor certo: um toque só, com Desfazer */
+  if(forma && !variavel){
+    comDesfazer(pagoMsg(g.desc, g.restante, forma.banco, forma.cartao), ()=>{ aoPagar(g.restante, forma.banco || null, forma.cartao); persist(); });
+    return;
+  }
+  pagarPerguntar({ u, nome: g.desc, valor: g.restante, exato: variavel, titulo: variavel ? 'Qual foi o valor exato?' : 'Pagar', comCartao: true, forma, aoPagar });
 }
 
 function getGastoItemRef(user, cat, id){
@@ -1069,6 +1096,7 @@ function ondeVaiDados(u, mKey){
   /* conta fixa com o mesmo nome de uma categoria (ex.: "Mercado") é uma reserva para esse gasto:
      o que já foi no cartão ou no Pix sai da conta, para não contar duas vezes (mesma regra de contaUsadaNoCartao) */
   getContasDoMes(mKey, u).forEach(it=>{
+    if(it.noCartao) return;   // paga no cartão: já conta na fatura
     let v = Number(it.valor) || 0;
     const usado = contaUsadaNoCartao(mKey + '_' + it.user + '_' + it.cat + '_' + it.id);
     if(usado > 0){

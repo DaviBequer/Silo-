@@ -305,6 +305,35 @@ async function rodarTestes(){
     saiuDoBanco('davi', 'pag_'+kPag, 100, null);
     igual('não mexer no saldo: banco fica igual', usG.bancos[0].valor, 500);
     state.users.davi.expenses.fixo = exP.filter(i=>i.id !== 'tpag');
+    /* método de pagamento: conta no cartão fica paga, saldo igual, entra na fatura; desmarcar tira */
+    const exF = state.users.davi.expenses.fixo, fatTotal = ()=>(cF.credoVista||[]).filter(cv=>cv.conta).reduce((s, cv)=>s + cv.valor, 0);
+    exF.push({ id:'tnet', desc:'Netflix', valor:40, dia:10, pgForma:'c:'+cF.id }, { id:'tpix', desc:'Internet', valor:90, dia:10, pgForma:'b:A' }, { id:'tsem', desc:'Sem', valor:5, dia:10, pgForma:'b:Sumiu' });
+    const kNet = M+'_davi_fixo_tnet';
+    igual('forma da conta: cartão, banco e banco que sumiu = perguntar', [contaForma(exF.find(i=>i.id === 'tnet'), 'davi').cartao.id, contaForma(exF.find(i=>i.id === 'tpix'), 'davi').banco, contaForma(exF.find(i=>i.id === 'tsem'), 'davi')], [cF.id, 'A', null]);
+    contaNoCartao(kNet, cF, 40);
+    igual('conta no cartão: paga, saldo igual, valor na fatura', [state.paid[kNet], usG.bancos[0].valor, fatTotal(), contaUsadaNoCartao(M+'_davi_fixo_tnet')], [true, 500, 40, 0]);
+    igual('conta no cartão não desconta o mês seguinte', gastosDoMes('davi', addMonths(M, 1)).find(g=>g.id === 'tnet').restante, 40);
+    contaDevolver(kNet); marcarContaPaga(kNet, false);
+    igual('desmarcar tira da fatura', [fatTotal(), kNet in state.contaNoCartao], [0, false]);
+    cF.assinaturas = [{ id:'as1', nome:'netflix', valor:40, mesInicio:'2020-01' }];
+    contaNoCartao(kNet, cF, 40);
+    igual('assinatura já cadastrada no cartão não entra em dobro', [state.paid[kNet], fatTotal()], [true, 0]);
+    marcarContaPaga(kNet, false); cF.assinaturas = [];
+    /* meta: cada compra desconta do máximo, nunca fica paga, e o que sobrou não vira dívida */
+    exF.push({ id:'tmeta', desc:'Gasolina', valor:300, dia:1, tipo:'meta' });
+    const kMeta = M+'_davi_fixo_tmeta', rMeta = ()=>gastosDoMes('davi', M).find(g=>g.id === 'tmeta').restante;
+    metaLancar(kMeta, 100, 'A');
+    metaLancar(kMeta, 50, null, cF);
+    igual('meta: Pix tira do banco, cartão não, os dois descontam', [rMeta(), usG.bancos[0].valor, !!state.paid[kMeta]], [150, 400, false]);
+    igual('meta: categoria nova para o Assistente e fora das contas abertas', [vozCategoriasCartao().includes('Gasolina'), vozContasAbertas().some(c=>c.desc === 'Gasolina')], [true, false]);
+    const atrasoMeta = atrasadasDoMes('davi', mesFinanceiroAtual());
+    exF.find(i=>i.id === 'tmeta').tipo = 'fixa';
+    igual('meta do mês passado não vira atrasada (fixa viraria)', atrasadasDoMes('davi', mesFinanceiroAtual()) - atrasoMeta, 300);
+    exF.find(i=>i.id === 'tmeta').tipo = 'meta';
+    igual('Assistente acha conta de nome parecido', [atzContaPorNome('netflix', [{ key:'a', desc:'Netflix Premium' }])?.key, atzContaPorNome('Top', [{ key:'a', desc:'Netflix' }])], ['a', null]);
+    cF.credoVista = cF.credoVista.filter(cv=>cv.categoria !== 'Gasolina');
+    state.lancamentos = state.lancamentos.filter(l=>l.categoria !== 'Gasolina');
+    state.users.davi.expenses.fixo = exF.filter(i=>!['tnet', 'tpix', 'tsem', 'tmeta'].includes(i.id));
     usG.bancos = bancosG; usG.saldoAtual = saldoG;
     state.lancamentos = state.lancamentos.filter(l=>l !== laA); cF.credoVista = cF.credoVista.filter(cv=>cv !== cvA && cv !== cvB);
     state.comprasTracker = []; state.cartoesTracker.pop();

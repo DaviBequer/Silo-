@@ -834,7 +834,7 @@ function resumoCompletoDoMes(mKey){
   const salario = rendaBaseForMonth(u, mKey);
   const extras = (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey)).reduce((s,e)=>s+(Number(e.valor)||0), 0);
   const contas = { moradia:0, assinatura:0, fixo:0, futuro:0 };
-  gastosDoMes(u, mKey).forEach(g=>{ contas[g.cat] = (contas[g.cat]||0) + g.valor; });
+  gastosDoMes(u, mKey).forEach(g=>{ if(!g.noCartao) contas[g.cat] = (contas[g.cat]||0) + g.valor; });   // paga no cartão: já conta na fatura
   const dizimo = dizimoValorCheio(u, mKey);
   const cartao = incluiNoGeral('cartao', mKey)
     ? (state.cartoesTracker||[]).reduce((s,c)=>s+faturaCartaoNoMes(c, mKey), 0) : 0;

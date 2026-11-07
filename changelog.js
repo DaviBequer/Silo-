@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.0', itens: [
+    'Toda conta agora tem Como paga: Pix de um banco ou um cartão. Com isso escolhido, um toque paga: no Pix sai do banco, no cartão entra na fatura e o saldo não muda',
+    'Tipo novo Meta, para Mercado e Gasolina: o valor é o máximo do mês e cada compra vai descontando',
+    'Assistente: Netflix paga acha a conta pelo nome parecido e segue o método dela; desmarcar agora devolve o dinheiro ou tira da fatura'
+  ] },
   { versao: 'v18.9', itens: [
     'Pagar agora mexe no banco: conta, dízimo, fatura e parcela de empréstimo tiram do banco escolhido, e desmarcar devolve',
     'Contas do mês virou a tela única de pagar, com o saldo de cada banco e quanto vai sobrar',

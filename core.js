@@ -1132,7 +1132,7 @@ function contaUsadaNoCartao(paidKey){
   const nome = semAcentoCore(item.desc);
   let usado = 0;
   if(user === 'davi') (state.cartoesTracker||[]).forEach(c=>(c.credoVista||[]).forEach(cv=>{
-    if(cv.mKey === mKey && !cv.ajuste && semAcentoCore(cv.categoria) === nome) usado += Number(cv.valor)||0;
+    if((cv.mesConta || cv.mKey) === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) usado += Number(cv.valor)||0;
   }));
   /* compras faladas no Pix/débito (state.lancamentos) da mesma categoria também contam */
   (state.lancamentos||[]).forEach(la=>{
@@ -1149,7 +1149,7 @@ function gastosDoMes(user, mKey){
     const paidKey = mKey+'_'+user+'_'+cat+'_'+item.id, pago = !!state.paid[paidKey];
     valor = (state.valoresReais||{})[paidKey] || valor;   // conta variável paga: vale o valor exato daquele mês
     return Object.assign({ cat, user, id:item.id, paidKey, desc:item.desc||'Conta', logoUrl:item.logoUrl||null, dia:item.dia, mesInicio:item.mesInicio||null,
-      valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor) }, extra);
+      valor, pago, restante: pago ? 0 : restanteConta(paidKey, valor), noCartao: !!(state.contaNoCartao||{})[paidKey] }, extra);
   };
   ['moradia','assinatura','fixo'].forEach(cat=>{
     ex[cat].forEach(item=>{
@@ -1178,7 +1178,7 @@ function gastosRestantesNoMes(user, mKey){ return gastosDoMes(user, mKey).reduce
 function atrasadasDoMes(user, mKey){
   if(mKey !== mesFinanceiroAtual()) return 0;
   const arq = state.contasArquivadas || {};
-  return gastosDoMes(user, addMonths(mKey, -1)).reduce((s, g)=>s + (arq[g.paidKey] ? 0 : g.restante), 0);
+  return gastosDoMes(user, addMonths(mKey, -1)).reduce((s, g)=>s + (arq[g.paidKey] || g.tipo === 'meta' ? 0 : g.restante), 0);   // meta não usada não é dívida
 }
 function expensesForMonth(user, mKey){
   let total = gastosRestantesNoMes(user, mKey) + atrasadasDoMes(user, mKey);   // o que falta pagar das contas do mês
@@ -1292,6 +1292,42 @@ function marcarContaPaga(paidKey, pago = true, valorReal){
   if(pago && state.pagamentosParciais) delete state.pagamentosParciais[paidKey];
   if(!pago && state.valoresReais) delete state.valoresReais[paidKey];
   if(pago && valorReal > 0 && contaDoPaidKey(paidKey)?.tipo === 'variavel') (state.valoresReais = state.valoresReais || {})[paidKey] = lancValor(valorReal);
+}
+/* Como a conta se paga (item.pgForma: 'c:<id do cartão>' ou 'b:<nome do banco>') → {cartao} ou {banco}; null = perguntar na hora */
+function contaForma(item, u){
+  const f = String((item||{}).pgForma||''), v = f.slice(2);
+  if(f.startsWith('c:') && u === 'davi'){ const c = (state.cartoesTracker||[]).find(x=>x.id === v); if(c) return { cartao: c }; }
+  if(f.startsWith('b:') && (state.users[u].bancos||[]).some(b=>b.nome === v)) return { banco: v };
+  return null;
+}
+/* Conta paga no cartão: fica paga, o saldo não muda e o valor entra na fatura (a do vencimento da conta; se já fechou, a aberta). Desmarcar tira da fatura. */
+function contaNoCartao(paidKey, cartao, valor){
+  const mKey = paidKey.split('_')[0], item = contaDoPaidKey(paidKey), desc = (item && item.desc) || 'Conta';
+  marcarContaPaga(paidKey, true, valor);
+  /* assinatura cadastrada no próprio cartão já entra na fatura sozinha: não lança de novo */
+  if((cartao.assinaturas||[]).some(a=>semAcentoCore(a.nome) === semAcentoCore(desc) && assinaturaValorNoMes(a, mKey))) return;
+  const data = mKey + '-' + String(Math.min(parseInt(item && item.dia)||1, daysInMonth(mKey))).padStart(2, '0');
+  const aberta = faturaAbertaMes(cartao), fat = faturaDaData(cartao, data) || aberta;
+  const cv = lancarVista(cartao, { descricao: desc, valor, categoria: desc, mKey: fat > aberta ? fat : aberta });
+  contaLigarAoCartao(paidKey, cartao, cv);
+}
+function contaLigarAoCartao(paidKey, cartao, cv){
+  cv.conta = paidKey;
+  (state.contaNoCartao = state.contaNoCartao || {})[paidKey] = { cartaoId: cartao.id, cvId: cv.id };
+}
+function contaTirarDoCartao(paidKey){
+  const l = (state.contaNoCartao||{})[paidKey];
+  if(!l) return;
+  const c = (state.cartoesTracker||[]).find(x=>x.id === l.cartaoId);
+  if(c) c.credoVista = (c.credoVista||[]).filter(cv=>cv.id !== l.cvId);
+  delete state.contaNoCartao[paidKey];
+}
+/* Meta de gasto (Mercado, Gasolina): cada compra entra na categoria com o nome da conta e desconta do máximo daquele mês (contaUsadaNoCartao) */
+function metaLancar(paidKey, valor, banco, cartao){
+  const [mKey, u] = paidKey.split('_'), desc = (contaDoPaidKey(paidKey) || {}).desc || 'Compra';
+  if(cartao){ lancarVista(cartao, { descricao: desc, valor, categoria: desc }).mesConta = mKey; return; }
+  lancarPix({ mKey, descricao: desc, valor, categoria: desc, banco: banco || '', usuario: u });
+  if(banco !== null) moverNoBanco(u, banco, -valor);
 }
 /* Histórico das contas variáveis: os valores exatos guardados, do mês mais novo ao mais antigo */
 function historicoVariaveis(user){
