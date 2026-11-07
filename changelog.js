@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.1', itens: [
+    'Colar roteiro do WhatsApp: o nome da música e do cantor sai com a primeira letra maiúscula e a IA corrige os acentos (passaro livre vira Pássaro Livre)', 'Harpa: o cantor fica Harpa Cristã - 127 e o nome do hino vem do Drive ou do Cifra Club ao montar', 'O roteiro e a lista do Louvor ficam na mesma ordem do texto colado'
+  ] },
   { versao: 'v20.0', itens: [
     'Drive: arquivo enviado de música Pronta ganha ✓ no nome',
     'Botão O que falta ajustar no Drive (no +): lista PDFs e slides sem ✓ e já marca os que o app enviou antes de músicas Prontas'

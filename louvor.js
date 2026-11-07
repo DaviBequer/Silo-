@@ -98,9 +98,14 @@ function lvRenderLista(){
   const porNome = (a,b)=> (a.titulo||'').localeCompare(b.titulo||'');
   /* Atual: por data (a mais próxima primeiro); sem data vão para o fim, por nome. Nas categorias: por nome */
   if(louvorFiltroAtivo === 'Atual'){
+    /* mesma data: na ordem do roteiro do culto daquele dia (a do texto colado), depois as que não estão nele */
+    const ordemCulto = {};
+    (state.cultos || []).forEach(c=>c.partes.flatMap(p=>p.musicas).forEach((id, i)=>{ if(ordemCulto[c.data + id] === undefined) ordemCulto[c.data + id] = i; }));
+    const noCulto = l=>ordemCulto[(l.dataAgendamento || '') + l.id] ?? 999;
     items.sort((a,b)=>{
       const da = a.dataAgendamento || '', db = b.dataAgendamento || '';
       if(da && db && da !== db) return da < db ? -1 : 1;
+      if(da && da === db && noCulto(a) !== noCulto(b)) return noCulto(a) - noCulto(b);
       if(!da !== !db) return da ? -1 : 1;
       return porNome(a,b);
     });

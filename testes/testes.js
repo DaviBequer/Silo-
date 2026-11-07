@@ -159,7 +159,9 @@ async function rodarTestes(){
     /* roteiro colado do WhatsApp (exemplo do Davi, 07/11): "Usa-me" é um nome só; "-dó" é o tom; Harpa pelo número */
     const colado = cultoColarParse('Abertura: passaro livre- (re maior)\nHarpa:127 -dó\nDia de sol- Gerson Rufino  (G)\n"Usa-me" - Silvan Santos (re maior)');
     igual('colar do WhatsApp: nome, cantor, tom e Harpa', colado.map(i=>[i.titulo, i.artista, i.tom && i.tom.raiz, i.harpaNum]),
-      [['passaro livre', '', 'D', ''], ['127', '', 'C', '127'], ['Dia de sol', 'Gerson Rufino', 'G', ''], ['Usa-me', 'Silvan Santos', 'D', '']]);
+      [['Passaro Livre', '', 'D', ''], ['', 'Harpa Cristã - 127', 'C', '127'], ['Dia de Sol', 'Gerson Rufino', 'G', ''], ['Usa-me', 'Silvan Santos', 'D', '']]);
+    igual('colar: Harpa com o nome escrito', ((x)=>[x.titulo, x.artista])(cultoColarParse('Harpa: 15 - mais perto quero estar')[0]), ['Mais Perto Quero Estar', 'Harpa Cristã - 15']);
+    igual('colar: maiúsculas no nome, palavrinhas e siglas', [cultoNomeFormatado('o SENHOR é meu pastor'), cultoNomeFormatado('ministério IAP de louvor')], ['O Senhor é Meu Pastor', 'Ministério IAP de Louvor']);
     igual('colar: "Harpa 127" em qualquer parte vira hino da Harpa', cultoColarParse('Hinos: Harpa Cristã 545 (D)')[0].harpaNum, '545');
     /* Drive: ✓ no nome = ajustado no app; a mesma música continua sendo achada com ou sem o ✓ */
     igual('Drive: marca ✓ antes da extensão, sem repetir', [driveComMarca('Ana - Hino - G.pdf'), driveComMarca('Ana - Hino - G ✓.pdf'), driveComMarca('Slide Hino')], ['Ana - Hino - G ✓.pdf', 'Ana - Hino - G ✓.pdf', 'Slide Hino ✓']);

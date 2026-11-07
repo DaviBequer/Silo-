@@ -488,6 +488,17 @@ function cultoColarTom(txt){
   if(m) return { raiz: CU_SOLFEJO[m[1]] + (m[2] ? (/^(#|sus)/.test(m[2]) ? '#' : 'b') : ''), menor: m[3] === 'menor' || m[3] === 'm' };
   return null;
 }
+/* nome de música/cantor como no título (pedido do Davi): primeira letra de cada palavra maiúscula,
+   menos as palavrinhas (de, da, do, e…) no meio. "passaro livre" → "Passaro Livre"; os acentos a IA põe depois (cultoColarCorrigirIA) */
+const CU_MINUSCULAS = new Set(['de','da','do','das','dos','e','a','o','as','os','em','no','na','nos','nas','com','por','pra','para','ao','aos','à','às','um','uma','é']);
+function cultoNomeFormatado(s){
+  return String(s || '').split(' ').filter(Boolean).map((p, i)=>{
+    if(/\d/.test(p) || (p.length > 1 && p.length <= 4 && p === p.toUpperCase() && /[A-Z]/.test(p))) return p;   // números e siglas (IAP, CCB) ficam como estão
+    const m = p.toLowerCase();
+    if(i > 0 && CU_MINUSCULAS.has(m)) return m;
+    return m.replace(/^(["“'(]*)(\p{L})/u, (_, a, l)=>a + l.toUpperCase());
+  }).join(' ');
+}
 function cultoColarParse(texto){
   const itens = []; let cabecalho = '';
   /* medley em várias linhas: "Medley:" (ou "Medley do louvor:") sozinho numa linha → as linhas seguintes, até uma linha vazia ou outra parte, são o mesmo medley */
@@ -536,12 +547,14 @@ function cultoColarParse(texto){
       /* nome e cantor só se separam no traço com espaço de um dos lados: "Usa-me" é um nome só ("Dia de sol- Gerson Rufino" separa) */
       else { const sp = titulo.split(/\s+[–—-]\s*|\s*[–—-]\s+/); if(sp.length >= 2 && sp[0] && sp[1]){ titulo = sp[0]; artista = sp.slice(1).join(' - '); } }
       const semAspas = x=>x.replace(/^["“”'‘’]+|["“”'‘’]+$/g, '').trim();
-      titulo = semAspas(titulo.replace(/\s+/g, ' ').trim()); artista = semAspas(artista);
+      titulo = cultoNomeFormatado(semAspas(titulo.replace(/\s+/g, ' ').trim())); artista = cultoNomeFormatado(semAspas(artista));
       if(!titulo) return;
       /* hino da Harpa pelo número: na parte "Harpa" (127) ou escrito "Harpa 127" / "Harpa Cristã 127" em qualquer parte */
       const mh = /^harpa(?:\s+crist[aã])?\s*:?\s*(\d{1,3})$/i.exec(titulo);
       const harpaNum = mh ? mh[1] : /harpa/.test(vozSemAcento(nomeParte)) && /^\d{1,3}$/.test(titulo) ? titulo : '';
-      if(mh) titulo = mh[1];
+      /* Harpa (pedido do Davi): cantor "Harpa Cristã - 127"; o nome só se veio escrito ("Harpa: 127 - Mais perto quero estar"),
+         senão fica vazio e vem do Drive ou do Cifra Club ao montar */
+      if(harpaNum){ titulo = artista; artista = 'Harpa Cristã - ' + harpaNum; }
       itens.push({ parte: nomeParte, titulo, artista: artista.trim(), tom, medley, grupo, harpaNum, status:'', id:'' });
     });
   });
@@ -647,9 +660,37 @@ function cultoColarLer(){
   /* "Boas vindas" / "Haŕpa" → o nome da parte que já existe no roteiro (Boas-vindas, Harpa) */
   const existentes = cultoAtual().partes;
   cuColar.forEach(it=>{ const p = existentes.find(x=>cuNorm(x.nome) === cuNorm(it.parte)); it.parte = p ? p.nome : it.parte.replace(/ŕ/g, 'r'); });
-  /* no medley a música precisa ter a cifra: a que está no app só com o PDF do Drive é buscada de novo */
-  cuColar.forEach(it=>{ const l = cultoColarNoApp(it); const serve = l && !(it.grupo && !(l.conteudo || '').trim()); it.id = serve ? l.id : ''; it.status = serve ? 'app' : ''; });
+  cultoColarAcharNoApp();
   cultoColarRender(true);
+  cultoColarCorrigirIA(cuColar);
+}
+/* no medley a música precisa ter a cifra: a que está no app só com o PDF do Drive é buscada de novo */
+function cultoColarAcharNoApp(){
+  cuColar.forEach(it=>{ if(it.status && it.status !== 'app') return; const l = cultoColarNoApp(it); const serve = l && !(it.grupo && !(l.conteudo || '').trim()); it.id = serve ? l.id : ''; it.status = serve ? 'app' : ''; });
+}
+/* acentos e ortografia dos nomes colados (pássaro livre → Pássaro Livre) pela IA, sem esperar: a lista atualiza quando ela responde */
+const CU_NOMES_ESQUEMA = { type:'object', properties:{ itens:{ type:'array', items:{ type:'object', properties:{ titulo:{ type:'string' }, artista:{ type:'string' } }, required:['titulo','artista'] } } }, required:['itens'] };
+async function cultoColarCorrigirIA(lista){
+  const alvo = lista.filter(it=>!it.harpaNum && it.titulo);
+  if(!alvo.length || typeof lviChaveIA !== 'function' || !lviChaveIA()) return;
+  try{
+    const r = await lviPerguntarIA([{ type:'text', text:
+      'Corrija só a ortografia e os acentos (português do Brasil) destes nomes de músicas gospel e de cantores. ' +
+      'Primeira letra de cada palavra maiúscula, menos de, da, do, e, a, o, em, no, na, com, por, para no meio do nome. ' +
+      'Não troque palavras, não traduza, não complete o nome, não invente cantor (cantor vazio continua vazio). Devolva na mesma ordem.\n' +
+      JSON.stringify(alvo.map(it=>({ titulo: it.titulo, artista: it.artista }))) }], ()=>{}, CU_NOMES_ESQUEMA, true);
+    const novos = (r && r.itens) || [];
+    if(cuColar !== lista || cuColarMontando || novos.length !== alvo.length) return;   // colou outra coisa ou já começou a montar
+    /* só aceita a correção quando é a mesma palavra (sem acento e sem maiúscula igual): nada de nome trocado */
+    const mesmo = (a, b)=>cuNorm(a) === cuNorm(b);
+    alvo.forEach((it, i)=>{
+      const n = novos[i] || {};
+      if(n.titulo && mesmo(n.titulo, it.titulo)) it.titulo = n.titulo.trim();
+      if(n.artista && it.artista && mesmo(n.artista, it.artista)) it.artista = n.artista.trim();
+    });
+    cultoColarAcharNoApp();
+    cultoColarRender();
+  }catch(e){}   // sem IA: fica a forma local (maiúsculas sem acento)
 }
 const CU_COLAR_ST = { app:'já está no app', drive:'do Drive (só o arquivo)', cifra:'criada pelo Cifra Club', vazia:'criada só com o nome', pulada:'não entrou' };
 const CU_COLAR_ICO = {
@@ -674,7 +715,7 @@ function cultoColarRender(entrar){
       </div>` : ''}
     <div class="cu-colar-item${it.status === 'buscando' ? ' ativo' : ''}${it.grupo ? ' no-medley' : ''}${it.pergunta ? ' perguntando' : ''}${entrar ? ' entra' : ''}" style="--i:${i}" data-i="${i}">
       <span class="cu-colar-ico ${feito(it.status) ? 'ok' : ruim(it.status) ? 'erro' : it.status === 'buscando' ? 'gira' : ''}">${feito(it.status) ? CU_COLAR_ICO.ok : ruim(it.status) ? CU_COLAR_ICO.erro : it.grupo ? posNoGrupo + 1 : ''}</span>
-      <div class="cu-colar-musica"><b>${it.harpaNum ? 'Harpa ' + lvEsc(it.harpaNum) : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.harpaNum ? `<small>Harpa Cristã - ${lvEsc(it.harpaNum)} · o nome vem da busca</small>` : it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
+      <div class="cu-colar-musica"><b>${it.harpaNum ? lvEsc(it.titulo || 'Nome vem do Drive ou do Cifra Club') : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
       ${it.grupo
         ? ''
         : `<select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${opcoesParte(it.parte)}</select>`}
@@ -757,6 +798,10 @@ async function cultoColarMontar(){
       l.dataAgendamento = c.data;
     }
   });
+  /* as partes ficam na ordem em que vieram no texto colado (pedido do Davi); as outras do roteiro vão depois */
+  const ordemColada = [...new Set(cuColar.map(it=>cuNorm(it.parte)))];
+  const pos = p=>{ const i = ordemColada.indexOf(cuNorm(p.nome)); return i < 0 ? ordemColada.length + c.partes.indexOf(p) : i; };
+  c.partes.sort((a, b)=>pos(a) - pos(b));
   persist();
   cultoGravar(); renderCulto(); renderLouvor(); cultoColarRender();
   btn.disabled = false; btn.textContent = 'Pronto'; btn.onclick = ()=>closeModal('modalCultoColar');
@@ -845,6 +890,14 @@ async function cultoColarDoDrive(it, pdfs){
   }
   cultoColarPasso(it, 'Ligando ao PDF do Drive…');
   const l = await cultoCriarDoDrive(f, it.titulo, it.artista);
+  /* Harpa: o nome vem do arquivo ("Harpa 127 - Mais Perto Quero Estar.pdf") e o cantor fica "Harpa Cristã - 127" */
+  if(it.harpaNum){
+    const doArquivo = cultoNomeFormatado(f.name.replace(/\.pdf$/i, '').replace(/harpa(\s+crist[aã])?/ig, ' ').replace(new RegExp('(^|\\D)0*' + it.harpaNum + '(?!\\d)'), '$1 ')
+      .replace(/^[\s\-–.:]+|[\s\-–.:]+$/g, '').replace(/\s*[-–]\s*[A-G](#|b)?m?\s*$/, '').replace(/\s+/g, ' ').trim());
+    if(!it.titulo && (!l.titulo || /^\d+$/.test(l.titulo.trim()))) l.titulo = doArquivo;
+    l.artista = 'Harpa Cristã - ' + it.harpaNum; l.categoria = 'Harpa Cristã';
+    persist();
+  }
   it.status = 'drive';
   return l;
 }
