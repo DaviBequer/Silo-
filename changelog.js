@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.9', itens: [
+    'Colar roteiro do WhatsApp: nome com traço (Usa-me) fica inteiro, tom escrito como dó, ré, mi depois do traço é entendido como tom, e Harpa 127 vira hino da Harpa Cristã com o nome vindo da busca'
+  ] },
   { versao: 'v19.8', itens: [
     'Louvor no computador: o painel invisível da direita ficava por cima da barra de seleção e os cliques não chegavam. Agora a barra fica na coluna da lista e todos os botões respondem'
   ] },

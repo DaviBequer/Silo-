@@ -156,6 +156,11 @@ async function rodarTestes(){
     const ousado = '[Intro] C#m  B4  A9  E\n\n[Primeira Parte]\nC#m        B4\nAntes de eu falar\nA9            E\nTu cantavas sobre mim\n\n[Refrão]\nE\nOh, impressionante\nB4          C#m   A9\nInfinito e ousado amor';
     igual('capo: a página diz a casa', ccCapoDaCifra({ capo: 2 }, 'F#', ousado), 2);
     igual('capo: "com forma de E" com tom F#', ccCapoDaCifra({ forma: 'E' }, 'F#', ousado), 2);
+    /* roteiro colado do WhatsApp (exemplo do Davi, 07/11): "Usa-me" é um nome só; "-dó" é o tom; Harpa pelo número */
+    const colado = cultoColarParse('Abertura: passaro livre- (re maior)\nHarpa:127 -dó\nDia de sol- Gerson Rufino  (G)\n"Usa-me" - Silvan Santos (re maior)');
+    igual('colar do WhatsApp: nome, cantor, tom e Harpa', colado.map(i=>[i.titulo, i.artista, i.tom && i.tom.raiz, i.harpaNum]),
+      [['passaro livre', '', 'D', ''], ['127', '', 'C', '127'], ['Dia de sol', 'Gerson Rufino', 'G', ''], ['Usa-me', 'Silvan Santos', 'D', '']]);
+    igual('colar: "Harpa 127" em qualquer parte vira hino da Harpa', cultoColarParse('Hinos: Harpa Cristã 545 (D)')[0].harpaNum, '545');
     igual('sem a página dizer o capo, não inventa capotraste', ccCapoDaCifra({}, 'F#', ousado), 0);
     const tomErrado = ccTomPelosAcordes({ tomOriginal:'F#', tomModoMenor:false }, ousado);
     igual('tom marcado errado na página: corrige pelo tom dos acordes', [tomErrado && tomErrado.tom.tomOriginal, !!(tomErrado && /corrigi/.test(tomErrado.aviso))], ['E', true]);

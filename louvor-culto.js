@@ -515,7 +515,12 @@ function cultoColarParse(texto){
     let tom = null;
     const mt = /\(\s*([^()]*?)\s*\)\s*$/.exec(s);
     if(mt && cultoColarTom(mt[1])){ tom = cultoColarTom(mt[1]); s = s.slice(0, mt.index).trim(); }
-    else { const md = /\s[-–]\s*([A-G](?:#|b)?)(m?)\s*$/.exec(s); if(md){ tom = { raiz: md[1], menor: !!md[2] }; s = s.slice(0, md.index).trim(); } }
+    else {
+      /* " - D", "-dó", "- ré maior" no fim também é o tom (pedido do Davi: "Harpa: 127 -dó" → tom C, não cantor "dó") */
+      const md = /\s*[-–]\s*([^-–()]+?)\s*$/.exec(s);
+      if(md && md.index > 0 && cultoColarTom(md[1])){ tom = cultoColarTom(md[1]); s = s.slice(0, md.index).trim(); }
+    }
+    s = s.replace(/\s*[-–—]\s*$/, '');   // "passaro livre- (re maior)": o traço que sobrou antes do tom sai
     /* "Medley- A + B", "Medley: A / B", "A+B": as músicas viram UM medley; "+" com ou sem espaço, "/" com espaço */
     const temMedley = /^medley\b/i.test(s) || /^medley\b/i.test(parte);
     const separa = temMedley ? /\s*\+\s*|\s+\/\s+/ : /\s*\+\s*/;
@@ -528,10 +533,15 @@ function cultoColarParse(texto){
       let titulo = peca.trim(), artista = '';
       const ma = /\(\s*([^()]+?)\s*\)\s*$/.exec(titulo);
       if(ma && !cultoColarTom(ma[1])){ artista = ma[1]; titulo = titulo.slice(0, ma.index).trim(); }
-      else { const sp = titulo.split(/\s*[–—-]\s*/); if(sp.length >= 2 && sp[0] && sp[1]){ titulo = sp[0]; artista = sp.slice(1).join(' - '); } }
-      titulo = titulo.replace(/\s+/g, ' ').trim();
+      /* nome e cantor só se separam no traço com espaço de um dos lados: "Usa-me" é um nome só ("Dia de sol- Gerson Rufino" separa) */
+      else { const sp = titulo.split(/\s+[–—-]\s*|\s*[–—-]\s+/); if(sp.length >= 2 && sp[0] && sp[1]){ titulo = sp[0]; artista = sp.slice(1).join(' - '); } }
+      const semAspas = x=>x.replace(/^["“”'‘’]+|["“”'‘’]+$/g, '').trim();
+      titulo = semAspas(titulo.replace(/\s+/g, ' ').trim()); artista = semAspas(artista);
       if(!titulo) return;
-      const harpaNum = /harpa/.test(vozSemAcento(nomeParte)) && /^\d{1,3}$/.test(titulo) ? titulo : '';
+      /* hino da Harpa pelo número: na parte "Harpa" (127) ou escrito "Harpa 127" / "Harpa Cristã 127" em qualquer parte */
+      const mh = /^harpa(?:\s+crist[aã])?\s*:?\s*(\d{1,3})$/i.exec(titulo);
+      const harpaNum = mh ? mh[1] : /harpa/.test(vozSemAcento(nomeParte)) && /^\d{1,3}$/.test(titulo) ? titulo : '';
+      if(mh) titulo = mh[1];
       itens.push({ parte: nomeParte, titulo, artista: artista.trim(), tom, medley, grupo, harpaNum, status:'', id:'' });
     });
   });
@@ -664,7 +674,7 @@ function cultoColarRender(entrar){
       </div>` : ''}
     <div class="cu-colar-item${it.status === 'buscando' ? ' ativo' : ''}${it.grupo ? ' no-medley' : ''}${it.pergunta ? ' perguntando' : ''}${entrar ? ' entra' : ''}" style="--i:${i}" data-i="${i}">
       <span class="cu-colar-ico ${feito(it.status) ? 'ok' : ruim(it.status) ? 'erro' : it.status === 'buscando' ? 'gira' : ''}">${feito(it.status) ? CU_COLAR_ICO.ok : ruim(it.status) ? CU_COLAR_ICO.erro : it.grupo ? posNoGrupo + 1 : ''}</span>
-      <div class="cu-colar-musica"><b>${it.harpaNum ? 'Harpa ' + lvEsc(it.harpaNum) : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
+      <div class="cu-colar-musica"><b>${it.harpaNum ? 'Harpa ' + lvEsc(it.harpaNum) : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.harpaNum ? `<small>Harpa Cristã - ${lvEsc(it.harpaNum)} · o nome vem da busca</small>` : it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
       ${it.grupo
         ? ''
         : `<select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${opcoesParte(it.parte)}</select>`}
