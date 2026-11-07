@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.6', itens: [
+    'Cifra Club: o app confere o tom pelos acordes; se a página marcou o tom errado, corrige e avisa',
+    'Seleção de várias músicas: o botão virou Marcar todas / Desmarcar todas e a música não sai mais da seleção depois de mudar o status',
+    'Saiu o botão Limpar todas as músicas'
+  ] },
   { versao: 'v19.5', itens: [
     'Culto no Louvor: tocar no número da música abre só as setinhas ao lado dele (a primeira só desce, a última só sobe)'
   ] },

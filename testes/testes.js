@@ -156,7 +156,10 @@ async function rodarTestes(){
     const ousado = '[Intro] C#m  B4  A9  E\n\n[Primeira Parte]\nC#m        B4\nAntes de eu falar\nA9            E\nTu cantavas sobre mim\n\n[Refrão]\nE\nOh, impressionante\nB4          C#m   A9\nInfinito e ousado amor';
     igual('capo: a página diz a casa', ccCapoDaCifra({ capo: 2 }, 'F#', ousado), 2);
     igual('capo: "com forma de E" com tom F#', ccCapoDaCifra({ forma: 'E' }, 'F#', ousado), 2);
-    igual('capo: descoberto pelos acordes (forma E, tom F#)', ccCapoDaCifra({}, 'F#', ousado), 2);
+    igual('sem a página dizer o capo, não inventa capotraste', ccCapoDaCifra({}, 'F#', ousado), 0);
+    const tomErrado = ccTomPelosAcordes({ tomOriginal:'F#', tomModoMenor:false }, ousado);
+    igual('tom marcado errado na página: corrige pelo tom dos acordes', [tomErrado && tomErrado.tom.tomOriginal, !!(tomErrado && /corrigi/.test(tomErrado.aviso))], ['E', true]);
+    igual('tom certo na página: não mexe', ccTomPelosAcordes({ tomOriginal:'E', tomModoMenor:false }, ousado), null);
     igual('capo: acordes já no tom da página = sem capo', ccCapoDaCifra({}, 'E', ousado), 0);
     const lc = { tomOriginal: 'F#', tomModoMenor: false, transpose: 0, capo: 2, conteudo: 'E  B4\nOh' };
     igual('capo: forma de E com tom F#', [lvFormaAtual(lc), lvTomAtual(lc)], ['E', 'F#']);

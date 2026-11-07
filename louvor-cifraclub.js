@@ -76,7 +76,7 @@ async function ccImportar(url){
       st.innerHTML = `<div class="cc-passos">${passos.filter(p=>p.tipo === 'erro').map(p=>`<div class="drive-linha ${p.tipo}">${lvEsc(p.txt)}</div>`).join('')}
         <div class="cc-passos-acoes"><button type="button" class="lvi-rel-ok" onclick="lvCompararAbrir()">Comparar com o original</button><button type="button" class="lvi-rel-ok" onclick="lviFecharRelatorio()">Ok</button></div></div>`;
     }
-    showToast(r.comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club');
+    showToast(r.tomCorrigido || (r.comLetras ? '✓ Criada · letra do Letras + acordes do Cifra Club' : '✓ Criada pelo Cifra Club'));
     lvEscreverNoEditor();
   }catch(e){ el.innerHTML = ccOutroCaminhoHtml(e, url); }
 }
@@ -108,7 +108,7 @@ function ccAplicarRefazer(id, r, url, passos){
     l.conteudo = r.dados.conteudo;
     delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado; delete l.medleyEditado;
     l.tomOriginal = r.dados.tomOriginal || ''; l.tomModoMenor = !!r.dados.tomModoMenor; l.transpose = 0; l.capo = r.dados.capo || 0;
-    if(antes.maior && l.tomOriginal) lvAplicarTom(l, antes.maior, antes.menor);   // continua no tom em que estava
+    if(antes.maior && l.tomOriginal && !r.tomCorrigido) lvAplicarTom(l, antes.maior, antes.menor);   // continua no tom em que estava (se o tom antigo veio errado da página, vale o corrigido)
     ccGuardarOrigem(l, r, url);
     persist();
   }, ()=>{ if(louvorAtualId === id) abrirLouvorDetalhe(id); });
@@ -182,11 +182,14 @@ async function ccMontar(url, passo, tirar){
     const conteudo = lvQuebrarSlides(lviBlocosParaTexto(doc.secoes));
     passo(`✓ ${doc.secoes.filter(s=>!s.repeatOf).length} partes · texto arrumado (maiúsculas, pontos, versos)`, 'ok');
     const m = /^([A-G](?:#|b)?)(m?)$/.exec(c.tom || '');
-    const tom = m ? lviTomSiloe(m[1], !!m[2]) : null;
-    /* capotraste: a cifra do Cifra Club vem escrita na forma (E) e o "Tom" é o que soa (F#) */
+    let tom = m ? lviTomSiloe(m[1], !!m[2]) : null;
+    /* capotraste: a cifra do Cifra Club vem escrita na forma (E) e o "Tom" é o que soa (F#) — só quando a página diz */
     const capo = tom ? ccCapoDaCifra(c, tom.tomOriginal, conteudo) : 0;
     if(capo) passo(`✓ Capotraste na ${capo}ª casa: tom ${c.tom}, acordes na forma de ${lvFormaDe(tom.tomOriginal, capo)}${tom.tomModoMenor ? 'm' : ''}`, 'ok');
-    return { c, lt, revisar, comLetras, dados: {
+    /* tom errado na página (cifra toda em C, mas marcada como E): vale o tom em que os acordes estão (pedido do Davi) */
+    const conf = capo ? null : ccTomPelosAcordes(tom, conteudo);
+    if(conf){ tom = conf.tom; passo(conf.aviso, 'erro'); }
+    return { c, lt, revisar, comLetras, tomCorrigido: conf ? conf.aviso : '', dados: {
       titulo: c.titulo || '', artista: c.artista || '', categoria: harpa ? 'Harpa Cristã' : 'Louvor',
       tomOriginal: tom ? tom.tomOriginal : '', tomModoMenor: tom ? tom.tomModoMenor : false, capo,
       conteudo
@@ -202,10 +205,20 @@ function ccCapoDaCifra(c, tomMaior, conteudo){
   if(n > 0 && n < 12) return n;
   const f = /^([A-G](?:#|b)?)(m?)$/.exec(c.forma || '');
   if(f){ const pcF = lvPc(lviTomSiloe(f[1], !!f[2]).tomOriginal); if(pcF >= 0) return ((pcTom - pcF) % 12 + 12) % 12; }
-  const forma = lvTomDosAcordes(conteudo);
-  if(!forma || forma.pc === pcTom || forma.nota(pcTom) > .6 || forma.melhor < .85) return 0;
-  const capo = ((pcTom - forma.pc) % 12 + 12) % 12;
-  return capo >= 1 && capo <= 7 ? capo : 0;   // capo acima da 7ª casa quase não existe: aí é outra coisa (melhor não mexer)
+  return 0;   // sem a página dizer o capo, acordes em outro tom = tom marcado errado (ccTomPelosAcordes), não capotraste
+}
+/* confere o tom da página com o tom em que os acordes estão escritos.
+   → null (está certo ou não dá para ter certeza) ou { tom, aviso } com o tom corrigido e a frase para mostrar */
+function ccTomPelosAcordes(tom, conteudo){
+  const f = lvTomDosAcordes(conteudo);
+  if(!f || f.melhor < .85) return null;   // poucos acordes ou acordes fora de qualquer tom: não mexe
+  const nome = lviTomSiloe(lvNomeNoTom(f.pc, 'C')).tomOriginal;
+  const txt = (t)=>t.tomModoMenor ? lvRelativoMenor(t.tomOriginal) + 'm' : t.tomOriginal;
+  if(!tom){ const novo = { tomOriginal: nome, tomModoMenor: false }; return { tom: novo, aviso: `O Cifra Club não dizia o tom: pelos acordes, é ${txt(novo)}` }; }
+  const pc = lvPc(tom.tomOriginal);
+  if(pc === f.pc || f.nota(pc) > .6) return null;
+  const novo = { tomOriginal: nome, tomModoMenor: tom.tomModoMenor };
+  return { tom: novo, aviso: `O Cifra Club dizia tom ${txt(tom)}, mas a cifra está em ${txt(novo)}: corrigi para ${txt(novo)}` };
 }
 /* tom maior em que os acordes de um texto estão escritos: { pc, melhor (0..1), nota(pc) } — fração dos acordes que cabem no campo de cada tom
    (o 1º e o último acorde contam em dobro: costumam ser o tom) */

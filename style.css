@@ -2359,7 +2359,6 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-colar-opcoes{display:flex;flex-direction:column;margin:8px 0 4px}
 .cu-perg-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px}
 @media (prefers-reduced-motion:reduce){.cu-colar-barra i{animation:none;width:100%}}
-.lv-limpar-tudo{display:block;margin:28px auto 90px;color:var(--danger);text-decoration-color:var(--danger-tint)}
 /* colar do WhatsApp v9.5: ícone de estado por música, entrada em sequência, medley agrupado, perguntas com animação */
 .cu-colar-item.ativo{background:linear-gradient(90deg,transparent,var(--primary-tint) 30%,transparent)}
 .cu-colar-item.no-medley{padding-left:14px;border-left:2px solid var(--line)}

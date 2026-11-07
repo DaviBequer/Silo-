@@ -58,11 +58,13 @@ function setLouvorFiltro(c){
   louvorFiltroAtivo = c;
   renderLouvorFilterChips();
   renderLouvorLista();
+  lvSelPodar();
 }
 function onLouvorSearchInput(v){
   louvorSearchTerm = v.trim().toLowerCase();
   document.getElementById('louvorSearchClear').style.display = v ? 'block' : 'none';
   renderLouvorLista();
+  lvSelPodar();
 }
 function limparLouvorSearch(){
   louvorSearchTerm = '';
@@ -72,8 +74,14 @@ function limparLouvorSearch(){
 }
 function renderLouvorLista(){
   lvRenderLista();
-  /* seleção só vale para o que está na tela: trocou o filtro ou a busca, o que sumiu sai da seleção (nada é excluído escondido) */
-  if(lvSel){ const vis = new Set(lvSelVisiveis()); [...lvSel].forEach(id=>{ if(!vis.has(id)) lvSel.delete(id); }); lvSelBarra(); }
+  if(lvSel) lvSelBarra();
+}
+/* trocou o filtro ou a busca: o que sumiu da tela sai da seleção (nada é excluído escondido).
+   Depois de mudar status/data a música continua selecionada, mesmo se sair do filtro "Atual" */
+function lvSelPodar(){
+  if(!lvSel) return;
+  const vis = new Set(lvSelVisiveis()); [...lvSel].forEach(id=>{ if(!vis.has(id)) lvSel.delete(id); });
+  lvSelBarra();
 }
 function lvRenderLista(){
   const el = document.getElementById('louvorLista');
@@ -384,9 +392,10 @@ function lvSelecionarModo(on){
   renderLouvorLista();
   lvSelBarra();
 }
-function lvSelAlternar(id){ lvSel.has(id) ? lvSel.delete(id) : lvSel.add(id); renderLouvorLista(); lvSelBarra(); }
+function lvSelAlternar(id){ if(!lvSel) return; lvSel.has(id) ? lvSel.delete(id) : lvSel.add(id); renderLouvorLista(); lvSelBarra(); }
 function lvSelVisiveis(){ return [...document.querySelectorAll('#louvorLista .lv-card[data-id]')].map(e=>e.dataset.id); }
 function lvSelTodas(){
+  if(!lvSel) return;
   const v = lvSelVisiveis(), todas = v.length && v.every(id=>lvSel.has(id));
   v.forEach(id=>todas ? lvSel.delete(id) : lvSel.add(id));
   renderLouvorLista(); lvSelBarra();
@@ -398,7 +407,7 @@ function lvSelBarra(){
   if(!lvSel) return;
   const n = lvSel.size, v = lvSelVisiveis();
   document.getElementById('lvSelConta').textContent = n ? `${n} selecionada${n > 1 ? 's' : ''}` : 'Toque nas músicas';
-  document.getElementById('lvSelTodasBtn').textContent = v.length && v.every(id=>lvSel.has(id)) ? 'Nenhuma' : 'Todas';
+  document.getElementById('lvSelTodasBtn').textContent = v.length && v.every(id=>lvSel.has(id)) ? 'Desmarcar todas' : 'Marcar todas';
   b.querySelectorAll('.lv-sel-acao').forEach(x=>{ x.disabled = !n; });
 }
 function lvSelMusicas(){ return (state.louvores || []).filter(l=>lvSel && lvSel.has(l.id)); }
@@ -416,6 +425,7 @@ function lvSelDataEscolhida(v){
   lvSelAplicar(n=>v ? `${lvSelN(n)} para ${v.split('-').reverse().join('/')}` : `Data tirada de ${lvSelN(n)}`, l=>lvMudarData(l, v));
 }
 function lvSelEscolher(campo){
+  if(!lvSel || !lvSel.size) return;
   const ops = campo === 'status' ? [['producao', 'Em produção'], ['finalizada', 'Pronto']] : LOUVOR_CATEGORIAS.map(c=>[c, c]);
   document.getElementById('perguntaTitulo').textContent = campo === 'status' ? 'Mudar o status' : 'Mudar o tipo';
   document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>Selecionadas</span><b>${lvSelN(lvSel.size)}</b></div>
@@ -1688,19 +1698,6 @@ async function lvMontarSlides(l){
 }
 
 
-/* TEMPORÁRIO (pedido do Davi, até terminar de testar o app): apaga todas as músicas e tira elas dos roteiros do Culto.
-   Tem "Desfazer" por alguns segundos; o banco também guarda cópias por hora (app_state_historico). Remover quando ele disser. */
-async function lvLimparTudo(){
-  const n = (state.louvores || []).length;
-  if(!n){ showToast('Não há músicas para apagar'); return; }
-  if(!(await iosConfirm(`Apagar as ${n} músicas do Louvor? Elas saem também dos roteiros do Culto. (Opção temporária para testes)`))) return;
-  comDesfazer(`${n} músicas apagadas`, ()=>{
-    state.louvores = [];
-    (state.cultos || []).forEach(c=>{ c.partes.forEach(p=>{ p.musicas = []; }); delete c.ordemWhats; });
-    persist();
-    renderLouvor();
-  }, ()=>renderLouvor());
-}
 
 /* ---------- seletor do capotraste (v14.5): braço do violão com as casas; tocar numa casa muda os acordes na hora ---------- */
 function lvCapoRender(l){
