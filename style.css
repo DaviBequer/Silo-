@@ -1813,6 +1813,9 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lv-sel-acao.vazio{opacity:.55}
 .lv-sel-barra button:focus-visible{outline:2px solid var(--latao);outline-offset:2px}
 @media(min-width:1024px){ .lv-sel-barra{left:calc(var(--sidebar-w) + 24px);right:24px;bottom:24px;max-width:640px;margin-inline:auto} }
+/* tela larga: a lista fica numa coluna de 380px e o lado direito é outra área; a barra fica dentro da coluna da lista
+   (antes ela passava por baixo do painel da direita e os cliques não chegavam nos botões) */
+@media(min-width:1100px){ .lv-sel-barra{left:calc(var(--sidebar-w) + 14px);right:auto;width:352px;max-width:none;margin:0;z-index:520} }
 .lv-card-info{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
 .lv-card-titulo{max-width:100%;font-size:14.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv-card-meta{max-width:100%;font-size:12px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3153,7 +3156,7 @@ body{font-weight:400;letter-spacing:.005em}
   .lv-card.sel{background:var(--graf);border-radius:12px;padding-left:10px;padding-right:10px}
   .lv-card.sel .lv-card-titulo{color:var(--graf-tx)}
   .lv-card.sel .lv-card-meta{color:var(--graf-dim)}
-  body:has(#aba-louvor.active):not(:has(.fullpage.active)) .lv-painel-vazio{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;position:fixed;left:calc(var(--sidebar-w) + 380px);right:0;top:var(--header-h,64px);bottom:0;padding:48px 40px;overflow-y:auto;border-left:1px solid var(--line)}
+  body:has(#aba-louvor.active):not(:has(.fullpage.active)) .lv-painel-vazio{pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;position:fixed;left:calc(var(--sidebar-w) + 380px);right:0;top:var(--header-h,64px);bottom:0;padding:48px 40px;overflow-y:auto;border-left:1px solid var(--line)}
   .lpv-placa{width:100%;max-width:640px;padding:22px 24px;border-radius:20px;background:var(--graf);color:var(--graf-tx)}
   .lpv-quando{margin:6px 0 14px;font-size:14px;color:var(--graf-dim)}
   .lpv-lista{display:flex;flex-direction:column}
