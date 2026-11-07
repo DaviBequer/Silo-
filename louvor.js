@@ -428,6 +428,7 @@ function lvSelAplicar(msg, mudar){
   if(!lvSelTemAlguma()) return;
   const ls = lvSelMusicas();
   comDesfazer(msg(ls.length), ()=>{ ls.forEach(mudar); persist(); lvAtualizarTelas(); }, ()=>{ lvAtualizarTelas(); lvSelBarra(); });
+  lvSelecionarModo(false);   // fez a mudança: sai da seleção (pedido do Davi)
 }
 const lvSelN = n=>`${n} música${n > 1 ? 's' : ''}`;
 function lvSelData(btn){
@@ -462,8 +463,7 @@ async function lvSelExcluir(){
     (state.cultos || []).forEach(c=>{ c.partes.forEach(p=>{ p.musicas = p.musicas.filter(id=>!ids.has(id)); }); if(c.ordemWhats) c.ordemWhats = c.ordemWhats.filter(id=>!ids.has(id)); });
     persist(); lvAtualizarTelas();
   }, ()=>{ lvAtualizarTelas(); lvSelBarra(); });
-  ids.forEach(id=>lvSel.delete(id));
-  lvSelBarra();
+  lvSelecionarModo(false);   // excluiu: sai da seleção
 }
 /* qualquer mudança na música (data, status, tom, tipo) aparece na hora em tudo o que está na tela: lista, placa do culto, Culto aberto */
 function lvAtualizarTelas(){

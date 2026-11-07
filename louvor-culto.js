@@ -715,7 +715,7 @@ function cultoColarRender(entrar){
       </div>` : ''}
     <div class="cu-colar-item${it.status === 'buscando' ? ' ativo' : ''}${it.grupo ? ' no-medley' : ''}${it.pergunta ? ' perguntando' : ''}${entrar ? ' entra' : ''}" style="--i:${i}" data-i="${i}">
       <span class="cu-colar-ico ${feito(it.status) ? 'ok' : ruim(it.status) ? 'erro' : it.status === 'buscando' ? 'gira' : ''}">${feito(it.status) ? CU_COLAR_ICO.ok : ruim(it.status) ? CU_COLAR_ICO.erro : it.grupo ? posNoGrupo + 1 : ''}</span>
-      <div class="cu-colar-musica"><b>${it.harpaNum ? lvEsc(it.titulo || 'Nome vem do Drive ou do Cifra Club') : lvEsc(it.titulo)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
+      <div class="cu-colar-musica"><b>${lvEsc(it.titulo || it.artista)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.titulo && it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
       ${it.grupo
         ? ''
         : `<select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${opcoesParte(it.parte)}</select>`}
@@ -752,6 +752,7 @@ async function cultoColarMontar(){
     it.status = 'buscando'; cultoColarRender();
     document.querySelectorAll('.cu-colar-item')[cuColar.indexOf(it)]?.scrollIntoView({ block:'nearest', behavior:'smooth' });
     try{
+      if(it.harpaNum && !it.titulo) await cultoHarpaNome(it);   // Harpa sem nome: primeiro o nome do hino pelo número (internet), depois Drive e Cifra Club
       const l = (pdfs && await cultoColarDoDrive(it, pdfs)) || await cultoColarDoCifraClub(it);
       it.id = l ? l.id : '';
       if(!l) it.status = 'pulada';
@@ -890,16 +891,30 @@ async function cultoColarDoDrive(it, pdfs){
   }
   cultoColarPasso(it, 'Ligando ao PDF do Drive…');
   const l = await cultoCriarDoDrive(f, it.titulo, it.artista);
-  /* Harpa: o nome vem do arquivo ("Harpa 127 - Mais Perto Quero Estar.pdf") e o cantor fica "Harpa Cristã - 127" */
+  /* Harpa: o nome é o achado na internet; senão o do arquivo ("Harpa 127 - Mais Perto Quero Estar.pdf"); sem nenhum, fica em branco.
+     O cantor fica "Harpa Cristã - 127" */
   if(it.harpaNum){
-    const doArquivo = cultoNomeFormatado(f.name.replace(/\.pdf$/i, '').replace(/harpa(\s+crist[aã])?/ig, ' ').replace(new RegExp('(^|\\D)0*' + it.harpaNum + '(?!\\d)'), '$1 ')
-      .replace(/^[\s\-–.:]+|[\s\-–.:]+$/g, '').replace(/\s*[-–]\s*[A-G](#|b)?m?\s*$/, '').replace(/\s+/g, ' ').trim());
-    if(!it.titulo && (!l.titulo || /^\d+$/.test(l.titulo.trim()))) l.titulo = doArquivo;
+    l.titulo = it.titulo || cultoHarpaLimparNome(f.name.replace(/\.pdf$/i, ''), it.harpaNum);
     l.artista = 'Harpa Cristã - ' + it.harpaNum; l.categoria = 'Harpa Cristã';
     persist();
   }
   it.status = 'drive';
   return l;
+}
+/* "127 - Harpa Cristã", "Harpa Cristã 127 - O Senhor da Ceifa Chama - E" → só o nome do hino ("" quando não tem nome) */
+function cultoHarpaLimparNome(s, num){
+  return cultoNomeFormatado(String(s || '').replace(/harpa(\s+crist[aã])?/ig, ' ').replace(new RegExp('(^|\\D)0*' + num + '(?!\\d)'), '$1 ')
+    .replace(/\s*[-–]\s*[A-G](#|b)?m?\s*$/, '').replace(/^[\s\-–.:|]+|[\s\-–.:|]+$/g, '').replace(/\s+/g, ' ').trim());
+}
+/* nome do hino da Harpa pelo número, na internet (busca do Cifra Club "harpa cristã 127"); sem internet ou sem achar, fica em branco */
+async function cultoHarpaNome(it){
+  cultoColarPasso(it, `Buscando o nome da Harpa ${it.harpaNum}…`);
+  try{
+    const lista = (await ccChamar({ busca: 'harpa cristã ' + it.harpaNum })).musicas || [];
+    const m = lista.find(m=>/harpa-crista/i.test(m.url) && new RegExp('(^|\\D)0*' + it.harpaNum + '(\\D|$)').test(m.titulo + ' ' + m.artista + ' ' + m.url));
+    const nome = m ? cultoHarpaLimparNome(m.titulo, it.harpaNum) : '';
+    if(nome){ it.titulo = nome; cultoColarRender(); }
+  }catch(e){}
 }
 /* música nova só com o arquivo do Drive (sem tirar o texto nem baixar o PDF) */
 async function cultoCriarDoDrive(f, titulo, artista){

@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.2', itens: [
+    'Harpa no colar do WhatsApp: sem nome escrito, o app busca o nome do hino pelo número na internet antes de procurar no Drive e no Cifra Club; se não achar, o nome fica em branco (sem frase no lugar)', 'Selecionar várias músicas: depois de mudar data, status ou tipo, ou de excluir, a seleção fecha sozinha'
+  ] },
   { versao: 'v20.1', itens: [
     'Colar roteiro do WhatsApp: o nome da música e do cantor sai com a primeira letra maiúscula e a IA corrige os acentos (passaro livre vira Pássaro Livre)', 'Harpa: o cantor fica Harpa Cristã - 127 e o nome do hino vem do Drive ou do Cifra Club ao montar', 'O roteiro e a lista do Louvor ficam na mesma ordem do texto colado'
   ] },

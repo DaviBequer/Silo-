@@ -160,6 +160,7 @@ async function rodarTestes(){
     const colado = cultoColarParse('Abertura: passaro livre- (re maior)\nHarpa:127 -dó\nDia de sol- Gerson Rufino  (G)\n"Usa-me" - Silvan Santos (re maior)');
     igual('colar do WhatsApp: nome, cantor, tom e Harpa', colado.map(i=>[i.titulo, i.artista, i.tom && i.tom.raiz, i.harpaNum]),
       [['Passaro Livre', '', 'D', ''], ['', 'Harpa Cristã - 127', 'C', '127'], ['Dia de Sol', 'Gerson Rufino', 'G', ''], ['Usa-me', 'Silvan Santos', 'D', '']]);
+    igual('Harpa: nome limpo do arquivo ou da busca (sem nome = vazio)', [cultoHarpaLimparNome('127-harpa cristã', '127'), cultoHarpaLimparNome('Harpa Cristã 127 - o senhor da ceifa chama - E', '127'), cultoHarpaLimparNome('127 - O Senhor da Ceifa Chama', '127')], ['', 'O Senhor da Ceifa Chama', 'O Senhor da Ceifa Chama']);
     igual('colar: Harpa com o nome escrito', ((x)=>[x.titulo, x.artista])(cultoColarParse('Harpa: 15 - mais perto quero estar')[0]), ['Mais Perto Quero Estar', 'Harpa Cristã - 15']);
     igual('colar: maiúsculas no nome, palavrinhas e siglas', [cultoNomeFormatado('o SENHOR é meu pastor'), cultoNomeFormatado('ministério IAP de louvor')], ['O Senhor é Meu Pastor', 'Ministério IAP de Louvor']);
     igual('colar: "Harpa 127" em qualquer parte vira hino da Harpa', cultoColarParse('Hinos: Harpa Cristã 545 (D)')[0].harpaNum, '545');
