@@ -359,17 +359,27 @@ function lvCultoHistorico(){
 }
 async function lvCultoApagar(){ await cultoApagar(); renderCultoBotao(); }
 function lvCultoDrive(){ if(typeof cultoEnviarDrive === 'function') cultoEnviarDrive(); }
-/* opções de uma música do culto: subir, descer, trocar de parte, tirar */
+/* toque no número (pedido do Davi): uma janelinha ao lado dele só com as setas (a primeira só desce, a última só sobe) */
 function lvcpOpcoes(i){
-  const x = lvcpItens[i]; if(!x) return;
-  const t = lvEsc(x.l.titulo || 'Sem título');
-  lvMenu(t, [
-    ['Abrir a música', `closeModal('modalPergunta');abrirLouvorDetalhe('${x.l.id}')`],
-    ['Subir', `lvcpMover(${i},-1)`, i === 0 ? 'off' : ''],
-    ['Descer', `lvcpMover(${i},1)`, i === lvcpItens.length - 1 ? 'off' : ''],
-    cultoAtual().partes.length > 1 ? ['Mudar de parte', `lvcpMudarParte(${i})`] : null,
-    ['Tirar do culto', `closeModal('modalPergunta');lvcpTirar(${i})`, 'perigo']
-  ]);
+  lvcpFechar();
+  const btn = document.querySelectorAll('#lvCultoPartes .lvcp-num')[i], n = lvcpItens.length;
+  if(!btn || n < 2) return;
+  const pop = document.createElement('div');
+  pop.id = 'lvcpPop'; pop.className = 'lvcp-pop';
+  pop.innerHTML = (i > 0 ? `<button type="button" title="Subir" aria-label="Subir" onclick="lvcpMover(${i},-1)">${CU_ICO.sobe}</button>` : '')
+    + (i < n - 1 ? `<button type="button" title="Descer" aria-label="Descer" onclick="lvcpMover(${i},1)">${CU_ICO.desce}</button>` : '');
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect();
+  pop.style.left = (r.right + 6) + 'px';
+  pop.style.top = (r.top + r.height / 2 - pop.offsetHeight / 2) + 'px';
+  btn.classList.add('aberto');
+  setTimeout(()=>{ document.addEventListener('click', lvcpForaClique, true); addEventListener('scroll', lvcpFechar, { capture: true, once: true }); }, 0);
+}
+function lvcpForaClique(e){ if(!e.target.closest('#lvcpPop, .lvcp-num')) lvcpFechar(); }
+function lvcpFechar(){
+  document.getElementById('lvcpPop')?.remove();
+  document.querySelectorAll('.lvcp-num.aberto').forEach(b=>b.classList.remove('aberto'));
+  document.removeEventListener('click', lvcpForaClique, true);
 }
 /* sobe/desce na ordem do culto: dentro da parte troca com a vizinha; na ponta, passa para a parte de cima/de baixo */
 function lvcpMover(i, d){
@@ -382,22 +392,7 @@ function lvcpMover(i, d){
     if(d < 0) outra.musicas.push(x.l.id); else outra.musicas.unshift(x.l.id);
   }
   cultoGravar();
-  lvcpOpcoes(Math.max(0, Math.min(lvcpItens.length - 1, i + d)));   // a janela continua aberta na mesma música, já no lugar novo
-}
-function lvcpMudarParte(i){
-  const x = lvcpItens[i]; if(!x) return;
-  lvMenu('Mudar para a parte', cultoAtual().partes.filter(p=>p !== x.parte).map(p=>[lvEsc(p.nome || 'Parte'), `lvcpParaParte(${i},'${p.id}')`]));
-}
-function lvcpParaParte(i, parteId){
-  const x = lvcpItens[i], destino = cultoParte(parteId); if(!x || !destino) return;
-  x.parte.musicas = x.parte.musicas.filter(id=>id !== x.l.id);
-  if(!destino.musicas.includes(x.l.id)) destino.musicas.push(x.l.id);
-  closeModal('modalPergunta');
-  cultoGravar();
-}
-function lvcpTirar(i){
-  const x = lvcpItens[i]; if(!x) return;
-  comDesfazer(`${x.l.titulo || 'Música'} saiu do culto`, ()=>{ x.parte.musicas = x.parte.musicas.filter(id=>id !== x.l.id); cultoGravar(); }, ()=>renderCultoBotao());
+  lvcpOpcoes(Math.max(0, Math.min(lvcpItens.length - 1, i + d)));   // as setas acompanham a música no lugar novo
 }
 /* ---------- sugestão de repertório (IA): tema da pregação → músicas do app que combinam, sem repetir as recentes ---------- */
 const CU_SUGESTAO_ESQUEMA = { type:'object', properties:{ musicas:{ type:'array', items:{ type:'object', properties:{

@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.5', itens: [
+    'Culto no Louvor: tocar no número da música abre só as setinhas ao lado dele (a primeira só desce, a última só sobe)'
+  ] },
   { versao: 'v19.4', itens: [
     'Louvor: a placa do culto virou o Culto inteiro. Toque na data para as opções (adicionar música, outra data, colar do WhatsApp, mandar no WhatsApp, sugestão, mais tocadas), no número para subir, descer, mudar de parte ou tirar a música, e no resto da linha para abrir a música',
     'Botão do Drive na placa, em branco, cinza e azul',

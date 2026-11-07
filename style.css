@@ -1627,7 +1627,12 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lvcp-drive:hover{opacity:1;background:rgba(255,255,255,.06)}
 .lvcp-num,.lvcp-abrir{padding:0;border:none;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .lvcp-num{display:grid;place-items:center;width:34px;height:40px;margin:-9px -6px}
-.lvcp-num:hover i{background:rgba(159,193,230,.18)}
+.lvcp-num:hover i,.lvcp-num.aberto i{background:rgba(159,193,230,.18)}
+/* setas ao lado do número (subir/descer a música no culto) */
+.lvcp-pop{position:fixed;z-index:600;display:flex;gap:6px;padding:5px;border-radius:999px;background:var(--graf);box-shadow:0 8px 22px rgba(15,22,34,.35),0 0 0 1px var(--graf-line)}
+.lvcp-pop button{display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--latao);border-radius:50%;background:none;color:var(--latao);cursor:pointer}
+.lvcp-pop button:hover{background:rgba(159,193,230,.18)}
+.lvcp-pop button:focus-visible{outline:2px solid var(--latao);outline-offset:2px}
 .lvcp-abrir{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-width:0}
 .lvcp-data:focus-visible,.lvcp-drive:focus-visible,.lvcp-num:focus-visible,.lvcp-abrir:focus-visible{outline:2px solid var(--latao);outline-offset:2px;border-radius:8px}
 .pg-banco:disabled{opacity:.35;cursor:default}
