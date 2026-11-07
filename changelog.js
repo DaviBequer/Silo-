@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.4', itens: [
+    'Louvor: a placa do culto virou o Culto inteiro. Toque na data para as opções (adicionar música, outra data, colar do WhatsApp, mandar no WhatsApp, sugestão, mais tocadas), no número para subir, descer, mudar de parte ou tirar a música, e no resto da linha para abrir a música',
+    'Botão do Drive na placa, em branco, cinza e azul',
+    'No computador o culto não aparece mais repetido no meio da tela; trocar de aba desmarca a música aberta'
+  ] },
   { versao: 'v19.3', itens: [
     'Louvor: botão de selecionar várias músicas para mudar a data (no calendário), o status ou o tipo de todas de uma vez, ou excluir',
     'Comissão de vendas aparece em Contas do mês e só entra no saldo e na previsão quando você marca que recebeu',

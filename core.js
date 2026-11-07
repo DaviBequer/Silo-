@@ -890,6 +890,7 @@ function switchAba(aba){
   /* trocar de aba fecha todas as telas cheias (música, Comparar, medley, Culto, contas...) */
   document.querySelectorAll('.fullpage.active').forEach(p=>p.classList.remove('active'));
   if(typeof lmEdit !== 'undefined') lmEdit = null;
+  if(aba !== 'louvor' && typeof louvorAtualId !== 'undefined') louvorAtualId = null;   // saiu do Louvor: a música aberta deixa de ficar marcada
   document.body.style.overflow = '';
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.aba===aba || (el.dataset.aba==='trabalho' && (aba==='ponto' || aba==='vendas'))));
   window.scrollTo(0,0);

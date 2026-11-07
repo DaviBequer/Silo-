@@ -1620,7 +1620,18 @@ body:has(.modal-overlay.active){overflow:hidden}
 .receita-filter-chips{display:inline-flex;max-width:100%;gap:2px;margin:var(--s3) 0 var(--s4);padding:3px;border-radius:999px;background:rgba(24,32,46,.07);overflow-x:auto}
 /* Culto (louvor-culto.js) */
 /* placa do próximo culto no topo do Louvor (v12) */
-.lv-culto-placa{display:flex;flex-direction:column;align-items:stretch;width:100%;margin:-8px 0 var(--s3);border:none;font:inherit;text-align:left;cursor:pointer}
+.lv-culto-placa{display:flex;flex-direction:column;align-items:stretch;width:100%;margin:-8px 0 var(--s3);border:none;font:inherit;text-align:left}
+.lvcp-topo{display:flex;align-items:flex-start;gap:8px}
+.lvcp-data{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;padding:0;border:none;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.lvcp-drive{flex-shrink:0;display:grid;place-items:center;width:44px;height:44px;margin:-8px -8px 0 0;padding:0;border:none;border-radius:12px;background:none;cursor:pointer;opacity:.9}
+.lvcp-drive:hover{opacity:1;background:rgba(255,255,255,.06)}
+.lvcp-num,.lvcp-abrir{padding:0;border:none;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.lvcp-num{display:grid;place-items:center;width:34px;height:40px;margin:-9px -6px}
+.lvcp-num:hover i{background:rgba(159,193,230,.18)}
+.lvcp-abrir{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-width:0}
+.lvcp-data:focus-visible,.lvcp-drive:focus-visible,.lvcp-num:focus-visible,.lvcp-abrir:focus-visible{outline:2px solid var(--latao);outline-offset:2px;border-radius:8px}
+.pg-banco:disabled{opacity:.35;cursor:default}
+.lvm-perigo .gm-nome{color:var(--danger)}
 .lv-culto-conta{margin-top:5px;font-size:12px;color:var(--graf-dim)}
 .lv-culto-conta b{color:var(--latao);font-weight:600}
 .lv-culto-partes{display:flex;flex-direction:column;margin-top:6px}
@@ -1786,6 +1797,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 #aba-louvor.lv-selecionando .receita-fab{display:none}
 #aba-louvor.lv-selecionando .lv-lista{padding-bottom:150px}
 .lv-sel-barra{position:fixed;left:12px;right:12px;bottom:calc(86px + var(--safe));z-index:210;display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;border-radius:18px;background:var(--graf);color:#fff;box-shadow:0 12px 30px rgba(15,22,34,.28)}
+.lv-sel-barra[hidden]{display:none}
 .lv-sel-topo{display:flex;align-items:center;gap:10px;font-size:14px}
 .lv-sel-topo #lvSelConta{flex:1;min-width:0}
 .lv-sel-link,.lv-sel-fechar{min-height:40px;padding:0 8px;border:none;background:none;color:var(--latao);font:inherit;font-weight:500;cursor:pointer}

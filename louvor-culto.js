@@ -40,6 +40,7 @@ function cultoGravar(){
   const c = cultoAtual();
   if(!cultoDaData(c.data)){ cultosLista().push(c); cultoRascunho = null; }
   persist();
+  if(typeof renderCultoBotao === 'function') renderCultoBotao();   // a placa do Louvor acompanha qualquer mudança no culto
 }
 
 function abrirCulto(){
@@ -215,9 +216,9 @@ function cultoEscolher(louvorId){
   const p = cultoParte(cultoEscolherParte); if(!p) return;
   if(p.musicas.includes(louvorId)) p.musicas = p.musicas.filter(id=>id !== louvorId);
   else p.musicas.push(louvorId);
-  cultoGravar();
   closeModal('modalCultoEscolher');
-  renderCulto();
+  cultoGravar();
+  if(document.getElementById('pageCulto')?.classList.contains('active')) renderCulto();
 }
 
 /* "Cantor - Música" (padrão do Davi em todo o Culto) */
@@ -291,25 +292,112 @@ function renderCultoBotao(){
   cultoTirarDeOutraData();
   if(typeof atualizarStatusDrive === 'function'){ atualizarStatusDrive(); if(driveClienteId()) drivePreparar(); }
   const el = document.getElementById('lvCultoInfo'); if(!el) return;
-  /* placa do próximo culto (v12): data e quanto falta; cada música com a parte, o cantor e o tom */
-  const d = cultoProximaData(), c = cultoDaData(d);
+  /* placa do culto (v19.4): é o Culto inteiro. Mostra o próximo culto, ou a data escolhida em "Outra data" */
+  if(!cultoData || (cultoData < cultoHojeISO() && !lvCultoFixo)) cultoData = cultoProximaData();
+  const d = cultoData, c = cultoAtual();
   const achar = id=>(state.louvores||[]).find(l=>l.id === id);
-  const itens = c ? c.partes.flatMap(p=>p.musicas.map(id=>({ parte: p.nome, l: achar(id) }))).filter(x=>x.l)
-    : (state.louvores||[]).filter(l=>l.dataAgendamento === d).map(l=>({ parte: '', l }));
+  const itens = c.partes.flatMap(p=>p.musicas.map(id=>({ parte: p, l: achar(id) }))).filter(x=>x.l);
+  lvcpItens = itens;
   const dias = Math.round((calParse(d) - calParse(cultoHojeISO())) / 86400000);
   const quando = dias <= 0 ? 'hoje' : dias === 1 ? 'amanhã' : 'faltam ' + dias + ' dias';
   const prontas = itens.filter(x=>x.l.status === 'finalizada').length;
   const lbl = document.querySelector('#lvCultoPlaca .placa-lbl'); if(lbl) lbl.textContent = cultoDataTexto(d, true) + ' · culto';
-  el.innerHTML = `${quando}${itens.length ? ` · <b>${itens.length}</b> ${itens.length === 1 ? 'música' : 'músicas'} · ${prontas} pronta${prontas === 1 ? '' : 's'}` : ' · toque para montar o roteiro'}`;
-  /* computador: o lado direito vazio mostra o culto inteiro, cada música abre ao tocar */
+  el.innerHTML = `${quando}${itens.length ? ` · <b>${itens.length}</b> ${itens.length === 1 ? 'música' : 'músicas'} · ${prontas} pronta${prontas === 1 ? '' : 's'}` : ' · toque para adicionar músicas'}`;
+  /* computador: o lado direito sem música aberta fica só com a dica (o culto fica só na placa da lista) */
   const pv = document.getElementById('lvPainelVazio');
-  if(pv) pv.innerHTML = `<div class="lpv-placa"><span class="placa-lbl" style="margin-top:0">${lvEsc(cultoDataTexto(d, true))} · culto</span>
-    <div class="lpv-quando">${quando}${itens.length ? ` · ${prontas} de ${itens.length} pronta${prontas === 1 ? '' : 's'}` : ''}</div>
-    ${itens.length ? `<div class="lpv-lista">${itens.map((x, i)=>`<button type="button" class="lpv-item" onclick="abrirLouvorDetalhe('${x.l.id}')"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}">${i + 1}</i><span>${lvEsc(x.l.titulo || 'Sem título')}<small>${lvEsc([x.parte, x.l.artista].filter(Boolean).join(' · '))}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></button>`).join('')}</div>`
-      : `<p class="lpv-dica">Nenhuma música marcada para esse culto ainda.</p>`}
-  </div><p class="lpv-dica">Ou escolha uma música na lista ao lado.</p>`;
+  if(pv) pv.innerHTML = `<p class="lpv-dica">Escolha uma música na lista ao lado.</p>`;
   const pe = document.getElementById('lvCultoPartes');
-  if(pe) pe.innerHTML = itens.slice(0, 6).map((x, i)=>`<span class="lvcp"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}" title="${x.l.status === 'finalizada' ? 'Pronta' : 'Em produção'}">${i + 1}</i><span>${lvEsc([x.parte, x.l.titulo || 'Sem título'].filter(Boolean).join(' · '))}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></span>`).join('');
+  if(pe) pe.innerHTML = itens.map((x, i)=>{
+    const nome = [x.parte.nome, x.l.titulo || 'Sem título'].filter(Boolean).join(' · ');
+    return `<div class="lvcp"><button type="button" class="lvcp-num" onclick="lvcpOpcoes(${i})" title="Opções de ${lvEsc(x.l.titulo || 'Sem título')}" aria-label="Opções de ${lvEsc(x.l.titulo || 'Sem título')}"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}">${i + 1}</i></button>
+      <button type="button" class="lvcp-abrir" onclick="abrirLouvorDetalhe('${x.l.id}')"><span>${lvEsc(nome)}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></button></div>`;
+  }).join('');
+}
+/* ---------- placa = Culto (v19.4): opções do culto e de cada música, sem abrir outra tela ---------- */
+let lvcpItens = [], lvCultoFixo = false;   // lvCultoFixo: a pessoa escolheu outra data (não volta sozinho para o próximo culto)
+function lvMenu(titulo, linhas){
+  document.getElementById('perguntaTitulo').textContent = titulo;
+  document.getElementById('perguntaCorpo').innerHTML = linhas.filter(Boolean).map(([txt, acao, extra])=>
+    `<button type="button" class="gm-linha pg-banco${extra === 'perigo' ? ' lvm-perigo' : ''}" ${extra === 'off' ? 'disabled' : ''} onclick="${acao}"><span class="gm-nome">${txt}</span></button>`).join('');
+  document.getElementById('modalPergunta').classList.add('active');
+}
+function lvCultoMenu(){
+  const c = cultoAtual(), proxima = cultoProximaData();
+  lvMenu(cultoDataTexto(cultoData, true) + ' · culto', [
+    ['Adicionar música', 'lvCultoAdicionar()'],
+    ['Outra data', 'lvCultoOutraData()'],
+    cultoData !== proxima ? ['Voltar para o próximo culto', `lvCultoMudarData('${proxima}', true)`] : null,
+    ['Colar roteiro do WhatsApp', "closeModal('modalPergunta');cultoColarAbrir()"],
+    ['Mandar no WhatsApp', "closeModal('modalPergunta');cultoMandarWhatsApp()"],
+    ['Sugerir músicas (IA)', "closeModal('modalPergunta');cultoAbrirSugestao()"],
+    ['Mais tocadas', 'lvCultoHistorico()'],
+    cultoDaData(c.data) ? ['Apagar o roteiro desta data', "closeModal('modalPergunta');lvCultoApagar()", 'perigo'] : null
+  ]);
+}
+function lvCultoAdicionar(){
+  const c = cultoAtual();
+  if(!c.partes.length){ c.partes.push({ id: cultoId('cp'), nome:'Hinos', quem:'', musicas:[] }); }
+  if(c.partes.length === 1){ closeModal('modalPergunta'); cultoAbrirEscolher(c.partes[0].id); return; }
+  lvMenu('Em qual parte?', c.partes.map(p=>[lvEsc(p.nome || 'Parte'), `closeModal('modalPergunta');cultoAbrirEscolher('${p.id}')`]));
+}
+function lvCultoOutraData(){
+  closeModal('modalPergunta');
+  const inp = document.getElementById('lvCultoDataInp');
+  inp.value = cultoData;
+  abrirCalendario(inp, document.querySelector('#lvCultoPlaca .lvcp-data'));
+}
+function lvCultoMudarData(v, voltar){
+  if(!v) return;
+  closeModal('modalPergunta');
+  cultoData = v; cultoRascunho = null; lvCultoFixo = !voltar;
+  renderCultoBotao();
+}
+function lvCultoHistorico(){
+  renderCultoHistorico();
+  document.getElementById('perguntaTitulo').textContent = 'Mais tocadas';
+  document.getElementById('perguntaCorpo').innerHTML = document.getElementById('cultoHistorico').innerHTML;
+}
+async function lvCultoApagar(){ await cultoApagar(); renderCultoBotao(); }
+function lvCultoDrive(){ if(typeof cultoEnviarDrive === 'function') cultoEnviarDrive(); }
+/* opções de uma música do culto: subir, descer, trocar de parte, tirar */
+function lvcpOpcoes(i){
+  const x = lvcpItens[i]; if(!x) return;
+  const t = lvEsc(x.l.titulo || 'Sem título');
+  lvMenu(t, [
+    ['Abrir a música', `closeModal('modalPergunta');abrirLouvorDetalhe('${x.l.id}')`],
+    ['Subir', `lvcpMover(${i},-1)`, i === 0 ? 'off' : ''],
+    ['Descer', `lvcpMover(${i},1)`, i === lvcpItens.length - 1 ? 'off' : ''],
+    cultoAtual().partes.length > 1 ? ['Mudar de parte', `lvcpMudarParte(${i})`] : null,
+    ['Tirar do culto', `closeModal('modalPergunta');lvcpTirar(${i})`, 'perigo']
+  ]);
+}
+/* sobe/desce na ordem do culto: dentro da parte troca com a vizinha; na ponta, passa para a parte de cima/de baixo */
+function lvcpMover(i, d){
+  const x = lvcpItens[i]; if(!x) return;
+  const ps = cultoAtual().partes, p = x.parte, pi = ps.indexOf(p), k = p.musicas.indexOf(x.l.id), j = k + d;
+  if(j >= 0 && j < p.musicas.length){ [p.musicas[k], p.musicas[j]] = [p.musicas[j], p.musicas[k]]; }
+  else {
+    const outra = ps[pi + d]; if(!outra) return;
+    p.musicas.splice(k, 1);
+    if(d < 0) outra.musicas.push(x.l.id); else outra.musicas.unshift(x.l.id);
+  }
+  cultoGravar();
+  lvcpOpcoes(Math.max(0, Math.min(lvcpItens.length - 1, i + d)));   // a janela continua aberta na mesma música, já no lugar novo
+}
+function lvcpMudarParte(i){
+  const x = lvcpItens[i]; if(!x) return;
+  lvMenu('Mudar para a parte', cultoAtual().partes.filter(p=>p !== x.parte).map(p=>[lvEsc(p.nome || 'Parte'), `lvcpParaParte(${i},'${p.id}')`]));
+}
+function lvcpParaParte(i, parteId){
+  const x = lvcpItens[i], destino = cultoParte(parteId); if(!x || !destino) return;
+  x.parte.musicas = x.parte.musicas.filter(id=>id !== x.l.id);
+  if(!destino.musicas.includes(x.l.id)) destino.musicas.push(x.l.id);
+  closeModal('modalPergunta');
+  cultoGravar();
+}
+function lvcpTirar(i){
+  const x = lvcpItens[i]; if(!x) return;
+  comDesfazer(`${x.l.titulo || 'Música'} saiu do culto`, ()=>{ x.parte.musicas = x.parte.musicas.filter(id=>id !== x.l.id); cultoGravar(); }, ()=>renderCultoBotao());
 }
 /* ---------- sugestão de repertório (IA): tema da pregação → músicas do app que combinam, sem repetir as recentes ---------- */
 const CU_SUGESTAO_ESQUEMA = { type:'object', properties:{ musicas:{ type:'array', items:{ type:'object', properties:{
