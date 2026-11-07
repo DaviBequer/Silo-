@@ -170,12 +170,11 @@ function efAnelHoje(){
 
 /* ganchos da rodada 2 */
 efDepois('switchAba', ()=>requestAnimationFrame(efPilula));
-/* ao abrir uma aba: cartões em leque, curva se desenhando, calendários virando, painel nas Vendas, anel no Ponto */
+/* ao abrir uma aba: cartões em leque, calendários virando, painel nas Vendas, anel no Ponto */
 efDepois('efeitoAoTrocarAba', (_, __)=>{
   if(!efeitosLigados) return;
   const marcar = (el, cls, ms)=>{ if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(()=>el.classList.remove(cls), ms); };
   marcar(document.getElementById('resumoCarteira'), 'ef-leque', 1200);
-  marcar(document.getElementById('resumoProximos'), 'ef-desenha', 2200);
   document.querySelectorAll('.aba.active').forEach(a=>marcar(a, 'ef-vira', 1000));
   if(document.getElementById('aba-vendas')?.classList.contains('active')) setTimeout(()=>document.querySelectorAll('#aba-vendas .resumo-stat-val').forEach(efPainel), 30);
   if(document.getElementById('aba-ponto')?.classList.contains('active')) efAnelHoje();

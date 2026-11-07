@@ -28,7 +28,7 @@ function renderRendaTable(){
   const btnToggle = document.getElementById('btnToggleFluxoMeses');
   if(btnToggle) btnToggle.classList.toggle('expandido', fluxoMesesExpandido);
 
-  const thead = `<tr><th style="text-align:left;padding-left:10px">Categoria</th>${months.map(mKey=>{
+  const thead = `<tr><th class="row-label"></th>${months.map(mKey=>{
     const isCurrent = mKey===hoje;
     return `<th class="${isCurrent?'current-col':''}">${isCurrent ? `<span class="fx-pilula">${monthLabel(mKey).slice(0,3)} · atual</span>` : monthLabel(mKey).slice(0,3)}</th>`;
   }).join('')}<th></th></tr>`;
@@ -48,7 +48,7 @@ function renderRendaTable(){
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
     const val = extraTotalForMonth(u, mKey);
     const nRec = extrasRecebidosNoMes(u, mKey).length;
-    const vazio = nRec ? '<span class="cell-money-empty">✓ recebido</span>' : '<span class="cell-money-empty">+ Extra</span>';
+    const vazio = nRec ? '<span class="cell-money-empty feito-tag">✓ recebido</span>' : '<span class="cell-money-empty">+ Extra</span>';
     return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirRendaExtraModal('${u}','${mKey}')">${val?fmtMoney(val)+(nRec?'<div class="extra-rec-nota">+'+nRec+' recebido'+(nRec>1?'s':'')+'</div>':''):vazio}</td>`;
   }).join('')}<td></td></tr>`;
 
@@ -69,18 +69,18 @@ function renderRendaTable(){
   }).join('')}<td></td></tr>`;
 
   /* Cartão e Empréstimo: interruptor no rótulo = todos os meses; toque na célula = só aquele mês */
-  const linhaGeral = (tipo, rotulo, valorFn)=>{
+  const linhaGeral = (tipo, rotulo, valorFn, temNoMes)=>{
     const ligadoGeral = geralCfg()[tipo] !== false;
     return `<tr class="geral-extra-row"><td class="row-label"><span class="geral-extra-lbl">${rotulo}<button type="button" class="mini-switch${ligadoGeral?' on':''}" onclick="toggleGeralTudo('${tipo}')" title="Contar em todos os meses" aria-pressed="${ligadoGeral}"><span></span></button></span></td>${months.map(mKey=>{
       const v = valorFn(mKey);
       const on = incluiNoGeral(tipo, mKey);
-      return `<td class="cell-money-clickable geral-extra-cell${on?'':' fora'}${mKey===hoje?' current-col':''}" onclick="toggleGeralMes('${tipo}','${mKey}')" title="${on?'Contando — toque para tirar deste mês':'Fora — toque para contar neste mês'}">${v>0.004?fmtMoney(v):'<span class="cell-money-empty">—</span>'}<small>${on?'conta':'fora'}</small></td>`;
+      return `<td class="cell-money-clickable geral-extra-cell${on?'':' fora'}${mKey===hoje?' current-col':''}" onclick="toggleGeralMes('${tipo}','${mKey}')" title="${on?'Contando — toque para tirar deste mês':'Fora — toque para contar neste mês'}">${v>0.004?fmtMoney(v):temNoMes(mKey)?'<span class="cell-money-empty feito-tag">✓ pago</span>':'<span class="cell-money-empty">—</span>'}${on?'':'<small>fora</small>'}</td>`;
     }).join('')}<td></td></tr>`;
   };
-  const cartaoRow = (u==='davi' && (state.cartoesTracker||[]).length) ? linhaGeral('cartao', 'Cartão', cartaoValorGeralNoMes) : '';
-  const empRow = (u==='davi' && (state.emprestimos||[]).length) ? linhaGeral('emprestimo', 'Empréstimo', emprestimoValorGeralNoMes) : '';
+  const cartaoRow = (u==='davi' && (state.cartoesTracker||[]).length) ? linhaGeral('cartao', 'Cartão', cartaoValorGeralNoMes, m=>state.cartoesTracker.some(c=>faturaCartaoNoMes(c, m) > 0.004)) : '';
+  const empRow = (u==='davi' && (state.emprestimos||[]).length) ? linhaGeral('emprestimo', 'Empréstimo', emprestimoValorGeralNoMes, m=>cpParcelasEmprestimoNoMes(m).length > 0) : '';
 
-  const sobraRow = `<tr class="total-row"><td class="row-label">Sobra estimada</td>${months.map(mKey=>{
+  const sobraRow = `<tr class="total-row"><td class="row-label">Sobra</td>${months.map(mKey=>{
     const s = saldoForMonth(u, mKey);
     return `<td class="${mKey===hoje?'current-col':''}"><span class="total-value" style="color:${s>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(s)}</span></td>`;
   }).join('')}<td></td></tr>`;
@@ -89,7 +89,7 @@ function renderRendaTable(){
   let acum = state.users[u].saldoAtual || 0;
   const acumRow = `<tr class="acum-row"><td class="row-label">Acumulado</td>${months.map((mKey, i)=>{
     acum = i === 0 ? saldoForMonth(u, mKey) : acum + saldoForMonth(u, mKey);
-    return `<td class="${mKey===hoje?'current-col':''}"><span class="${acum>=0?'pos':'neg'}">${fmtCompacto(acum)}</span></td>`;
+    return `<td class="${mKey===hoje?'current-col':''}"><span class="${acum>=0?'pos':'neg'}">${fmtMoneySigned(acum)}</span></td>`;
   }).join('')}<td></td></tr>`;
 
   document.getElementById('rendaTableThead').innerHTML = thead;

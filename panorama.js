@@ -152,37 +152,40 @@ function renderBlocosMes(u, mKey){
   el.innerHTML = b.join('');
 }
 /* curva: hoje (saldo) → fim deste mês (sobra) → acumulado dos próximos 4 meses; toque num mês abre o detalhe */
+let curvaSel = null, curvaLarg = 0, curvaObs = null;   // mês tocado ('hoje' ou mKey); sem toque = fim do mês atual
+function curvaEscolher(m){ curvaSel = m; renderCurvaSaldo(userDash(), mesFinanceiroAtual()); }
 function renderCurvaSaldo(u, mKey){
   const el = document.getElementById('resumoProximos'); if(!el) return;
-  const pts = [{ rot:'hoje', v: state.users[u].saldoAtual || 0, m:null }];
+  const saldo = state.users[u].saldoAtual || 0, nome = m=>monthLabel(m).slice(0, 3);
   let acum = saldoForMonth(u, mKey);
-  pts.push({ rot: monthLabel(mKey), v: acum, m: mKey });
-  for(let i = 1; i <= 4; i++){ const m = addMonths(mKey, i); acum += saldoForMonth(u, m); pts.push({ rot: monthLabel(m), v: acum, m }); }
-  const W = 340, H = 120, pad = 14;
+  const pts = [{ rot:'Hoje', v: saldo, id:'hoje' }, { rot: nome(mKey), v: acum, muda: acum - saldo, id: mKey }];
+  for(let i = 1; i <= 4; i++){ const m = addMonths(mKey, i), muda = saldoForMonth(u, m); acum += muda; pts.push({ rot: nome(m), v: acum, muda, id: m }); }
+  /* desenha na largura real do bloco, para a letra do gráfico não esticar */
+  if(!curvaObs){ curvaObs = new ResizeObserver(()=>{ if(el.clientWidth && el.clientWidth !== curvaLarg) renderCurvaSaldo(userDash(), mesFinanceiroAtual()); }); curvaObs.observe(el); }
+  curvaLarg = el.clientWidth;
+  const W = Math.max(240, (curvaLarg || 352) - 32), H = 170, L = 12, R = 12, T = 16, B = 138, n = pts.length;
   const vs = pts.map(p=>p.v), max = Math.max(0, ...vs), min = Math.min(0, ...vs), faixa = (max - min) || 1;
-  const x = i=>pad + i * (W - pad * 2) / (pts.length - 1), y = v=>pad + (max - v) * (H - pad * 2) / faixa;
+  const x = i=>L + i * (W - L - R) / (n - 1), y = v=>T + (max - v) * (B - T) / faixa, zero = y(0);
   const P = pts.map((p, i)=>[x(i), y(p.v)]);
   let d = `M${P[0][0]},${P[0][1]}`;
-  for(let i = 0; i < P.length - 1; i++){   // curva suave (Catmull-Rom)
+  for(let i = 0; i < n - 1; i++){   // curva suave (Catmull-Rom)
     const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
     d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6},${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]},${p2[1]}`;
   }
-  const fim = pts[pts.length - 1].v, cor = fim >= 0 ? 'var(--gold)' : 'var(--danger)';
-  const zero = y(0);
-  el.innerHTML = `<div class="curva-topo"><span>Saldo nos próximos meses</span><b class="${fim >= 0 ? 'pos' : 'neg'}">${fmtMoneySigned(fim)} em ${monthLabel(pts[pts.length - 1].m)}</b></div>
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Saldo previsto mês a mês">
-      <defs><linearGradient id="curvaFundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fim >= 0 ? '#9fc1e6' : '#d2452f'}" stop-opacity=".2"/><stop offset="1" stop-color="${fim >= 0 ? '#9fc1e6' : '#d2452f'}" stop-opacity="0"/></linearGradient></defs>
-      ${min < 0 ? `<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#d2452f" stroke-opacity=".35" stroke-dasharray="3 4"/>` : ''}
-      <path d="${d} L${P[P.length - 1][0]},${H} L${P[0][0]},${H} Z" fill="url(#curvaFundo)"/>
-      <path class="curva-linha" pathLength="1" d="${d}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-      ${P.map((p, i)=>`<circle${i === 0 ? ' class="curva-hoje"' : ''} cx="${p[0]}" cy="${p[1]}" r="${i === 0 ? 4.5 : 3}" fill="${i === 0 ? '#fff' : cor}" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join('')}
-    </svg>
-    <div class="curva-meses">${pts.map(p=>p.m ? `<button type="button" onclick="abrirDetalheAcumulado('${p.m}')"><span>${p.rot}</span><b class="${p.v >= 0 ? 'pos' : 'neg'}">${fmtCompacto(p.v)}</b></button>` : `<span class="curva-hoje"><span>hoje</span><b>${fmtCompacto(p.v)}</b></span>`).join('')}</div>`;
-}
-/* 12.345 → "12,3 mil"; −2.463 → "−2,5 mil"; 980 → "980" */
-function fmtCompacto(v){
-  const s = v < 0 ? '−' : '', a = Math.abs(v);
-  return s + (a >= 1000 ? (a / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : Math.round(a).toLocaleString('pt-BR'));
+  const a = Math.max(0, pts.findIndex(p=>p.id === curvaSel)) || 1, s = curvaSel === 'hoje' ? 0 : a, sel = pts[s], corte = (zero - T) / (B - T), slot = (W - L - R) / (n - 1);
+  const sub = s === 0 ? 'saldo de hoje' : `${sel.muda < 0 ? '−' : '+'}${fmtMoney(Math.abs(sel.muda))} no mês · fim de ${sel.rot}`;
+  el.innerHTML = `<div class="curva-rot">Quanto fica no banco</div><div class="curva-num${sel.v < 0 ? ' neg' : ''}">${fmtMoneySigned(sel.v)}</div>
+    <div class="curva-sub"><span>${sub}</span>${s ? `<button type="button" onclick="abrirDetalheAcumulado('${sel.id}')">ver o mês</button>` : ''}</div>
+    <div class="curva-graf"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs>
+        <linearGradient id="curvaLinha" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${T}" y2="${B}"><stop offset="${corte}" stop-color="#9fc1e6"/><stop offset="${corte}" stop-color="#f4a696"/></linearGradient>
+        <linearGradient id="curvaFundo" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#9fc1e6" stop-opacity=".28"/><stop offset="1" stop-color="#9fc1e6" stop-opacity="0"/></linearGradient></defs>
+      <path d="${d} L${x(n - 1)},${zero} L${x(0)},${zero} Z" fill="url(#curvaFundo)"/>
+      <line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="#b9c6d8" stroke-opacity=".4" stroke-dasharray="3 5"/>
+      <line x1="${x(s)}" x2="${x(s)}" y1="${T - 6}" y2="${B + 4}" stroke="#fff" stroke-opacity=".35"/>
+      <path d="${d}" fill="none" stroke="url(#curvaLinha)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="${P[s][0]}" cy="${P[s][1]}" r="6" fill="#fff" stroke="#1b2638" stroke-width="2"/>
+      ${pts.map((p, i)=>`<text x="${x(i)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}" font-size="13" font-weight="${i === s ? 600 : 400}" fill="${i === s ? '#fff' : '#b9c6d8'}">${p.rot}</text>`).join('')}
+    </svg>${pts.map((p, i)=>`<button type="button" style="left:${Math.max(0, x(i) - slot / 2)}px;width:${slot}px" aria-label="${p.rot}: ${fmtMoneySigned(p.v)}" aria-pressed="${i === s}" onclick="curvaEscolher('${p.id}')"></button>`).join('')}</div>`;
 }
 /* próximas contas em aberto (pela data): calendário com o dia no meio, nome e o mês embaixo, valor à direita (v12) */
 function renderProxContas(u, mKey){

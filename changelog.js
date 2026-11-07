@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.1', itens: [
+    'Gráfico do saldo novo: placa azul-noite, toque no mês para ver quanto fica no banco, sem a pulsação',
+    'Fluxo Mensal mais limpo: coluna dos nomes mais fina, botões de Cartão e Empréstimo alinhados, fatura e parcela pagas mostram que estão pagas e o Acumulado mostra o valor inteiro'
+  ] },
   { versao: 'v19.0', itens: [
     'Toda conta agora tem Como paga: Pix de um banco ou um cartão. Com isso escolhido, um toque paga: no Pix sai do banco, no cartão entra na fatura e o saldo não muda',
     'Tipo novo Meta, para Mercado e Gasolina: o valor é o máximo do mês e cada compra vai descontando',

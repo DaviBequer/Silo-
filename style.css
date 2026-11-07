@@ -596,18 +596,19 @@ body:has(.modal-overlay.active){overflow:hidden}
 .fb-anel::after{content:'';width:26px;height:26px;border-radius:50%;background:var(--card)}
 .fb-barra{display:block;height:3px;margin-top:5px;border-radius:2px;background:var(--fio)}
 .fb-barra i{display:block;height:100%;border-radius:2px;background:var(--latao)}
-/* curva do saldo nos próximos meses (bloco claro) */
-.curva{margin-top:12px;padding:12px 14px 8px;border:1px solid var(--fio);border-radius:14px;background:var(--vidro)}
+/* gráfico do saldo (v19.1, escolha G1 do Davi): placa azul-noite, o número grande muda ao tocar no mês, sem efeito */
+.curva{margin-top:12px;padding:16px 16px 10px;border-radius:18px;background:var(--graf);color:#fff}
 .curva:empty{display:none}
-.curva-topo{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
-.curva-topo b{font:600 12.5px/1.3 var(--font-body);letter-spacing:0;text-transform:none}
-.curva-topo b.pos,.curva-meses b.pos{color:var(--text)}.curva-topo b.neg,.curva-meses b.neg{color:var(--danger)}
-.curva svg{display:block;width:100%;height:100px}
-.curva-meses{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin-top:6px}
-.curva-meses>*{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0;border:none;background:none;font:inherit;cursor:pointer}
-.curva-meses span{font-size:11px;font-weight:600;color:var(--text-faint);text-transform:lowercase}
-.curva-meses b{font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums}
-.curva-hoje b{color:var(--text)}
+.curva-rot{font-size:13px;color:#b9c6d8}
+.curva-num{font-size:36px;font-weight:200;line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums}
+.curva-num.neg{color:#f4a696}
+.curva-sub{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:30px;font-size:13.5px;color:#b9c6d8}
+.curva-sub button{position:relative;flex-shrink:0;border:none;background:none;padding:4px 0;color:var(--latao);font:inherit;font-weight:500;cursor:pointer}
+.curva-sub button::before{content:'';position:absolute;inset:-8px -8px}
+.curva-graf{position:relative;margin-top:4px}
+.curva-graf svg{display:block;max-width:100%}
+.curva-graf>button{position:absolute;top:0;bottom:0;padding:0;border:none;border-radius:8px;background:none;cursor:pointer}
+.curva-graf>button:focus-visible{outline:2px solid var(--latao);outline-offset:-2px}
 /* próximas contas: lista num quadro claro, calendário com o dia no meio */
 .prox-contas-topo{display:flex;justify-content:space-between;align-items:baseline;margin:16px 2px 8px;font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
 .prox-contas-topo button{border:none;background:none;padding:4px 0;color:var(--text);font:600 12px/1.3 var(--font-body);letter-spacing:0;text-transform:none;cursor:pointer}
@@ -680,10 +681,14 @@ body:has(.modal-overlay.active){overflow:hidden}
 .geral-extra-cell.fora small{text-decoration:none}
 @media(min-width:1024px){ .money-table{min-width:0} }
 /* Fluxo mensal (v12, escolha A do Davi): os 12 meses rolando, a primeira coluna presa, o mês atual em grafite, sobra e acumulado em destaque */
-.fluxo-wrap .money-table{min-width:1180px}
-.fluxo-wrap .money-table th{font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);border-bottom-color:var(--fio)}
-.fluxo-wrap .money-table td{border-bottom-color:var(--fio);font-variant-numeric:tabular-nums}
-.fluxo-wrap .money-table .row-label{position:sticky;left:0;z-index:1;background:var(--bg);font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
+/* v19.1 (T1 do Davi): coluna dos nomes fina e de largura fixa, os botões de Cartão e Empréstimo alinhados na direita dela */
+.fluxo-wrap .money-table{min-width:0}
+.fluxo-wrap .money-table th{min-width:92px;font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);border-bottom-color:var(--fio)}
+.fluxo-wrap .money-table td{min-width:92px;padding-inline:8px;font-size:13px;font-variant-numeric:tabular-nums;border-bottom-color:var(--fio)}
+.fluxo-wrap .money-table .row-label{position:sticky;left:0;z-index:1;width:126px;min-width:126px;max-width:126px;padding-left:2px;background:var(--bg);font-size:13.5px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--text)}
+.fluxo-wrap .money-table tr>:last-child{min-width:0;padding:0}
+.fluxo-wrap .money-table .geral-extra-lbl{justify-content:space-between;gap:6px}
+.fluxo-wrap .feito-tag{color:var(--success);font-size:13px}
 /* mês atual (v14.8, escolha O3 do Davi): só o nome do mês numa pílula grafite; os valores do mês em negrito, sem coluna pintada */
 .fluxo-wrap .money-table .current-col{background:none;color:var(--text);font-weight:600}
 .fluxo-wrap .money-table .current-col *{font-weight:600}
@@ -2721,11 +2726,6 @@ body.ef-rolou .header{background:rgba(238,241,245,.72);box-shadow:0 1px 0 var(--
 .ef-leque .cc{animation:efLeque .65s cubic-bezier(.3,1.3,.5,1) both}
 .ef-leque .cc:nth-child(2){animation-delay:.07s}.ef-leque .cc:nth-child(3){animation-delay:.14s}.ef-leque .cc:nth-child(4){animation-delay:.21s}.ef-leque .cc:nth-child(n+5){animation-delay:.28s}
 @keyframes efLeque{from{opacity:0;transform:translateX(-70%) rotate(-9deg) scale(.88)}}
-/* F10 curva do saldo se desenhando + ponto de hoje pulsando */
-.ef-desenha .curva-linha{stroke-dasharray:1;stroke-dashoffset:1;animation:efDesenha 1.6s ease .15s forwards}
-@keyframes efDesenha{to{stroke-dashoffset:0}}
-.curva-hoje{transform-box:fill-box;transform-origin:center;animation:efPontoHoje 2s ease-in-out infinite}
-@keyframes efPontoHoje{50%{transform:scale(1.45)}}
 /* F11 calendarinhos virando a folha */
 .ef-vira .cal{animation:efVira .7s ease both}
 @keyframes efVira{0%{transform:perspective(300px) rotateX(-90deg);opacity:.3}100%{transform:none}}
@@ -2774,8 +2774,7 @@ body.ef-rolou .header{background:rgba(238,241,245,.72);box-shadow:0 1px 0 var(--
 .lv-fab-menu.aberto .lv-fab-op:nth-child(2){animation-delay:.05s}.lv-fab-menu.aberto .lv-fab-op:nth-child(3){animation-delay:.1s}.lv-fab-menu.aberto .lv-fab-op:nth-child(4){animation-delay:.15s}.lv-fab-menu.aberto .lv-fab-op:nth-child(5){animation-delay:.2s}.lv-fab-menu.aberto .lv-fab-op:nth-child(n+6){animation-delay:.25s}
 @keyframes efArco{0%{opacity:0;transform:translate(34vw,90px) rotate(-28deg) scale(.4)}60%{opacity:1}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){
-  .nav-pilula,.fullpage.active,.splash-nome span,.pin-pontos i,.vs-p,.ef-leque .cc,.ef-desenha .curva-linha,.curva-hoje,.ef-vira .cal,.toast.com-acao::after,.ef-painel b i,.lv-capa svg,#lvPdfWrap.ef-abre > *,#lvTomBoxValor,.cu-parte.entra::before,.cu-parte-num,.lv-fab-op{animation:none!important;transition:none!important}
-  .ef-desenha .curva-linha{stroke-dashoffset:0}
+  .nav-pilula,.fullpage.active,.splash-nome span,.pin-pontos i,.vs-p,.ef-leque .cc,.ef-vira .cal,.toast.com-acao::after,.ef-painel b i,.lv-capa svg,#lvPdfWrap.ef-abre > *,#lvTomBoxValor,.cu-parte.entra::before,.cu-parte-num,.lv-fab-op{animation:none!important;transition:none!important}
   .splash-nome span{-webkit-text-fill-color:currentColor}
 }
 
