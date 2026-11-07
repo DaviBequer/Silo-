@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=18.8">
+<link rel="stylesheet" href="style.css?v=18.9">
 </head>
 <body class="carregando">
 
@@ -25,7 +25,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:600;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 188</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 189</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -149,17 +149,6 @@
     </div>
   </div>
 
-  <div class="card dg fin-extra" id="cardAcumulado" data-span="8" data-col="dir">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Projeção do saldo</div></div>
-    <div class="pano-nav">
-      <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 6 14 4.6 6.6 12l7.4 7.4 1.4-1.4-6-6z"/></svg></button>
-      <div class="pano-nav-label" id="panoWindowLabel"></div>
-      <button class="pano-nav-btn" onclick="shiftPanoWindow(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 18 10 19.4l7.4-7.4L10 4.6 8.6 6l6 6z"/></svg></button>
-    </div>
-    <div class="acum-timeline" id="acumTimelineWrap"></div>
-  </div>
-
-
   <div class="card dg fin-extra" id="cardOndeVai" data-span="12" data-col="esq">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>Para onde vai o dinheiro</div></div>
     <div class="pano-nav">
@@ -174,17 +163,6 @@
   <div class="card dc" id="secaoCartaoTracker" data-span="12">
     <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>Cartões de Crédito</div><div style="display:flex;align-items:center;gap:8px"><button class="section-add" aria-label="Adicionar conta" onclick="openCartaoCardModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div></div>
     <div class="cartao-tracker-list" id="cartaoTrackerList"></div>
-  </div>
-
-  <div class="card dc" id="cardAcumCartao" data-span="12">
-    <div class="card-title"><div class="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Sobra depois da fatura</div></div>
-    <div class="pano-nav">
-      <button class="pano-nav-btn" onclick="shiftPanoWindow(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 6 14 4.6 6.6 12l7.4 7.4 1.4-1.4-6-6z"/></svg></button>
-      <div class="pano-nav-label" id="panoWindowLabelCartao"></div>
-      <button class="pano-nav-btn" onclick="shiftPanoWindow(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 18 10 19.4l7.4-7.4L10 4.6 8.6 6l6 6z"/></svg></button>
-    </div>
-    <div class="acum-timeline" id="acumCartaoWrap"></div>
-    <div class="sf-nota" style="text-align:center;margin-top:6px">Sobra do Geral − fatura dos cartões</div>
   </div>
 
   <!-- EMPRÉSTIMO -->
@@ -441,6 +419,7 @@
       <input type="checkbox" id="editarContaPagaCheck">
       <span>Paga integralmente</span>
     </label>
+    <div id="editarContaBancos"></div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeEditarConta()">Cancelar</button>
       <button class="btn btn-block" onclick="salvarPagamentoConta()">Salvar</button>
@@ -660,6 +639,7 @@
       <label class="fat-quitar"><input type="checkbox" id="pagarFaturaQuitar" checked onchange="atualizarNotaPagarFatura()"><span>Considerar fatura paga</span></label>
       <div class="sf-nota" id="pagarFaturaNota" style="margin-top:6px"></div>
     </div>
+    <div id="pagarFaturaBancos"></div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" id="pagarFaturaBtnDesfazer" onclick="desfazerPagamentoFatura()">Apagar pagamentos</button>
       <button class="btn btn-block" id="pagarFaturaBtnConfirmar" onclick="confirmarPagarFatura()">Confirmar pagamento</button>
@@ -982,6 +962,7 @@
       <label>Data do pagamento</label>
       <input type="date" id="empPagarData">
     </div>
+    <div id="empPagarBancos"></div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalEmpPagar')">Cancelar</button>
       <button class="btn btn-block" onclick="confirmarPagarParcelaEmp()">Confirmar</button>
@@ -1025,6 +1006,7 @@
       <div class="input-money"><input type="text" id="empAmortValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this);atualizarAmortizacaoEmp(false)"></div>
     </div>
     <div id="empAmortInfo"></div>
+    <div id="empAmortBancos"></div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-block" onclick="closeModal('modalEmpAmortizar')">Cancelar</button>
       <button class="btn btn-block" onclick="confirmarAmortizacaoEmp()">Confirmar</button>
@@ -1051,18 +1033,6 @@
       <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalResumoDetalhe')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
     </div>
     <div id="resumoDetalheLista"></div>
-  </div>
-</div>
-
-<!-- MODAL: gastos do mês (linha "Gastos" do Fluxo Mensal) -->
-<div class="modal-overlay" id="modalGastosMes">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="gastosMesTitulo">Gastos</h3>
-      <button class="modal-close" aria-label="Fechar" onclick="closeModal('modalGastosMes')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button>
-    </div>
-    <div id="gastosMesLista"></div>
-    <div class="gm-total" id="gastosMesTotal"></div>
   </div>
 </div>
 
@@ -1161,7 +1131,7 @@
   <div class="fullpage-header">
     <button class="header-btn" aria-label="Voltar" onclick="fecharFoco()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fullpage-title" id="focoTitulo"></div>
-    <button class="header-btn" id="focoHistorico" aria-label="Histórico das contas variáveis" title="Histórico das contas variáveis" onclick="abrirHistoricoVariaveis()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></button>
+    <span style="width:36px;flex-shrink:0"></span>
   </div>
   <div class="fullpage-content ext foco">
     <div class="ext-mes">
@@ -1221,7 +1191,7 @@
   <div class="fullpage-header">
     <button class="header-btn" aria-label="Voltar" onclick="fecharContasPagar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="fullpage-title cp-titulo-pagina">Contas do mês<small id="contasPagarMesLabel"></small></div>
-    <span style="width:36px;flex-shrink:0"></span>
+    <button class="header-btn" aria-label="Histórico das contas variáveis" title="Histórico das contas variáveis" onclick="abrirHistoricoVariaveis()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></button>
   </div>
   <div class="fullpage-content" id="contasPagarConteudo" style="padding-bottom:96px"></div>
   <div class="cp-footer"><button type="button" class="btn btn-block" onclick="finalizarContasPagar()">Concluir mês</button></div>
@@ -2034,30 +2004,30 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=18.8"></script>
-<script src="core.js?v=18.8"></script>
-<script src="layout.js?v=18.8"></script>
-<script src="changelog.js?v=18.8"></script>
-<script src="app.js?v=18.8"></script>
-<script src="app-recursos.js?v=18.8"></script>
-<script src="panorama.js?v=18.8"></script>
-<script src="planner.js?v=18.8"></script>
-<script src="voz.js?v=18.8"></script>
-<script src="ponto.js?v=18.8"></script>
-<script src="louvor.js?v=18.8"></script>
-<script src="louvor-extra.js?v=18.8"></script>
-<script src="ia.js?v=18.8"></script>
-<script src="louvor-cifraclub.js?v=18.8"></script>
-<script src="louvor-medley.js?v=18.8"></script>
-<script src="louvor-culto.js?v=18.8"></script>
-<script src="louvor-drive.js?v=18.8"></script>
-<script src="atualizar.js?v=18.8"></script>
-<script src="louvor-comparar.js?v=18.8"></script>
-<script src="fatura-pdf.js?v=18.8"></script>
-<script src="emprestimo.js?v=18.8"></script>
-<script src="vendas.js?v=18.8"></script>
-<script src="efeitos.js?v=18.8"></script>
-<script src="digital.js?v=18.8"></script>
+<script src="supabase.js?v=18.9"></script>
+<script src="core.js?v=18.9"></script>
+<script src="layout.js?v=18.9"></script>
+<script src="changelog.js?v=18.9"></script>
+<script src="app.js?v=18.9"></script>
+<script src="app-recursos.js?v=18.9"></script>
+<script src="panorama.js?v=18.9"></script>
+<script src="planner.js?v=18.9"></script>
+<script src="voz.js?v=18.9"></script>
+<script src="ponto.js?v=18.9"></script>
+<script src="louvor.js?v=18.9"></script>
+<script src="louvor-extra.js?v=18.9"></script>
+<script src="ia.js?v=18.9"></script>
+<script src="louvor-cifraclub.js?v=18.9"></script>
+<script src="louvor-medley.js?v=18.9"></script>
+<script src="louvor-culto.js?v=18.9"></script>
+<script src="louvor-drive.js?v=18.9"></script>
+<script src="atualizar.js?v=18.9"></script>
+<script src="louvor-comparar.js?v=18.9"></script>
+<script src="fatura-pdf.js?v=18.9"></script>
+<script src="emprestimo.js?v=18.9"></script>
+<script src="vendas.js?v=18.9"></script>
+<script src="efeitos.js?v=18.9"></script>
+<script src="digital.js?v=18.9"></script>
 <script>carregar();</script>
 </body>
 </html>

@@ -1174,8 +1174,14 @@ function futuroParcelaNoMes(item, mKey){
   return null;
 }
 function gastosRestantesNoMes(user, mKey){ return gastosDoMes(user, mKey).reduce((s,g)=>s+g.restante, 0); }
+/* contas do mês anterior ainda em aberto: continuam devidas, então entram na conta do mês atual */
+function atrasadasDoMes(user, mKey){
+  if(mKey !== mesFinanceiroAtual()) return 0;
+  const arq = state.contasArquivadas || {};
+  return gastosDoMes(user, addMonths(mKey, -1)).reduce((s, g)=>s + (arq[g.paidKey] ? 0 : g.restante), 0);
+}
 function expensesForMonth(user, mKey){
-  let total = gastosRestantesNoMes(user, mKey);   // o que falta pagar das contas do mês
+  let total = gastosRestantesNoMes(user, mKey) + atrasadasDoMes(user, mKey);   // o que falta pagar das contas do mês
   total += dizimoForMonth(user, mKey);
   total += extrasGeralNoMes(user, mKey).total;
   return total;
@@ -1296,17 +1302,17 @@ function historicoVariaveis(user){
     return { desc: item.desc, arquivado: !!item.arquivado, meses, media: meses.length ? lancValor(meses.reduce((s, m)=>s + m.valor, 0) / meses.length) : 0 };
   })).filter(c=>!c.arquivado || c.meses.length);
 }
-/* Ganho concluído: soma no banco e guarda onde caiu, para devolver ao desmarcar. Banco pelo nome porque salvarBancos troca os ids. */
+/* Ganho (valor +) ou pagamento (valor -): mexe no banco e guarda onde foi, para devolver ao desmarcar. Banco pelo nome porque salvarBancos troca os ids. */
 function moverNoBanco(user, nomeBanco, delta){
   const us = state.users[user], bancos = us.bancos || [], b = bancos.find(x=>x.nome === nomeBanco);
   if(b){ b.valor = lancValor((Number(b.valor)||0) + delta); us.saldoAtual = totalBancos(bancos); }
   else if(!bancos.length) us.saldoAtual = lancValor((us.saldoAtual||0) + delta);
 }
-function registrarGanho(user, chave, valor, nomeBanco){
+function registrarNoBanco(user, chave, valor, nomeBanco){
   moverNoBanco(user, nomeBanco, valor);
   (state.ganhoNoBanco = state.ganhoNoBanco || {})[chave] = { banco: nomeBanco, valor };
 }
-function desfazerGanho(user, chave){
+function desfazerNoBanco(user, chave){
   const g = (state.ganhoNoBanco||{})[chave];
   if(!g) return;
   moverNoBanco(user, g.banco, -g.valor);

@@ -1,6 +1,12 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v18.9', itens: [
+    'Pagar agora mexe no banco: conta, dízimo, fatura e parcela de empréstimo tiram do banco escolhido, e desmarcar devolve',
+    'Contas do mês virou a tela única de pagar, com o saldo de cada banco e quanto vai sobrar',
+    'Saíram a tela Fixos, a janela Gastos do mês e duas previsões repetidas; o bloco Fixos agora se chama Contas',
+    'A Falta pagar é a mesma em todo o app e inclui as contas atrasadas do mês anterior'
+  ] },
   { versao: 'v18.8', itens: [
     'Fixos: novo botão de histórico das contas variáveis, com o valor exato de cada mês e a média'
   ] },

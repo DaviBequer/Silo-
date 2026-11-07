@@ -25,6 +25,9 @@ async function rodarTestes(){
     ex.fixo.push({ id:'f1', desc:'Luz', valor:100 }, { id:'f2', desc:'Água', valor:80 });
     ex.moradia.push({ id:'m1', desc:'Aluguel', valor:900, mesInicio: addMonths(M, 1) });   // ainda não começou
     ex.futuro.push({ id:'p1', desc:'Geladeira', valor:300, parcelas:3, mesInicio: addMonths(M, -1) });
+    const mAnt = addMonths(M, -1);
+    perto('conta atrasada do mês anterior entra no que falta', expensesForMonth('davi', M), 480 + 480);
+    ['fixo_f1', 'fixo_f2', 'futuro_p1'].forEach(k=>{ state.paid[mAnt + '_davi_' + k] = true; });
     perto('gastos: fixos + parcela, sem o que não começou', expensesForMonth('davi', M), 480);
     state.paid[M + '_davi_fixo_f2'] = true;
     perto('conta paga sai da soma', expensesForMonth('davi', M), 400);
@@ -283,13 +286,25 @@ async function rodarTestes(){
     /* ganho: soma no banco escolhido, desmarcar devolve no mesmo banco */
     const usG = state.users.davi, bancosG = usG.bancos, saldoG = usG.saldoAtual;
     usG.bancos = [{ id:'a', nome:'A', valor:10 }, { id:'b', nome:'B', valor:20 }];
-    registrarGanho('davi', 'sal_t', 100.5, 'B');
+    registrarNoBanco('davi', 'sal_t', 100.5, 'B');
     igual('ganho soma só no banco escolhido e no saldo', [usG.bancos[0].valor, usG.bancos[1].valor, usG.saldoAtual], [10, 120.5, 130.5]);
     usG.bancos = usG.bancos.map(b=>({ ...b, id: b.id + 'novo' }));   // salvarBancos troca os ids
-    desfazerGanho('davi', 'sal_t');
+    desfazerNoBanco('davi', 'sal_t');
     igual('desmarcar ganho devolve, mesmo com id novo', [usG.bancos[1].valor, usG.saldoAtual, 'sal_t' in state.ganhoNoBanco], [20, 30, false]);
-    desfazerGanho('davi', 'sal_t');
+    desfazerNoBanco('davi', 'sal_t');
     igual('ganho antigo sem registro: desmarcar não mexe no saldo', usG.bancos[1].valor, 20);
+    /* pagamento tira do banco e não muda a sobra (antes a sobra subia ao pagar) */
+    usG.bancos = [{ id:'a', nome:'A', valor:500 }]; usG.saldoAtual = 500;
+    const exP = state.users.davi.expenses.fixo;
+    exP.push({ id:'tpag', desc:'Conta teste', valor:100, dia:9 });
+    const kPag = M+'_davi_fixo_tpag', sobraAntes = saldoForMonth('davi', M);
+    saiuDoBanco('davi', 'pag_'+kPag, 100, 'A'); marcarContaPaga(kPag);
+    igual('pagar tira do banco e a sobra não muda', [usG.bancos[0].valor, Math.round((saldoForMonth('davi', M) - sobraAntes)*100)/100], [400, 0]);
+    contaDevolver(kPag); marcarContaPaga(kPag, false);
+    igual('desmarcar devolve ao banco', usG.bancos[0].valor, 500);
+    saiuDoBanco('davi', 'pag_'+kPag, 100, null);
+    igual('não mexer no saldo: banco fica igual', usG.bancos[0].valor, 500);
+    state.users.davi.expenses.fixo = exP.filter(i=>i.id !== 'tpag');
     usG.bancos = bancosG; usG.saldoAtual = saldoG;
     state.lancamentos = state.lancamentos.filter(l=>l !== laA); cF.credoVista = cF.credoVista.filter(cv=>cv !== cvA && cv !== cvB);
     state.comprasTracker = []; state.cartoesTracker.pop();

@@ -20,11 +20,7 @@ function userDash(){ return state.currentUser || 'davi'; }
 function renderPanorama(){
   const months = getPanoWindowMonths();
   if(!months.includes(state.focusMonth)) state.focusMonth = months[0];
-  const lbl = monthLabel(months[0])+' – '+monthLabel(months[5]);
-  ['panoWindowLabel','panoWindowLabelCartao'].forEach(id=>{ const el = document.getElementById(id); if(el) el.textContent = lbl; });
   renderResumoMes();
-  renderAcumTable(months);
-  renderAcumCartao(months);
   renderOndeVai();
   const cp = document.getElementById('pageContasPagar');
   if(cp && cp.classList.contains('active')) renderContasPagar();
@@ -130,19 +126,23 @@ function blocosMesDados(u, mKey){
     parcelado += f.totalParcelas;
     f.parcelas.forEach(p=>{ parcTot += p.n; parcPagas += p.k - 1; });   // parcela k de n neste mês
   });
-  return { entra, sobra, totContas, faltaContas, pix, vista, parcelado, parcTot, parcPagas };
+  /* falta = o mesmo número da tela Contas do mês (contas, atrasadas, dízimo, cartão e empréstimo) */
+  const falta = expensesForMonth(u, mKey), ex = cpExtrasDoMes(mKey, u);
+  const pagoTudo = (totContas - faltaContas) + (dizimoPagoNoMes(u, mKey) ? dizimoValorCheio(u, mKey) : 0)
+    + ex.cartoes.reduce((s, x)=>s + x.f.pago, 0) + ex.parcelas.reduce((s, p)=>s + (p.pago ? p.pago.valorPago : 0), 0);
+  return { entra, sobra, totContas, faltaContas, falta, pagoTudo, pix, vista, parcelado, parcTot, parcPagas };
 }
 function renderBlocosMes(u, mKey){
   const el = document.getElementById('resumoBlocos'); if(!el) return;
   const d = blocosMesDados(u, mKey);
-  const pago = d.totContas > 0 ? Math.round((d.totContas - d.faltaContas) / d.totContas * 100) : 100;
+  const pago = d.pagoTudo + d.falta > 0 ? Math.round(d.pagoTudo / (d.pagoTudo + d.falta) * 100) : 100;
   const pSobra = d.entra + (state.users[u].saldoAtual || 0) > 0 ? Math.max(0, Math.min(100, Math.round(d.sobra / (d.entra + (state.users[u].saldoAtual || 0)) * 100))) : 0;
   const bloco = (o)=>`<button type="button" class="fb" onclick="${o.on}">${o.ico}<span class="fb-txt"><small>${o.rot}</small><b>${o.val}</b>${o.barra != null ? `<i class="fb-barra"><i style="width:${o.barra}%"></i></i>` : ''}${o.sub ? `<em>${o.sub}</em>` : ''}</span></button>`;
   const anel = p=>`<span class="fb-anel" style="--p:${p}"></span>`;
   const b = [
     bloco({ ico: anel(pSobra), rot: d.sobra >= 0 ? 'Sobra' : 'Falta', val: fmtMoney(d.sobra), on: "abrirDetalheResumo('entra')" }),
-    bloco({ ico: anel(pago), rot: 'Pago', val: pago + '%', sub: d.faltaContas > 0.004 ? 'falta ' + fmtMoney(d.faltaContas) : 'tudo pago', on: 'abrirContasPagar()' }),
-    bloco({ ico: finIco(FIN_ICO.fixo), rot: 'Fixos', val: fmtMoney(d.totContas), barra: pago, on: `abrirFoco('fixos','${mKey}')` }),
+    bloco({ ico: anel(pago), rot: 'Pago', val: pago + '%', sub: d.falta > 0.004 ? 'falta ' + fmtMoney(d.falta) : 'tudo pago', on: 'abrirContasPagar()' }),
+    bloco({ ico: finIco(FIN_ICO.fixo), rot: 'Contas', val: fmtMoney(d.pagoTudo + d.falta), barra: pago, on: `abrirContasPagar('${mKey}')` }),
     bloco({ ico: finIco(FIN_ICO.pix), rot: 'Pix no mês', val: fmtMoney(d.pix), on: `abrirFoco('pix','${mKey}')` })
   ];
   if(u === 'davi' && (state.cartoesTracker || []).length){
@@ -225,29 +225,6 @@ function abrirDetalheResumo(tipo){
     });
     html = rdGrupo('Renda', salario) + rdGrupo('Extras', extras);
     total = incomeForMonth(u, mKey) - (state.users[u].saldoAtual || 0);
-  } else {
-    titulo = 'Falta pagar'; cor = 'neg';
-    const contas = gastosDoMes(u, mKey).filter(g=>g.restante > 0.004).sort((a,b)=>b.restante-a.restante).map(g=>({
-      nome: g.desc, logoUrl: g.logoUrl, valor: g.restante, dia: g.dia,
-      sub: g.restante < g.valor - 0.004 ? `pago em parte · total ${fmtMoney(g.valor)}` : ''
-    }));
-    html += rdGrupo('Contas', contas);
-    const diz = dizimoForMonth(u, mKey);
-    if(diz > 0.004) html += rdGrupo('Dízimo', [{ nome:'Dízimo', ico:'♡', sub:'10% do salário', valor: diz }]);
-    if(u === 'davi'){
-      if(incluiNoGeral('cartao', mKey)){
-        const cartoes = (state.cartoesTracker||[]).map(c=>({ nome: c.nome || 'Cartão', logoUrl: c.logoUrl, sub: c.vencimento ? 'fatura · vence dia '+c.vencimento : 'fatura', valor: faturaRestanteNoMes(c, mKey) })).filter(c=>c.valor > 0.004);
-        html += rdGrupo('Cartão', cartoes);
-      }
-      if(incluiNoGeral('emprestimo', mKey)){
-        const emps = (state.emprestimos||[]).map(emp=>{
-          const n = empPendentes(emp).filter(k=>monthKey(empVencimento(emp,k))===mKey).length;
-          return { nome: emp.nome || 'Empréstimo', logoUrl: emp.logoUrl, sub: n>1 ? n+' parcelas' : 'parcela do mês', valor: n*(Number(emp.valorParcela)||0) };
-        }).filter(e=>e.valor > 0.004);
-        html += rdGrupo('Empréstimo', emps);
-      }
-    }
-    total = expensesForMonth(u, mKey);
   }
   document.getElementById('resumoDetalheTopo').innerHTML = `<div class="rd-rotulo">${titulo} · ${monthLabelLong(mKey)}</div><div class="rd-total ${cor}">${fmtMoney(total)}</div>`;
   document.getElementById('resumoDetalheLista').innerHTML = html || `<div class="gm-vazio">${tipo==='entra'?'Nada para entrar neste mês.':'Nada para pagar neste mês. ✓'}</div>`;
@@ -601,123 +578,11 @@ function abrirDetalheAcumulado(mKey){
   document.getElementById('modalDetalheAcumulado').classList.add('active');
 }
 
-/* Linha do tempo dos meses (usada no acumulado do Geral e no do Cartão) */
-function desenharTimeline(wrapId, months, vals, onclickFn, estilo){
-  const wrap = document.getElementById(wrapId);
-  if(!wrap) return;
-  const hoje = mesFinanceiroAtual();
-  const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
-  const range = (max-min) || 1;
-  const chartTop = 26, chartH = 40, chartBottom = chartTop + chartH;
-  const n = months.length;
-  const stepX = n>1 ? 268/(n-1) : 0;
-  const pts = months.map((mKey,i)=>{
-    const v = vals[i];
-    const x = 16 + i*stepX;
-    const y = chartBottom - ((v-min)/range)*chartH;
-    return {x,y,v,mKey};
-  });
-  const line = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const dots = pts.map(p=>{
-    const isSelected = p.mKey===state.focusMonth;
-    const isHoje = p.mKey===hoje;
-    const cor = isSelected ? 'var(--gold)' : (isHoje ? 'var(--gold)' : 'var(--text-faint)');
-    const r = isSelected||isHoje ? 4 : 2.5;
-    return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${cor}" style="cursor:pointer" onclick="${onclickFn(p.mKey)}"/>`;
-  }).join('');
-  const labels = pts.map(p=>{
-    const cor = p.v>=0 ? 'var(--success)' : 'var(--danger)';
-    const peso = p.mKey===state.focusMonth ? '800' : '600';
-    return `<text x="${p.x}" y="${chartTop-10}" text-anchor="middle" font-size="9" font-weight="${peso}" fill="${cor}">${fmtMoneyCompactSigned(p.v)}</text>`;
-  }).join('');
-  const meses = pts.map(p=>{
-    const isSelected = p.mKey===state.focusMonth;
-    return `<div class="acum-timeline-mes${isSelected?' selected':''}" onclick="${onclickFn(p.mKey)}">${monthLabel(p.mKey)}</div>`;
-  }).join('');
-  /* v12: A (saldo) = linha dourada com área e o valor do último mês em cima; C (cartão, estilo 'placa') = número final numa placa grafite com a linha pequena */
-  const ult = pts[pts.length - 1] || { v:0, mKey:hoje };
-  const area = pts.length ? `${pts[0].x.toFixed(1)},${chartBottom} ${line} ${ult.x.toFixed(1)},${chartBottom}` : '';
-  if(estilo === 'placa'){
-    /* v15.3: colunas por mês (valor + barra + mês), legível em qualquer largura; antes era uma linha pequena esticada */
-    const maxAbs = Math.max(1, ...vals.map(v=>Math.abs(v)));
-    const temPos = vals.some(v=>v >= 0), temNeg = vals.some(v=>v < 0);
-    const cols = pts.map(p=>{
-      const alt = (Math.abs(p.v) / maxAbs * 100).toFixed(1), neg = p.v < 0;
-      const cls = (p.mKey === state.focusMonth ? ' sel' : '') + (p.mKey === hoje ? ' hoje' : '');
-      return `<button type="button" class="tlb-col${cls}" onclick="${onclickFn(p.mKey)}" title="${monthLabelLong(p.mKey)}: ${fmtMoneySigned(p.v)}">
-        <span class="tlb-v${neg ? ' neg' : ''}">${fmtMoneyCompactSigned(p.v)}</span>
-        <span class="tlb-area${temPos && temNeg ? ' dupla' : ''}">${temPos ? `<span class="tlb-pos">${neg ? '' : `<i style="height:${alt}%"></i>`}</span>` : ''}${temNeg ? `<span class="tlb-neg">${neg ? `<i style="height:${alt}%"></i>` : ''}</span>` : ''}</span>
-        <span class="tlb-m">${monthLabel(p.mKey).slice(0, 3)}</span></button>`;
-    }).join('');
-    wrap.innerHTML = `
-    <div class="placa tl-placa"><span class="placa-lbl" style="margin-top:0">Em ${monthLabelLong(ult.mKey).toLowerCase()}</span><b class="${ult.v >= 0 ? '' : 'neg'}">${fmtMoneySigned(ult.v)}</b>
-      <div class="tlb" style="--n:${pts.length}">${cols}</div></div>`;
-    return;
-  }
-  wrap.innerHTML = `
-    <div class="tl-fim"><span>em ${monthLabelLong(ult.mKey).toLowerCase()}</span><b class="${ult.v >= 0 ? '' : 'neg'}">${fmtMoneySigned(ult.v)}</b></div>
-    <svg viewBox="0 0 300 ${chartBottom+6}" width="100%" height="${chartBottom+6}" style="overflow:visible">
-      <polygon points="${area}" fill="rgba(159,193,230,.2)"/>
-      <polyline points="${line}" fill="none" stroke="var(--gold)" stroke-width="2"/>
-      ${labels}
-      ${dots}
-    </svg>
-    <div class="acum-timeline-meses">${meses}</div>
-  `;
-}
-function renderAcumTable(months){
-  const u = userDash();
-  const vals = months.map(mKey=>saldoForMonth(u, mKey));
-  desenharTimeline('acumTimelineWrap', months, vals, m=>`selectFocusMonth('${m}');abrirDetalheAcumulado('${m}')`);
-}
-/* Acumulado do Cartão: sobra do Geral (contas) − fatura dos cartões no mês */
-function faturaTotalNoMes(mKey){
-  return (state.cartoesTracker||[]).reduce((s,c)=>s+faturaRestanteNoMes(c, mKey), 0);
-}
-function sobraDoGeralNoMes(mKey){
-  let sobra = 0;
-  try{ sobra = Number(dadosDoMes(mKey).sobra) || 0; }catch(e){ sobra = 0; }
-  /* se o cartão já entrou no Geral, devolve aqui para não descontar a fatura duas vezes */
-  if(!(state.historicoMeses && state.historicoMeses[mKey])) sobra += extrasGeralNoMes('davi', mKey).cartao;
-  return sobra;
-}
-function renderAcumCartao(months){
-  months = months || getPanoWindowMonths();
-  const vals = months.map(mKey=>sobraDoGeralNoMes(mKey) - faturaTotalNoMes(mKey));
-  desenharTimeline('acumCartaoWrap', months, vals, m=>`selectFocusMonth('${m}');abrirDetalheCartaoMes('${m}')`, 'placa');
-}
-function abrirDetalheCartaoMes(mKey){
-  const sobra = sobraDoGeralNoMes(mKey);
-  const cartoes = state.cartoesTracker || [];
-  const linhas = cartoes.map(c=>{
-    const f = faturaRestanteNoMes(c, mKey);
-    const paga = faturaStatus(c, mKey).st==='pago';
-    return `<div class="simulador-linha"><span class="label">${c.nome}${paga?' · paga ✓':''}</span><span class="valor">-${fmtMoney(f)}</span></div>`;
-  }).join('') || '<div class="simulador-linha"><span class="label">Nenhum cartão cadastrado</span><span class="valor"></span></div>';
-  const fatura = faturaTotalNoMes(mKey);
-  const resta = sobra - fatura;
-  document.getElementById('detalheAcumuladoTitulo').textContent = monthLabelExtensoCurto(mKey);
-  document.getElementById('detalheAcumuladoConteudo').innerHTML = `
-    <div class="simulador-painel">
-      <h4>${ICON_WALLET}Sobra − fatura em ${monthLabelExtensoCurto(mKey)}</h4>
-      <div class="simulador-linha"><span class="label">Sobra do Geral</span><span class="valor" style="color:${sobra>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(sobra)}</span></div>
-      ${linhas}
-      <div class="simulador-linha" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:10px"><span class="label" style="font-weight:900">Resta</span><span class="valor" style="font-weight:900;color:${resta>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(resta)}</span></div>
-    </div>`;
-  document.getElementById('modalDetalheAcumulado').classList.add('active');
-}
-
 function selectFocusMonth(mKey){
   state.focusMonth = mKey;
   renderPanorama();
   persist();
 }
-function shiftPanoWindow(delta){
-  state.panoOffset = Math.max(-1, Math.min(36, state.panoOffset + delta));
-  renderPanorama();
-  persist();
-}
-
 /* as contas do mês (gastosDoMes) em ordem de vencimento, com "(k/n)" no nome das parceladas */
 function getContasDoMes(mKey, usuario){
   return gastosDoMes(usuario || 'davi', mKey)
@@ -760,7 +625,7 @@ function abrirContasPagar(mKey){
 }
 function cpNavMes(delta){
   const novo = addMonths(contasPagarMes || mesFinanceiroAtual(), delta);
-  if(novo < todayKey() || novo > addMonths(mesFinanceiroAtual(), 36)) return;
+  if(novo < addMonths(mesFinanceiroAtual(), -36) || novo > addMonths(mesFinanceiroAtual(), 36)) return;
   contasPagarMes = novo;
   renderContasPagar();
 }
@@ -800,14 +665,14 @@ function cpToggleExtra(u, id, mKey){
 /* Concluir ganho: pergunta em qual banco caiu e soma lá. Desmarcar devolve. marcar(bool) liga/desliga o "recebido". */
 let ganhoFim = null;
 function ganhoAlternar(u, chave, valor, nome, recebido, marcar){
-  if(recebido){ desfazerGanho(u, chave); marcar(false); persist(); return; }
+  if(recebido){ desfazerNoBanco(u, chave); marcar(false); persist(); return; }
   const bancos = state.users[u].bancos || [];
   ganhoFim = i=>{
     closeModal('modalPergunta');
     const b = i === null ? null : bancos[i];
     comDesfazer(b ? `+${fmtMoney(valor)} no ${b.nome}` : `${nome}: recebido`, ()=>{
-      if(b) registrarGanho(u, chave, valor, b.nome);
-      else if(i !== null) registrarGanho(u, chave, valor, '');
+      if(b) registrarNoBanco(u, chave, valor, b.nome);
+      else if(i !== null) registrarNoBanco(u, chave, valor, '');
       marcar(true);
       persist();
     });
@@ -819,19 +684,54 @@ function ganhoAlternar(u, chave, valor, nome, recebido, marcar){
     <button type="button" class="modal-link pg-ja" onclick="ganhoFim(null)">Já está no saldo, só marcar como recebido</button>`;
   document.getElementById('modalPergunta').classList.add('active');
 }
-/* Conta variável: ao pagar, pergunta o valor exato (vale só para este mês; o aproximado continua nos outros) */
-function perguntarValorConta(paidKey, aoPagar){
-  const item = contaDoPaidKey(paidKey);
-  const previsto = gastosDoMes(paidKey.split('_')[1], paidKey.split('_')[0]).find(g=>g.paidKey === paidKey)?.valor ?? (Number(item.valor)||0);
-  document.getElementById('perguntaTitulo').textContent = 'Qual foi o valor exato?';
-  document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>${escBanco(item.desc)} · previsto</span><b>${fmtMoney(previsto)}</b></div>
-    <form onsubmit="event.preventDefault();valorContaConfirmar()">
-      <div class="field full"><label for="perguntaValor">Valor pago</label><div class="input-money"><input type="text" id="perguntaValor" inputmode="numeric" placeholder="0,00" oninput="maskMoneyInput(this)"></div></div>
+/* ===== PAGAR: toda conta, dízimo, fatura e parcela tira do banco escolhido ===== */
+/* escolha do banco (já vem o último usado). "Não mexer no saldo" é para quando o saldo informado já desconta. Sem banco cadastrado não pergunta. */
+function pgBancosHtml(u, rotulo){
+  const bancos = state.users[u].bancos || [];
+  if(!bancos.length) return '';
+  const ultimo = (state.ultimoBanco || {})[u], sel = bancos.some(b=>b.nome === ultimo) ? ultimo : bancos[0].nome;
+  return `<div class="field full"><label>${rotulo || 'De qual banco saiu'}</label><div class="pg-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${b.nome === sel ? ' active' : ''}" data-banco="${escBanco(b.nome)}" onclick="pgEscolher(this)">${escBanco(b.nome)}</button>`).join('')}<button type="button" class="dif-chip" data-nao="1" onclick="pgEscolher(this)">Não mexer no saldo</button></div></div>`;
+}
+function pgEscolher(btn){ btn.parentElement.querySelectorAll('.dif-chip').forEach(b=>b.classList.toggle('active', b === btn)); }
+/* nome do banco; null = não mexer no saldo; '' = sem banco cadastrado (mexe só no saldo geral) */
+function pgBancoDe(raiz){
+  const on = raiz.querySelector('.pg-bancos .dif-chip.active');
+  if(!on) return '';
+  return on.dataset.nao ? null : on.dataset.banco;
+}
+function pgGuardarUltimo(u, banco){ if(banco) (state.ultimoBanco = state.ultimoBanco || {})[u] = banco; }
+function saiuDoBanco(u, chave, valor, banco){
+  if(banco === null) return;
+  registrarNoBanco(u, chave, -valor, banco);
+  pgGuardarUltimo(u, banco);
+}
+/* devolve ao banco o que uma conta tirou (pagamento e pagamento parcial) */
+function contaDevolver(paidKey){
+  const u = paidKey.split('_')[1];
+  desfazerNoBanco(u, 'pag_'+paidKey);
+  desfazerNoBanco(u, 'par_'+paidKey);
+}
+let pagarFim = null;
+function pagarPerguntar(o){
+  document.getElementById('perguntaTitulo').textContent = o.titulo || 'Pagar';
+  const fmt = v=>Number(v).toFixed(2).replace('.', ',');
+  document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>${escBanco(o.nome)}${o.exato ? ' · previsto' : ''}</span><b>${fmtMoney(o.valor)}</b></div>
+    <form onsubmit="event.preventDefault();pagarConfirmar()">
+      <div class="field full"><label for="perguntaValor">${o.exato ? 'Valor exato pago' : 'Valor pago'}</label><div class="input-money"><input type="text" id="perguntaValor" inputmode="numeric" placeholder="0,00" value="${o.exato ? '' : fmt(o.valor)}" oninput="maskMoneyInput(this)"></div></div>
+      ${pgBancosHtml(o.u)}
       <div class="modal-actions"><button type="button" class="btn btn-outline btn-block" onclick="closeModal('modalPergunta')">Cancelar</button><button class="btn btn-block">Pagar</button></div>
     </form>`;
-  valorContaFim = v=>comDesfazer(`${item.desc} paga: ${fmtMoney(v)}`, ()=>{ marcarContaPaga(paidKey, true, v); if(aoPagar) aoPagar(); persist(); });
+  pagarFim = (v, banco)=>comDesfazer(`${o.nome} pago: ${fmtMoney(v)}${banco ? ' · '+banco : ''}`, ()=>{ o.aoPagar(v, banco); persist(); });
   document.getElementById('modalPergunta').classList.add('active');
-  document.getElementById('perguntaValor').focus();
+  if(o.exato) document.getElementById('perguntaValor').focus();
+}
+function pagarConfirmar(){
+  const inp = document.getElementById('perguntaValor'), v = parseMoney(inp.value);
+  if(!(v > 0)){ showToast('Digite o valor pago'); inp.focus(); return; }
+  const banco = pgBancoDe(document.getElementById('perguntaCorpo'));
+  inp.blur();
+  closeModal('modalPergunta');
+  pagarFim(v, banco);
 }
 function abrirHistoricoVariaveis(){
   const contas = historicoVariaveis(state.currentUser);
@@ -841,17 +741,10 @@ function abrirHistoricoVariaveis(){
     : '<div class="gm-vazio">Nenhuma conta está marcada como Variável.</div>';
   document.getElementById('modalPergunta').classList.add('active');
 }
-let valorContaFim = null;
-function valorContaConfirmar(){
-  const inp = document.getElementById('perguntaValor'), v = parseMoney(inp.value);
-  if(!(v > 0)){ showToast('Digite o valor'); inp.focus(); return; }
-  inp.blur();
-  closeModal('modalPergunta');
-  valorContaFim(v);
-}
 function cpToggleDizimo(u, mKey){
-  setDizimoPago(u, mKey, !dizimoPagoNoMes(u, mKey));
-  cpAtualizarTudo();
+  const chave = 'diz_'+u+'_'+mKey;
+  if(dizimoPagoNoMes(u, mKey)){ desfazerNoBanco(u, chave); setDizimoPago(u, mKey, false); cpAtualizarTudo(); return; }
+  pagarPerguntar({ u, nome:'Dízimo', valor: dizimoValorCheio(u, mKey), aoPagar:(v, banco)=>{ saiuDoBanco(u, chave, v, banco); setDizimoPago(u, mKey, true); } });
 }
 const CP_ICON_OK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 /* linha padrão da tela Contas do mês: logo · título/sub · valor · bolinha de feito */
@@ -900,7 +793,6 @@ function renderContasPagar(){
   const u = userDash();
   const nomeU = u==='davi' ? 'Davi' : 'Cris';
   document.getElementById('contasPagarMesLabel').textContent = monthLabel(mKey)+' · '+nomeU;
-  const podeVoltar = mKey > todayKey();
   let totalPagar = 0, totalPago = 0, nItens = 0, nFeitos = 0;
   const conta = (valor, feito, pagoParcial)=>{ nItens++; if(feito){ nFeitos++; totalPago += valor; } else { totalPago += (pagoParcial||0); totalPagar += Math.max(0, valor-(pagoParcial||0)); } };
 
@@ -952,8 +844,8 @@ function renderContasPagar(){
       tag: it.mesOrigem!==mKey ? `<span class="cp-tag">${monthLabel(it.mesOrigem)}</span>` : '',
       valor: Number(it.valor)||0, valorSub: !isParcial ? '' : [valorPago > 0 ? 'pago '+fmtMoney(valorPago) : '', noCartao > 0 ? fmtMoney(noCartao)+' no cartão' : ''].filter(Boolean).join(' · '),
       feito: isPaid, parcial: isParcial,
-      acao: isPaid ? '' : `<button type="button" class="cp-parte ico-btn" title="Paguei só uma parte" aria-label="Paguei só uma parte" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()" onclick="event.stopPropagation();abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')">${ICO(ICO_D.parte, 18)}</button>`,
-      attrs: `onpointerdown="contaTapStart(event,'${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')" onpointerup="contaTapEnd(event,'${paidKey}')" onpointercancel="contaTapCancel()" onpointerleave="contaTapCancel()"`
+      acao: isPaid ? '' : `<button type="button" class="cp-parte ico-btn" title="Paguei só uma parte" aria-label="Paguei só uma parte" onclick="event.stopPropagation();abrirEditarConta('${paidKey}','${it.user}','${it.cat}','${it.id}','${it.mesOrigem}')">${ICO(ICO_D.parte, 18)}</button>`,
+      attrs: `onclick="togglePaid('${paidKey}')"`
     });
   });
 
@@ -980,7 +872,7 @@ function renderContasPagar(){
   /* --- montagem --- */
   const pct = nItens ? Math.round(nFeitos/nItens*100) : 0;
   let html = `<div class="cp-mes-nav">
-    <button type="button" onclick="cpNavMes(-1)" ${podeVoltar?'':'disabled'} aria-label="Mês anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 6 14 4.6 6.6 12l7.4 7.4 1.4-1.4-6-6z"/></svg></button>
+    <button type="button" onclick="cpNavMes(-1)" aria-label="Mês anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 6 14 4.6 6.6 12l7.4 7.4 1.4-1.4-6-6z"/></svg></button>
     <div class="cp-mes-label">${monthLabelLong(mKey)}${mKey===mesFinanceiroAtual()?' <small>atual</small>':''}</div>
     <button type="button" onclick="cpNavMes(1)" aria-label="Próximo mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 18 10 19.4l7.4-7.4L10 4.6 8.6 6l6 6z"/></svg></button>
   </div>
@@ -989,6 +881,7 @@ function renderContasPagar(){
     <div class="cp-resumo-val">${fmtMoney(totalPagar)}</div>
     <div class="cp-resumo-bar"><div style="width:${pct}%"></div></div>
     <div class="cp-resumo-sub"><span><b>${nFeitos} de ${nItens}</b> pagas · ${fmtMoney(totalPago)}</span>${aReceber>0.004?`<span>a receber <b>${fmtMoney(aReceber)}</b></span>`:''}</div>
+    ${mKey===mesFinanceiroAtual()?`<div class="cp-resumo-sub cp-resumo-saldo"><span>${(state.users[u].bancos||[]).map(b=>`${escBanco(b.nome)} <b>${fmtMoney(Number(b.valor)||0)}</b>`).join(' · ') || `Saldo <b>${fmtMoney(state.users[u].saldoAtual||0)}</b>`}</span><span>depois de tudo sobra <b>${fmtMoney(saldoForMonth(u, mKey))}</b></span></div>`:''}
   </div>`;
   /* filtro Todas / Em aberto / Pagas (v12, escolha C do Davi): esconde pelo CSS (data-filtro) */
   html += `<div class="sec-filtro cp-filtro">${[['todas','Todas'],['aberto','Em aberto'],['pagas','Pagas']].map(([k, t])=>`<button type="button" class="${cpFiltro === k ? 'on' : ''}" onclick="cpFiltrar('${k}')">${t}</button>`).join('')}</div>`;
@@ -1004,8 +897,6 @@ function renderContasPagar(){
 let cpFiltro = 'todas';
 function cpFiltrar(f){ cpFiltro = f; renderContasPagar(); }
 
-let contaTapTimer = null;
-let contaTapClickTimer = null;
 let iosConfirmResolve = null;
 function iosConfirm(msg){
   document.getElementById('iosConfirmMsg').textContent = msg;
@@ -1018,45 +909,19 @@ function iosConfirmResolver(v){
   iosConfirmResolve = null;
 }
 
-let contaTapLongFired = false;
-function contaTapStart(ev, paidKey, user, cat, id, mKey){
-  if(ev.pointerType==='mouse' && ev.button!==0) return;
-  contaTapLongFired = false;
-  contaTapTimer = setTimeout(()=>{
-    contaTapLongFired = true;
-    if(navigator.vibrate) navigator.vibrate(12);
-    abrirEditarConta(paidKey, user, cat, id, mKey);
-  }, 500);
-}
-function contaTapEnd(ev, paidKey){
-  clearTimeout(contaTapTimer);
-  if(contaTapLongFired) return;
-  if(contaTapClickTimer){
-    clearTimeout(contaTapClickTimer);
-    contaTapClickTimer = null;
-    confirmarEArquivarConta(paidKey);
-  }else{
-    contaTapClickTimer = setTimeout(()=>{
-      contaTapClickTimer = null;
-      togglePaid(paidKey);
-    }, 280);
-  }
-}
-function contaTapCancel(){
-  clearTimeout(contaTapTimer);
-}
-function confirmarEArquivarConta(paidKey){
-  const arquivar = ()=>{ if(!state.contasArquivadas) state.contasArquivadas = {}; state.contasArquivadas[paidKey] = true; };
-  if(!state.paid[paidKey] && contaDoPaidKey(paidKey)?.tipo === 'variavel'){ perguntarValorConta(paidKey, arquivar); return; }
-  marcarContaPaga(paidKey);
-  arquivar();
-  persist();
-  if(navigator.vibrate) navigator.vibrate([10,30,10]);
-}
 function togglePaid(paidKey){
-  if(!state.paid[paidKey] && contaDoPaidKey(paidKey)?.tipo === 'variavel'){ perguntarValorConta(paidKey); return; }
-  marcarContaPaga(paidKey, !state.paid[paidKey]);
-  persist();
+  if(state.paid[paidKey]){ contaDevolver(paidKey); marcarContaPaga(paidKey, false); persist(); return; }
+  const [mKey, u] = paidKey.split('_');
+  const g = gastosDoMes(u, mKey).find(x=>x.paidKey === paidKey);
+  const variavel = contaDoPaidKey(paidKey)?.tipo === 'variavel';
+  if(!g){ marcarContaPaga(paidKey); persist(); return; }
+  if(!variavel && g.restante <= 0.004){ marcarContaPaga(paidKey); persist(); return; }   // já gasta toda no cartão: nada sai do banco
+  pagarPerguntar({ u, nome: g.desc, valor: g.restante, exato: variavel, titulo: variavel ? 'Qual foi o valor exato?' : 'Pagar', aoPagar:(v, banco)=>{
+    saiuDoBanco(u, 'pag_'+paidKey, v, banco);
+    const real = lancValor(g.valor + v - g.restante);   // pagou diferente do previsto: vale o pago, só neste mês
+    marcarContaPaga(paidKey);
+    if(variavel || Math.abs(real - g.valor) > 0.004) (state.valoresReais = state.valoresReais || {})[paidKey] = real;
+  } });
 }
 
 function getGastoItemRef(user, cat, id){
@@ -1079,6 +944,7 @@ function abrirEditarConta(paidKey, user, cat, id, mKey){
     ? `<img src="${item.logoUrl}" class="conta-logo-grande">`
     : `<div class="conta-logo-grande conta-logo-placeholder">${item.desc.charAt(0).toUpperCase()}</div>`;
   document.getElementById('editarContaPagaCheck').checked = isPaid;
+  document.getElementById('editarContaBancos').innerHTML = pgBancosHtml(user);
   document.getElementById('modalEditarConta').classList.add('active');
 }
 function closeEditarConta(){
@@ -1122,9 +988,18 @@ function salvarPagamentoConta(){
   const pagaIntegral = document.getElementById('editarContaPagaCheck').checked;
 
   if(!state.pagamentosParciais) state.pagamentosParciais = {};
+  const banco = pgBancoDe(document.getElementById('modalEditarConta'));
+  const parteAntes = state.pagamentosParciais[paidKey] || 0, comRegistro = !!(state.ganhoNoBanco || {})['par_'+paidKey];
+  const jaPaga = !!state.paid[paidKey] && !(state.ganhoNoBanco || {})['pag_'+paidKey];   // paga antes desta versão: já saiu do saldo
+  const faltaAntes = restanteConta(paidKey, valorTotal);
+  contaDevolver(paidKey);
+  /* pagamento parcial anterior a esta versão já saiu do saldo: tira só a diferença */
+  const aTirar = v=>comRegistro ? v : Math.max(0, v - parteAntes);
   if(pagaIntegral || valorPago >= valorTotal){
+    if(!jaPaga){ const v = valorPago > 0 ? valorPago : parteAntes + faltaAntes; saiuDoBanco(user, 'pag_'+paidKey, aTirar(v), banco); }
     marcarContaPaga(paidKey, true, valorPago);
   } else if(valorPago > 0){
+    saiuDoBanco(user, 'par_'+paidKey, aTirar(valorPago), banco);
     marcarContaPaga(paidKey, false);
     state.pagamentosParciais[paidKey] = valorPago;
   } else {
@@ -1416,20 +1291,13 @@ function abrirFoco(tipo, mKey){
   document.body.style.overflow = 'hidden';
   renderFoco();
 }
-/* Fixos: tocar na conta marca como paga; tocar de novo desmarca */
-function focoPagar(paidKey){
-  togglePaid(paidKey);
-  if(navigator.vibrate) navigator.vibrate(state.paid[paidKey] ? [10,30,10] : 10);
-}
-aoMudarEstado(()=>{ if(document.getElementById('pageFoco')?.classList.contains('active')) renderFoco(); });
 function focoMudarMes(d){ focoDesloc += d; renderFoco(); }
 function fecharFoco(){ document.getElementById('pageFoco').classList.remove('active'); document.body.style.overflow = ''; }
 /* v15.7 (layout L2 escolhido): uma coluna por grupo; a placa tem a barra de quanto cada grupo pesa (L4);
    no Fixos, em cada coluna as em aberto vêm primeiro e as pagas ficam separadas embaixo (L5) */
 const FOCO_CORES = ['#9fc1e6', '#8fa3b8', '#9fb08a', '#b98a7a', '#9a8fb0', '#c9d3e2'];
-function focoLinha(ico, nome, sub, valor, extra, pago, paidKey){
-  const toque = paidKey ? ` role="button" tabindex="0" title="${pago ? 'Desmarcar pago' : 'Marcar como pago'}" onclick="focoPagar('${paidKey}')"` : '';
-  return `<div class="foco-linha${pago ? ' foco-pago' : ''}${paidKey ? ' foco-toca' : ''}"${toque}>${ico}<span class="foco-meio"><span class="foco-l1"><b>${escBanco(nome)}</b><span class="foco-val">${fmtMoney(valor)}</span></span><span class="foco-l2"><small>${sub}</small>${extra ? `<small class="foco-extra">${extra}</small>` : ''}</span></span></div>`;
+function focoLinha(ico, nome, sub, valor, extra){
+  return `<div class="foco-linha">${ico}<span class="foco-meio"><span class="foco-l1"><b>${escBanco(nome)}</b><span class="foco-val">${fmtMoney(valor)}</span></span><span class="foco-l2"><small>${sub}</small>${extra ? `<small class="foco-extra">${extra}</small>` : ''}</span></span></div>`;
 }
 const focoIco = (tipo, cat)=>typeof atzIcoItem === 'function' ? atzIcoItem({ tipo, categoria: cat }, 17) : '';
 function focoData(iso){ return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; }
@@ -1447,27 +1315,11 @@ function focoAgrupar(itens, max){
 }
 function renderFoco(){
   const u = state.currentUser, mKey = addMonths(focoMes, focoDesloc), mesCartao = c=>addMonths(faturaAbertaMes(c), focoDesloc);
-  const titulo = { fixos:'Fixos', pix:'Pix no mês', vista:'Crédito à vista', parcelado:'Parcelado' }[focoTipo] || '';
+  const titulo = { pix:'Pix no mês', vista:'Crédito à vista', parcelado:'Parcelado' }[focoTipo] || '';
   document.getElementById('focoTitulo').textContent = titulo;
-  document.getElementById('focoHistorico').style.visibility = focoTipo === 'fixos' ? '' : 'hidden';
   document.getElementById('focoMesLabel').textContent = (focoTipo === 'vista' || focoTipo === 'parcelado') && !focoDesloc ? 'Fatura aberta' : monthLabelLong(focoTipo === 'vista' || focoTipo === 'parcelado' ? addMonths(mesFinanceiroAtual(), focoDesloc) : mKey);
   let rotulo = '', total = 0, stats = [], grupos = [];
-  if(focoTipo === 'fixos'){
-    const contas = gastosDoMes(u, mKey);
-    total = contas.reduce((s, g)=>s + g.valor, 0);
-    const falta = contas.reduce((s, g)=>s + g.restante, 0), pagas = contas.filter(g=>g.pago).length;
-    rotulo = 'Contas de ' + monthLabelLong(mKey).toLowerCase();
-    stats = [['Pago', fmtMoney(total - falta)], ['Falta', fmtMoney(falta), 'foco-latao'], ['', `${pagas} de ${contas.length} paga${contas.length === 1 ? '' : 's'}`]];
-    grupos = GASTO_GRUPOS.map(([cat, nome])=>{
-      const itens = contas.filter(g=>g.cat === cat).sort((a, b)=>(a.pago - b.pago) || ((a.dia || 0) - (b.dia || 0)));
-      return { nome, total: itens.reduce((s, g)=>s + g.valor, 0), itens: itens.map(g=>{
-        const ico = g.logoUrl ? `<img src="${g.logoUrl}" class="conta-logo" alt="">` : gmCal(g.dia || 1);
-        const parcial = !g.pago && g.restante < g.valor - 0.004;
-        const sub = g.pago ? '<em class="ext-como foco-ok">PAGA</em>' : parcial ? `<span class="foco-falta">falta ${fmtMoney(g.restante)}</span>` : (g.dia ? 'vence dia ' + g.dia : 'em aberto');
-        return { pago: g.pago, html: focoLinha(ico, g.desc, sub, g.valor, '', g.pago, g.paidKey) };
-      }) };
-    }).filter(g=>g.itens.length);
-  } else if(focoTipo === 'pix'){
+  if(focoTipo === 'pix'){
     const itens = (state.lancamentos || []).filter(la=>la.mKey === mKey && (la.usuario || 'davi') === u).sort((a, b)=>String(b.data || '').localeCompare(String(a.data || '')));
     total = itens.reduce((s, la)=>s + (Number(la.valor) || 0), 0);
     rotulo = 'Pix e débito em ' + monthLabelLong(mKey).toLowerCase();

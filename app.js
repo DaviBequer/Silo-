@@ -824,7 +824,7 @@ function efeitoAoTrocarAba(aba){
   efeitoContarNumeros(raiz);
 }
 /* "feito": qualquer toque nos controles de marcar (conta paga, batida/dia do ponto, ordem, roteiro, salário, dízimo, fatura...) */
-const EFEITO_FEITO = /togglePaid|contaTapEnd|toggleDiaConcluido|toggleCompraPago|toggleExtraRecebido|cpToggleSalario|cpToggleExtra|cpToggleDizimo|toggleFaturaMes/;
+const EFEITO_FEITO = /toggleDiaConcluido|toggleCompraPago|toggleFaturaMes/;
 document.addEventListener('pointerup', ev=>{
   if(!efeitosLigados) return;
   const alvo = ev.target.closest('[onclick], [onpointerup]');

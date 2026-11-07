@@ -3165,3 +3165,8 @@ body{font-weight:400;letter-spacing:.005em}
 .pg-banco{width:100%;background:none;border:0;border-bottom:1px solid var(--line);font:inherit;text-align:left;cursor:pointer;min-height:52px;color:inherit}
 .pg-banco .gm-nome{flex:1;min-width:0}
 .pg-ja{display:block;margin:16px auto 4px;min-height:44px;font-size:13px}
+
+/* v18.9 pagar: escolha do banco e saldo em Contas do mês */
+.pg-bancos{display:flex;flex-wrap:wrap;gap:8px}
+.pg-bancos .dif-chip{flex:0 1 auto;min-height:44px}
+.cp-resumo-saldo{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}

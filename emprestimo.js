@@ -302,6 +302,13 @@ async function excluirEmprestimo(id){
   renderEmprestimos(); empAtualizarOutrasTelas();
 }
 
+/* parcela paga tira do banco; o banco fica guardado para devolver ao desfazer */
+function empTirarDoBanco(parcela, banco){
+  if(banco === null) return;
+  moverNoBanco('davi', banco, -parcela.valorPago);
+  pgGuardarUltimo('davi', banco);
+  parcela.banco = banco;
+}
 /* ---------- pagar a próxima parcela ---------- */
 let empPagarId = null, empPagarK = null;
 function abrirPagarParcelaEmp(id, kEspecifica){
@@ -313,6 +320,7 @@ function abrirPagarParcelaEmp(id, kEspecifica){
   document.getElementById('empPagarInfo').textContent = `Parcela ${k} de ${emp.numParcelas} · vence ${venc.toLocaleDateString('pt-BR')}`;
   document.getElementById('empPagarValor').value = empFmtValorInput(emp.valorParcela);
   document.getElementById('empPagarData').value = empHojeISO();
+  document.getElementById('empPagarBancos').innerHTML = pgBancosHtml('davi');
   document.getElementById('modalEmpPagar').classList.add('active');
 }
 function confirmarPagarParcelaEmp(){
@@ -323,6 +331,7 @@ function confirmarPagarParcelaEmp(){
   if(!(valor>0)){ showToast('Informe o valor pago'); return; }
   if(!emp.pagas) emp.pagas = {};
   emp.pagas[k] = { tipo:'paga', valorPago: valor, data: document.getElementById('empPagarData').value || empHojeISO() };
+  empTirarDoBanco(emp.pagas[k], pgBancoDe(document.getElementById('empPagarBancos')));
   persist();
   closeModal('modalEmpPagar');
   renderEmprestimos(); empAtualizarOutrasTelas();
@@ -343,6 +352,7 @@ function abrirAmortizarEmp(id, valorSugerido){
   document.getElementById('empAmortData').value = empHojeISO();
   document.getElementById('empAmortAlvo').value = valorSugerido ? empFmtValorInput(valorSugerido) : '';
   selecionarModoAmortEmp(valorSugerido ? 'valor' : 'parcelas');
+  document.getElementById('empAmortBancos').innerHTML = pgBancosHtml('davi');
   document.getElementById('modalEmpAmortizar').classList.add('active');
 }
 function selecionarModoAmortEmp(modo){
@@ -428,12 +438,14 @@ function confirmarAmortizacaoEmp(){
   const pago = parseMoney(document.getElementById('empAmortValor').value);
   if(!(pago>0)){ showToast('Informe quanto você pagou'); return; }
   if(!emp.pagas) emp.pagas = {};
+  const bancoAmort = pgBancoDe(document.getElementById('empAmortBancos'));
   /* divide o valor pago entre as parcelas na proporção do valor presente de cada uma */
   let distribuido = 0;
   est.ks.forEach((k,idx)=>{
     let v = idx===est.ks.length-1 ? pago - distribuido : Math.round(pago * (est.vps[idx]/est.custo) * 100)/100;
     distribuido += v;
     emp.pagas[k] = { tipo:'antecipada', valorPago: v, data };
+    empTirarDoBanco(emp.pagas[k], bancoAmort);
   });
   persist();
   closeModal('modalEmpAmortizar');
@@ -448,6 +460,7 @@ async function desfazerParcelaEmp(id, k){
   if(!p) return;
   const ok = await iosConfirm(`Desfazer o pagamento da parcela ${k} (${p.tipo==='antecipada'?'antecipada':'paga'} em ${empDataBR(p.data)} · ${fmtMoney(p.valorPago)})?`);
   if(!ok) return;
+  if(p.banco !== undefined) moverNoBanco('davi', p.banco, p.valorPago);
   delete emp.pagas[k];
   persist();
   renderEmprestimos(); empAtualizarOutrasTelas();

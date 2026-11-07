@@ -65,7 +65,7 @@ function renderRendaTable(){
     const val = gastosRestantesNoMes(u, mKey);
     const todos = gastosDoMes(u, mKey);
     const tudoPago = todos.length && val < 0.005;
-    return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirGastosDoMes('${mKey}')">${tudoPago?'<span class="cell-money-empty feito-tag">✓ pago</span>':(val>0.004?fmtMoney(val):'<span class="cell-money-empty">—</span>')}</td>`;
+    return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirContasPagar('${mKey}')">${tudoPago?'<span class="cell-money-empty feito-tag">✓ pago</span>':(val>0.004?fmtMoney(val):'<span class="cell-money-empty">—</span>')}</td>`;
   }).join('')}<td></td></tr>`;
 
   /* Cartão e Empréstimo: interruptor no rótulo = todos os meses; toque na célula = só aquele mês */
@@ -94,31 +94,6 @@ function renderRendaTable(){
 
   document.getElementById('rendaTableThead').innerHTML = thead;
   document.getElementById('rendaTableBody').innerHTML = rendaRow + extraRow + dizimoRow + gastosRow + cartaoRow + empRow + sobraRow + acumRow;
-}
-
-/* janela com cada gasto do mês, agrupado como nas seções do Dashboard */
-const GASTO_GRUPOS = [['moradia','Moradia'],['assinatura','Assinaturas'],['fixo','Fixos'],['futuro','Contas Futuras']];
-function abrirGastosDoMes(mKey){
-  const u = state.currentUser;
-  const lista = gastosDoMes(u, mKey);
-  const total = lista.reduce((s,g)=>s+g.valor, 0), falta = lista.reduce((s,g)=>s+g.restante, 0);
-  document.getElementById('gastosMesTitulo').textContent = 'Gastos · ' + monthLabelLong(mKey);
-  const linha = g=>{
-    const logo = g.logoUrl ? `<img src="${g.logoUrl}" class="conta-logo" alt="">` : g.dia ? gmCal(g.dia) : `<span class="gm-inicial">${escBanco((g.desc||'?').charAt(0).toUpperCase())}</span>`;
-    const parcial = !g.pago && g.restante < g.valor - 0.004;
-    const sub = g.pago ? 'pago' : (parcial ? `falta ${fmtMoney(g.restante)}` : (g.dia ? 'dia '+g.dia : ''));
-    return `<div class="gm-linha${g.pago?' pago':''}">${logo}<div class="gm-info"><div class="gm-nome">${escBanco(g.desc)}</div>${sub?`<div class="gm-sub">${sub}</div>`:''}</div><div class="gm-valor">${fmtMoney(g.valor)}</div></div>`;
-  };
-  const html = GASTO_GRUPOS.map(([cat, nome])=>{
-    const itens = lista.filter(g=>g.cat===cat).sort((a,b)=>(a.pago-b.pago) || (b.valor-a.valor));
-    if(!itens.length) return '';
-    const sub = itens.reduce((s,g)=>s+g.valor, 0);
-    return `<div class="gm-grupo"><div class="gm-grupo-topo"><span>${nome}</span><span>${fmtMoney(sub)}</span></div>${itens.map(linha).join('')}</div>`;
-  }).join('');
-  document.getElementById('gastosMesLista').innerHTML = html || '<div class="gm-vazio">Nenhum gasto neste mês.</div>';
-  document.getElementById('gastosMesTotal').innerHTML = `<span>Total do mês <b>${fmtMoney(total)}</b></span><span class="${falta>0.004?'neg':'pos'}">${falta>0.004?'Falta pagar '+fmtMoney(falta):'✓ Tudo pago'}</span>`;
-  document.getElementById('modalGastosMes').classList.add('active');
-  document.body.style.overflow = 'hidden';
 }
 
 function setIncome(user, mKey, valStr){
@@ -461,8 +436,6 @@ function renderResumoSecaoGasto(cat){
        <div class="sec-resumo-bar"><div style="width:${pct}%"></div></div>
        <div class="sec-resumo-linha sec-resumo-sub"><span class="pago">Pago ${fmtMoney(pago)}</span><span class="${falta<0.005?'pago':''}">${falta<0.005?'✓ tudo pago':'Falta '+fmtMoney(falta)}</span></div>`;
 }
-const gastoFiltro = {};   // filtro de cada seção (só na tela): 'todas' | 'aberto' | 'pagas'
-function gastoFiltrar(cat, f){ gastoFiltro[cat] = f; renderGastoGrid(cat); }
 /* ---------- detalhe da conta (v14.8): tocar no nome mostra o limite, quanto já foi, quanto falta (ou quanto passou)
    e cada compra que caiu nela (cartão à vista e Pix/débito com a categoria igual ao nome da conta), pela data da compra ---------- */
 let contaDetalheAberta = null;
@@ -531,17 +504,10 @@ function renderGastoGrid(cat){
     secao.classList.toggle('collapsed', colapsada);
   }
   const grid = document.getElementById('grid-'+cat);
-  /* filtro Todas / Em aberto / Pagas (v12, escolha C do Davi), por seção */
-  const mFil = mesFinanceiroAtual(), filtro = gastoFiltro[cat] || 'todas';
-  const pagaNoMes = item=>!!state.paid[mFil+'_'+u+'_'+cat+'_'+item.id];
-  const filtrados = filtro === 'pagas' ? items.filter(pagaNoMes) : filtro === 'aberto' ? items.filter(i=>!pagaNoMes(i)) : items;
-  const chips = items.length ? `<div class="sec-filtro">${[['todas','Todas'],['aberto','Em aberto'],['pagas','Pagas']].map(([k, t])=>`<button type="button" class="${filtro === k ? 'on' : ''}" onclick="gastoFiltrar('${cat}','${k}')">${t}</button>`).join('')}</div>` : '';
   if(!items || items.length===0){
     grid.innerHTML = `<div class="empty-state"><div class="title">Nada por aqui</div><div class="desc">Toque em + para incluir um gasto</div></div>`;
-  }else if(!filtrados.length){
-    grid.innerHTML = chips + `<div class="gm-vazio">${filtro === 'pagas' ? 'Nenhuma paga ainda' : 'Tudo pago'} em ${monthLabel(mFil)}.</div>`;
   }else{
-  grid.innerHTML = chips + filtrados.map(item=>{
+  grid.innerHTML = items.map(item=>{
     const metaTxt = cat==='futuro' ? futuroDescricaoMeta(item) : (item.logoUrl ? 'dia '+(item.dia||1) : 'todo mês')+(item.mesInicio?' · a partir de '+monthLabel(item.mesInicio):'');
     const valorTxt = cat==='futuro'
       ? (item.recorrente || (item.parcelas||1)<=1 || item.replicar!==false
@@ -555,21 +521,16 @@ function renderGastoGrid(cat){
     const mAtual = mesFinanceiroAtual();
     const pk = mAtual+'_'+u+'_'+cat+'_'+item.id;
     const ativoNoMes = cat==='futuro' ? futuroValorNoMes(item, mAtual)>0 : !(item.mesInicio && mAtual < item.mesInicio);
-    const pago = !!state.paid[pk];
-    const parc = (state.pagamentosParciais||{})[pk] || 0;
-    const statusTxt = !ativoNoMes ? '' : (pago ? ' · <b class="lr-paga">✓ paga</b>' : (parc>0 ? ' · <b style="color:var(--warning)">pago '+fmtMoney(parc)+'</b>' : ' · aberta'));
-    const btnPagar = !ativoNoMes ? '' : `<button class="btn-icon-sm" title="Registrar pagamento" onclick="abrirEditarConta('${pk}','${u}','${cat}','${item.id}','${mAtual}')">$</button>`;
     const aberta = contaDetalheAberta === pk;
     return `<div class="list-row${aberta ? ' aberta' : ''}">
       ${logo}
       <div class="lr-info" onclick="contaDetalheAlternar('${pk}')" title="Ver o que foi gasto nesta conta">
         <div class="lr-desc">${item.desc}</div>
         ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
-        <div class="lr-meta">${metaTxt}${statusTxt}</div>
+        <div class="lr-meta">${metaTxt}</div>
       </div>
       <div class="lr-right">
         <div class="lr-actions">
-          ${btnPagar}
           <button class="btn-icon-sm" onclick="editGasto('${cat}','${item.id}')">${ICON_EDIT}</button>
           <button class="btn-icon-sm" onclick="deleteGasto('${cat}','${item.id}')">${ICON_TRASH}</button>
         </div>
@@ -799,6 +760,7 @@ function renderPagarFatura(){
   document.getElementById('pagarFaturaBtnDesfazer').style.display = (f.pago>0) ? '' : 'none';
   document.getElementById('pagarFaturaValor').value = f.resta.toFixed(2).replace('.',',');
   document.getElementById('pagarFaturaQuitar').checked = true;
+  document.getElementById('pagarFaturaBancos').innerHTML = quitada ? '' : pgBancosHtml('davi');
   atualizarNotaPagarFatura();
 }
 function atualizarNotaPagarFatura(){
@@ -822,7 +784,10 @@ function confirmarPagarFatura(){
   const reg = state.faturasCartao[k] || { pago:0, pagamentos:[] };
   if(quitar) reg.quitada = true;
   reg.pago = Math.round(((Number(reg.pago)||0) + v)*100)/100;
-  reg.pagamentos = (reg.pagamentos||[]).concat([{ valor:v, em:Date.now() }]);
+  const banco = pgBancoDe(document.getElementById('pagarFaturaBancos'));
+  const pgto = { valor:v, em:Date.now() };
+  if(banco !== null){ moverNoBanco('davi', banco, -v); pgGuardarUltimo('davi', banco); pgto.banco = banco; }
+  reg.pagamentos = (reg.pagamentos||[]).concat([pgto]);
   state.faturasCartao[k] = reg;
   persist();
   closeModal('modalPagarFatura');
@@ -835,6 +800,7 @@ async function desfazerPagamentoFatura(){
   const ok = await iosConfirm('Apagar os pagamentos registrados dessa fatura?');
   if(!ok) return;
   const { cartaoId, mKey } = pagarFaturaAlvo;
+  ((state.faturasCartao||{})[cartaoId+'_'+mKey]?.pagamentos || []).forEach(p=>{ if(p.banco !== undefined) moverNoBanco('davi', p.banco, p.valor); });
   if(state.faturasCartao) delete state.faturasCartao[cartaoId+'_'+mKey];
   persist();
   closeModal('modalPagarFatura');
@@ -866,7 +832,6 @@ function scrollFaturaMensal(cartaoId, dir){
 function renderCartaoTrackerList(){
   const list = document.getElementById('cartaoTrackerList');
   if(!list) return;
-  if(typeof renderAcumCartao==='function') renderAcumCartao();
   const cartoes = state.cartoesTracker || [];
   if(cartoes.length === 0){
     list.innerHTML = `<div class="empty-state"><div class="title">Nenhum cartão cadastrado</div><div class="desc">Toque em "+ Cartão" pra começar</div></div>`;
