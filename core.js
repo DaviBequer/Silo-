@@ -975,7 +975,29 @@ function incomeForMonth(user, mKey){
   const saldo = isAtual ? (state.users[user].saldoAtual || 0) : 0;
   const base = salarioRecebidoNoMes(user, mKey) ? 0 : rendaBaseForMonth(user, mKey);
   const extra = extraTotalForMonth(user, mKey);
-  return base + extra + saldo;
+  const p = pendentesDoMes(user, mKey);
+  return base + extra + saldo + p.renda + p.extras;
+}
+/* Meses concluídos logo antes deste (mais novo primeiro). Só os concluídos depois do Nº 192: o passado anterior não vira dívida de repente. */
+function mesesLevados(mKey){
+  const out = [], feitos = state.mesConcluido || {};
+  for(let m = addMonths(mKey, -1); feitos[m] && out.length < 24; m = addMonths(m, -1)) out.push(m);
+  return out;
+}
+/* O que ficou em aberto ao concluir o mês continua valendo no mês atual: salário e extra a receber, dízimo, fatura, parcela e contas mais antigas */
+function pendentesDoMes(user, mKey){
+  const p = { renda:0, extras:0, dizimo:0, cartao:0, emprestimo:0, contas:0 };
+  if(mKey !== mesFinanceiroAtual()) return p;
+  const arq = state.contasArquivadas || {}, ant = addMonths(mKey, -1);
+  mesesLevados(mKey).forEach(m=>{
+    if(!salarioRecebidoNoMes(user, m)) p.renda += rendaBaseForMonth(user, m);
+    p.extras += extraTotalForMonth(user, m);
+    p.dizimo += dizimoForMonth(user, m);
+    const ex = extrasGeralNoMes(user, m);
+    p.cartao += ex.cartao; p.emprestimo += ex.emprestimo;
+    if(m !== ant) p.contas += gastosDoMes(user, m).reduce((s, g)=>s + (arq[g.paidKey] || g.tipo === 'meta' ? 0 : g.restante), 0);   // o mês anterior já entra em atrasadasDoMes
+  });
+  return p;
 }
 /* Categorias fixas de um chip-picker + categorias que o usuário criou (guardadas em state[customKey]) */
 function getCategoriasComCustom(base, customKey){
@@ -1000,7 +1022,6 @@ function abrirRendaExtraModal(user, mKey){
   rendaExtraUser = user;
   rendaExtraMes = mKey;
   document.getElementById('rendaExtraModalUsuario').textContent = user==='davi'?'Davi':'Cris';
-  document.getElementById('extraAjudaDaviField').style.display = user==='cris' ? 'block' : 'none';
   resetarFormExtraItem();
   createMonthPicker('extraMesInicioPicker','extraMesInicio', mKey);
   createMonthPicker('extraMesFimPicker','extraMesFim', mKey);
@@ -1011,7 +1032,6 @@ function resetarFormExtraItem(){
   document.getElementById('extraItemId').value = '';
   document.getElementById('extraItemDesc').value = '';
   document.getElementById('extraItemValor').value = '';
-  document.getElementById('extraItemAjudaDavi').checked = false;
   document.getElementById('extraFormTitulo').textContent = 'Novo Extra';
 }
 function renderRendaExtraLista(){
@@ -1029,7 +1049,7 @@ function renderRendaExtraLista(){
     const btnRec = noMes ? `<button class="btn-recebido ${rec?'on':''}" onclick="toggleExtraRecebido('${e.id}')">${rec?ICON_CHECK+' Recebido em '+monthLabel(rendaExtraMes):'Marcar recebido em '+monthLabel(rendaExtraMes)}</button>` : '';
     return `<div class="renda-extra-item ${rec?'recebido':''}">
       <div class="rei-info">
-        <div class="rei-desc">${e.desc}</div>
+        <div class="rei-desc">${escBanco(e.desc)}</div>
         <div class="rei-periodo">${periodo}</div>
         ${btnRec}
       </div>
@@ -1048,7 +1068,6 @@ function editarExtraItem(id){
   document.getElementById('extraItemDesc').value = item.desc;
   document.getElementById('extraItemValor').value = Number(item.valor).toFixed(2).replace('.',',');
   document.getElementById('extraItemDia').value = item.dia || '';
-  document.getElementById('extraItemAjudaDavi').checked = !!item.ajudaDavi;
   selectPickerMonth('extraMesInicioPicker', item.mesInicio);
   selectPickerMonth('extraMesFimPicker', item.mesFim||item.mesInicio);
   document.getElementById('extraFormTitulo').textContent = 'Editar Extra';
@@ -1058,7 +1077,6 @@ function salvarExtraItem(){
   const desc = document.getElementById('extraItemDesc').value.trim();
   const valor = parseMoney(document.getElementById('extraItemValor').value);
   const dia = parseInt(document.getElementById('extraItemDia').value) || null;
-  const ajudaDavi = rendaExtraUser==='cris' && document.getElementById('extraItemAjudaDavi').checked;
   const mesInicio = document.getElementById('extraMesInicio').value;
   const mesFim = document.getElementById('extraMesFim').value;
   if(!desc){ showToast('Digite uma descrição'); return; }
@@ -1068,9 +1086,9 @@ function salvarExtraItem(){
   if(!state.users[rendaExtraUser].extras) state.users[rendaExtraUser].extras = [];
   if(id){
     const item = state.users[rendaExtraUser].extras.find(e=>e.id===id);
-    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; item.dia=dia; item.ajudaDavi=ajudaDavi; }
+    if(item){ item.desc=desc; item.valor=valor; item.mesInicio=mesInicio; item.mesFim=mesFim; item.dia=dia; }
   } else {
-    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim, dia, ajudaDavi });
+    state.users[rendaExtraUser].extras.push({ id:'ex'+Date.now(), desc, valor, mesInicio, mesFim, dia });
   }
   persist();
   resetarFormExtraItem();
@@ -1132,7 +1150,11 @@ function contaUsadaNoCartao(paidKey){
   const nome = semAcentoCore(item.desc);
   let usado = 0;
   if(user === 'davi') (state.cartoesTracker||[]).forEach(c=>(c.credoVista||[]).forEach(cv=>{
-    if((cv.mesConta || cv.mKey) === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) usado += Number(cv.valor)||0;
+    if(cv.mKey === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) usado += Number(cv.valor)||0;
+  }));
+  /* a mesma assinatura cadastrada dentro do cartão já está na fatura: não conta duas vezes */
+  if(user === 'davi') (state.cartoesTracker||[]).forEach(c=>(c.assinaturas||[]).forEach(a=>{
+    if(semAcentoCore(a.nome) === nome) usado += assinaturaValorNoMes(a, mKey);
   }));
   /* compras faladas no Pix/débito (state.lancamentos) da mesma categoria também contam */
   (state.lancamentos||[]).forEach(la=>{
@@ -1173,18 +1195,42 @@ function futuroParcelaNoMes(item, mKey){
   for(let i = 0; i < n; i++) if(addMonths(item.mesInicio, i) === mKey) return { atual: i + 1, total: n };
   return null;
 }
-function gastosRestantesNoMes(user, mKey){ return gastosDoMes(user, mKey).reduce((s,g)=>s+g.restante, 0); }
+/* Conta paga no cartão: o dinheiro só sai no mês da fatura em que ela cai, então a previsão já nasce nesse mês (marcar não muda a previsão) */
+function contaFaturaMes(cartao, item, mKey){
+  const data = mKey + '-' + String(Math.min(parseInt(item && item.dia)||1, daysInMonth(mKey))).padStart(2, '0');
+  const aberta = faturaAbertaMes(cartao), fat = faturaDaData(cartao, data) || aberta;
+  return fat > aberta ? fat : aberta;
+}
+/* em que mês o dinheiro de uma conta sai. Sem cartão = o mês dela. null = cartão desligado no Geral desse mês (fica de fora da conta) */
+function contaMesDeCaixa(g){
+  const mKey = g.paidKey.slice(0, 7), item = contaDoPaidKey(g.paidKey);
+  if(g.tipo === 'meta') return mKey;
+  const f = contaForma(item, g.user);
+  if(!f || !f.cartao) return mKey;
+  const m = contaFaturaMes(f.cartao, item, mKey);
+  return incluiNoGeral('cartao', m) ? m : null;
+}
+function gastosRestantesNoMes(user, mKey){
+  const doMes = gastosDoMes(user, mKey).reduce((s, g)=>s + (contaMesDeCaixa(g) === mKey ? g.restante : 0), 0);
+  const veioAntes = gastosDoMes(user, addMonths(mKey, -1)).reduce((s, g)=>s + (g.paidKey.slice(0, 7) !== contaMesDeCaixa(g) && contaMesDeCaixa(g) === mKey ? g.restante : 0), 0);
+  return doMes + veioAntes;
+}
 /* contas do mês anterior ainda em aberto: continuam devidas, então entram na conta do mês atual */
 function atrasadasDoMes(user, mKey){
   if(mKey !== mesFinanceiroAtual()) return 0;
   const arq = state.contasArquivadas || {};
-  return gastosDoMes(user, addMonths(mKey, -1)).reduce((s, g)=>s + (arq[g.paidKey] || g.tipo === 'meta' ? 0 : g.restante), 0);   // meta não usada não é dívida
+  return gastosDoMes(user, addMonths(mKey, -1)).reduce((s, g)=>{
+    if(arq[g.paidKey] || g.tipo === 'meta') return s;   // meta não usada não é dívida
+    const m = contaMesDeCaixa(g);
+    return s + (m !== null && m < mKey ? g.restante : 0);   // a que cai na fatura deste mês já entra em gastosRestantesNoMes
+  }, 0);
 }
 function expensesForMonth(user, mKey){
   let total = gastosRestantesNoMes(user, mKey) + atrasadasDoMes(user, mKey);   // o que falta pagar das contas do mês
   total += dizimoForMonth(user, mKey);
   total += extrasGeralNoMes(user, mKey).total;
-  return total;
+  const p = pendentesDoMes(user, mKey);
+  return total + p.dizimo + p.cartao + p.emprestimo + p.contas;
 }
 /* ===== Cartão e Empréstimo dentro do Geral (sobra real) =====
    Interruptor geral por tipo + exceções por mês. Só no Dashboard do Davi (cartões e empréstimos são dele). */
@@ -1269,6 +1315,9 @@ function lancarVista(cartao, o){
   const cv = { id: lancId('cv'), descricao: String(o.descricao||'').trim() || 'Crédito à vista', valor: lancValor(o.valor), categoria: o.categoria || 'Outros',
     mKey: o.mKey || (o.data && faturaDaData(cartao, o.data)) || faturaAbertaMes(cartao), data, criadoEm: Date.now() };
   if(o.ajuste) cv.ajuste = true;
+  /* compra de antes do 1º mês controlado: entra sozinha, sem trazer as parcelas daquele mês para a fatura */
+  const desde = cartaoControleDesde(cartao);
+  if(desde && cv.mKey < desde){ cartao.controleDesde = desde; cv.avulsa = true; }
   cartao.credoVista.push(cv);
   return cv;
 }
@@ -1306,9 +1355,7 @@ function contaNoCartao(paidKey, cartao, valor){
   marcarContaPaga(paidKey, true, valor);
   /* assinatura cadastrada no próprio cartão já entra na fatura sozinha: não lança de novo */
   if((cartao.assinaturas||[]).some(a=>semAcentoCore(a.nome) === semAcentoCore(desc) && assinaturaValorNoMes(a, mKey))) return;
-  const data = mKey + '-' + String(Math.min(parseInt(item && item.dia)||1, daysInMonth(mKey))).padStart(2, '0');
-  const aberta = faturaAbertaMes(cartao), fat = faturaDaData(cartao, data) || aberta;
-  const cv = lancarVista(cartao, { descricao: desc, valor, categoria: desc, mKey: fat > aberta ? fat : aberta });
+  const cv = lancarVista(cartao, { descricao: desc, valor, categoria: desc, mKey: contaFaturaMes(cartao, item, mKey) });
   contaLigarAoCartao(paidKey, cartao, cv);
 }
 function contaLigarAoCartao(paidKey, cartao, cv){
@@ -1322,12 +1369,47 @@ function contaTirarDoCartao(paidKey){
   if(c) c.credoVista = (c.credoVista||[]).filter(cv=>cv.id !== l.cvId);
   delete state.contaNoCartao[paidKey];
 }
-/* Meta de gasto (Mercado, Gasolina): cada compra entra na categoria com o nome da conta e desconta do máximo daquele mês (contaUsadaNoCartao) */
+/* a compra sumiu do cartão ou do Pix: a conta ligada a ela volta a ficar em aberto */
+function compraApagadaSoltaConta(o){
+  if(!o || !o.conta) return;
+  const u = o.conta.split('_')[1];
+  if(state.contaNoCartao) delete state.contaNoCartao[o.conta];
+  desfazerNoBanco(u, 'pag_'+o.conta);
+  marcarContaPaga(o.conta, false);
+}
+/* apagar Pix que tirou do banco devolve o dinheiro; o que veio de planilha nunca mexeu no saldo */
+function pixApagadoDevolve(la){
+  if(la && la.saiu) moverNoBanco(la.usuario || 'davi', la.banco, Number(la.valor) || 0);
+}
+/* Meta de gasto (Mercado, Gasolina): cada compra entra na categoria com o nome da conta. No Pix desconta deste mês;
+   no cartão desconta do mês da fatura, que é quando o dinheiro sai (a previsão de cada mês não muda) */
 function metaLancar(paidKey, valor, banco, cartao){
   const [mKey, u] = paidKey.split('_'), desc = (contaDoPaidKey(paidKey) || {}).desc || 'Compra';
-  if(cartao){ lancarVista(cartao, { descricao: desc, valor, categoria: desc }).mesConta = mKey; return; }
-  lancarPix({ mKey, descricao: desc, valor, categoria: desc, banco: banco || '', usuario: u });
-  if(banco !== null) moverNoBanco(u, banco, -valor);
+  if(cartao){ lancarVista(cartao, { descricao: desc, valor, categoria: desc }); return; }
+  const la = lancarPix({ mKey, descricao: desc, valor, categoria: desc, banco: banco || '', usuario: u });
+  if(banco !== null){ moverNoBanco(u, banco, -valor); if(banco) la.saiu = true; }
+}
+/* quando o saldo de um banco foi informado à mão (Assistente, planilha, janela dos bancos). Conta vencida antes disso pode já ter saído dele */
+function marcarSaldoInformado(u, nomeBanco){ (state.saldoInformado = state.saldoInformado || {})[u+'|'+nomeBanco] = Date.now(); }
+function saldoJaInformouConta(u, nomeBanco, item, mKey){
+  const ts = (state.saldoInformado || {})[u+'|'+nomeBanco];
+  if(!ts) return false;
+  const venc = mKey + '-' + String(Math.min(parseInt(item && item.dia)||1, daysInMonth(mKey))).padStart(2, '0');
+  return venc <= calISO(new Date(ts));
+}
+/* renomear um banco: tudo que guarda o nome dele acompanha (senão desmarcar não devolve o dinheiro) */
+function bancoRenomear(u, antigo, novo){
+  const us = state.users[u], de = 'b:'+antigo;
+  Object.keys(state.ganhoNoBanco || {}).forEach(k=>{ const g = state.ganhoNoBanco[k]; if(g.banco === antigo && k.includes('_'+u+'_')) g.banco = novo; });
+  if((state.ultimoBanco || {})[u] === antigo) state.ultimoBanco[u] = novo;
+  const inf = state.saldoInformado || {};
+  if(inf[u+'|'+antigo]){ inf[u+'|'+novo] = inf[u+'|'+antigo]; delete inf[u+'|'+antigo]; }
+  Object.values(us.expenses || {}).forEach(l=>(l||[]).forEach(i=>{ if(i.pgForma === de) i.pgForma = 'b:'+novo; }));
+  (state.lancamentos || []).forEach(la=>{ if(la.banco === antigo && (la.usuario || 'davi') === u) la.banco = novo; });
+  if(u === 'davi'){
+    Object.values(state.faturasCartao || {}).forEach(r=>(r.pagamentos || []).forEach(p=>{ if(p.banco === antigo) p.banco = novo; }));
+    (state.emprestimos || []).forEach(e=>Object.values(e.pagas || {}).forEach(p=>{ if(p.banco === antigo) p.banco = novo; }));
+  }
 }
 /* Histórico das contas variáveis: os valores exatos guardados, do mês mais novo ao mais antigo */
 function historicoVariaveis(user){
@@ -1346,7 +1428,7 @@ function moverNoBanco(user, nomeBanco, delta){
 }
 function registrarNoBanco(user, chave, valor, nomeBanco){
   moverNoBanco(user, nomeBanco, valor);
-  (state.ganhoNoBanco = state.ganhoNoBanco || {})[chave] = { banco: nomeBanco, valor };
+  (state.ganhoNoBanco = state.ganhoNoBanco || {})[chave] = { banco: nomeBanco, valor, em: Date.now() };
 }
 function desfazerNoBanco(user, chave){
   const g = (state.ganhoNoBanco||{})[chave];

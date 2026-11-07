@@ -191,7 +191,7 @@ function renderCurvaSaldo(u, mKey){
 function renderProxContas(u, mKey){
   const el = document.getElementById('resumoProxContas'); if(!el) return;
   const hoje = new Date().getDate();
-  const abertas = getContasDoMes(mKey, u).filter(it=>!state.paid[mKey + '_' + it.user + '_' + it.cat + '_' + it.id])
+  const abertas = getContasDoMes(mKey, u).filter(it=>it.tipo !== 'meta' && !state.paid[mKey + '_' + it.user + '_' + it.cat + '_' + it.id])
     .map(it=>({ ...it, falta: typeof restanteConta === 'function' ? restanteConta(mKey + '_' + it.user + '_' + it.cat + '_' + it.id, it.valor) : it.valor }))
     .filter(it=>it.falta > 0.004);
   if(!abertas.length){ el.innerHTML = '<div class="pc-vazio">Tudo pago neste mês</div>'; return; }
@@ -226,8 +226,14 @@ function abrirDetalheResumo(tipo){
       const rec = extraRecebidoNoMes(e, mKey);
       return { nome: e.desc || 'Extra', ico:'+', icoClasse:'pos', sub: rec ? '✓ recebido · já está no saldo' : (e.dia ? 'dia '+e.dia : ''), valor: Number(e.valor)||0, feito: rec };
     });
-    html = rdGrupo('Renda', salario) + rdGrupo('Extras', extras);
-    total = incomeForMonth(u, mKey) - (state.users[u].saldoAtual || 0);
+    /* o que ficou por receber dos meses concluídos: as linhas somam o total mostrado */
+    const antes = [];
+    mesesLevados(mKey).forEach(m=>{
+      if(!salarioRecebidoNoMes(u, m) && rendaBaseForMonth(u, m) > 0.004) antes.push({ nome: u==='davi' ? 'Salário' : 'Renda', ico:'R$', icoClasse:'pos', sub: monthLabel(m), valor: rendaBaseForMonth(u, m) });
+      (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, m) && !extraRecebidoNoMes(e, m)).forEach(e=>antes.push({ nome: e.desc || 'Extra', ico:'+', icoClasse:'pos', sub: monthLabel(m), valor: Number(e.valor)||0 }));
+    });
+    html = rdGrupo('Renda', salario) + rdGrupo('Extras', extras) + rdGrupo('De meses anteriores', antes);
+    total = incomeForMonth(u, mKey) - (mKey === mesFinanceiroAtual() ? (state.users[u].saldoAtual || 0) : 0);
   }
   document.getElementById('resumoDetalheTopo').innerHTML = `<div class="rd-rotulo">${titulo} · ${monthLabelLong(mKey)}</div><div class="rd-total ${cor}">${fmtMoney(total)}</div>`;
   document.getElementById('resumoDetalheLista').innerHTML = html || `<div class="gm-vazio">${tipo==='entra'?'Nada para entrar neste mês.':'Nada para pagar neste mês. ✓'}</div>`;
@@ -371,9 +377,9 @@ function calcularComparativoMeses(nMeses){
   let acumulado = 0;
   for(let i=0;i<nMeses;i++){
     const mKey = addMonths(hoje, i);
-    const rendaBase = (incomeForMonth('davi', mKey) || 0) + (incomeForMonth('cris', mKey) || 0);
-    const renda = rendaBase * (1 + (simuladorAumentoRendaPercent||0)/100);
-    const gasto = (expensesForMonth('davi', mKey) || 0) + (expensesForMonth('cris', mKey) || 0);
+    const u = userDash(), saldo = i === 0 ? (state.users[u].saldoAtual || 0) : 0;   // o aumento vale para a renda, não para o saldo
+    const renda = (incomeForMonth(u, mKey) - saldo) * (1 + (simuladorAumentoRendaPercent||0)/100) + saldo;
+    const gasto = expensesForMonth(u, mKey) || 0;
     const sobra = renda - gasto;
     const impacto = impactoMetasNoMes(mKey);
     const saldoFinal = sobra - impacto;
@@ -385,15 +391,12 @@ function calcularComparativoMeses(nMeses){
 
 function calcularImpactoSimulador(){
   const mKeyAtual = mesFinanceiroAtual();
-  const rendaTotal = (incomeForMonth('davi', mKeyAtual) || 0) + (incomeForMonth('cris', mKeyAtual) || 0);
-  const gastoTotal = (expensesForMonth('davi', mKeyAtual) || 0) + (expensesForMonth('cris', mKeyAtual) || 0);
-  const saldoPrevisto = rendaTotal - gastoTotal;
-  const totalCartoes = (state.cartoesTracker||[]).reduce((s,c)=>{
-    const compras = (state.comprasTracker||[]).filter(cp=>cp.cartaoId===c.id && !cp.pago);
-    const usado = compras.reduce((s2,item)=>{ const calc=compraTrackerCalc(item); return s2 + (calc.status==='concluido'?0:calc.restante); },0) + (c.credoVista?.reduce((s2,v)=>s2+Number(v.valor||0),0)||0);
-    return s + usado;
-  },0);
-  return { rendaTotal, gastoTotal, saldoPrevisto, totalCartoes };
+  const u = userDash(), saldo = state.users[u].saldoAtual || 0;
+  const rendaTotal = incomeForMonth(u, mKeyAtual) - saldo;   // receita de verdade: o saldo tem linha própria
+  const gastoTotal = expensesForMonth(u, mKeyAtual);
+  const saldoPrevisto = saldoForMonth(u, mKeyAtual);
+  const totalCartoes = u === 'davi' ? (state.cartoesTracker||[]).reduce((s,c)=>s + faturaRestanteNoMes(c, mKeyAtual), 0) : 0;
+  return { saldo, rendaTotal, gastoTotal, saldoPrevisto, totalCartoes };
 }
 
 function renderSimulador(){
@@ -402,7 +405,7 @@ function renderSimulador(){
   const painelAtual = `
     <div class="simulador-linha">
       <span class="label">Saldo Disponível</span>
-      <span class="valor">${fmtMoney(state.users.davi.saldoAtual + state.users.cris.saldoAtual)}</span>
+      <span class="valor">${fmtMoney(calc.saldo)}</span>
     </div>
     <div class="simulador-linha">
       <span class="label">Receita (${monthLabel(mesFinanceiroAtual())})</span>
@@ -417,7 +420,7 @@ function renderSimulador(){
       <span class="valor" style="color:${calc.saldoPrevisto>=0?'var(--success)':'var(--danger)'}">${fmtMoneySigned(calc.saldoPrevisto)}</span>
     </div>
     <div class="simulador-linha">
-      <span class="label">Cartões (abertos)</span>
+      <span class="label">Faturas a pagar (já estão nos gastos)</span>
       <span class="valor">${fmtMoney(calc.totalCartoes)}</span>
     </div>
   `;
@@ -428,7 +431,7 @@ function renderSimulador(){
     ? '<div style="text-align:center;padding:16px;color:var(--slate-500);font-size:12px">Nenhuma meta adicionada ainda</div>'
     : simuladorMetas.map(meta => `
       <div class="simulador-meta-item">
-        <div class="nome">${meta.nome}</div>
+        <div class="nome">${escBanco(meta.nome)}</div>
         <div class="info">
           <div style="margin-bottom:4px">${fmtMoney(meta.valor)} em ${meta.parcelas}x = ${fmtMoney(meta.valor/meta.parcelas)}/mês</div>
           <div style="font-size:11px;color:var(--slate-500)">Começa em ${monthLabel(meta.mes)}</div>
@@ -444,7 +447,7 @@ function renderSimulador(){
     const salvas = state.metas || [];
     salvasWrap.innerHTML = salvas.length === 0 ? '' : `<h4 style="margin-top:0">${ICON_SAVE}Metas Salvas</h4>` + salvas.map(meta => `
       <div class="simulador-meta-item">
-        <div class="nome">${meta.nome}</div>
+        <div class="nome">${escBanco(meta.nome)}</div>
         <div class="info">
           <div style="margin-bottom:4px">${fmtMoney(meta.valor)} em ${meta.parcelas}x = ${fmtMoney(meta.valor/meta.parcelas)}/mês</div>
           <div style="font-size:11px;color:var(--slate-500)">Começa em ${monthLabel(meta.mes)}</div>
@@ -616,7 +619,7 @@ function diasParaVencimento(it, mKey){
   return Math.round((alvo - hoje) / 86400000);
 }
 function contasEmAbertoNoMes(mKey){
-  return getContasDoMes(mKey).filter(it=>!it.pago).length;
+  return getContasDoMes(mKey).filter(it=>!it.pago && it.tipo !== 'meta').length;   // Meta é limite de gasto: nunca fica "paga"
 }
 /* ================= CONTAS A PAGAR DO MÊS (recebi / paguei / contas) ================= */
 let contasPagarMes = null;
@@ -671,11 +674,13 @@ function ganhoAlternar(u, chave, valor, nome, recebido, marcar){
   if(recebido){ desfazerNoBanco(u, chave); marcar(false); persist(); return; }
   const bancos = state.users[u].bancos || [];
   ganhoFim = i=>{
+    const inp = document.getElementById('perguntaValor'), v = inp ? parseMoney(inp.value) : valor;   // caiu diferente do previsto: vale o que caiu
+    if(i !== null && !(v > 0)){ showToast('Digite quanto caiu'); inp && inp.focus(); return; }
     closeModal('modalPergunta');
     const b = i === null ? null : bancos[i];
-    comDesfazer(b ? `+${fmtMoney(valor)} no ${b.nome}` : `${nome}: recebido`, ()=>{
-      if(b) registrarNoBanco(u, chave, valor, b.nome);
-      else if(i !== null) registrarNoBanco(u, chave, valor, '');
+    comDesfazer(b ? `+${fmtMoney(v)} no ${b.nome}` : `${nome}: recebido`, ()=>{
+      if(b) registrarNoBanco(u, chave, v, b.nome);
+      else if(i !== null) registrarNoBanco(u, chave, v, '');
       marcar(true);
       persist();
     });
@@ -683,6 +688,7 @@ function ganhoAlternar(u, chave, valor, nome, recebido, marcar){
   if(!bancos.length){ ganhoFim(-1); return; }
   document.getElementById('perguntaTitulo').textContent = 'Em qual banco caiu?';
   document.getElementById('perguntaCorpo').innerHTML = `<div class="modal-destaque"><span>${escBanco(nome)}</span><b>${fmtMoney(valor)}</b></div>
+    <div class="field full"><label for="perguntaValor">Quanto caiu</label><div class="input-money"><input type="text" id="perguntaValor" inputmode="numeric" placeholder="0,00" value="${Number(valor).toFixed(2).replace('.', ',')}" oninput="maskMoneyInput(this)"></div></div>
     ${bancos.map((b, i)=>`<button type="button" class="gm-linha pg-banco" onclick="ganhoFim(${i})">${b.logoUrl ? `<img src="${b.logoUrl}" class="conta-logo" alt="">` : `<span class="gm-inicial">${escBanco((b.nome||'?').charAt(0).toUpperCase())}</span>`}<span class="gm-nome">${escBanco(b.nome)}</span><span class="gm-valor">${fmtMoney(Number(b.valor)||0)}</span></button>`).join('')}
     <button type="button" class="modal-link pg-ja" onclick="ganhoFim(null)">Já está no saldo, só marcar como recebido</button>`;
   document.getElementById('modalPergunta').classList.add('active');
@@ -692,10 +698,10 @@ function ganhoAlternar(u, chave, valor, nome, recebido, marcar){
 function pgBancosHtml(u, rotulo, o = {}){
   const bancos = state.users[u].bancos || [], cartoes = o.comCartao && u === 'davi' ? (state.cartoesTracker || []) : [];
   if(!bancos.length && !cartoes.length) return '';
-  const ultimo = (state.ultimoBanco || {})[u], selC = o.forma && o.forma.cartao ? o.forma.cartao.id : null;
-  const sel = (o.forma && o.forma.banco) || (bancos.some(b=>b.nome === ultimo) ? ultimo : (bancos[0] || {}).nome);
+  const ultimo = (state.ultimoBanco || {})[u], selC = !o.naoMexer && o.forma && o.forma.cartao ? o.forma.cartao.id : null;
+  const sel = o.naoMexer ? null : (o.forma && o.forma.banco) || (bancos.some(b=>b.nome === ultimo) ? ultimo : (bancos[0] || {}).nome);
   const pre = cartoes.length ? 'Pix ' : '';
-  return `<div class="field full"><label>${rotulo || (cartoes.length ? 'Como pagou' : 'De qual banco saiu')}</label><div class="pg-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${!selC && b.nome === sel ? ' active' : ''}" data-banco="${escBanco(b.nome)}" onclick="pgEscolher(this)">${pre}${escBanco(b.nome)}</button>`).join('')}${cartoes.map(c=>`<button type="button" class="dif-chip${c.id === selC ? ' active' : ''}" data-cartao="${escBanco(c.id)}" onclick="pgEscolher(this)">Cartão ${escBanco(c.nome)}</button>`).join('')}<button type="button" class="dif-chip" data-nao="1" onclick="pgEscolher(this)">Não mexer no saldo</button></div></div>`;
+  return `<div class="field full"><label>${rotulo || (cartoes.length ? 'Como pagou' : 'De qual banco saiu')}</label><div class="pg-bancos">${bancos.map(b=>`<button type="button" class="dif-chip${!selC && b.nome === sel ? ' active' : ''}" data-banco="${escBanco(b.nome)}" onclick="pgEscolher(this)">${pre}${escBanco(b.nome)}</button>`).join('')}${cartoes.map(c=>`<button type="button" class="dif-chip${c.id === selC ? ' active' : ''}" data-cartao="${escBanco(c.id)}" onclick="pgEscolher(this)">Cartão ${escBanco(c.nome)}</button>`).join('')}<button type="button" class="dif-chip${o.naoMexer ? ' active' : ''}" data-nao="1" onclick="pgEscolher(this)">Não mexer no saldo</button></div>${o.aviso ? `<div class="meta pg-aviso">${escBanco(o.aviso)}</div>` : ''}</div>`;
 }
 function pgEscolher(btn){ btn.parentElement.querySelectorAll('.dif-chip').forEach(b=>b.classList.toggle('active', b === btn)); }
 /* nome do banco; null = não mexer no saldo; '' = sem banco cadastrado (mexe só no saldo geral) */
@@ -819,7 +825,21 @@ function renderContasPagar(){
   extras.forEach(e=>{
     const ok = extraRecebidoNoMes(e, mKey);
     if(!ok) aReceber += Number(e.valor)||0;
-    receb += cpItem({ titulo:e.desc, sub:'Extra', valor:Number(e.valor)||0, feito:ok, icone:'+', attrs:`onclick="cpToggleExtra('${u}','${e.id}','${mKey}')"` });
+    receb += cpItem({ titulo:escBanco(e.desc), sub:'Extra', valor:Number(e.valor)||0, feito:ok, icone:'+', attrs:`onclick="cpToggleExtra('${u}','${e.id}','${mKey}')"` });
+  });
+  /* o que ficou em aberto dos meses concluídos continua aqui, com o mês na etiqueta */
+  const levados = mKey === mesFinanceiroAtual() ? mesesLevados(mKey) : [];
+  const tagMes = m=>`<span class="cp-tag">${monthLabel(m)}</span>`;
+  levados.forEach(m=>{
+    const base = rendaBaseForMonth(u, m);
+    if(base > 0.004 && !salarioRecebidoNoMes(u, m)){
+      aReceber += base;
+      receb += cpItem({ titulo: u==='davi' ? 'Salário' : 'Renda', tag: tagMes(m), sub:'ainda não recebido', valor: base, icone:'$', attrs:`onclick="cpToggleSalario('${u}','${m}')"` });
+    }
+    (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, m) && !extraRecebidoNoMes(e, m)).forEach(e=>{
+      aReceber += Number(e.valor)||0;
+      receb += cpItem({ titulo: escBanco(e.desc), tag: tagMes(m), sub:'ainda não recebido', valor: Number(e.valor)||0, icone:'+', attrs:`onclick="cpToggleExtra('${u}','${e.id}','${m}')"` });
+    });
   });
 
   /* --- Contas (dízimo + contas do mês e atrasadas do mês anterior) --- */
@@ -831,6 +851,12 @@ function renderContasPagar(){
       conta(dz, ok);
       contasHtml += cpItem({ titulo:'Dízimo', sub:'10% da renda', valor:dz, feito:ok, icone:'%', attrs:`onclick="cpToggleDizimo('${u}','${mKey}')"` });
     }
+    levados.forEach(m=>{
+      const d = dizimoForMonth(u, m);
+      if(d <= 0.004) return;
+      conta(d, false);
+      contasHtml += cpItem({ titulo:'Dízimo', tag: tagMes(m), sub:'10% da renda', valor:d, icone:'%', attrs:`onclick="cpToggleDizimo('${u}','${m}')"` });
+    });
   }
   const mesAnteriorKey = addMonths(mKey, -1);
   const arquivadas = state.contasArquivadas || {};
@@ -838,17 +864,21 @@ function renderContasPagar(){
     .filter(it=> !arquivadas[mKey+'_'+it.user+'_'+it.cat+'_'+it.id]);
   let itemsAnterior = getContasDoMes(mesAnteriorKey, u).map(it=>Object.assign({}, it, { mesOrigem: mesAnteriorKey }))
     .filter(it=>{ const pk = mesAnteriorKey+'_'+it.user+'_'+it.cat+'_'+it.id; return !state.paid[pk] && !arquivadas[pk] && it.tipo !== 'meta'; });
-  const items = itemsAnterior.concat(itemsAtual).sort((a,b)=> a.mesOrigem!==b.mesOrigem ? (a.mesOrigem<b.mesOrigem?-1:1) : (a.dia||1)-(b.dia||1));
+  const itemsMaisAntigos = levados.filter(m=>m !== mesAnteriorKey).flatMap(m=>getContasDoMes(m, u).map(it=>Object.assign({}, it, { mesOrigem: m }))
+    .filter(it=>!it.pago && it.restante > 0.004 && !arquivadas[it.paidKey] && it.tipo !== 'meta'));
+  const items = itemsMaisAntigos.concat(itemsAnterior, itemsAtual).sort((a,b)=> a.mesOrigem!==b.mesOrigem ? (a.mesOrigem<b.mesOrigem?-1:1) : (a.dia||1)-(b.dia||1));
   items.forEach(it=>{
     const paidKey = it.mesOrigem+'_'+it.user+'_'+it.cat+'_'+it.id;
     const isPaid = !!state.paid[paidKey];
     const valorPago = (state.pagamentosParciais||{})[paidKey] || 0;
     const noCartao = isPaid ? 0 : Math.min(Number(it.valor)||0, contaUsadaNoCartao(paidKey));
     const isParcial = !isPaid && (valorPago > 0 || noCartao > 0);
-    conta(Number(it.valor)||0, isPaid, valorPago + noCartao);
+    /* conta no cartão cujo dinheiro só sai em outro mês: aparece aqui para marcar, mas não soma no "falta pagar" deste mês */
+    const caixa = contaMesDeCaixa(it), somaAqui = isPaid || caixa === mKey || (it.mesOrigem < mKey && caixa !== null && caixa < mKey);
+    if(somaAqui) conta(Number(it.valor)||0, isPaid, valorPago + noCartao); else nItens++;
     if(it.tipo === 'meta' && !isPaid){
       const usado = valorPago + contaUsadaNoCartao(paidKey), dif = (Number(it.valor)||0) - usado;
-      contasHtml += cpItem({ titulo: it.desc, logoUrl: it.logoUrl, icone: it.desc.charAt(0).toUpperCase(),
+      contasHtml += cpItem({ titulo: escBanco(it.desc), logoUrl: it.logoUrl, icone: escBanco(it.desc.charAt(0).toUpperCase()),
         sub: usado > 0.004 ? `gastou ${fmtMoney(usado)}` : 'toque para lançar uma compra',
         valor: Number(it.valor)||0, valorSub: dif < -0.004 ? `passou ${fmtMoney(-dif)}` : `sobra ${fmtMoney(dif)}`, parcial: usado > 0.004,
         attrs: `onclick="togglePaid('${paidKey}')"` });
@@ -858,8 +888,8 @@ function renderContasPagar(){
     const corDia = diasVenc===null ? '' : (diasVenc<0?' atrasada':(diasVenc<=3?' urgente':''));
     const quando = diasVenc===null ? `dia ${it.dia}` : (diasVenc<0 ? `venceu dia ${it.dia}` : (diasVenc===0 ? 'vence hoje' : (diasVenc<=3 ? `vence em ${diasVenc} dia${diasVenc>1?'s':''}` : `dia ${it.dia}`)));
     contasHtml += cpItem({
-      titulo: it.desc, logoUrl: it.logoUrl, dia: it.dia,
-      sub: `<span class="cp-dia${corDia}">${quando}</span>`,
+      titulo: escBanco(it.desc), logoUrl: it.logoUrl, dia: it.dia,
+      sub: somaAqui ? `<span class="cp-dia${corDia}">${quando}</span>` : caixa ? `cai na fatura de ${monthLabel(caixa)}` : 'cartão fora da conta deste mês',
       tag: it.mesOrigem!==mKey ? `<span class="cp-tag">${monthLabel(it.mesOrigem)}</span>` : '',
       valor: Number(it.valor)||0, valorSub: !isParcial ? '' : [valorPago > 0 ? 'pago '+fmtMoney(valorPago) : '', noCartao > 0 ? fmtMoney(noCartao)+' no cartão' : ''].filter(Boolean).join(' · '),
       feito: isPaid, parcial: isParcial,
@@ -871,21 +901,28 @@ function renderContasPagar(){
   /* --- Cartão e Empréstimo (se ligados no Geral deste mês) --- */
   const ex = cpExtrasDoMes(mKey, u);
   let cartaoHtml = '';
-  ex.cartoes.forEach(({c, f})=>{
-    const ok = f.st==='pago';
-    conta(ok ? f.pago : f.total, ok, ok ? 0 : f.pago);
-    const sub = f.datas ? (venceHojeFatura(f) ? 'vence hoje · sem juros' : (f.st==='vencido' ? 'vencida · gerando juros' : 'vence '+fmtDiaMesCurto(f.datas.vence))) : 'Fatura '+monthLabel(mKey);
-    cartaoHtml += cpItem({ titulo:c.nome, logoUrl:c.logoUrl, sub:`<span class="cp-dia${f.st==='vencido'?' atrasada':''}">${sub}</span>`,
-      valor: ok ? f.pago : f.total, valorSub: (!ok && f.pago>0.004) ? 'pago '+fmtMoney(f.pago) : '', feito: ok, parcial: !ok && f.pago>0.004,
-      attrs:`onclick="abrirPagarFatura('${c.id}','${mKey}')"` });
-  });
+  const linhaFatura = ({c, f}, m, tag)=>{
+    const ok = f.st==='pago', valor = ok ? f.pago : f.pago + f.resta;
+    conta(valor, ok, ok ? 0 : f.pago);
+    const sub = f.datas ? (venceHojeFatura(f) ? 'vence hoje · sem juros' : (f.st==='vencido' ? 'vencida · gerando juros' : 'vence '+fmtDiaMesCurto(f.datas.vence))) : 'Fatura '+monthLabel(m);
+    cartaoHtml += cpItem({ titulo:c.nome, tag, logoUrl:c.logoUrl, sub:`<span class="cp-dia${f.st==='vencido'?' atrasada':''}">${sub}</span>`,
+      valor, valorSub: (!ok && f.pago>0.004) ? 'pago '+fmtMoney(f.pago) : '', feito: ok, parcial: !ok && f.pago>0.004,
+      attrs:`onclick="abrirPagarFatura('${c.id}','${m}')"` });
+  };
+  ex.cartoes.forEach(x=>linhaFatura(x, mKey, ''));
   let empHtml = '';
-  ex.parcelas.forEach(({emp, k, venc, pago})=>{
+  const linhaParcela = ({emp, k, venc, pago}, tag)=>{
     conta(pago ? pago.valorPago : emp.valorParcela, !!pago);
-    empHtml += cpItem({ titulo:escapeHtmlEmp(emp.nome||'Empréstimo'), logoUrl:emp.logoUrl,
+    empHtml += cpItem({ titulo:escapeHtmlEmp(emp.nome||'Empréstimo'), tag, logoUrl:emp.logoUrl,
       sub:`Parcela ${k} de ${emp.numParcelas} · vence ${String(venc.getDate()).padStart(2,'0')}/${String(venc.getMonth()+1).padStart(2,'0')}`,
       valor: pago ? pago.valorPago : emp.valorParcela, valorSub: pago && pago.tipo==='antecipada' ? 'antecipada' : '', feito: !!pago,
       attrs: pago ? `onclick="desfazerParcelaEmp('${emp.id}',${k})"` : `onclick="abrirPagarParcelaEmp('${emp.id}',${k})"` });
+  };
+  ex.parcelas.forEach(x=>linhaParcela(x, ''));
+  levados.forEach(m=>{
+    const velho = cpExtrasDoMes(m, u);
+    velho.cartoes.filter(x=>x.f.st !== 'pago').forEach(x=>linhaFatura(x, m, tagMes(m)));
+    velho.parcelas.filter(x=>!x.pago).forEach(x=>linhaParcela(x, tagMes(m)));
   });
 
   /* --- montagem --- */
@@ -946,12 +983,16 @@ function togglePaid(paidKey){
     const real = lancValor(g.valor + v - g.restante);   // pagou diferente do previsto: vale o pago, só neste mês
     if(variavel || Math.abs(real - g.valor) > 0.004) (state.valoresReais = state.valoresReais || {})[paidKey] = real;
   };
+  /* saldo informado depois do vencimento: a conta pode já ter saído dele, então não desconta sem perguntar */
+  const bancoProvavel = forma && forma.cartao ? null : (forma && forma.banco) || (state.ultimoBanco || {})[u] || ((state.users[u].bancos || [])[0] || {}).nome;
+  const jaNoSaldo = !!bancoProvavel && saldoJaInformouConta(u, bancoProvavel, item, mKey);
   /* método já escolhido no cadastro e valor certo: um toque só, com Desfazer */
-  if(forma && !variavel){
+  if(forma && !variavel && !jaNoSaldo){
     comDesfazer(pagoMsg(g.desc, g.restante, forma.banco, forma.cartao), ()=>{ aoPagar(g.restante, forma.banco || null, forma.cartao); persist(); });
     return;
   }
-  pagarPerguntar({ u, nome: g.desc, valor: g.restante, exato: variavel, titulo: variavel ? 'Qual foi o valor exato?' : 'Pagar', comCartao: true, forma, aoPagar });
+  pagarPerguntar({ u, nome: g.desc, valor: g.restante, exato: variavel, titulo: variavel ? 'Qual foi o valor exato?' : 'Pagar', comCartao: true, forma, aoPagar,
+    naoMexer: jaNoSaldo, aviso: jaNoSaldo ? `Você informou o saldo do ${bancoProvavel} depois do vencimento desta conta. Se ela já tinha saído, deixe "Não mexer no saldo"; se não, escolha o banco.` : '' });
 }
 
 function getGastoItemRef(user, cat, id){
@@ -1162,7 +1203,9 @@ function abrirLancamentos(mKey){
   document.body.style.overflow = 'hidden';
 }
 function excluirLancamento(id, mKey){
-  comDesfazer('Compra excluída (o saldo do banco não muda)', ()=>{
+  const alvo = (state.lancamentos||[]).find(la=>la.id === id);
+  comDesfazer(alvo && (alvo.saiu || alvo.conta) ? 'Compra excluída: o dinheiro voltou para o banco' : 'Compra excluída (o saldo do banco não muda)', ()=>{
+    pixApagadoDevolve(alvo); compraApagadaSoltaConta(alvo);
     state.lancamentos = (state.lancamentos||[]).filter(la=>la.id !== id);
     persist(); abrirLancamentos(mKey);
   }, ()=>{ if(document.getElementById('modalResumoDetalhe').dataset.modo === 'lancamentos') abrirLancamentos(mKey); });
@@ -1187,7 +1230,35 @@ function extratoItens(){
   (state.lancamentos || []).filter(la=>(la.usuario || 'davi') === u).forEach(la=>{
     out.push({ ref: { t: 'la', id: la.id }, data: dataDe(la.data, atzTsDoId(la.id, 'la')), tipo: 'pix', desc: la.descricao || 'Compra', cat: la.categoria || 'Outros', onde: la.banco || 'Pix/débito', valor: Number(la.valor) || 0 });
   });
+  extratoMovimentos(u).forEach(m=>out.push(m));
   return out.filter(x=>x.data).sort((a, b)=>b.data.localeCompare(a.data));
+}
+/* aba Movimentos: o dinheiro que entrou ou saiu do banco marcando contas, dízimo, fatura, parcela e ganhos (só leitura; o valor já tem sinal) */
+function extratoMovimentos(u){
+  const out = [], item = (data, desc, onde, valor)=>out.push({ tipo: 'mov', data, desc, cat: '', onde: onde || 'Saldo', valor });
+  const comConta = new Set((state.lancamentos || []).map(la=>la.conta).filter(Boolean));
+  Object.entries(state.ganhoNoBanco || {}).forEach(([k, g])=>{
+    if(!k.includes('_'+u+'_')) return;
+    const tipo = k.slice(0, 3), resto = k.slice(4), mesDaChave = /\d{4}-\d{2}/.exec(k), data = g.em ? calISO(new Date(g.em)) : (mesDaChave ? mesDaChave[0] + '-01' : '');
+    if(tipo === 'pag' && comConta.has(resto)) return;   // já aparece como Pix
+    let desc = 'Movimento';
+    if(tipo === 'pag' || tipo === 'par') desc = ((contaDoPaidKey(resto) || {}).desc || 'Conta') + (tipo === 'par' ? ' (parte)' : '');
+    else if(tipo === 'diz') desc = 'Dízimo';
+    else if(tipo === 'sal') desc = u === 'davi' ? 'Salário' : 'Renda';
+    else if(tipo === 'ext'){ const id = resto.split('_')[1]; desc = ((state.users[u].extras || []).find(e=>e.id === id) || {}).desc || 'Extra'; }
+    item(data, desc, g.banco, Number(g.valor) || 0);
+  });
+  if(u === 'davi'){
+    Object.entries(state.faturasCartao || {}).forEach(([k, r])=>(r.pagamentos || []).forEach(p=>{
+      if(p.banco === undefined) return;
+      const c = (state.cartoesTracker || []).find(x=>k.startsWith(x.id + '_'));
+      item(calISO(new Date(p.em)), 'Fatura ' + (c ? c.nome : 'do cartão'), p.banco, -(Number(p.valor) || 0));
+    }));
+    (state.emprestimos || []).forEach(e=>Object.entries(e.pagas || {}).forEach(([k, p])=>{
+      if(p.banco !== undefined) item(p.data, `${e.nome || 'Empréstimo'} (parcela ${k})`, p.banco, -(Number(p.valorPago) || 0));
+    }));
+  }
+  return out;
 }
 function abrirExtrato(){
   extMes = extMes || calISO(new Date()).slice(0, 7);
@@ -1201,14 +1272,19 @@ function extratoFiltro(f){ extFiltro = f; renderExtrato(); }
 function renderExtrato(){
   document.getElementById('extMesLabel').textContent = monthLabelLong(extMes);
   document.querySelectorAll('#extAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.f === extFiltro));
-  const doMes = extratoItens().filter(x=>x.data.slice(0, 7) === extMes);
-  const itens = extFiltro === 'tudo' ? doMes : doMes.filter(x=>x.tipo === extFiltro);
+  const todos = extratoItens().filter(x=>x.data.slice(0, 7) === extMes);
+  const doMes = todos.filter(x=>x.tipo !== 'mov');   // compra e pagamento não somam juntos: a fatura paga já é a soma das compras
+  const itens = extFiltro === 'tudo' ? doMes : todos.filter(x=>x.tipo === extFiltro);
   extVisiveis = itens;
   document.getElementById('pageExtrato').classList.toggle('editando', extEditando);
   const be = document.getElementById('extEditarBtn'); if(be){ be.classList.toggle('on', extEditando); be.textContent = extEditando ? 'Pronto' : 'Editar'; }
   const soma = t=>doMes.filter(x=>x.tipo === t).reduce((s, x)=>s + x.valor, 0);
   const total = itens.reduce((s, x)=>s + x.valor, 0);
-  document.getElementById('extTotal').innerHTML = `<span class="placa-lbl" style="margin-top:0">${extFiltro === 'tudo' ? 'Gasto no mês' : extFiltro === 'cartao' ? 'No cartão' : 'No Pix e débito'}</span>
+  const movEntrou = itens.filter(x=>x.tipo === 'mov' && x.valor > 0).reduce((s, x)=>s + x.valor, 0), movSaiu = itens.filter(x=>x.tipo === 'mov' && x.valor < 0).reduce((s, x)=>s - x.valor, 0);
+  document.getElementById('extTotal').innerHTML = extFiltro === 'mov'
+    ? `<span class="placa-lbl" style="margin-top:0">Saiu do banco</span><b class="ext-total">${fmtMoney(movSaiu)}</b>
+    <div class="ext-partes"><span>Entrou <b>${fmtMoney(movEntrou)}</b></span><span>${itens.length} movimento${itens.length === 1 ? '' : 's'}</span></div>`
+    : `<span class="placa-lbl" style="margin-top:0">${extFiltro === 'tudo' ? 'Gasto no mês' : extFiltro === 'cartao' ? 'No cartão' : 'No Pix e débito'}</span>
     <b class="ext-total">${fmtMoney(total)}</b>
     <div class="ext-partes"><span>Cartão <b>${fmtMoney(soma('cartao'))}</b></span><span>Pix e débito <b>${fmtMoney(soma('pix'))}</b></span><span>${itens.length} compra${itens.length === 1 ? '' : 's'}</span></div>`;
   /* vazio com caminho: lançar pelo Assistente ou olhar o mês anterior */
@@ -1216,7 +1292,7 @@ function renderExtrato(){
     const mesAntes = monthLabelLong(addMonths(extMes, -1)).split(' ')[0].toLowerCase();
     document.getElementById('extLista').innerHTML = `<div class="ext-vazio">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
-      <p>Nenhuma compra em ${monthLabelLong(extMes).toLowerCase()}${extFiltro === 'tudo' ? '' : ' nesta aba'}.</p>
+      <p>${extFiltro === 'mov' ? 'Nenhum movimento' : 'Nenhuma compra'} em ${monthLabelLong(extMes).toLowerCase()}${extFiltro === 'tudo' ? '' : ' nesta aba'}.</p>
       <div class="ext-vazio-acoes"><button type="button" class="btn" onclick="fecharExtrato(); abrirAtualizar()">Lançar gasto</button><button type="button" class="btn btn-outline" onclick="extratoMes(-1)">Ver ${mesAntes}</button></div>
     </div>`;
     return;
@@ -1232,10 +1308,10 @@ function renderExtrato(){
         /* ícone do que foi comprado (o mesmo do Assistente: carrinho, cápsula, prato…) + selinho de como pagou;
            sem categoria conhecida, tenta pelo nome da compra */
         const catIco = typeof atzIcoCategoria === 'function' && atzIcoCategoria(x.cat) === ATZ_ICO_OUTROS ? x.desc : x.cat;
-        const ico = typeof atzIcoItem === 'function' ? atzIcoItem({ tipo: x.parc ? 'parcelada' : x.tipo === 'pix' ? 'pix' : 'vista', categoria: catIco }, 17) : '';
-        const como = x.tipo === 'pix' ? `<em class="ext-como pix">Pix/débito</em> ${escBanco(x.onde)}` : `<em class="ext-como">Cartão</em> ${escBanco(x.onde)}`;
+        const ico = typeof atzIcoItem === 'function' ? atzIcoItem({ tipo: x.parc ? 'parcelada' : x.tipo === 'vista' || x.tipo === 'cartao' ? 'vista' : 'pix', categoria: catIco }, 17) : '';
+        const como = x.tipo === 'mov' ? `<em class="ext-como pix">Banco</em> ${escBanco(x.onde)}` : x.tipo === 'pix' ? `<em class="ext-como pix">Pix/débito</em> ${escBanco(x.onde)}` : `<em class="ext-como">Cartão</em> ${escBanco(x.onde)}`;
         const cat = x.cat && x.cat !== 'Outros' && semAcentoCore(x.cat) !== semAcentoCore(x.desc) ? ' · ' + escBanco(x.cat) : '';
-        return `<div class="ext-linha"${extEditando ? ` role="button" tabindex="0" onclick="extratoEditar(${extVisiveis.indexOf(x)})"` : ''}>${ico}<span class="ext-info"><b>${escBanco(x.desc)}</b><small>${como}${cat}</small></span><span class="ext-valor">${fmtMoney(x.valor)}</span></div>`;
+        return `<div class="ext-linha"${extEditando && x.ref ? ` role="button" tabindex="0" onclick="extratoEditar(${extVisiveis.indexOf(x)})"` : ''}>${ico}<span class="ext-info"><b>${escBanco(x.desc)}</b><small>${como}${cat}</small></span><span class="ext-valor">${x.tipo === 'mov' ? (x.valor > 0 ? '+' : '−') + fmtMoney(Math.abs(x.valor)) : fmtMoney(x.valor)}</span></div>`;
       }).join('')}</div>`;
   }).join('');
 }
@@ -1290,6 +1366,7 @@ function extratoSalvar(k){
     if(x.ref.t === 'cp'){
       Object.assign(o, { nome, valorTotal: valor, parcelas, data });
     } else {
+      if(x.ref.t === 'la' && o.saiu) moverNoBanco(o.usuario || 'davi', o.banco, (Number(o.valor) || 0) - valor);   // Pix que tirou do banco: acerta a diferença
       Object.assign(o, { descricao: nome, valor, categoria: cat, data });
       /* à vista: a data decide a fatura (mesma regra do Assistente: depois do fechamento vai para a fatura seguinte) */
       if(x.ref.t === 'cv' && c && data !== x.data && typeof atzFaturaDaData === 'function') o.mKey = atzFaturaDaData(c, data);
@@ -1301,11 +1378,15 @@ function extratoSalvar(k){
 }
 async function extratoApagar(k){
   const x = extVisiveis[k]; if(!x) return;
-  if(!(await iosConfirm(`Apagar "${x.desc}" (${fmtMoney(x.valor)})?${x.tipo === 'pix' ? ' O saldo do banco não muda.' : ''}`))) return;
+  const alvo = extratoAchar(x.ref).o || {};
+  const nota = alvo.conta ? ` A conta ${(contaDoPaidKey(alvo.conta) || {}).desc || ''} volta a ficar em aberto.` : '';
+  const voltaBanco = alvo.saiu || (alvo.conta && x.ref.t === 'la');
+  if(!(await iosConfirm(`Apagar "${x.desc}" (${fmtMoney(x.valor)})?${nota}${x.tipo === 'pix' ? (voltaBanco ? ' O dinheiro volta para o banco.' : ' O saldo do banco não muda.') : ''}`))) return;
   comDesfazer('Compra apagada', ()=>{
+    compraApagadaSoltaConta(alvo);
     if(x.ref.t === 'cv'){ const c = (state.cartoesTracker || []).find(y=>y.id === x.ref.c); if(c) c.credoVista = (c.credoVista || []).filter(y=>y.id !== x.ref.id); }
     else if(x.ref.t === 'cp') state.comprasTracker = (state.comprasTracker || []).filter(y=>y.id !== x.ref.id);
-    else state.lancamentos = (state.lancamentos || []).filter(y=>y.id !== x.ref.id);
+    else { pixApagadoDevolve(alvo); state.lancamentos = (state.lancamentos || []).filter(y=>y.id !== x.ref.id); }
     persist();
   }, extratoRedesenhar);
   document.getElementById('extEditJanela')?.remove();

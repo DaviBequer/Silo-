@@ -323,8 +323,12 @@ async function rodarTestes(){
     exF.push({ id:'tmeta', desc:'Gasolina', valor:300, dia:1, tipo:'meta' });
     const kMeta = M+'_davi_fixo_tmeta', rMeta = ()=>gastosDoMes('davi', M).find(g=>g.id === 'tmeta').restante;
     metaLancar(kMeta, 100, 'A');
-    metaLancar(kMeta, 50, null, cF);
-    igual('meta: Pix tira do banco, cartão não, os dois descontam', [rMeta(), usG.bancos[0].valor, !!state.paid[kMeta]], [150, 400, false]);
+    igual('meta: Pix tira do banco e desconta, sem ficar paga', [rMeta(), usG.bancos[0].valor, !!state.paid[kMeta]], [200, 400, false]);
+    /* cartão: a compra desconta no mês da fatura em que caiu; a previsão de cada mês fica parada */
+    const geralAntes = state.incluirGeral; state.incluirGeral = { cartao:true, emprestimo:true, meses:{} };
+    const fatMeta = faturaAbertaMes(cF), sobraF = ()=>Math.round(saldoForMonth('davi', fatMeta)*100)/100, sobra0 = sobraF();
+    metaLancar(fatMeta+'_davi_fixo_tmeta', 50, null, cF);
+    igual('meta no cartão: previsão do mês da fatura não muda', sobraF(), sobra0);
     igual('meta: categoria nova para o Assistente e fora das contas abertas', [vozCategoriasCartao().includes('Gasolina'), vozContasAbertas().some(c=>c.desc === 'Gasolina')], [true, false]);
     const atrasoMeta = atrasadasDoMes('davi', mesFinanceiroAtual());
     exF.find(i=>i.id === 'tmeta').tipo = 'fixa';
@@ -332,8 +336,66 @@ async function rodarTestes(){
     exF.find(i=>i.id === 'tmeta').tipo = 'meta';
     igual('Assistente acha conta de nome parecido', [atzContaPorNome('netflix', [{ key:'a', desc:'Netflix Premium' }])?.key, atzContaPorNome('Top', [{ key:'a', desc:'Netflix' }])], ['a', null]);
     cF.credoVista = cF.credoVista.filter(cv=>cv.categoria !== 'Gasolina');
+    const laG = state.lancamentos.find(l=>l.categoria === 'Gasolina'), bG = usG.bancos[0].valor;
+    pixApagadoDevolve(laG);
+    igual('apagar Pix que saiu do banco devolve o dinheiro', usG.bancos[0].valor, bG + 100);
     state.lancamentos = state.lancamentos.filter(l=>l.categoria !== 'Gasolina');
-    state.users.davi.expenses.fixo = exF.filter(i=>!['tnet', 'tpix', 'tsem', 'tmeta'].includes(i.id));
+    /* conta no cartão que cai em outro mês: a previsão já nasce no mês da fatura e marcar não muda nada */
+    const cCaixa = { id:'cx', nome:'Caixa', fechamento:'1', vencimento:'10', credoVista:[], assinaturas:[] };
+    state.cartoesTracker.push(cCaixa);
+    const mFat = addMonths(M, 1);
+    exF.push({ id:'tcx', desc:'Serviço', valor:70, dia:20, pgForma:'c:cx' });
+    const kCx = M+'_davi_fixo_tcx', sM = ()=>Math.round(saldoForMonth('davi', M)*100)/100, sProx = ()=>Math.round(saldoForMonth('davi', mFat)*100)/100;
+    const caixaOk = contaFaturaMes(cCaixa, exF.find(i=>i.id === 'tcx'), M) >= mFat;
+    if(caixaOk){
+      const a = [sM(), sProx()];
+      contaNoCartao(kCx, cCaixa, 70);
+      igual('conta no cartão de outra fatura: marcar não muda a previsão', [sM(), sProx()], a);
+      contaDevolver(kCx); marcarContaPaga(kCx, false);
+    }
+    /* assinatura também cadastrada no cartão não conta em dobro */
+    cCaixa.assinaturas = [{ id:'as2', nome:'Serviço', valor:70, mesInicio:'2020-01' }];
+    igual('conta igual a assinatura do cartão: nada a pagar à parte', gastosDoMes('davi', M).find(g=>g.id === 'tcx').restante, 0);
+    state.users.davi.expenses.fixo = exF.filter(i=>!['tnet', 'tpix', 'tsem', 'tmeta', 'tcx'].includes(i.id));
+    /* compra nova depois de quitar: a fatura reabre só com o valor novo */
+    const cQ = { id:'cq', nome:'Q', fechamento:'25', vencimento:'28', credoVista:[{ id:'q1', valor:100, categoria:'Outros', mKey:M }], assinaturas:[] };
+    state.cartoesTracker.push(cQ);
+    (state.faturasCartao = state.faturasCartao || {})['cq_'+M] = { pago:90, quitada:true, totalQuitado:100, pagamentos:[] };
+    igual('quitada com desconto: nada a pagar', faturaRestanteNoMes(cQ, M), 0);
+    lancarVista(cQ, { descricao:'Nova', valor:20, categoria:'Outros', mKey:M });
+    igual('compra depois de quitar volta a contar', [faturaRestanteNoMes(cQ, M), faturaStatus(cQ, M).st !== 'pago'], [20, true]);
+    delete state.faturasCartao['cq_'+M];
+    /* compra antes do 1º mês controlado não traz as parcelas daquele mês */
+    state.comprasTracker = [{ id:'cpq', nome:'P', cartaoId:'cq', valorTotal:300, parcelas:3, mesInicio:addMonths(M, -1) }];
+    const mVelho = addMonths(M, -1), cvV = lancarVista(cQ, { descricao:'Antiga', valor:30, categoria:'Outros', mKey:mVelho });
+    igual('compra antiga no cartão: entra só ela', [cvV.avulsa, faturaCartaoNoMes(cQ, mVelho)], [true, 30]);
+    state.comprasTracker = [];
+    state.cartoesTracker = state.cartoesTracker.filter(c=>c !== cCaixa && c !== cQ);
+    /* renomear banco: desmarcar ainda devolve e o método da conta acompanha */
+    usG.bancos = [{ id:'a', nome:'A', valor:500 }]; usG.saldoAtual = 500;
+    exF.length = 0; state.users.davi.expenses.fixo.push({ id:'tren', desc:'Conta', valor:100, dia:9, pgForma:'b:A' });
+    const kRen = M+'_davi_fixo_tren';
+    saiuDoBanco('davi', 'pag_'+kRen, 100, 'A'); marcarContaPaga(kRen);
+    usG.bancos[0].nome = 'Novo'; bancoRenomear('davi', 'A', 'Novo');
+    contaDevolver(kRen); marcarContaPaga(kRen, false);
+    igual('renomear banco: desmarcar devolve', [usG.bancos[0].valor, state.users.davi.expenses.fixo.find(i=>i.id === 'tren').pgForma], [500, 'b:Novo']);
+    state.users.davi.expenses.fixo = state.users.davi.expenses.fixo.filter(i=>i.id !== 'tren');
+    /* saldo informado depois do vencimento: a conta pode já ter saído dele */
+    marcarSaldoInformado('davi', 'Novo');
+    igual('saldo informado: conta vencida antes pergunta, futura não', [saldoJaInformouConta('davi', 'Novo', { dia:1 }, addMonths(calISO(new Date()).slice(0, 7), -1)), saldoJaInformouConta('davi', 'Novo', { dia:1 }, addMonths(calISO(new Date()).slice(0, 7), 1))], [true, false]);
+    delete state.saldoInformado['davi|Novo'];
+    /* concluir o mês com coisa em aberto: dívida e dinheiro a receber seguem para o mês novo */
+    const mRef = mesAtualRef, proxC = addMonths(M, 1);
+    const concluidoAntes = state.mesConcluido;
+    const previsao = Math.round((saldoForMonth('davi', M) + saldoForMonth('davi', proxC))*100)/100;
+    state.mesConcluido = { [M]: true };
+    if(M === mesFinanceiroAtual()){
+      mesAtualRef = proxC;
+      igual('concluir com tudo em aberto: previsão do mês novo não pula', Math.round(saldoForMonth('davi', proxC)*100)/100, previsao);
+      mesAtualRef = mRef;
+    }
+    state.mesConcluido = concluidoAntes;
+    state.incluirGeral = geralAntes;
     usG.bancos = bancosG; usG.saldoAtual = saldoG;
     state.lancamentos = state.lancamentos.filter(l=>l !== laA); cF.credoVista = cF.credoVista.filter(cv=>cv !== cvA && cv !== cvB);
     state.comprasTracker = []; state.cartoesTracker.pop();

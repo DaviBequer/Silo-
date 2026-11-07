@@ -34,11 +34,12 @@ function renderRendaTable(){
   }).join('')}<th></th></tr>`;
 
   const rendaRow = `<tr><td class="row-label">Renda</td>${months.map(mKey=>{
-    if(salarioRecebidoNoMes(u, mKey)){
+    const rendaPend = pendentesDoMes(u, mKey).renda;
+    if(salarioRecebidoNoMes(u, mKey) && rendaPend < 0.005){
       return `<td class="cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirContasPagar('${mKey}')"><span class="cell-money-empty feito-tag">✓ recebido</span></td>`;
     }
-    if(u==='davi'){
-      const val = rendaBaseForMonth(u, mKey);
+    if(u==='davi' || rendaPend > 0.004){
+      const val = (salarioRecebidoNoMes(u, mKey) ? 0 : rendaBaseForMonth(u, mKey)) + rendaPend;
       return `<td class="${mKey===hoje?'current-col':''}" style="font-weight:600">${fmtMoney(val)}</td>`;
     }
     const val = state.users[u].income[mKey] || 0;
@@ -46,25 +47,27 @@ function renderRendaTable(){
   }).join('')}<td></td></tr>`;
 
   const extraRow = `<tr><td class="row-label">Extra</td>${months.map(mKey=>{
-    const val = extraTotalForMonth(u, mKey);
+    const val = extraTotalForMonth(u, mKey) + pendentesDoMes(u, mKey).extras;
     const nRec = extrasRecebidosNoMes(u, mKey).length;
     const vazio = nRec ? '<span class="cell-money-empty feito-tag">✓ recebido</span>' : '<span class="cell-money-empty">+ Extra</span>';
     return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirRendaExtraModal('${u}','${mKey}')">${val?fmtMoney(val)+(nRec?'<div class="extra-rec-nota">+'+nRec+' recebido'+(nRec>1?'s':'')+'</div>':''):vazio}</td>`;
   }).join('')}<td></td></tr>`;
 
   const dizimoRow = (u!=='davi') ? '' : `<tr><td class="row-label" style="color:var(--text-faint)">Dízimo</td>${months.map(mKey=>{
-    if(dizimoPagoNoMes(u, mKey)){
+    const dizPend = pendentesDoMes(u, mKey).dizimo;
+    if(dizimoPagoNoMes(u, mKey) && dizPend < 0.005){
       return `<td class="cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirContasPagar('${mKey}')"><span class="cell-money-empty feito-tag">✓ pago</span></td>`;
     }
-    const val = dizimoForMonth(u, mKey);
+    const val = dizimoForMonth(u, mKey) + dizPend;
     return `<td class="${mKey===hoje?'current-col':''}" style="color:var(--text-faint);font-weight:600">${fmtMoney(val)}</td>`;
   }).join('')}<td></td></tr>`;
 
   /* Gastos: o que falta pagar das contas do mês; toque abre cada gasto separado */
   const gastosRow = `<tr><td class="row-label">Gastos</td>${months.map(mKey=>{
-    const val = gastosRestantesNoMes(u, mKey);
+    const pend = pendentesDoMes(u, mKey);
+    const val = gastosRestantesNoMes(u, mKey) + atrasadasDoMes(u, mKey) + pend.contas;
     const todos = gastosDoMes(u, mKey);
-    const tudoPago = todos.length && val < 0.005;
+    const tudoPago = todos.length && val < 0.005 && todos.every(g=>g.restante < 0.005);
     return `<td class="cell-money cell-money-clickable ${mKey===hoje?'current-col':''}" onclick="abrirContasPagar('${mKey}')">${tudoPago?'<span class="cell-money-empty feito-tag">✓ pago</span>':(val>0.004?fmtMoney(val):'<span class="cell-money-empty">—</span>')}</td>`;
   }).join('')}<td></td></tr>`;
 
@@ -72,7 +75,7 @@ function renderRendaTable(){
   const linhaGeral = (tipo, rotulo, valorFn, temNoMes)=>{
     const ligadoGeral = geralCfg()[tipo] !== false;
     return `<tr class="geral-extra-row"><td class="row-label"><span class="geral-extra-lbl">${rotulo}<button type="button" class="mini-switch${ligadoGeral?' on':''}" onclick="toggleGeralTudo('${tipo}')" title="Contar em todos os meses" aria-pressed="${ligadoGeral}"><span></span></button></span></td>${months.map(mKey=>{
-      const v = valorFn(mKey);
+      const v = valorFn(mKey) + pendentesDoMes(u, mKey)[tipo];
       const on = incluiNoGeral(tipo, mKey);
       return `<td class="cell-money-clickable geral-extra-cell${on?'':' fora'}${mKey===hoje?' current-col':''}" onclick="toggleGeralMes('${tipo}','${mKey}')" title="${on?'Contando — toque para tirar deste mês':'Fora — toque para contar neste mês'}">${v>0.004?fmtMoney(v):temNoMes(mKey)?'<span class="cell-money-empty feito-tag">✓ pago</span>':'<span class="cell-money-empty">—</span>'}${on?'':'<small>fora</small>'}</td>`;
     }).join('')}<td></td></tr>`;
@@ -142,6 +145,7 @@ function adicionarBancoLinha(focar, b){
   const i = el.children.length;
   linha.dataset.logo = (b && b.logoUrl) || '';
   linha.dataset.cor = (b && b.cor) || '';
+  linha.dataset.orig = (b && b.nome) || '';
   const valor = b && b.valor ? Number(b.valor).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '';
   linha.innerHTML = `<button type="button" class="banco-logo" title="Logo do banco" aria-label="Logo do banco" onclick="bancoLogoEscolher(this)">${bancoLogoHtml(b, i)}</button>
     <input type="text" class="banco-nome" placeholder="Banco" value="${escBanco(b ? b.nome : '')}" autocomplete="off">
@@ -196,7 +200,8 @@ function lerBancosDaJanela(){
     nome: l.querySelector('.banco-nome').value.trim(),
     valor: parseMoney(l.querySelector('.banco-valor input').value),
     logoUrl: l.dataset.logo || '',
-    cor: l.dataset.cor || ''
+    cor: l.dataset.cor || '',
+    orig: l.dataset.orig || ''
   })).filter(b=>b.nome || b.valor);
 }
 function atualizarTotalBancos(){
@@ -204,7 +209,14 @@ function atualizarTotalBancos(){
   document.getElementById('bancosTotal').innerHTML = `<span>Total em ${lista.length} banco${lista.length===1?'':'s'}</span><b>${fmtMoney(totalBancos(lista))}</b>`;
 }
 function salvarBancos(){
-  const lista = lerBancosDaJanela().map((b,i)=>{
+  const u = state.currentUser, antes = bancosDoUsuario().map(b=>({ ...b }));
+  const lida = lerBancosDaJanela();
+  lida.forEach(b=>{
+    const nome = b.nome || 'Banco', velho = antes.find(x=>x.nome === b.orig);
+    if(b.orig && nome !== b.orig) bancoRenomear(u, b.orig, nome);
+    if(!velho || Math.abs((Number(velho.valor)||0) - b.valor) > 0.004) marcarSaldoInformado(u, nome);   // digitou o saldo: é o que o banco mostra agora
+  });
+  const lista = lida.map((b,i)=>{
     const o = { id: 'bc'+Date.now().toString(36)+i, nome: b.nome || 'Banco', valor: b.valor };
     if(b.logoUrl) o.logoUrl = b.logoUrl;
     if(b.cor) o.cor = b.cor;
@@ -451,7 +463,7 @@ function contaComprasDe(pk){
   if(!item || !item.desc) return [];
   const nome = semAcentoCore(item.desc), out = [];
   if(user === 'davi') (state.cartoesTracker || []).forEach(c=>(c.credoVista || []).forEach(cv=>{
-    if((cv.mesConta || cv.mKey) === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) out.push({ data: cv.data || '', desc: cv.descricao || 'Compra', onde: c.nome, tipo: 'cartao', valor: Number(cv.valor) || 0 });
+    if(cv.mKey === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) out.push({ data: cv.data || '', desc: cv.descricao || 'Compra', onde: c.nome, tipo: 'cartao', valor: Number(cv.valor) || 0 });
   }));
   (state.lancamentos || []).forEach(la=>{
     if(la.mKey === mKey && (la.usuario || 'davi') === user && semAcentoCore(la.categoria) === nome) out.push({ data: la.data || '', desc: la.descricao || 'Compra', onde: la.banco || 'Pix/débito', tipo: 'pix', valor: Number(la.valor) || 0 });
@@ -525,8 +537,8 @@ function renderGastoGrid(cat){
     return `<div class="list-row${aberta ? ' aberta' : ''}">
       ${logo}
       <div class="lr-info" onclick="contaDetalheAlternar('${pk}')" title="Ver o que foi gasto nesta conta">
-        <div class="lr-desc">${item.desc}</div>
-        ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
+        <div class="lr-desc">${escBanco(item.desc)}</div>
+        ${item.descricao?`<div class="lr-caption">${escBanco(item.descricao)}</div>`:''}
         <div class="lr-meta">${metaTxt}</div>
       </div>
       <div class="lr-right">
@@ -546,7 +558,7 @@ function renderGastoGrid(cat){
       const aberto = !!gastoMostrarArquivados[cat];
       arqEl.innerHTML = `<button class="link-btn-sm" onclick="toggleArquivadosGasto('${cat}')">${aberto?'Ocultar':'Ver'} arquivados (${arquivados.length})</button>` +
         (aberto ? arquivados.map(item=>`<div class="list-row list-row-arquivado">
-          <div class="lr-info"><div class="lr-desc">${item.desc}</div></div>
+          <div class="lr-info"><div class="lr-desc">${escBanco(item.desc)}</div></div>
           <div class="lr-right">
             <div class="lr-actions">
               <button class="btn-icon-sm" title="Restaurar" onclick="desarquivarGasto('${cat}','${item.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
@@ -624,7 +636,11 @@ function cartaoForaDoControle(cartao, mKey){ const d = cartaoControleDesde(carta
    Antes do "controle desde" do cartão a fatura fica vazia. */
 function faturaPartes(cartao, mKey){
   const out = { vista: [], parcelas: [], assinaturas: [], totalVista: 0, totalParcelas: 0, totalAssinaturas: 0, total: 0, fora: cartaoForaDoControle(cartao, mKey) };
-  if(out.fora) return out;
+  if(out.fora){   // antes do controle: só a compra lançada de propósito nesse mês
+    out.vista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey && cv.avulsa);
+    out.total = out.totalVista = out.vista.reduce((s,cv)=>s+Number(cv.valor||0), 0);
+    return out;
+  }
   out.vista = (cartao.credoVista||[]).filter(cv=>cv.mKey===mKey);
   (state.comprasTracker||[]).filter(c=>c.cartaoId===cartao.id).forEach(compra=>{ const p = compraParcelaNoMes(compra, mKey); if(p) out.parcelas.push(Object.assign({ compra }, p)); });
   (cartao.assinaturas||[]).forEach(a=>{ const valor = assinaturaValorNoMes(a, mKey); if(valor) out.assinaturas.push({ assinatura: a, valor }); });
@@ -665,17 +681,23 @@ function fmtDiaMesCurto(d){ return String(d.getDate()).padStart(2,'0')+'/'+Strin
 function faturaRegistro(cartao, mKey){ return (state.faturasCartao||{})[cartao.id+'_'+mKey] || null; }
 function faturaPagaValor(cartao, mKey){ const r = faturaRegistro(cartao, mKey); return r ? (Number(r.pago)||0) : 0; }
 /* "considerar paga": a fatura fica quitada com o valor informado, mesmo que diferente do total calculado */
-function faturaQuitada(cartao, mKey){ const r = faturaRegistro(cartao, mKey); return !!(r && r.quitada); }
+/* compra que entrou depois de quitar reabre a fatura só com o valor novo */
+function faturaNovoDepoisDeQuitar(cartao, mKey){
+  const r = faturaRegistro(cartao, mKey);
+  return r && r.quitada && r.totalQuitado !== undefined ? Math.max(0, faturaCartaoNoMes(cartao, mKey) - r.totalQuitado) : 0;
+}
+function faturaQuitada(cartao, mKey){ const r = faturaRegistro(cartao, mKey); return !!(r && r.quitada) && faturaNovoDepoisDeQuitar(cartao, mKey) < 0.005; }
 /* quanto ainda falta pagar da fatura (o que já foi pago deixa de contar) */
 function faturaRestanteNoMes(cartao, mKey){
-  if(faturaQuitada(cartao, mKey)) return 0;
+  const r = faturaRegistro(cartao, mKey);
+  if(r && r.quitada) return faturaNovoDepoisDeQuitar(cartao, mKey);
   return Math.max(0, faturaCartaoNoMes(cartao, mKey) - faturaPagaValor(cartao, mKey));
 }
 /* st: aberto | fechado (aguardando pagamento) | vencido (gerando juros) | parcial (pago em parte) | pago | vazio */
 function faturaStatus(cartao, mKey, agora){
   const total = faturaCartaoNoMes(cartao, mKey), pago = faturaPagaValor(cartao, mKey);
   const quitada = faturaQuitada(cartao, mKey);
-  const resta = quitada ? 0 : Math.max(0, total - pago);
+  const resta = faturaRestanteNoMes(cartao, mKey);
   const datas = cartaoDatasFatura(cartao, mKey);
   const hoje = new Date(agora || Date.now()); hoje.setHours(0,0,0,0);
   let st;
@@ -782,8 +804,9 @@ function confirmarPagarFatura(){
   if(!state.faturasCartao) state.faturasCartao = {};
   const k = cartaoId+'_'+mKey;
   const reg = state.faturasCartao[k] || { pago:0, pagamentos:[] };
-  if(quitar) reg.quitada = true;
-  reg.pago = Math.round(((Number(reg.pago)||0) + v)*100)/100;
+  if(quitar){ reg.quitada = true; reg.totalQuitado = f.total; }
+  else if(reg.quitada) reg.totalQuitado = (Number(reg.totalQuitado)||0) + v;
+  reg.pago =Math.round(((Number(reg.pago)||0) + v)*100)/100;
   const banco = pgBancoDe(document.getElementById('pagarFaturaBancos'));
   const pgto = { valor:v, em:Date.now() };
   if(banco !== null){ moverNoBanco('davi', banco, -v); pgGuardarUltimo('davi', banco); pgto.banco = banco; }
@@ -875,7 +898,7 @@ function renderCartaoTrackerList(){
               ${compraLogo}
               <div style="min-width:0">
                 <div class="ct-nome${pagoClass}">${item.nome}</div>
-                ${item.descricao?`<div class="lr-caption">${item.descricao}</div>`:''}
+                ${item.descricao?`<div class="lr-caption">${escBanco(item.descricao)}</div>`:''}
               </div>
             </div>
             <div class="ct-actions">
@@ -1293,7 +1316,7 @@ function credoVistaTotalPorCategoria(mKey){
 function excluirCredoVista(cartaoId, credoId){
   comDesfazer('Compra excluída', ()=>{
     const cartao = (state.cartoesTracker||[]).find(c=>c.id===cartaoId);
-    if(cartao) cartao.credoVista = (cartao.credoVista||[]).filter(cv=>cv.id!==credoId);
+    if(cartao){ compraApagadaSoltaConta((cartao.credoVista||[]).find(cv=>cv.id===credoId)); cartao.credoVista = (cartao.credoVista||[]).filter(cv=>cv.id!==credoId); }
     persist();
     renderCartaoTrackerList();
   });

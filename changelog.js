@@ -1,6 +1,13 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v19.2', itens: [
+    'Previsão firme: conta e compra no cartão já contam no mês da fatura, e marcar não muda a sobra',
+    'Concluir o mês com fatura, dízimo, parcela, salário ou extra em aberto: eles seguem para o mês novo',
+    'Salário e extra perguntam quanto caiu; Assistente pergunta o banco; saldo informado avisa antes de descontar de novo',
+    'Correções: renomear banco, compra em fatura já paga, apagar pelo Extrato, Histórico e Simular',
+    'Extrato ganhou a aba Movimentos; Meta sai de Próximas contas; atalho Metas virou Guardar; Cris sem cartão no Assistente; excluir música tem Desfazer'
+  ] },
   { versao: 'v19.1', itens: [
     'Gráfico do saldo novo: placa azul-noite, toque no mês para ver quanto fica no banco, sem a pulsação',
     'Fluxo Mensal mais limpo: coluna dos nomes mais fina, botões de Cartão e Empréstimo alinhados, fatura e parcela pagas mostram que estão pagas e o Acumulado mostra o valor inteiro'

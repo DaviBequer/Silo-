@@ -375,9 +375,12 @@ function excluirLouvorAtual(){
   const l = getLouvorAtual(); if(!l) return;
   iosConfirm(`Excluir "${l.titulo||'este louvor'}"?`).then(ok=>{
     if(!ok) return;
-    state.louvores = state.louvores.filter(x=>x.id!==l.id);
-    persist();
-    closeLouvorDetalhe();
+    comDesfazer(`"${l.titulo||'Louvor'}" excluído`, ()=>{
+      state.louvores = state.louvores.filter(x=>x.id!==l.id);
+      (state.cultos || []).forEach(c=>{ c.partes.forEach(p=>{ p.musicas = p.musicas.filter(id=>id !== l.id); }); if(c.ordemWhats) c.ordemWhats = c.ordemWhats.filter(id=>id !== l.id); });
+      persist();
+      closeLouvorDetalhe();
+    }, ()=>renderLouvor());
   });
 }
 

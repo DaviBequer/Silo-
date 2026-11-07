@@ -2857,6 +2857,7 @@ body{font-weight:400;letter-spacing:.005em}
 .ext-mes{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px}
 .ext-mes b{min-width:150px;text-align:center;font-weight:300;font-size:19px}
 .ext-abas{margin-bottom:14px}
+.ext-abas .dash-tab{padding-inline:11px}
 .ext-placa{margin-bottom:18px}
 .ext-total{display:block;margin-top:4px;font:200 36px/1.1 var(--font-body);letter-spacing:-.02em;color:var(--graf-tx);font-variant-numeric:tabular-nums}
 .ext-partes{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:8px;font-size:12px;color:var(--graf-dim)}

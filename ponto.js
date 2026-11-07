@@ -834,7 +834,13 @@ function resumoCompletoDoMes(mKey){
   const salario = rendaBaseForMonth(u, mKey);
   const extras = (state.users[u].extras||[]).filter(e=>extraNoPeriodo(e, mKey)).reduce((s,e)=>s+(Number(e.valor)||0), 0);
   const contas = { moradia:0, assinatura:0, fixo:0, futuro:0 };
-  gastosDoMes(u, mKey).forEach(g=>{ if(!g.noCartao) contas[g.cat] = (contas[g.cat]||0) + g.valor; });   // paga no cartão: já conta na fatura
+  /* o que foi no cartão já conta na fatura; Meta conta só o que foi gasto no Pix, não o máximo */
+  gastosDoMes(u, mKey).forEach(g=>{
+    if(g.noCartao) return;
+    const compras = contaComprasDe(g.paidKey), soma = t=>compras.filter(c=>c.tipo === t).reduce((s, c)=>s + c.valor, 0);
+    const v = g.tipo === 'meta' ? soma('pix') + ((state.pagamentosParciais||{})[g.paidKey]||0) : g.valor - Math.min(g.valor, soma('cartao'));
+    contas[g.cat] = (contas[g.cat]||0) + v;
+  });
   const dizimo = dizimoValorCheio(u, mKey);
   const cartao = incluiNoGeral('cartao', mKey)
     ? (state.cartoesTracker||[]).reduce((s,c)=>s+faturaCartaoNoMes(c, mKey), 0) : 0;
@@ -854,6 +860,7 @@ function concluirMesAtual(){
   comDesfazer('Mês concluído — avançou para ' + monthLabel(addMonths(mesQueFecha, 1)), ()=>{
     if(!state.historicoMeses) state.historicoMeses = {};
     state.historicoMeses[mesQueFecha] = resumoCompletoDoMes(mesQueFecha);
+    (state.mesConcluido = state.mesConcluido || {})[mesQueFecha] = true;   // o que ficou em aberto segue para o mês novo (pendentesDoMes)
     mesAtualRef = addMonths(mesAtualRef, 1);
     state.mesAtual = mesAtualRef;
     state.panoOffset = 0;

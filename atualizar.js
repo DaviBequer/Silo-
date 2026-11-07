@@ -95,9 +95,9 @@ function atzRenderResumo(){
   const ult = atzUltimaAtualizacao(), q = ult ? atzQuandoTexto(ult) : null;
   const contas = vozContasAbertas(), totalContas = contas.reduce((s, c)=>s + c.valor, 0);
   const bancos = bancosDoUsuario(), hist = atzHistorico();
-  const cartoes = (state.cartoesTracker || []).map(c=>{
+  const cartoes = vozCartoes().map(c=>{
     const m = faturaAbertaMes(c);
-    const vista = (c.credoVista || []).filter(cv=>cv.mKey === m).reduce((s, cv)=>s + (Number(cv.valor) || 0), 0);
+    const vista =(c.credoVista || []).filter(cv=>cv.mKey === m).reduce((s, cv)=>s + (Number(cv.valor) || 0), 0);
     const parcelas = (state.comprasTracker || []).filter(cp=>cp.cartaoId === c.id).reduce((s, cp)=>s + compraTrackerValorNoMes(cp, m), 0);
     const assin = (c.assinaturas || []).reduce((s, a)=>s + assinaturaValorNoMes(a, m), 0);
     return { c, m, total: faturaCartaoNoMes(c, m), vista, parcelas, assin };
@@ -226,8 +226,8 @@ const ATZ_ESQUEMA = { type:'object', properties:{
 /* o que a lista muda em cada cartão e banco (para a IA e para os Detalhes) */
 function atzConferencia(itens){
   itens = itens || atzItens;
-  const cartoes = (state.cartoesTracker || []).map(c=>{
-    const m = faturaAbertaMes(c), noApp = faturaCartaoNoMes(c, m);
+  const cartoes = vozCartoes().map(c=>{
+    const m = faturaAbertaMes(c), noApp =faturaCartaoNoMes(c, m);
     const meus = itens.filter(i=>i.cartaoId === c.id);
     const novos = meus.filter(i=>(i.tipo === 'vista' || i.tipo === 'parcelada') && atzFaturaDoItem(c, i) === m)
       .reduce((s, i)=>s + (i.tipo === 'parcelada' ? i.valor / Math.max(1, i.parcelas || 1) : i.valor), 0);
@@ -340,6 +340,7 @@ function atzFaltaNoItem(i){
   if(['vista','parcelada','fatura'].includes(i.tipo) && !i.cartaoId) return 'qual cartão?';
   if(['pix','recebi','saldo'].includes(i.tipo) && !i.bancoId && bancosDoUsuario().length) return 'qual banco?';
   if(i.tipo === 'conta' && !i.conta) return 'qual conta?';
+  if(i.tipo === 'conta' && !i.bancoId && !i.cartaoId && !i.naoMexer && bancosDoUsuario().length) return 'de qual banco saiu?';
   return '';
 }
 const atzChave = i=>[i.tipo, vozSemAcento(i.descricao), i.valor, i.cartaoId, i.bancoId].join('|');
@@ -350,6 +351,7 @@ function atzManterConfirmados(antes, novos){
   novos.forEach(i=>{
     const v = (velhos[atzChave(i)] || []).shift(); if(!v) return;
     i.ok = !!v.ok;
+    if(v.naoMexer) i.naoMexer = true;
     if(v.catManual){ i.categoria = v.categoria; i.duvida = false; i.catManual = true; }
   });
   return novos;
@@ -407,7 +409,7 @@ async function atzPerguntar(msg, audio){
 ` +
       `CARTÃO E BANCO: se a lista de cartões tem UM só cartão, toda compra no crédito é nele: preencha e NÃO pergunte qual cartão. O mesmo para banco: com um só banco, use ele. ` +
       `Só pergunte o cartão ou o banco quando houver mais de um e a fala não disser qual. Se faltar o número de parcelas ou algo for ambíguo, deixe vazio e PERGUNTE.\n` +
-      `CONTA PAGA: "Netflix paga", "paguei a luz", "Spotify pago" = item conta com a chave da conta de nome igual ou parecido em contasAbertas (procure ali primeiro, o nome não precisa ser exato); sem valor falado, use o valor da lista. Se a conta tem formaDePagar, NÃO pergunte de onde pagou e deixe banco e cartão vazios: o app joga na fatura ou tira do banco sozinho. ` +
+      `CONTA PAGA: "Netflix paga", "paguei a luz", "Spotify pago" = item conta com a chave da conta de nome igual ou parecido em contasAbertas (procure ali primeiro, o nome não precisa ser exato); sem valor falado, use o valor da lista. Se a conta tem formaDePagar, NÃO pergunte de onde pagou e deixe banco e cartão vazios: o app joga na fatura ou tira do banco sozinho. Se ela NÃO tem formaDePagar e a pessoa não disse o banco, PERGUNTE de qual banco saiu. ` +
       `METAS: compra de uma conta da lista metas ("mercado 120", "gasolina 200") NUNCA é item conta: é vista ou pix com categoria igual ao nome da meta; se a fala não diz onde, use a formaDePagar da meta (cartão = vista naquele cartão, Pix = pix naquele banco).\n` +
       `CATEGORIA: a descricao é o nome que a pessoa falou ("Top", "JK", "Drogasil"). Para escolher a categoria, veja primeiro "apelidos" (a pessoa ensinou: vale sempre), ` +
       `depois "nomesJaUsados" (o que ela já lançou e em que categoria), depois o que você sabe de lojas do Brasil. Se ainda não tiver certeza, escolha a mais provável e marque categoriaDuvida true. ` +
@@ -560,7 +562,7 @@ function atzEditorHtml(i, k){
     ${atzGravavel(i) ? `<label class="atz-ed-l"><span>Dia</span><input id="atzEdData" type="date" max="${calISO(new Date())}" value="${i.data || calISO(new Date())}"></label>` : ''}
     ${i.tipo === 'parcelada' ? `<label class="atz-ed-l"><span>Parcelas</span><input id="atzEdParc" type="number" inputmode="numeric" min="2" max="48" value="${i.parcelas}"></label>` : ''}
     ${comCartao ? `<label class="atz-ed-l"><span>Cartão</span><select id="atzEdCartao"><option value="">Escolha</option>${opc(vozCartoes(), i.cartaoId)}</select></label>` : ''}
-    ${comBanco ? `<label class="atz-ed-l"><span>Banco</span><select id="atzEdBanco"><option value="">${i.tipo === 'conta' ? 'Não mexer no banco' : 'Escolha'}</option>${opc(bancosDoUsuario(), i.bancoId)}</select></label>` : ''}
+    ${comBanco ? `<label class="atz-ed-l"><span>Banco</span><select id="atzEdBanco">${i.tipo === 'conta' ? `<option value="?">Escolha</option><option value=""${i.naoMexer ? ' selected' : ''}>Não mexer no banco</option>` : '<option value="">Escolha</option>'}${opc(bancosDoUsuario(), i.bancoId)}</select></label>` : ''}
     <div class="atz-ed-acoes"><button type="button" class="link-txt" onclick="atzEditando=-1;atzRenderConversa()">Cancelar</button><button type="submit" class="btn btn-sm">Salvar</button></div>
   </form>`;
 }
@@ -577,7 +579,7 @@ function atzSalvarEdicao(k){
   const dt = v('atzEdData'); if(dt) i.data = atzDataValida(dt);
   const parc = parseInt(v('atzEdParc')); if(parc >= 2) i.parcelas = Math.min(48, parc);
   const cid = v('atzEdCartao'); if(cid !== null){ const c = vozCartoes().find(x=>x.id === cid); i.cartaoId = c ? c.id : ''; i.cartaoNome = c ? c.nome : ''; }
-  const bid = v('atzEdBanco'); if(bid !== null){ const b = bancosDoUsuario().find(x=>x.id === bid); i.bancoId = b ? b.id : ''; i.bancoNome = b ? b.nome : ''; }
+  const bid = v('atzEdBanco'); if(bid !== null){ const b = bancosDoUsuario().find(x=>x.id === bid); i.bancoId = b ? b.id : ''; i.bancoNome = b ? b.nome : ''; if(i.tipo === 'conta') i.naoMexer = bid === ''; }
   /* a resposta onde o item apareceu continua apontando para ele */
   const depois = atzChave(i);
   if(depois !== antes) atzConversa.forEach(m=>{ if(m.novos) m.novos = m.novos.map(c=>c === antes ? depois : c); });
@@ -889,15 +891,18 @@ async function atzGravar(){
         if(c){
           const cv = lancarVista(c, { descricao: i.descricao || 'Compra', valor: i.valor, categoria: i.categoria, mKey: atzFaturaDoItem(c, i), data: i.data || hoje });
           if(paga) contaLigarAoCartao(paga.key, c, cv);
-          if(vozMetas().some(m=>vozSemAcento(m.desc) === vozSemAcento(i.categoria))) cv.mesConta = mKey;   // desconta da meta deste mês, mesmo caindo na próxima fatura
         }
       } else if(i.tipo === 'parcelada'){
         if(c) lancarParcelada(c, { nome: i.descricao, valorTotal: i.valor, parcelas: i.parcelas, mesInicio: atzFaturaDoItem(c, i), data: i.data || hoje });
       } else if(i.tipo === 'pix'){
         const b = banco(i.bancoId);
-        lancarPix({ mKey, data: i.data || hoje, descricao: i.descricao, valor: i.valor, categoria: i.categoria, banco: b ? b.nome : '' });
+        const la = lancarPix({ mKey, data: i.data || hoje, descricao: i.descricao, valor: i.valor, categoria: i.categoria, banco: b ? b.nome : '' });
         mexe(i.bancoId, -i.valor);
-        if(paga && b && !comSaldo.has(i.bancoId)) (state.ganhoNoBanco = state.ganhoNoBanco || {})['pag_'+paga.key] = { banco: b.nome, valor: -i.valor };   // desmarcar devolve
+        if(paga) la.conta = paga.key;
+        if(b && !comSaldo.has(i.bancoId)){
+          if(paga) (state.ganhoNoBanco = state.ganhoNoBanco || {})['pag_'+paga.key] = { banco: b.nome, valor: -i.valor, em: Date.now() };   // desmarcar devolve
+          else la.saiu = true;   // apagar a compra devolve
+        }
       } else if(i.tipo === 'recebi'){
         mexe(i.bancoId, i.valor);
       } else if(i.tipo === 'conta'){
@@ -911,7 +916,7 @@ async function atzGravar(){
     });
     pagas.forEach(p=>marcarContaPaga(p.key));
     /* saldo confirmado: vale o do banco (o "não identificado" só entra se a pessoa pediu: vira item Pix na lista) */
-    conf.bancos.filter(x=>x.informado !== null).forEach(x=>{ const b = banco(x.b.id); if(b) b.valor = x.informado; });
+    conf.bancos.filter(x=>x.informado !== null).forEach(x=>{ const b = banco(x.b.id); if(b){ b.valor = x.informado; marcarSaldoInformado(state.currentUser, b.nome); } });
     if(bancos.length) us.saldoAtual = totalBancos(bancos);
     state.ultimaAtualizacao = agora;
     persist();
@@ -1176,7 +1181,7 @@ async function impGravar(){
 }
 /* saldo de cada banco = o da planilha; o saldo em conta acompanha */
 function impGravarSaldos(saldos){
-  saldos.forEach(x=>{ x.banco.valor = x.valor; });
+  saldos.forEach(x=>{ x.banco.valor = x.valor; marcarSaldoInformado(state.currentUser, x.banco.nome); });
   if(saldos.length) state.users[state.currentUser].saldoAtual = totalBancos(bancosDoUsuario());
 }
 /* modelo para preencher: aba Gastos (vazia), Exemplo e Listas (categorias e os cartões/bancos do app) */

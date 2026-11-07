@@ -39,7 +39,10 @@ function vozOuvir(){
 /* contas do mês ainda abertas (para "paguei a ...") */
 function vozContasAbertas(){
   const mKey = mesFinanceiroAtual(), u = state.currentUser;
-  return getContasDoMes(mKey, u).filter(it=>!it.pago && it.restante > 0.004 && it.tipo !== 'meta').map(it=>({ key: it.paidKey, desc: it.desc || 'Conta', valor: it.restante }));
+  const arq = state.contasArquivadas || {};
+  /* as do mês anterior ainda em aberto também: são as mesmas que aparecem em Contas do mês */
+  return [...getContasDoMes(mKey, u), ...getContasDoMes(addMonths(mKey, -1), u).filter(it=>!arq[it.paidKey])]
+    .filter(it=>!it.pago && it.restante > 0.004 && it.tipo !== 'meta').map(it=>({ key: it.paidKey, desc: it.desc || 'Conta', valor: it.restante }));
 }
 /* contas tipo Meta (Mercado, Gasolina): compra vai pela categoria, nunca marca a conta como paga */
 function vozMetas(){
@@ -94,7 +97,7 @@ const VOZ_CATEGORIA_PALAVRAS = [
   ['Alimentação', /lanche|restaurante|ifood|padaria|pizza|almoco|jantar|cafe|sorvete|acai|hamburguer|comida/],
   ['Lazer', /cinema|netflix|spotify|show|passeio|jogo|viagem/]
 ];
-function vozCartoes(){ return state.cartoesTracker || []; }
+function vozCartoes(){ return state.currentUser === 'cris' ? [] : (state.cartoesTracker || []); }   // a Cris não tem cartão
 function vozCategoriasCartao(){
   const cats = getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom');
   const novas = vozMetas().map(i=>i.desc).filter(d=>!cats.some(c=>vozSemAcento(c) === vozSemAcento(d)));   // Gasolina vira categoria para descontar da meta
