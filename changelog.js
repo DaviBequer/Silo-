@@ -1,6 +1,15 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.3', itens: [
+    'Padrão novo dos slides: título 90, cantor 40 (acompanha o título), letra 45, linhas 1.7 e letras 0.5',
+    'Padrão novo do PDF: título 20, linhas 1.5, letras 0, margem 28 e colunas no automático',
+    'Colunas automáticas: 1 coluna; se passar de uma página, 2 (no paisagem, até 3)',
+    'Paisagem ganha a opção de 3 colunas',
+    'Tamanho do texto do Visualizar volta a mudar a letra (só a linha comprida encolhe)',
+    'Tela cheia com zoom (pinça ou Ctrl + roda) e arrastar a folha',
+    'Saíram a rolagem automática e o botão Organizar'
+  ] },
   { versao: 'v20.2', itens: [
     'Harpa no colar do WhatsApp: sem nome escrito, o app busca o nome do hino pelo número na internet antes de procurar no Drive e no Cifra Club; se não achar, o nome fica em branco (sem frase no lugar)', 'Selecionar várias músicas: depois de mudar data, status ou tipo, ou de excluir, a seleção fecha sozinha'
   ] },

@@ -1961,6 +1961,8 @@ a.drive-falta:hover{color:var(--primary)}
 .lv-pdf-wrap{margin-top:8px;overflow:hidden}
 .lv-tela-cheia-sair{display:none}
 .lv-pdf-wrap.lv-tela-cheia{position:fixed;inset:0;z-index:2500;margin:0;padding:calc(16px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));background:#e1e7f0;overflow:auto;-webkit-overflow-scrolling:touch}
+.lv-pdf-wrap.lv-tela-cheia{cursor:grab;touch-action:pan-x pan-y}
+.lv-pdf-wrap.lv-tela-cheia.arrastando{cursor:grabbing;user-select:none}
 .lv-rolar{display:none}
 .lv-tela-cheia .lv-rolar{display:flex;align-items:center;gap:2px;position:fixed;left:calc(20px + env(safe-area-inset-left));bottom:calc(20px + env(safe-area-inset-bottom));z-index:1;height:52px;padding:0 4px 0 8px;border-radius:26px;background:rgba(24,32,46,.78);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18);animation:surgir .35s var(--mola)}
 .lv-rolar-btn{width:36px;height:40px;border:none;background:none;color:#fff;font:inherit;font-size:20px;cursor:pointer}
@@ -2004,7 +2006,7 @@ a.drive-falta:hover{color:var(--primary)}
 .lv-pdf-preview.linhas-auto .lv-bloco{padding-bottom:12px;border-bottom:1px solid #dcdce0}
 .lv-bloco{margin:0 0 16px;break-inside:avoid;page-break-inside:avoid}
 .lv-bloco.longo{break-inside:auto;page-break-inside:auto}
-.lv-linha{margin:0 0 .45em;padding-left:14px;font-size:var(--lv-fs,11pt);letter-spacing:var(--lv-ls,0);white-space:nowrap;break-inside:avoid}
+.lv-linha{margin:0 0 .45em;padding-left:14px;font-size:calc(var(--lv-fs,11pt) * var(--lv-k,1));letter-spacing:var(--lv-ls,0);white-space:nowrap;break-inside:avoid}
 .lv-seg{display:inline-block;vertical-align:bottom}
 .lv-c{display:block;min-height:1.35em;padding-right:.55em;color:#ef7d22;font-size:.92em;font-weight:600;line-height:1.35}
 .lv-t{display:block;min-height:1.3em;line-height:calc(var(--lv-lh,1.5) * .87);white-space:pre}

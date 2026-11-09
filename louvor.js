@@ -516,15 +516,21 @@ function switchLouvorSubtab(tab){
 function ensureLouvorConfig(l){
   if(!l.colunas) l.colunas = 2;
   if(l.pdfTamanhoTexto === undefined) l.pdfTamanhoTexto = 11;
-  if(l.pdfTamanhoTitulo === undefined) l.pdfTamanhoTitulo = 17;
+  if(l.pdfTamanhoTitulo === undefined) l.pdfTamanhoTitulo = 20;
   if(l.pdfOrientacao === undefined) l.pdfOrientacao = 'retrato';
   if(l.pdfAlturaLinha === undefined) l.pdfAlturaLinha = 1.5;
   if(l.pdfEspacamento === undefined) l.pdfEspacamento = 0;
-  if(l.pdfMargem === undefined) l.pdfMargem = 40;
-  if(l.slideTituloTamanho === undefined) l.slideTituloTamanho = 44;
-  if(l.slideTextoTamanho === undefined) l.slideTextoTamanho = 32;
+  if(l.pdfMargem === undefined) l.pdfMargem = 28;
+  if(l.slideTituloTamanho === undefined) l.slideTituloTamanho = 90;
+  if(l.slideTextoTamanho === undefined) l.slideTextoTamanho = 45;
   if(l.slideAlturaLinha === undefined) l.slideAlturaLinha = 1.4;
   if(l.slideEspacamento === undefined) l.slideEspacamento = 0;
+  /* Nº 203, padrão do Davi (vale uma vez para todas as músicas; depois cada uma pode mudar) */
+  if((l.padraoV||0) < 203){
+    Object.assign(l, { slideTituloTamanho:90, slideTextoTamanho:45, slideAlturaLinha:1.7, slideEspacamento:0.5,
+      pdfTamanhoTitulo:20, pdfAlturaLinha:1.5, pdfEspacamento:0, pdfMargem:28, colunas:'auto', padraoV:203 });
+  }
+  if(l.pdfOrientacao !== 'paisagem' && Number(l.colunas) === 3) l.colunas = 'auto';
   if(l.transpose === undefined) l.transpose = 0;
   if(l.tomOriginal === undefined){
     let base = (l.tom||'').trim();
@@ -1203,7 +1209,7 @@ function ajustarLvPdfTamanhoTexto(delta){
 function ajustarLvPdfTamanhoTitulo(delta){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
-  l.pdfTamanhoTitulo = Math.max(12, Math.min(26, l.pdfTamanhoTitulo + delta));
+  l.pdfTamanhoTitulo = Math.max(12, Math.min(40, l.pdfTamanhoTitulo + delta));
   persist();
   renderLouvorPdfPreview();
 }
@@ -1241,7 +1247,8 @@ function renderLouvorPdfPreview(){
   document.getElementById('lvPdfEspacamentoLabel').textContent = l.pdfEspacamento.toFixed(1);
   document.getElementById('lvPdfMargemLabel').textContent = l.pdfMargem+'pt';
 
-  ['auto',1,2].forEach(n=>document.getElementById('lvColuna'+(n==='auto'?'Auto':n))?.classList.toggle('active', l.colunas===n));
+  ['auto',1,2,3].forEach(n=>document.getElementById('lvColuna'+(n==='auto'?'Auto':n))?.classList.toggle('active', l.colunas===n));
+  const b3 = document.getElementById('lvColuna3'); if(b3) b3.style.display = l.pdfOrientacao==='paisagem' ? '' : 'none';   // 3 colunas só no paisagem
   document.getElementById('lvFonteMono')?.classList.toggle('active', (l.pdfFonte||'mono')==='mono');
   document.getElementById('lvFonteSans')?.classList.toggle('active', l.pdfFonte==='sans');
 
@@ -1291,7 +1298,7 @@ function renderLouvorPdfPreview(){
   previewEl.innerHTML = `
     <div class="lv-sheet-header">
       <div class="lv-sheet-header-text">
-        <div class="lv-sheet-title" data-campo="titulo" style="font-size:${l.pdfTamanhoTitulo+8}pt">${lvEsc(l.titulo||'Sem título')}</div>
+        <div class="lv-sheet-title" data-campo="titulo" style="font-size:${l.pdfTamanhoTitulo}pt">${lvEsc(l.titulo||'Sem título')}</div>
         <div class="lv-sheet-artist" data-campo="artista">${lvEsc(l.artista||'')}</div>
       </div>
       ${tomAtual?`<div class="lv-sheet-tom-box"><span>TOM</span><b>${tomAtual}</b>${lvCapo(l)?`<small>Capo ${lvCapo(l)}ª · ${lvFormaAtual(l)}</small>`:''}</div>`:''}
@@ -1300,20 +1307,25 @@ function renderLouvorPdfPreview(){
   `;
   if(typeof lvAplicarEdicaoFolha==='function') lvAplicarEdicaoFolha();
 
-  /* colunas e tamanho: reduz a letra só o necessário para a linha mais larga caber na coluna */
+  /* colunas e tamanho: a letra fica no tamanho escolhido; só a linha que não cabe na coluna encolhe (como no PDF) */
   const cols = previewEl.querySelector('.lv-sheet-cols');
-  const largura = cols.clientWidth;
-  let maxW = 0;
-  cols.querySelectorAll('.lv-linha').forEach(li=>{ let w = 0; li.childNodes.forEach(c=>{ w += c.getBoundingClientRect().width; }); if(w > maxW) maxW = w; });
-  const gap = 30;
-  const fsPara = n => { const colW = (largura - gap*(n-1))/n; return maxW > colW ? Math.max(6, l.pdfTamanhoTexto * colW / maxW * 0.98) : l.pdfTamanhoTexto; };
+  const largura = cols.clientWidth, gap = 30;
+  const linhas = [...cols.querySelectorAll('.lv-linha')].map(li=>{ let w = 0; li.childNodes.forEach(c=>{ w += c.getBoundingClientRect().width; }); return { li, w }; });
+  const usar = n=>{
+    const colW = (largura - gap*(n-1))/n - 16;   // 14px de recuo da linha
+    cols.style.columnCount = n;
+    linhas.forEach(({ li, w })=>li.style.setProperty('--lv-k', w > colW ? Math.max(0.5, colW / w * 0.98).toFixed(3) : 1));
+  };
+  const alturaPagina = (paisagem ? 210 : 297) * 96 / 25.4 - 2;
   let n;
-  /* v12 (escolha C do Davi): no automático, duas colunas sempre que a música tem mais de uma parte e a letra não fica pequena demais */
-  if(l.colunas==='auto'){ n = (nSecoes >= 2 && fsPara(2) >= l.pdfTamanhoTexto*0.72) ? 2 : 1; lvColsAuto[l.id] = n; }
-  else n = Number(l.colunas)||2;
-  cols.style.columnCount = n;
-  previewEl.style.setProperty('--lv-fs', fsPara(n).toFixed(2)+'pt');
-  lvCaberNumaPagina(previewEl, fsPara(n), paisagem);
+  /* Nº 203 (pedido do Davi): no automático, 1 coluna; se passou de uma página, 2 colunas (no paisagem, se ainda passar, 3) */
+  if(l.colunas==='auto'){
+    const max = paisagem ? 3 : 2;
+    n = 1; usar(n);
+    while(n < max && previewEl.offsetHeight > alturaPagina){ n++; usar(n); }
+    lvColsAuto[l.id] = n;
+  }else{ n = Math.min(paisagem ? 3 : 2, Number(l.colunas)||2); usar(n); }
+  lvCaberNumaPagina(previewEl, l.pdfTamanhoTexto, paisagem);
   lvAjustarZoomFolha();
 }
 /* Prioridade: tudo numa folha A4. Se passou um pouco, a letra encolhe aos poucos até caber; se precisaria
@@ -1340,7 +1352,7 @@ function lvAjustarZoomFolha(){
   const disp = pai.clientWidth - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
   const w = el.offsetWidth;
   if(!w || !disp) return;
-  if(pai.classList.contains('lv-tela-cheia')) el.style.zoom = Math.min(disp / w, 2).toFixed(3);   // tela cheia: ocupa a largura (até 2x)
+  if(pai.classList.contains("lv-tela-cheia")) el.style.zoom = (Math.min(disp / w, 2) * lvZoomTela).toFixed(3);   // tela cheia: ocupa a largura (até 2x) vezes o zoom dos dedos/Ctrl+roda
   else if(w > disp) el.style.zoom = (disp / w).toFixed(3);
 }
 /* Tela cheia da folha: ocupa a tela toda (e usa a tela cheia do navegador quando ele deixa) */
@@ -1354,42 +1366,49 @@ function lvTelaCheia(ligar){
     if(ligar && wrap.requestFullscreen && !document.fullscreenElement) wrap.requestFullscreen().catch(()=>{});
     if(!ligar && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
   }catch(e){}
-  if(ligar) wrap.scrollTop = 0;
-  if(!ligar) lvRolarAlternar(false);
-  else lvRolarMostrarVel();
+  if(ligar){ lvZoomTela = 1; wrap.scrollTop = 0; }
   lvAjustarZoomFolha();
 }
-/* Rolagem automática na tela cheia: velocidade 1–10 (guardada em cada louvor); toque em ▶/⏸ liga e desliga */
-let lvRolarTimer = null, lvRolarResto = 0, lvRolarUltimo = 0;
-function lvRolarVelAtual(){ const l = getLouvorAtual(); return Math.min(10, Math.max(1, Number(l && l.rolagemVel) || 3)); }
-function lvRolarMostrarVel(){ const e = document.getElementById('lvRolarVel'); if(e) e.textContent = lvRolarVelAtual(); }
-function lvRolarVel(d){
-  const l = getLouvorAtual(); if(!l) return;
-  l.rolagemVel = Math.min(10, Math.max(1, lvRolarVelAtual() + d));
-  lvRolarMostrarVel();
-  persist();
+/* Nº 203 (pedido do Davi): zoom na tela cheia — pinça no celular, Ctrl + roda no computador — e arrastar a folha (mãozinha) */
+var lvZoomTela = 1;   // var: lvAjustarZoomFolha pode rodar antes desta linha
+function lvZoomPara(novo, cx, cy){
+  const wrap = document.getElementById('lvPdfWrap'), el = document.getElementById('lvPdfPreview');
+  if(!wrap || !el) return;
+  novo = Math.max(1, Math.min(5, novo));
+  const antes = parseFloat(el.style.zoom) || 1;
+  const r = wrap.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
+  const px = wrap.scrollLeft + x, py = wrap.scrollTop + y;
+  lvZoomTela = novo;
+  lvAjustarZoomFolha();
+  const f = (parseFloat(el.style.zoom) || 1) / antes;   // mantém parado o ponto embaixo do dedo/mouse
+  wrap.scrollLeft = px * f - x; wrap.scrollTop = py * f - y;
 }
-function lvRolarAlternar(ligar){
-  const wrap = document.getElementById('lvPdfWrap'), play = document.getElementById('lvRolarPlay');
-  if(ligar === undefined) ligar = !lvRolarTimer;
-  if(lvRolarTimer){ cancelAnimationFrame(lvRolarTimer); lvRolarTimer = null; }
-  if(play){
-    play.classList.toggle('ligado', !!ligar);
-    play.innerHTML = ligar ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-  }
-  if(!ligar || !wrap) return;
-  lvRolarResto = 0; lvRolarUltimo = 0;
-  const passo = t=>{
-    if(!wrap.classList.contains('lv-tela-cheia')){ lvRolarAlternar(false); return; }
-    const dt = lvRolarUltimo ? Math.min(100, t - lvRolarUltimo) : 0; lvRolarUltimo = t;
-    lvRolarResto += dt * lvRolarVelAtual() * 0.006;   // vel 3 ≈ 18 px/s
-    const px = Math.floor(lvRolarResto);
-    if(px >= 1){ lvRolarResto -= px; wrap.scrollTop += px; }
-    if(wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 1){ lvRolarAlternar(false); return; }   // chegou no fim
-    lvRolarTimer = requestAnimationFrame(passo);
-  };
-  lvRolarTimer = requestAnimationFrame(passo);
-}
+(function(){
+  const wrap = document.getElementById('lvPdfWrap'); if(!wrap) return;
+  const cheia = ()=>wrap.classList.contains('lv-tela-cheia');
+  wrap.addEventListener('wheel', e=>{
+    if(!cheia() || !e.ctrlKey) return;
+    e.preventDefault();
+    lvZoomPara(lvZoomTela * Math.exp(-e.deltaY * 0.002), e.clientX, e.clientY);
+  }, { passive:false });
+  let pinca = null;
+  const dist = t=>Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  wrap.addEventListener('touchstart', e=>{ if(cheia() && e.touches.length === 2) pinca = { d: dist(e.touches), z: lvZoomTela }; }, { passive:true });
+  wrap.addEventListener('touchmove', e=>{
+    if(!pinca || e.touches.length !== 2) return;
+    e.preventDefault();
+    lvZoomPara(pinca.z * dist(e.touches) / pinca.d, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
+  }, { passive:false });
+  wrap.addEventListener('touchend', e=>{ if(e.touches.length < 2) pinca = null; });
+  let arrasto = null;
+  wrap.addEventListener('mousedown', e=>{
+    if(!cheia() || e.button !== 0 || e.target.closest('button')) return;
+    arrasto = { x: e.clientX, y: e.clientY, l: wrap.scrollLeft, t: wrap.scrollTop };
+    wrap.classList.add('arrastando'); e.preventDefault();
+  });
+  window.addEventListener('mousemove', e=>{ if(arrasto){ wrap.scrollLeft = arrasto.l - (e.clientX - arrasto.x); wrap.scrollTop = arrasto.t - (e.clientY - arrasto.y); } });
+  window.addEventListener('mouseup', ()=>{ if(arrasto){ arrasto = null; wrap.classList.remove('arrastando'); } });
+})();
 /* saiu da tela cheia do navegador (Esc, gesto de voltar): sai do modo também */
 document.addEventListener('fullscreenchange', ()=>{
   if(!document.fullscreenElement && document.getElementById('lvPdfWrap')?.classList.contains('lv-tela-cheia')) lvTelaCheia(false);
@@ -1445,7 +1464,7 @@ function lvMontarPdf(l){
 
   doc.setTextColor(20,20,22);
   doc.setFont('helvetica','bold');
-  doc.setFontSize(l.pdfTamanhoTitulo+2);
+  doc.setFontSize(l.pdfTamanhoTitulo);
   doc.text(l.titulo||'Sem título', marginX, 34);
   doc.setFont('helvetica','normal');
   doc.setFontSize(11);
@@ -1485,9 +1504,11 @@ function lvMontarPdf(l){
     }catch(e){ mono = 'courier'; }
   }
   const { items } = lvParseContent(l.conteudo);
-  const cols = lvColunasEfetivas(l);
-  const colWidth = cols===2 ? (pageW - marginX*2 - 20)/2 : (pageW - marginX*2);
-  const colX = [marginX, marginX + colWidth + 20];
+  /* colunas: escolhidas, ou no automático 1 → 2 (→ 3 no paisagem) até caber numa página (Nº 203) */
+  const paisagem = l.pdfOrientacao === 'paisagem', maxCols = paisagem ? 3 : 2;
+  let cols = l.colunas === 'auto' ? 1 : Math.min(maxCols, Number(l.colunas) || 2), colWidth, colX;
+  const montarCols = ()=>{ colWidth = (pageW - marginX*2 - 20*(cols-1)) / cols; colX = Array.from({ length: cols }, (_, i)=>marginX + i*(colWidth + 20)); };
+  montarCols();
   const startY = 96;
 
   /* desenha tudo com a letra em "fontSize"; desenhar=false só conta quantas páginas precisaria */
@@ -1495,7 +1516,7 @@ function lvMontarPdf(l){
     let colIdx = 0, y = startY, paginas = 1;
     const lineH = fontSize * l.pdfAlturaLinha;
     const nextColumnOrPage = ()=>{
-      if(cols===2 && colIdx===0){ colIdx = 1; y = startY; }
+      if(colIdx < cols - 1){ colIdx++; y = startY; }
       else { paginas++; if(desenhar) doc.addPage(); colIdx = 0; y = startY; }
     };
     const ensureSpace = need=>{ if(y + need > pageH - marginX) nextColumnOrPage(); };
@@ -1552,6 +1573,7 @@ function lvMontarPdf(l){
     return paginas;
   }
   /* cabe numa folha só? encolhe a letra até 78% (mín. 9pt), como a folha da tela; se nem assim couber, fica no tamanho normal */
+  if(l.colunas === 'auto') while(cols < maxCols && layout(l.pdfTamanhoTexto, false) > 1){ cols++; montarCols(); }
   let fs = l.pdfTamanhoTexto;
   if(layout(fs, false) > 1){
     const minimo = Math.max(9, l.pdfTamanhoTexto * 0.78);
@@ -1571,14 +1593,14 @@ function lvMontarPdf(l){
 function ajustarLvSlideTituloTamanho(delta){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
-  l.slideTituloTamanho = Math.max(20, Math.min(70, l.slideTituloTamanho + delta));
+  l.slideTituloTamanho = Math.max(20, Math.min(140, l.slideTituloTamanho + delta));
   persist();
   renderLouvorSlidePreview();
 }
 function ajustarLvSlideTextoTamanho(delta){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
-  l.slideTextoTamanho = Math.max(16, Math.min(56, l.slideTextoTamanho + delta));
+  l.slideTextoTamanho = Math.max(16, Math.min(80, l.slideTextoTamanho + delta));
   persist();
   renderLouvorSlidePreview();
 }
@@ -1620,7 +1642,7 @@ function renderLouvorSlidePreview(){
   const espacamentoStyle = `letter-spacing:${pt(l.slideEspacamento)}`;
   if(lvSlideIndex === 0){
     el.style.alignItems = 'center';
-    el.innerHTML = `<div class="lv-slide-title" style="font-size:${pt(l.slideTituloTamanho)};text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lvEsc(l.titulo||'Sem título')}</div><div class="lv-slide-artist" style="font-size:${pt(LV_SLIDE_ARTISTA_PT)};text-align:center">${lvEsc(l.artista||'')}</div>`;
+    el.innerHTML = `<div class="lv-slide-title" style="font-size:${pt(l.slideTituloTamanho)};text-align:center;line-height:${l.slideAlturaLinha};${espacamentoStyle}">${lvEsc(l.titulo||'Sem título')}</div><div class="lv-slide-artist" style="font-size:${pt(lvSlideArtistaPt(l))};text-align:center">${lvEsc(l.artista||'')}</div>`;
   }else{
     const s = slides[lvSlideIndex-1];
     const lyricText = s.lines.join('\n');
@@ -1667,7 +1689,7 @@ function lvSlideNav(delta){
 /* slide: mesmo visual na prévia e no arquivo .pptx */
 const LV_SLIDE_FONTE = 'Arial';
 const LV_SLIDE_FUNDO = '#020617';
-const LV_SLIDE_ARTISTA_PT = 22;
+const lvSlideArtistaPt = l=>Math.round(l.slideTituloTamanho * 0.44);   // Nº 203: cantor um pouco menos da metade do título (90 → 40)
 const LV_SLIDE_VEZES_PT = 26;   // "2x" no canto de cima, à direita
 /* gerador de slides (~470 KB) só é baixado quando for usado */
 const LV_PPTXGEN = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
@@ -1696,8 +1718,8 @@ async function lvMontarSlides(l){
 
   const capa = pres.addSlide();
   capa.background = { color: fundo };
-  capa.addText(l.titulo||'Sem título', { x:0.6,y:2.4,w:12.1,h:1.6, fontFace:LV_SLIDE_FONTE, fontSize:l.slideTituloTamanho, bold:true, color:'FFFFFF', align:'center', valign:'bottom', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
-  capa.addText(l.artista||'', { x:0.6,y:4.05,w:12.1,h:0.8, fontFace:LV_SLIDE_FONTE, fontSize:LV_SLIDE_ARTISTA_PT, color:'B3B3B3', align:'center', valign:'top' });
+  capa.addText(l.titulo||'Sem título', { x:0.6,y:0.5,w:12.1,h:3.5, fontFace:LV_SLIDE_FONTE, fontSize:l.slideTituloTamanho, bold:true, color:'FFFFFF', align:'center', valign:'bottom', lineSpacingMultiple:l.slideAlturaLinha, charSpacing:l.slideEspacamento });
+  capa.addText(l.artista||'', { x:0.6,y:4.05,w:12.1,h:1.4, fontFace:LV_SLIDE_FONTE, fontSize:lvSlideArtistaPt(l), color:'B3B3B3', align:'center', valign:'top' });
 
   const { slides } = lvParseContent(l.conteudo);
   slides.forEach(s=>{
