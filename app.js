@@ -338,8 +338,8 @@ function panoramaParaAnalise(){
     L.push(`- **Total: ${R(us.saldoAtual)}**`, '');
     if(u !== 'davi'){ L.push('(A Cris não usa cartão; aqui só os saldos.)', ''); return; }
 
-    L.push('### Renda', '(O salário de cada mês vem das horas do Ponto do mês anterior: mês futuro sem horas lançadas aparece com R$ 0,00.)');
-    passados(3).concat(meses(2)).forEach(m=>L.push(`- ${monthLabelLong(m)}: salário ${R(rendaBaseForMonth(u, m))}${salarioRecebidoNoMes(u, m) ? ' (já recebido)' : ''}, extras ${R((us.extras||[]).filter(e=>extraNoPeriodo(e, m)).reduce((s, e)=>s + (Number(e.valor)||0), 0))}, dízimo ${R(dizimoValorCheio(u, m))}`));
+    L.push('### Renda', '(O salário de cada mês vem das horas do Ponto do mês anterior; dias que ainda não chegaram contam o horário padrão do Ponto, então os meses futuros são estimativa.)');
+    passados(3).concat(meses(3)).forEach(m=>L.push(`- ${monthLabelLong(m)}: salário ${R(rendaBaseForMonth(u, m))}${salarioRecebidoNoMes(u, m) ? ' (já recebido)' : ''}, extras ${R((us.extras||[]).filter(e=>extraNoPeriodo(e, m)).reduce((s, e)=>s + (Number(e.valor)||0), 0))}, dízimo ${R(dizimoValorCheio(u, m))}`));
     const extras = (us.extras || []).filter(e=>(e.mesFim || e.mesInicio) >= hoje);
     if(extras.length){ L.push('- Extras previstos:'); extras.forEach(e=>L.push(`  - ${e.desc || e.nome || 'Extra'}: ${R(e.valor)} (${monthLabel(e.mesInicio)}${e.mesFim && e.mesFim !== e.mesInicio ? ' a ' + monthLabel(e.mesFim) : ''})`)); }
     L.push('');
@@ -384,7 +384,7 @@ function panoramaParaAnalise(){
     L.push('### Previsão dos próximos meses (do app)');
     L.push('| Mês | Entra | Sai | Sobra |', '|---|---:|---:|---:|');
     meses(6).forEach(m=>L.push(`| ${monthLabelLong(m)} | ${R(incomeForMonth(u, m))} | ${R(expensesForMonth(u, m))} | ${R(saldoForMonth(u, m))} |`));
-    L.push('(No mês atual, "Entra" já inclui o saldo dos bancos. Mês futuro sem salário lançado aparece negativo: use a renda dos meses passados como base.)', '');
+    L.push('(No mês atual, "Entra" já inclui o saldo dos bancos. O salário dos meses futuros é estimado pelo horário padrão do Ponto.)', '');
 
     const metas = (typeof metasEconomia === 'function' ? metasEconomia() : []);
     if(metas.length){ L.push('### Metas de economia'); metas.forEach(m=>L.push(`- ${m.nome || 'Meta'}: guardado ${R(m.guardado)} de ${R(m.alvo)}`)); L.push(''); }

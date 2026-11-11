@@ -482,6 +482,15 @@ async function rodarTestes(){
     }catch(e){ erroTelas = String(e && e.stack || e); }
     t('telas: abas e telas cheias abrem sem erro', !erroTelas, erroTelas);
 
+    /* ---------- salário de mês futuro = horário padrão do Ponto (pergunta do Davi, 11/11) ---------- */
+    const vhAntes = state.ponto.valorHora; state.ponto.valorHora = 10;
+    const mFutPonto = addMonths(mesFinanceiroAtual(), 5), diasAntes = state.ponto.days[mFutPonto];
+    delete state.ponto.days[mFutPonto];
+    const rFut = rendaBaseForMonth('davi', addMonths(mFutPonto, 1)), padraoFut = computePontoMes(mFutPonto).padraoMin / 60 * 10;
+    t('ponto: mês futuro sem horas conta o horário padrão', rFut > 0 && Math.abs(rFut - padraoFut) < 0.01, rFut + ' x ' + padraoFut);
+    if(diasAntes) state.ponto.days[mFutPonto] = diasAntes; else delete state.ponto.days[mFutPonto];
+    state.ponto.valorHora = vhAntes;
+
     /* ---------- panorama para análise (Nº 204): monta o texto sem mexer nos dados ---------- */
     let pano = '';
     try{ panoramaParaAnalise(); }catch(e){}   // 1ª vez cria os meses vazios do Ponto (como qualquer tela)
