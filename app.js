@@ -317,6 +317,90 @@ function exportarDadosApp(){
   if(typeof atualizarSino === 'function') atualizarSino();
   showToast('Backup exportado');
 }
+/* Nº 204 (pedido do Davi): panorama das finanças num texto só, para mandar a outra IA analisar e dar um norte.
+   Só leitura: não grava nada. */
+function panoramaParaAnalise(){
+  const R = v=>'R$ ' + (Math.round((Number(v)||0)*100)/100).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const hoje = mesFinanceiroAtual(), L = [];
+  const meses = n=>Array.from({ length:n }, (_, i)=>addMonths(hoje, i));
+  const passados = n=>Array.from({ length:n }, (_, i)=>addMonths(hoje, i - n));
+  L.push('# Minhas finanças — panorama para análise', '',
+    `Gerado em ${new Date().toLocaleString('pt-BR')} pelo app Siloé. Mês atual do app: ${monthLabelLong(hoje)}.`, '',
+    'Pedido: analise com sinceridade como eu uso meu dinheiro. Mostre onde estou errando, o que estou deixando de fazer,',
+    'riscos (dívidas, parcelas, cartão), quanto dá para guardar por mês e um plano prático, passo a passo, para eu mudar de vida.',
+    'Observações: o dízimo (10% do salário) é decisão minha e fica. "Fatura" = cartão de crédito; "Pix/débito" = saiu direto do banco.', '');
+  ['davi', 'cris'].forEach(u=>{
+    const us = state.users[u]; if(!us) return;
+    const bancos = (us.bancos || []).filter(b=>b && b.nome);
+    L.push(`## ${u === 'davi' ? 'Davi' : 'Cris'}`, '');
+    L.push('### Saldo nos bancos agora');
+    bancos.forEach(b=>L.push(`- ${b.nome}: ${R(b.valor)}`));
+    L.push(`- **Total: ${R(us.saldoAtual)}**`, '');
+    if(u !== 'davi'){ L.push('(A Cris não usa cartão; aqui só os saldos.)', ''); return; }
+
+    L.push('### Renda', '(O salário de cada mês vem das horas do Ponto do mês anterior: mês futuro sem horas lançadas aparece com R$ 0,00.)');
+    passados(3).concat(meses(2)).forEach(m=>L.push(`- ${monthLabelLong(m)}: salário ${R(rendaBaseForMonth(u, m))}${salarioRecebidoNoMes(u, m) ? ' (já recebido)' : ''}, extras ${R((us.extras||[]).filter(e=>extraNoPeriodo(e, m)).reduce((s, e)=>s + (Number(e.valor)||0), 0))}, dízimo ${R(dizimoValorCheio(u, m))}`));
+    const extras = (us.extras || []).filter(e=>(e.mesFim || e.mesInicio) >= hoje);
+    if(extras.length){ L.push('- Extras previstos:'); extras.forEach(e=>L.push(`  - ${e.desc || e.nome || 'Extra'}: ${R(e.valor)} (${monthLabel(e.mesInicio)}${e.mesFim && e.mesFim !== e.mesInicio ? ' a ' + monthLabel(e.mesFim) : ''})`)); }
+    L.push('');
+
+    L.push(`### Contas do mês (${monthLabelLong(hoje)})`);
+    const contas = gastosDoMes(u, hoje);
+    contas.forEach(c=>L.push(`- ${c.desc}: ${R(c.valor)} — ${c.cat}${c.tipo && c.tipo !== 'fixa' ? ', ' + c.tipo : ''}${c.essencial === false ? ', não essencial' : ''}${c.dia ? ', dia ' + c.dia : ''}${c.parcela ? `, parcela ${c.parcela.k}/${c.parcela.n}` : ''}${c.noCartao ? ', paga no cartão' : ''} — ${c.pago ? 'paga' : 'em aberto'}`));
+    L.push(`- **Total das contas: ${R(contas.reduce((s, c)=>s + c.valor, 0))}**`, '');
+
+    const cartoes = state.cartoesTracker || [];
+    if(cartoes.length){
+      L.push('### Cartões de crédito');
+      cartoes.forEach(c=>{
+        const m0 = faturaAbertaMes(c), f = faturaPartes(c, m0);
+        L.push(`- **${c.nome}**${Number(c.limite) ? ` (limite ${R(c.limite)})` : ''}: fatura aberta de ${monthLabel(m0)} = ${R(f.total)} (à vista ${R(f.totalVista)}, parcelas ${R(f.totalParcelas)}, assinaturas ${R(f.totalAssinaturas)})`);
+        L.push(`  - Próximas faturas: ${[1, 2, 3, 4, 5].map(i=>{ const m = addMonths(m0, i); return monthLabel(m) + ' ' + R(faturaCartaoNoMes(c, m)); }).join(' · ')}`);
+        f.parcelas.forEach(p=>L.push(`  - Parcelado: ${p.compra.nome} — ${R(p.valor)}/mês, parcela ${p.k}/${p.n}`));
+        f.assinaturas.forEach(a=>L.push(`  - Assinatura: ${a.assinatura.nome || a.assinatura.descricao || 'Assinatura'} — ${R(a.valor)}`));
+      });
+      L.push('');
+    }
+
+    const emps = (state.emprestimos || []).filter(e=>empPendentes(e).length);
+    if(emps.length){
+      L.push('### Empréstimos');
+      emps.forEach(e=>{ const r = empResumo(e); L.push(`- ${e.nome || 'Empréstimo'}: parcela ${R(e.valorParcela)}, faltam ${r.pend.length} de ${e.numParcelas}${r.vencidas ? ` (${r.vencidas} vencida(s))` : ''}; para quitar hoje ≈ ${R(r.saldoHoje)}`); });
+      L.push('');
+    }
+
+    L.push('### Gastos do dia a dia por categoria (cartão à vista + Pix/débito)');
+    const ms = passados(3).concat([hoje]);
+    const porCat = {};
+    const somar = (cat, m, v)=>{ cat = cat || 'Outros'; (porCat[cat] = porCat[cat] || {})[m] = ((porCat[cat] || {})[m] || 0) + (Number(v)||0); };
+    cartoes.forEach(c=>(c.credoVista || []).forEach(cv=>{ if(!cv.ajuste && !cv.conta && ms.includes(cv.mKey)) somar(cv.categoria, cv.mKey, cv.valor); }));
+    (state.lancamentos || []).forEach(la=>{ if((la.usuario || 'davi') === u && ms.includes(la.mKey)) somar(la.categoria, la.mKey, la.valor); });
+    L.push('| Categoria | ' + ms.map(monthLabel).join(' | ') + ' |', '|---|' + ms.map(()=>'---:').join('|') + '|');
+    Object.keys(porCat).sort((a, b)=>ms.reduce((s, m)=>s + (porCat[b][m]||0), 0) - ms.reduce((s, m)=>s + (porCat[a][m]||0), 0))
+      .forEach(cat=>L.push(`| ${cat} | ` + ms.map(m=>R(porCat[cat][m])).join(' | ') + ' |'));
+    L.push('| **Total** | ' + ms.map(m=>R(Object.values(porCat).reduce((s, x)=>s + (x[m]||0), 0))).join(' | ') + ' |', '');
+    L.push('(O mês atual ainda está em andamento.)', '');
+
+    L.push('### Previsão dos próximos meses (do app)');
+    L.push('| Mês | Entra | Sai | Sobra |', '|---|---:|---:|---:|');
+    meses(6).forEach(m=>L.push(`| ${monthLabelLong(m)} | ${R(incomeForMonth(u, m))} | ${R(expensesForMonth(u, m))} | ${R(saldoForMonth(u, m))} |`));
+    L.push('(No mês atual, "Entra" já inclui o saldo dos bancos. Mês futuro sem salário lançado aparece negativo: use a renda dos meses passados como base.)', '');
+
+    const metas = (typeof metasEconomia === 'function' ? metasEconomia() : []);
+    if(metas.length){ L.push('### Metas de economia'); metas.forEach(m=>L.push(`- ${m.nome || 'Meta'}: guardado ${R(m.guardado)} de ${R(m.alvo)}`)); L.push(''); }
+  });
+  return L.join('\n');
+}
+function exportarPanorama(){
+  let txt;
+  try{ txt = panoramaParaAnalise(); }catch(e){ console.error(e); showToast('Não deu para montar o panorama.'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type: 'text/markdown;charset=utf-8' }));
+  a.download = `siloe-panorama-${new Date().toISOString().slice(0,10)}.md`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  showToast('Panorama baixado: mande o arquivo no outro chat');
+}
 function triggerImportarDados(){
   document.getElementById('importFileInput').click();
 }

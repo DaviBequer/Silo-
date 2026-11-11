@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.4', itens: [
+    'Ajustes ganhou o botão Panorama: baixa um arquivo com saldos, cartões, contas, empréstimos, gastos por categoria e a previsão, pronto para mandar em outro chat analisar'
+  ] },
   { versao: 'v20.3', itens: [
     'Padrão novo dos slides: título 90, cantor 40 (acompanha o título), letra 45, linhas 1.7 e letras 0.5',
     'Padrão novo do PDF: título 20, linhas 1.5, letras 0, margem 28 e colunas no automático',

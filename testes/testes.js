@@ -482,6 +482,14 @@ async function rodarTestes(){
     }catch(e){ erroTelas = String(e && e.stack || e); }
     t('telas: abas e telas cheias abrem sem erro', !erroTelas, erroTelas);
 
+    /* ---------- panorama para análise (Nº 204): monta o texto sem mexer nos dados ---------- */
+    let pano = '';
+    try{ panoramaParaAnalise(); }catch(e){}   // 1ª vez cria os meses vazios do Ponto (como qualquer tela)
+    const antesPano = JSON.stringify(state);
+    try{ pano = panoramaParaAnalise(); }catch(e){ pano = 'ERRO ' + e; }
+    t('panorama: texto com saldos, contas e previsão', pano.includes('## Davi') && pano.includes('### Saldo nos bancos agora') && pano.includes('### Previsão dos próximos meses'), pano.slice(0, 200));
+    t('panorama: não muda nada nos dados', JSON.stringify(state) === antesPano);
+
     /* ---------- dados que não podem sumir (conselho 27/10) ---------- */
     state.paid['2020-01_davi_fixo_f1'] = true;
     state.ponto.days['2020-01'] = { '5': { entrada:'08:00', saida:'17:00' } };
