@@ -462,6 +462,7 @@ async function lvSelExcluir(){
     state.louvores = state.louvores.filter(l=>!ids.has(l.id));
     (state.cultos || []).forEach(c=>{ c.partes.forEach(p=>{ p.musicas = p.musicas.filter(id=>!ids.has(id)); }); if(c.ordemWhats) c.ordemWhats = c.ordemWhats.filter(id=>!ids.has(id)); });
     persist(); lvAtualizarTelas();
+    if(louvorAtualId && ids.has(louvorAtualId)) closeLouvorDetalhe();   // a música aberta foi excluída: a tela dela fecha também
   }, ()=>{ lvAtualizarTelas(); lvSelBarra(); });
   lvSelecionarModo(false);   // excluiu: sai da seleção
 }

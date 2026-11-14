@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.0', itens: [
+    'Louvor: excluir pela seleção fecha também a tela do hino que estava aberto'
+  ] },
   { versao: 'v20.9', itens: [
     'Medley: o nome fica Hino 1 + Hino 2 e no cantor aparece Medley',
     'Música tirada de dentro de outro medley do Drive: a IA lê o PDF inteiro, com as colunas, e traz a música completa',
