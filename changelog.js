@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.3', itens: [
+    'Visualizar mostra o PDF de verdade, igual ao que baixa: mesmo tamanho de letra, mesma pílula das partes e cada parte no mesmo lugar'
+  ] },
   { versao: 'v21.2', itens: [
     'Campo harmônico: toque num grau e embaixo de cada outro grau aparecem os acordes de ligação até ele; embaixo do grau tocado, as cores dele (7M, 9, 4, 6). Toque num acorde para ver o caminho e para que serve',
     'Ícone da data sem os pontinhos brancos na borda'

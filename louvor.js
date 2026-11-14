@@ -1378,6 +1378,7 @@ function renderLouvorPdfPreview(){
   const previewEl = document.getElementById('lvPdfPreview');
   const paisagem = l.pdfOrientacao==='paisagem';
   previewEl.style.zoom = 1;   // mede no tamanho real; o zoom de tela é aplicado no fim
+  previewEl.classList.remove('real');
   previewEl.classList.toggle('paisagem', paisagem);
   previewEl.classList.toggle('sans', l.pdfFonte==='sans');
   /* cifra antiga, sem nenhum "--": mantém a linha automática embaixo de cada bloco, como era antes */
@@ -1419,6 +1420,41 @@ function renderLouvorPdfPreview(){
   }else{ n = Math.min(paisagem ? 3 : 2, Number(l.colunas)||2); usar(n); }
   lvCaberNumaPagina(previewEl, l.pdfTamanhoTexto, paisagem);
   lvAjustarZoomFolha();
+  lvPdfRealAgendar();
+}
+/* pedido do Davi (14/11): o Visualizar mostra o PDF de verdade (o mesmo arquivo que baixa), desenhado página por página,
+   para não ter diferença de tamanho, de pílula das partes nem de onde cada parte cai. A folha em HTML fica só até ele ficar pronto. */
+let lvPdfRealVez = 0, lvPdfRealTimer = null;
+function lvPdfRealAgendar(){
+  clearTimeout(lvPdfRealTimer);
+  const vez = ++lvPdfRealVez;
+  lvPdfRealTimer = setTimeout(()=>lvPdfRealDesenhar(vez), 180);
+}
+async function lvPdfRealDesenhar(vez){
+  const l = getLouvorAtual(), el = document.getElementById('lvPdfPreview');
+  if(!l || !el || window.lvEditandoFolha) return;
+  try{
+    await lvPdfCarregarFonte();
+    if(typeof lviPdfPronto === 'function') await lviPdfPronto();
+    if(vez !== lvPdfRealVez || typeof pdfjsLib === 'undefined') return;
+    const r = lvMontarPdf(l); if(!r) return;
+    const pdf = await pdfjsLib.getDocument({ data: r.doc.output('arraybuffer') }).promise;
+    const larg = (l.pdfOrientacao === 'paisagem' ? 297 : 210) * 96 / 25.4;   // A4 em px, igual à folha
+    const nitidez = Math.min(3, (window.devicePixelRatio || 1) * 1.5);   // mais pixels: o zoom da tela cheia fica nítido
+    const caixa = document.createElement('div'); caixa.className = 'lv-pdf-real';
+    for(let p = 1; p <= pdf.numPages; p++){
+      const pag = await pdf.getPage(p);
+      const v = pag.getViewport({ scale: larg / pag.getViewport({ scale: 1 }).width * nitidez });
+      const cv = document.createElement('canvas'); cv.width = v.width; cv.height = v.height;
+      caixa.appendChild(cv);
+      await pag.render({ canvasContext: cv.getContext('2d'), viewport: v, intent: 'print' }).promise;   // 'print': desenha sem esperar quadro de animação
+      if(vez !== lvPdfRealVez) return;
+    }
+    if(vez !== lvPdfRealVez || louvorAtualId !== l.id) return;
+    el.classList.add('real'); el.style.padding = '0';
+    el.replaceChildren(caixa);
+    lvAjustarZoomFolha();
+  }catch(e){}   // sem o leitor de PDF: fica a folha em HTML
 }
 /* Prioridade: tudo numa folha A4. Se passou um pouco, a letra encolhe aos poucos até caber; se precisaria
    ficar pequena demais (abaixo de 9pt ou de 78% do tamanho escolhido), volta ao tamanho normal e segue na 2ª página. */
