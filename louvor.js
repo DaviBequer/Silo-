@@ -388,6 +388,20 @@ function lvMudarData(l, v){
   const antiga = l.dataAgendamento, hoje = calISO(new Date());
   if(antiga && antiga !== v && antiga <= hoje){ l.tocadaEm = [...new Set([...(l.tocadaEm||[]), antiga])].sort(); }
   l.dataAgendamento = v || '';
+  /* pedido do Davi: mudou para o dia de um culto que já tem roteiro → entra nele (em Hinos); sai do roteiro do dia antigo que ainda não passou */
+  if(antiga === v || typeof cultoDaData !== 'function') return;
+  const velho = antiga && antiga >= hoje && cultoDaData(antiga);
+  if(velho) velho.partes.forEach(p=>{ p.musicas = p.musicas.filter(id=>id !== l.id); });
+  const novo = v && cultoDaData(v);
+  if(novo && !novo.partes.some(p=>p.musicas.includes(l.id))){
+    let p = novo.partes.find(p=>cuNorm(p.nome) === 'hinos');
+    if(!p){
+      p = { id: cultoId('cp'), nome:'Hinos', quem:'', musicas:[] };
+      const fim = novo.partes.findIndex(x=>cuNorm(x.nome) === 'final');
+      fim >= 0 ? novo.partes.splice(fim, 0, p) : novo.partes.push(p);
+    }
+    p.musicas.push(l.id);
+  }
 }
 /* ---------- selecionar várias músicas (v19.3, pedido do Davi): mudar data, status ou tipo de todas de uma vez, ou excluir ---------- */
 let lvSel = null;   // null = modo normal; Set de ids = selecionando

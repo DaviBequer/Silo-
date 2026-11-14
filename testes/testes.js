@@ -168,6 +168,16 @@ async function rodarTestes(){
     igual('colar: medley "A - Fá + B - Dó" = cada uma no seu tom', cultoColarParse('Medley: jesus querido - Fá + santo espirito - Dó').map(i=>[i.titulo, i.artista, i.tom && i.tom.raiz, i.grupo]),
       [['Jesus Querido', '', 'F', 'md0'], ['Santo Espirito', '', 'C', 'md0']]);
     igual('colar: medley com o tom só no fim vale para as duas', cultoColarParse('Medley- Adorador (Eliane Fernandes) + Nada pode calar um adorador (Mi maior)').map(i=>i.tom && i.tom.raiz), ['E', 'E']);
+    /* mudar a data da música para o dia de um culto com roteiro: entra em Hinos; volta: sai (pedido do Davi, 14/11) */
+    {
+      const cultosAntes = state.cultos, dia = '2099-03-15', outro = '2099-03-14';
+      state.cultos = [{ id:'cuT', data: dia, partes:[{ id:'p1', nome:'Abertura', quem:'', musicas:[] }, { id:'p2', nome:'Hinos', quem:'', musicas:[] }] }];
+      const lt = { id:'lvT', titulo:'Teste', dataAgendamento: outro };
+      lvMudarData(lt, dia); const entrou = state.cultos[0].partes[1].musicas.includes('lvT');
+      lvMudarData(lt, outro); const saiu = !state.cultos[0].partes.some(p=>p.musicas.includes('lvT'));
+      state.cultos = cultosAntes;
+      igual('louvor: data do culto põe a música no roteiro e tirar a data tira', [entrou, saiu], [true, true]);
+    }
     /* medley do Drive: corta só a música pedida (do título dela até o título da próxima do nome do arquivo) */
     const txtMd = 'MEDLEY JESUS QUERIDO + SANTO ESPIRITO\nJesus Querido (F)\nF       C\nJesus querido amado\nBb\nmeu Senhor\n--\nSanto Espírito\nC       G\nSanto Espírito vem\nAm\nenche este lugar';
     igual('medley do Drive: corta só a música pedida', [cultoMedleyCortar(txtMd, 'Santo Espírito', 'Medley Jesus Querido + Santo Espírito - Ana'), cultoMedleyCortar(txtMd, 'Jesus querido', 'Medley Jesus Querido + Santo Espírito'), cultoMedleyCortar(txtMd, 'Grande é o Senhor', 'Medley Jesus Querido + Santo Espírito')],

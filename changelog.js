@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.1', itens: [
+    'Louvor: mudar a data de uma música para o dia de um culto já montado põe ela no roteiro (em Hinos) e na placa azul; trocar para outro dia tira do roteiro antigo'
+  ] },
   { versao: 'v21.0', itens: [
     'Louvor: excluir pela seleção fecha também a tela do hino que estava aberto'
   ] },
