@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.8', itens: [
+    'Medley colado: música que tem PDF solto no Drive entra direto, sem perguntar',
+    'Música que só existe dentro de outro medley: você escolhe o medley e só ela é tirada de lá (o medley inteiro não entra mais)'
+  ] },
   { versao: 'v20.7', itens: [
     'Medley colado: a música que só existe dentro de outro medley do Drive é lida do PDF e só ela entra (você confere o trecho antes)',
     'Parte de medley com PDF próprio no Drive usa a cifra desse PDF antes do Cifra Club'

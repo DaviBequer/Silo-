@@ -838,14 +838,21 @@ async function cultoMedleyParteDoDrive(m, pdfs){
   const nome = f=>f.name.replace(/\.pdf$/i, '');
   const ehMedley = f=>/medley/.test(cuNorm(nome(f)));
   const bate = f=>cuNorm(nome(f)).includes(t) || cuParecido(m.titulo, nome(f)) >= 0.6;
-  const cands = [...pdfs.filter(f=>!ehMedley(f) && bate(f)), ...pdfs.filter(f=>ehMedley(f) && bate(f))].slice(0, 8);
+  /* pedido do Davi: tem o PDF solto dela → usa direto; só existe dentro de outro medley → pergunta qual medley e tira só ela */
+  const soltos = pdfs.filter(f=>!ehMedley(f) && bate(f));
+  const exatos = soltos.filter(f=>cuNorm(nome(f)).includes(t));
+  const cands = [...soltos, ...pdfs.filter(f=>ehMedley(f) && bate(f))].slice(0, 8);
   if(!cands.length) return null;
+  let direto = exatos.length === 1 ? exatos[0] : null;
   for(;;){
-    cultoColarPasso(m, 'esperando você escolher o arquivo…');
-    const r = await cultoColarPerguntarOpcao(m, `<b>${lvEsc(m.titulo)}</b>: usar a cifra deste PDF do Drive?`,
-      cands.map(f=>({ nome: nome(f), sub: (ehMedley(f) ? 'medley: pega só esta música · ' : '') + (f.pasta || '') })), 'Nenhum: buscar no Cifra Club', false);
-    if(r.i === undefined) return null;
-    const f = cands[r.i];
+    let f = direto; direto = null;
+    if(!f){
+      cultoColarPasso(m, 'esperando você escolher o arquivo…');
+      const r = await cultoColarPerguntarOpcao(m, soltos.length ? `<b>${lvEsc(m.titulo)}</b>: qual destes PDFs do Drive?` : `<b>${lvEsc(m.titulo)}</b> só está dentro de medley no Drive. De qual medley tiro ela?`,
+        cands.map(f=>({ nome: nome(f), sub: (ehMedley(f) ? 'tira só esta música · ' : '') + (f.pasta || '') })), 'Nenhum: buscar no Cifra Club', false);
+      if(r.i === undefined) return null;
+      f = cands[r.i];
+    }
     cultoColarPasso(m, 'Lendo o PDF do Drive…');
     let d = null;
     try{
@@ -859,6 +866,7 @@ async function cultoMedleyParteDoDrive(m, pdfs){
       texto = cultoMedleyCortar(texto, m.titulo, nome(f));
       const p = texto && ccTomPelosAcordes(null, texto); tom = p ? p.tom : null;
     } else if(d && d.tom && d.tom.tomOriginal) tom = d.tom;
+    if(texto && !ehMedley(f)) return { texto, tom: tom ? tom.tomOriginal : '', menor: !!(tom && tom.tomModoMenor) };   // PDF solto: usa direto
     const msg = !d ? 'Não consegui ler esse PDF.' : !texto ? `Não achei <b>${lvEsc(m.titulo)}</b> dentro desse PDF.` : '';
     const ok = await cultoColarPerguntar(m, `
       <div class="cu-perg-tit">${msg || `É este o trecho de <b>${lvEsc(m.titulo)}</b>?${tom ? ` <span class="cu-tom">${lvEsc(tom.tomModoMenor ? lvRelativoMenor(tom.tomOriginal) + 'm' : tom.tomOriginal)}</span>` : ''}`}</div>
@@ -873,7 +881,7 @@ async function cultoMedleyParteDoDrive(m, pdfs){
   }
 }
 /* medley = UM arquivo só (pedido do Davi: nada de uma música para cada parte).
-   1º o Drive: PDF com o nome de todas as músicas do medley (ou "Medley" + uma delas) → música só com o arquivo.
+   1º o Drive: PDF com o nome de todas as músicas do medley → música só com o arquivo.
    Senão as cifras (a do app, se já existe com cifra; senão a do Cifra Club, sem criar a música sozinha) viram uma música só:
    "[♪ Nome — Tom X]" antes de cada uma, cada uma no tom pedido. Os links do Cifra Club ficam em l.cifraLinks. */
 async function cultoColarMedleyMontar(membros, pdfs){
@@ -887,7 +895,7 @@ async function cultoColarMedleyMontar(membros, pdfs){
     const nome = f=>cuNorm(f.name.replace(/\.pdf$/i, ''));
     const ts = titulos.map(cuNorm).filter(t=>t.length >= 4);
     let cands = ts.length ? pdfs.filter(f=>ts.every(t=>nome(f).includes(t))) : [];
-    if(!cands.length) cands = pdfs.filter(f=>/medley/.test(nome(f)) && ts.some(t=>nome(f).includes(t)));
+    /* PDF de outro medley com só UMA das músicas não serve como o medley inteiro (pedido do Davi): cada música é buscada sozinha no passo 2 */
     /* nomes não iguais: o PDF onde cada música está igual ou parecida, sempre perguntando */
     const parecidos = !cands.length && titulos.length > 0;
     if(parecidos) cands = pdfs.filter(f=>titulos.every(t=>{ const n = cuNorm(t); return (n.length >= 4 && nome(f).includes(n)) || cuParecido(t, f.name.replace(/\.pdf$/i, '')) >= 0.6; })).slice(0, 6);
