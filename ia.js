@@ -12,6 +12,9 @@ const lviModeloRapido = ()=>String(state.iaModeloRapido || '').trim() || LVI_IA_
 const LVI_IA_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 /* modo fiel: arquivo do Drive que já está no formato certo → importa como está (sem corrigir, juntar nem repetir) */
 let lviModoFiel = false;
+/* medley do Drive (pedido do Davi): ler o PDF inteiro e devolver só UMA música, completa */
+let lviSoMusica = '';
+const lviTextoSoMusica = ()=>lviSoMusica ? `\n\nSÓ UMA MÚSICA (vale mais que tudo acima): este PDF é um MEDLEY com várias músicas, e pode estar em duas ou três colunas — leia a 1ª coluna inteira de cima a baixo, depois a 2ª, depois a 3ª. Devolva SOMENTE a música "${lviSoMusica}", INTEIRA: de onde começa (o título dela ou a primeira linha dela) até onde começa a próxima música (outro título ou outra letra). Não corte no meio nem no fim da coluna: se ela continua na coluna seguinte, continue. Nada das outras músicas. Em "titulo" ponha "${lviSoMusica}" e em "tom" o tom desta música.` : '';
 const LVI_IA_FIEL = '\n\nMODO FIEL (vale mais que tudo acima): este arquivo já está do jeito certo, feito pelo próprio usuário. Copie exatamente: os mesmos nomes de partes (com 2x, Repete e o que mais estiver escrito), a mesma ordem, as mesmas quebras de linha, os mesmos acordes no mesmo lugar e o texto como está. Não junte nem separe versos, não crie nem tire Repete, não renomeie partes, não corrija maiúsculas nem pontuação. Só ignore cabeçalho, créditos e rodapé.';
 /* regras da IA + as instruções do Davi (Dados do App) + o modo fiel quando for o caso */
 function lviRegrasIA(){
@@ -274,7 +277,7 @@ async function lviImportarComIA(file, status){
   const arquivo = lviEhImagem(file)
     ? { type:'image', data: b64, mime_type: lviTipoImagem(file) }
     : { type:'document', data: b64, mime_type: 'application/pdf' };
-  const j = await lviPerguntarIA([ arquivo, { type:'text', text: lviRegrasIA() + '\n\nNome do arquivo: ' + (file.name||'') } ], status);
+  const j = await lviPerguntarIA([ arquivo, { type:'text', text: lviRegrasIA() + lviTextoSoMusica() + '\n\nNome do arquivo: ' + (file.name||'') } ], status);
   status('Separando as partes (estrofes, refrão…)', 'partes');
   const simples = await simplesP;
   const linhasPdf = simples ? lviTextoParaLinhas(simples.conteudo).filter(r=>r.type==='lyric') : null;

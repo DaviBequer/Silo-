@@ -858,19 +858,20 @@ async function cultoMedleyParteDoDrive(m, pdfs){
     try{
       const res = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
       if(!res.ok) throw new Error('Drive ' + res.status);
-      const antes = lviModoFiel; lviModoFiel = true;
-      try{ d = await lviImportar(new File([await res.blob()], f.name, { type:'application/pdf' }), driveNada); } finally { lviModoFiel = antes; }
+      /* medley: a IA lê o PDF inteiro (com as colunas) e devolve só esta música, completa */
+      const antes = lviModoFiel; lviModoFiel = true; lviSoMusica = ehMedley(f) ? m.titulo : '';
+      try{ d = await lviImportar(new File([await res.blob()], f.name, { type:'application/pdf' }), driveNada); } finally { lviModoFiel = antes; lviSoMusica = ''; }
     }catch(e){ d = null; }
-    let texto = String(d && d.conteudo || '').trim(), tom = null;
-    if(texto && ehMedley(f)){
+    let texto = String(d && d.conteudo || '').trim(), tom = d && d.tom && d.tom.tomOriginal ? d.tom : null;
+    if(texto && ehMedley(f) && !d.usouIA){   // sem IA: corta pelo título na leitura simples
       texto = cultoMedleyCortar(texto, m.titulo, nome(f));
       const p = texto && ccTomPelosAcordes(null, texto); tom = p ? p.tom : null;
-    } else if(d && d.tom && d.tom.tomOriginal) tom = d.tom;
+    }
     if(texto && !ehMedley(f)) return { texto, tom: tom ? tom.tomOriginal : '', menor: !!(tom && tom.tomModoMenor) };   // PDF solto: usa direto
     const msg = !d ? 'Não consegui ler esse PDF.' : !texto ? `Não achei <b>${lvEsc(m.titulo)}</b> dentro desse PDF.` : '';
     const ok = await cultoColarPerguntar(m, `
       <div class="cu-perg-tit">${msg || `É este o trecho de <b>${lvEsc(m.titulo)}</b>?${tom ? ` <span class="cu-tom">${lvEsc(tom.tomModoMenor ? lvRelativoMenor(tom.tomOriginal) + 'm' : tom.tomOriginal)}</span>` : ''}`}</div>
-      ${texto ? `<pre class="cu-perg-trecho">${lvEsc(texto.split('\n').slice(0, 16).join('\n'))}${texto.split('\n').length > 16 ? '\n…' : ''}</pre>` : ''}
+      ${texto ? `<pre class="cu-perg-trecho">${lvEsc(texto)}</pre>` : ''}
       <div class="cu-perg-links">${texto ? '<button type="button" class="btn btn-primary cu-perg-sim">Usar este</button>' : ''}<button type="button" class="link-txt cu-perg-outro">Escolher outro PDF</button><button type="button" class="link-txt cu-perg-pular">Buscar no Cifra Club</button></div>`, (fim, el)=>{
       const sim = el.querySelector('.cu-perg-sim'); if(sim) sim.onclick = ()=>fim('sim');
       el.querySelector('.cu-perg-outro').onclick = ()=>fim('outro');
@@ -886,8 +887,9 @@ async function cultoMedleyParteDoDrive(m, pdfs){
    "[♪ Nome — Tom X]" antes de cada uma, cada uma no tom pedido. Os links do Cifra Club ficam em l.cifraLinks. */
 async function cultoColarMedleyMontar(membros, pdfs){
   const titulos = membros.map(m=>m.titulo).filter(Boolean);
-  const nomeMedley = 'Medley ' + titulos.join(' + ');
-  const artistas = [...new Set(membros.map(m=>m.artista).filter(Boolean))].join(' · ');
+  /* pedido do Davi: nome = "Hino 1 + Hino 2"; no cantor, "Medley" */
+  const nomeMedley = titulos.join(' + ');
+  const artistas = 'Medley';
   const passo = (m, t)=>{ m.status = 'buscando'; m.passo = t; cultoColarRender(); };
   /* 1. Drive */
   if(pdfs){
@@ -908,6 +910,7 @@ async function cultoColarMedleyMontar(membros, pdfs){
     }
     if(f){
       const l = await cultoCriarDoDrive(f, nomeMedley, artistas);
+      l.titulo = nomeMedley; l.artista = artistas; persist();   // o nome do arquivo não manda no nome do medley
       membros.forEach(m=>{ m.status = 'drive'; m.id = l.id; });
       return l;
     }
@@ -939,9 +942,9 @@ async function cultoColarMedleyMontar(membros, pdfs){
     m.id = '';   // a música sozinha não entra no app nem no roteiro
   }
   const conteudo = blocos.join('\n--\n');
-  const ja = (state.louvores || []).find(l=>cuNorm(l.titulo) === cuNorm(nomeMedley));
+  const ja = (state.louvores || []).find(l=>[cuNorm(nomeMedley), cuNorm('Medley ' + nomeMedley)].includes(cuNorm(l.titulo)) && (cuNorm(l.artista) === 'medley' || /^medley/.test(cuNorm(l.titulo))));
   const l = ja || lvCriarDireto({ titulo: nomeMedley, artista: artistas, categoria: 'Louvor' }, false);
-  Object.assign(l, { conteudo, tomOriginal: tomPrimeira ? tomPrimeira.tom : '', tomModoMenor: tomPrimeira ? tomPrimeira.menor : false, transpose: 0 });
+  Object.assign(l, { titulo: nomeMedley, artista: artistas, conteudo, tomOriginal: tomPrimeira ? tomPrimeira.tom : '', tomModoMenor: tomPrimeira ? tomPrimeira.menor : false, transpose: 0 });
   if(links.length){ l.cifraLinks = links; if(!l.origem) l.origem = { tipo:'cifraclub', url: links[0].url, texto:'', letras: null, quando: Date.now() }; }
   persist();
   membros.forEach(m=>{ m.id = l.id; });

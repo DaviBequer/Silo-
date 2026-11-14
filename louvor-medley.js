@@ -257,8 +257,9 @@ async function lmSalvar(){
   if(!lmEdit.seq.length){ showToast('Toque nas partes para montar a sequência'); return; }
   const usadas = lmEdit.musicas.filter(m=>lmEdit.seq.some(s=>s.id===m.id));
   const medley = { musicas: lmEdit.musicas.map(m=>({ id:m.id, tom:m.tom||'', menor:!!m.menor })), seq: lmEdit.seq.map(s=>({ id:s.id, parte:s.parte })) };
-  const titulo = lmEdit.nome || 'Medley';
-  const artista = usadas.map(m=>(lmLouvor(m.id)||{}).titulo || '').filter(Boolean).join(' · ');
+  /* pedido do Davi: nome = "Hino 1 + Hino 2"; no cantor, "Medley" */
+  const titulo = lmEdit.nome || usadas.map(m=>(lmLouvor(m.id)||{}).titulo || '').filter(Boolean).join(' + ') || 'Medley';
+  const artista = 'Medley';
   const primeira = usadas[0] || {};
   let l = lmEdit.id ? lmLouvor(lmEdit.id) : null;
   if(l && l.medleyEditado && !(await iosConfirm('Você mexeu no texto deste medley à mão. Salvar monta o texto de novo e essas mudanças saem. Continuar?'))) return;
