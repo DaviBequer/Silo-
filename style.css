@@ -622,7 +622,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 .pc-valor{grid-column:3;grid-row:1 / span 2;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
 .pc-vazio{padding:14px;font-size:13px;font-weight:600;color:var(--success)}
 /* calendário pequeno com o dia no meio (contas, Louvor, Ponto) */
-.cal{position:relative;display:flex;flex-direction:column;align-items:center;width:28px;height:30px;border:1.5px solid var(--text);border-radius:7px;background:var(--card);overflow:hidden;flex-shrink:0;color:var(--text)}
+.cal{position:relative;display:flex;flex-direction:column;align-items:center;width:28px;height:30px;border:1.5px solid var(--text);border-radius:7px;background:linear-gradient(var(--text) 0 7px, var(--card) 7px) padding-box;overflow:hidden;flex-shrink:0;color:var(--text)}
 .cal::before{content:'';display:block;width:100%;height:7px;background:var(--text)}
 .cal b{font-size:12.5px;font-weight:600;line-height:1;margin-top:3px;font-variant-numeric:tabular-nums}
 .cal.hoje{border-color:var(--gold)}.cal.hoje::before{background:var(--latao)}
@@ -1847,8 +1847,27 @@ a.drive-falta:hover{color:var(--primary)}
 .lv-panel.active{display:block;animation:surgir .3s var(--mola)}
 .lv-harmonic-bar{display:flex;gap:6px;padding:var(--s2)}
 .lv-grau-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
-.lv-grau-chip{width:100%;padding:6px 2px;border:1px solid var(--line);border-radius:8px;background:var(--card);text-align:center}
-.lv-grau-chip.active{background:var(--primary-tint);border-color:var(--primary)}
+.lv-grau-chip{width:100%;padding:6px 2px;border:1px solid var(--line);border-radius:8px;background:var(--card);text-align:center;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.lv-grau-chip.active{background:var(--graf);border-color:var(--graf)}
+.lv-grau-chip.active .lv-grau-num,.lv-grau-chip.active .lv-grau-chord{color:var(--graf-tx)}
+/* ligações do campo harmônico (tocar num grau) */
+.lv-harmonic-bar.aberta{overflow-x:auto;-webkit-overflow-scrolling:touch;align-items:flex-start}
+.lv-harmonic-bar.aberta .lv-grau-col{flex:1 0 66px}
+.lv-campo-op{display:flex;flex-direction:column;align-items:center;width:100%;padding:4px 2px;border:1px dashed var(--line);border-radius:7px;background:none;font:inherit;color:var(--text);cursor:pointer;animation:lvCampoEntra .2s ease both;animation-delay:calc(var(--i) * 25ms)}
+.lv-campo-op span{font-size:11px;font-weight:600;white-space:nowrap;line-height:1.3}
+.lv-campo-op i{font-style:normal;font-size:9px;color:var(--text-faint);line-height:1.1}
+.lv-campo-op.cor{border-style:solid;background:var(--primary-tint)}
+.lv-campo-op.sel{border:1px solid var(--latao);background:color-mix(in srgb,var(--latao) 26%,transparent)}
+.lv-campo-vazio{font-size:10.5px;color:var(--text-faint);text-align:center;padding-top:4px}
+@keyframes lvCampoEntra{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.lv-campo-op{animation:none}}
+.lv-campo-det{padding:2px var(--s2) 10px;display:grid;gap:5px}
+.lv-campo-caminho{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:16px;font-weight:400}
+.lv-campo-caminho b{font-weight:500;padding:2px 8px;border-radius:7px;background:var(--primary-tint)}
+.lv-campo-caminho b.ponte{background:none;border:1px dashed var(--latao)}
+.lv-campo-caminho em{font-style:normal;color:var(--text-faint)}
+.lv-campo-det p{margin:0;font-size:13.5px;line-height:1.45;color:var(--text-dim)}
+.lv-campo-dica{font-size:13px;color:var(--text-faint)}
 .lv-grau-num{font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-faint)}
 .lv-grau-chord{margin-top:2px;font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv-grau-alt{width:100%;padding:3px 2px;border:1px dashed var(--line);border-radius:6px;font-size:10.5px;font-weight:600;text-align:center;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -621,23 +621,100 @@ const LV_GRAUS_MENOR = [
   { grau:'VI', idx:3, qualidade:'' },
   { grau:'VII', idx:4, qualidade:'' }
 ];
-/* campo harmônico do tom escolhido, com os nomes literais do tom (e o dominante de cada grau embaixo) */
+/* graus do campo do tom da música: { grau, nome (acorde), pc, letra (índice em LV_LETRAS), q (qualidade) } */
+function lvCampoGraus(l){
+  const tom = lvTomMaiorAtual(l), esc = lvEscalaDoTom(tom);
+  if(!esc) return null;
+  const graus = l.tomModoMenor ? LV_GRAUS_MENOR : LV_GRAUS_MAIOR.map((g,i)=>({ grau:g.grau, idx:i, qualidade:g.qualidade }));
+  return graus.map(g=>{ const nota = esc[g.idx]; return { grau: g.grau, nota, nome: nota + g.qualidade, pc: lvPc(nota), letra: LV_LETRAS.indexOf(nota[0]), q: g.qualidade }; });
+}
+/* nome da nota pela letra (C#º e não Dbº); grafia estranha (E#, B#, Fb, Cb, dobrada) vira o nome comum do tom */
+function lvCampoNota(letra, pc, tom){
+  const s = lvSoletrar(letra, ((pc % 12) + 12) % 12);
+  return !s || /##|bb|E#|B#|Fb|Cb/.test(s) ? lvNomeNoTom(((pc % 12) + 12) % 12, tom) : s;
+}
+/* ligações (pedido do Davi, modelo aprovado em 14/11): de um grau (i) para outro (j), vários acordes de passagem com a explicação */
+function lvCampoPontes(G, i, j, maior, tom){
+  const o = G[i], t = G[j], out = [], vistos = new Set();
+  const ac = (letra, pc, q, b)=>lvCampoNota(letra, pc, tom) + q + (b ? '/' + b : '');
+  const add = (chs, rot, txt)=>{ const k = chs.join(' '); if(vistos.has(k) || k === o.nome || k === t.nome) return; vistos.add(k); out.push({ chs, rot, txt }); };
+  const menor = t.q === 'm', alvo = t.nome, diff = ((t.pc - o.pc) % 12 + 12) % 12;
+  const ehTonica = j === 0;
+  if(t.q !== 'º'){
+    const dom = ac(t.letra + 4, t.pc + 7, '');
+    add([dom + '7'], ehTonica ? 'V7' : 'dom', ehTonica ? `O V com 7ª: a 7ª menor cria tensão e quer cair no ${alvo}.` : `Dominante do ${t.grau}: um acorde de fora que puxa forte para o ${alvo}, como se ele fosse a tônica por um instante.`);
+    if(menor) add([dom + '7(b9)'], 'dom b9', `Dominante com 9ª menor: mais tenso e dramático; é o jeito clássico de cair num acorde menor (${alvo}).`);
+    else {
+      add([dom + '7(4)'], 'sus', `Dominante suspenso: troca a 3ª pela 4ª e segura a tensão antes de resolver no ${alvo}. Muito usado em louvor, às vezes antes do 7 normal.`);
+      add([dom + '7(9)'], 'dom 9', `Mesmo dominante, com a 9ª: a mesma força para o ${alvo}, som mais aberto.`);
+    }
+    add([ac(t.letra + 1, t.pc + 2, menor ? 'm7(b5)' : 'm7'), dom + '7'], 'II–V', `Prepara o ${alvo} em dois passos: o primeiro afasta, o segundo puxa.${menor ? ' Com destino menor o primeiro é meio-diminuto, m7(b5).' : ''}`);
+    add([ac(t.letra + 1, t.pc + 1, '7')], 'Sub V', `Troca o dominante por um 7 meio tom acima do ${alvo}: o baixo desce meio tom e cai nele. Som de jazz e gospel.`);
+    add([ac(t.letra - 1, t.pc - 1, 'º')], 'dim', `Diminuto meio tom abaixo do ${alvo}: o baixo sobe meio tom e encaixa nele. Serve só de passagem, rapidinho.`);
+  }
+  if(diff === 10) add([ac(o.letra, o.pc - 1, 'º')], 'dim ↓', `Diminuto descendo: o baixo desce meio tom do ${o.nome} e mais meio tom até o ${alvo}.`);
+  /* baixo de passagem: baixos a uma 3ª de distância → a nota do meio vira o baixo */
+  const tons = g=>[g.pc, g.pc + (g.q === '' ? 4 : 3), g.pc + (g.q === 'º' ? 6 : 7)].map(x=>x % 12);
+  if([3, 4, 8, 9].includes(diff)){
+    const p = G[(i + (diff <= 4 ? 1 : 6)) % 7];
+    if(tons(o).includes(p.pc) || (o.q === 'm' && (o.pc + 10) % 12 === p.pc)) add([o.nome + '/' + p.nota], 'baixo', `O próprio ${o.nome} com ${p.nota} no baixo: o baixo anda de nota em nota até o ${alvo}.`);
+    else if(o.q === '' && (o.pc + 10) % 12 === p.pc) add([o.nome + '7/' + p.nota], 'baixo', `O ${o.nome} com a 7ª (${p.nota}) no baixo: o baixo desce de nota em nota até o ${alvo}.`);
+    else {
+      const k = G.find(g=>g.q !== 'º' && (g.pc + (g.q === '' ? 4 : 3)) % 12 === p.pc);
+      if(k) add([k.nome + '/' + p.nota], 'baixo', `${k.nome} com a 3ª no baixo: o baixo anda de nota em nota (${o.nota} → ${p.nota} → ${t.nota}).`);
+    }
+  }
+  if(diff === 5 && o.q !== 'º') add([o.nome + '/' + lvCampoNota(o.letra + 2, o.pc + (o.q === '' ? 4 : 3), tom)], 'baixo', `O ${o.nome} com a 3ª no baixo: o baixo vai subindo até o ${alvo}.`);
+  /* empréstimos do tom menor (só no tom maior) */
+  if(maior && ehTonica){
+    add([ac(t.letra + 3, t.pc + 5, 'm')], 'IVm', 'IV menor, emprestado do tom menor: som de saudade que cai bonito na tônica.');
+    add([ac(t.letra + 6, t.pc + 10, '')], 'VIIb', 'VII bemol, emprestado: chega na tônica "por cima", som de vitória.');
+    add([ac(t.letra + 5, t.pc + 8, ''), ac(t.letra + 6, t.pc + 10, '')], 'VIb VIIb', 'Subida emprestada: dois acordes maiores subindo até a tônica. Final forte.');
+  }
+  if(maior && j === 4) add([ac(G[0].letra + 5, G[0].pc + 8, '')], 'VIb', `VI bemol, emprestado: desce meio tom e cai no ${alvo}.`);
+  return out;
+}
+/* cores do próprio grau (o que pôr nele sem mudar a função) */
+function lvCampoCores(g, ehDominante){
+  if(ehDominante) return [['7','Com 7ª: vira o dominante, pede para ir ao I.'],['7(4)','Suspenso: segura antes de resolver.'],['(4)','Só com a 4ª no lugar da 3ª: aberto, sem tensão forte.'],['7(9)','Dominante com 9ª: forte e moderno.']];
+  if(g.q === '') return [['7M','7ª maior: suave e repousado, ótimo para começar ou terminar.'],['(9)','Nona: abre o som, deixa moderno. Não muda a função.'],['6','Sexta: doce, bom para final.'],['7M(9)','7M com 9ª: bem cheio, som de louvor atual.']];
+  if(g.q === 'm') return [['m7','Menor com 7ª: mais macio que o menor puro.'],['m(9)','Menor com 9ª: melancólico e bonito.'],['m7(9)','Os dois juntos: cheio e suave.']];
+  return [['m7(b5)','Meio-diminuto: o grau diminuto com 7ª. Mais usado como "II" de um acorde menor.']];
+}
+/* campo harmônico do tom escolhido (nomes literais do tom, dominante de cada grau embaixo).
+   Tocar num grau: some a linha dos dominantes e, embaixo de cada outro grau, aparecem as ligações até ele; embaixo do grau tocado, as cores dele */
+let lvCampoSel = null, lvCampoEsc = null, lvCampoDe = null;
+function lvCampoTocar(i){ lvCampoSel = lvCampoSel === i ? null : i; lvCampoEsc = null; const l = getLouvorAtual(); if(l) renderLvHarmonicBar(l); }
+function lvCampoEscolher(j, n){ lvCampoEsc = { j, n }; const l = getLouvorAtual(); if(l) renderLvHarmonicBar(l); }
 function renderLvHarmonicBar(l){
   const el = document.getElementById('lvHarmonicBar');
   if(!el) return;
-  const esc = lvEscalaDoTom(lvTomMaiorAtual(l));
-  if(!esc){ el.innerHTML = ''; return; }
-  const graus = l.tomModoMenor ? LV_GRAUS_MENOR : LV_GRAUS_MAIOR.map((g,i)=>({ grau:g.grau, idx:i, qualidade:g.qualidade }));
-  el.innerHTML = graus.map(g=>{
-    const nota = esc[g.idx];
-    const acorde = nota + g.qualidade;
-    const li = LV_LETRAS.indexOf(nota[0]), pcDom = (lvPc(nota)+7)%12;
-    const alt = (lvSoletrar(li+4, pcDom) || lvNomeNoTom(pcDom, lvTomMaiorAtual(l))) + '7';
+  let det = document.getElementById('lvCampoDet');
+  if(!det){ det = document.createElement('div'); det.id = 'lvCampoDet'; det.className = 'lv-campo-det'; el.after(det); }
+  if(lvCampoDe !== l.id){ lvCampoSel = null; lvCampoEsc = null; lvCampoDe = l.id; }   // outra música: começa fechado
+  const G = lvCampoGraus(l), tom = lvTomMaiorAtual(l);
+  if(!G){ el.innerHTML = ''; det.hidden = true; return; }
+  const maior = !l.tomModoMenor, ab = lvCampoSel != null;
+  const domIdx = maior ? 4 : -1;
+  const listas = G.map((g, j)=>!ab ? null : j === lvCampoSel
+    ? lvCampoCores(g, j === domIdx).map(c=>({ partes: [g.nota + c[0]], rot: 'cor', cor: true, txt: c[1] }))
+    : lvCampoPontes(G, lvCampoSel, j, maior, tom).map(p=>({ partes: p.chs, rot: p.rot, txt: p.txt })));
+  el.classList.toggle('aberta', ab);
+  el.innerHTML = G.map((g, j)=>{
+    const alt = (lvSoletrar(g.letra + 4, (g.pc + 7) % 12) || lvNomeNoTom((g.pc + 7) % 12, tom)) + '7';
     return `<div class="lv-grau-col">
-      <div class="lv-grau-chip"><div class="lv-grau-num">${g.grau}</div><div class="lv-grau-chord">${acorde}</div></div>
-      <div class="lv-grau-alt">${alt}</div>
+      <button type="button" class="lv-grau-chip${lvCampoSel === j ? ' active' : ''}" onclick="lvCampoTocar(${j})" aria-expanded="${lvCampoSel === j}" aria-label="Grau ${g.grau}, ${lvEsc(g.nome)}: ver ligações"><div class="lv-grau-num">${g.grau}</div><div class="lv-grau-chord">${lvEsc(g.nome)}</div></button>
+      ${!ab ? `<div class="lv-grau-alt">${lvEsc(alt)}</div>`
+        : listas[j].length ? listas[j].map((o, n)=>`<button type="button" class="lv-campo-op${o.cor ? ' cor' : ''}${lvCampoEsc && lvCampoEsc.j === j && lvCampoEsc.n === n ? ' sel' : ''}" style="--i:${n}" onclick="lvCampoEscolher(${j},${n})">${o.partes.map(x=>`<span>${lvEsc(x)}</span>`).join('')}<i>${lvEsc(o.rot)}</i></button>`).join('')
+        : '<div class="lv-campo-vazio">—</div>'}
     </div>`;
   }).join('');
+  det.hidden = !ab;
+  if(!ab){ det.innerHTML = ''; return; }
+  const e = lvCampoEsc && listas[lvCampoEsc.j] && listas[lvCampoEsc.j][lvCampoEsc.n];
+  det.innerHTML = !e ? '<div class="lv-campo-dica">Toque num acorde de qualquer coluna para ver o caminho e para que ele serve.</div>'
+    : e.cor ? `<div class="lv-campo-caminho"><b>${lvEsc(e.partes[0])}</b><em>no lugar de ${lvEsc(G[lvCampoSel].nome)}</em></div><p>${lvEsc(e.txt)}</p>`
+    : `<div class="lv-campo-caminho"><b>${lvEsc(G[lvCampoSel].nome)}</b><em>›</em>${e.partes.map(x=>`<b class="ponte">${lvEsc(x)}</b>`).join('<em>›</em>')}<em>›</em><b>${lvEsc(G[lvCampoEsc.j].nome)}</b></div><p>${lvEsc(e.txt)}</p>`;
 }
 
 /* ---------- Seletor de Tom (grid cromático + relativo menor no duplo toque) ---------- */
