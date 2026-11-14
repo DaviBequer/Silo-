@@ -164,6 +164,11 @@ async function rodarTestes(){
     igual('colar: Harpa com o nome escrito', ((x)=>[x.titulo, x.artista])(cultoColarParse('Harpa: 15 - mais perto quero estar')[0]), ['Mais Perto Quero Estar', 'Harpa Cristã - 15']);
     igual('colar: maiúsculas no nome, palavrinhas e siglas', [cultoNomeFormatado('o SENHOR é meu pastor'), cultoNomeFormatado('ministério IAP de louvor')], ['O Senhor é Meu Pastor', 'Ministério IAP de Louvor']);
     igual('colar: "Harpa 127" em qualquer parte vira hino da Harpa', cultoColarParse('Hinos: Harpa Cristã 545 (D)')[0].harpaNum, '545');
+    /* medley com um tom para cada música (pedido do Davi, 14/11); tom só no fim vale para todas */
+    igual('colar: medley "A - Fá + B - Dó" = cada uma no seu tom', cultoColarParse('Medley: jesus querido - Fá + santo espirito - Dó').map(i=>[i.titulo, i.artista, i.tom && i.tom.raiz, i.grupo]),
+      [['Jesus Querido', '', 'F', 'md0'], ['Santo Espirito', '', 'C', 'md0']]);
+    igual('colar: medley com o tom só no fim vale para as duas', cultoColarParse('Medley- Adorador (Eliane Fernandes) + Nada pode calar um adorador (Mi maior)').map(i=>i.tom && i.tom.raiz), ['E', 'E']);
+    igual('Drive: nome parecido (palavra a mais ou a menos)', [cuParecido('Jesus amado', 'Jesus Querido Amado - Ana - G'), cuParecido('Jesus querido amado meu', 'Jesus Querido Amado') >= 0.6, cuParecido('Grande é o Senhor', 'Santo Espírito - F')], [1, true, 0]);
     /* Drive: ✓ no nome = ajustado no app; a mesma música continua sendo achada com ou sem o ✓ */
     igual('Drive: marca ✓ antes da extensão, sem repetir', [driveComMarca('Ana - Hino - G.pdf'), driveComMarca('Ana - Hino - G ✓.pdf'), driveComMarca('Slide Hino')], ['Ana - Hino - G ✓.pdf', 'Ana - Hino - G ✓.pdf', 'Slide Hino ✓']);
     igual('Drive: arquivo com ✓ é da mesma música', [driveEhDaMusica({ name:'Ana - Hino ✓.pdf' }, { chave:'ana - hino', l:{}, tipo:'pdf' }), driveEhDaMusica({ name:'Ana - Hino - G ✓.pdf' }, { chave:'ana - hino', l:{}, tipo:'pdf' })], [true, true]);

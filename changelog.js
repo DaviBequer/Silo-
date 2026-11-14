@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.6', itens: [
+    'Medley colado do WhatsApp: cada música no seu tom (Nome - Fá + Nome - Dó)',
+    'Nome um pouco diferente do Drive: o app mostra os parecidos e pergunta se é aquele'
+  ] },
   { versao: 'v20.5', itens: [
     'Panorama: o salário dos meses futuros aparece como estimativa pelo horário padrão do Ponto (o aviso de salário zerado estava errado)'
   ] },

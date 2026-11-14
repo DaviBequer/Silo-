@@ -522,26 +522,31 @@ function cultoColarParse(texto){
       return;
     }
     if(parte && !/^medley\b/i.test(parte)) medleyAberto = null;   // outra parte: o medley de várias linhas acabou
-    /* tom: "(E)", "( C)", "(Mi maior)" no fim, ou " - D" no fim */
-    let tom = null;
-    const mt = /\(\s*([^()]*?)\s*\)\s*$/.exec(s);
-    if(mt && cultoColarTom(mt[1])){ tom = cultoColarTom(mt[1]); s = s.slice(0, mt.index).trim(); }
-    else {
-      /* " - D", "-dó", "- ré maior" no fim também é o tom (pedido do Davi: "Harpa: 127 -dó" → tom C, não cantor "dó") */
-      const md = /\s*[-–]\s*([^-–()]+?)\s*$/.exec(s);
-      if(md && md.index > 0 && cultoColarTom(md[1])){ tom = cultoColarTom(md[1]); s = s.slice(0, md.index).trim(); }
-    }
-    s = s.replace(/\s*[-–—]\s*$/, '');   // "passaro livre- (re maior)": o traço que sobrou antes do tom sai
+    /* tom de cada música: "(E)", "( C)", "(Mi maior)" no fim, ou " - D" no fim */
+    const tirarTom = x=>{
+      let tom = null;
+      const mt = /\(\s*([^()]*?)\s*\)\s*$/.exec(x);
+      if(mt && cultoColarTom(mt[1])){ tom = cultoColarTom(mt[1]); x = x.slice(0, mt.index).trim(); }
+      else {
+        /* " - D", "-dó", "- ré maior" no fim também é o tom (pedido do Davi: "Harpa: 127 -dó" → tom C, não cantor "dó") */
+        const md = /\s*[-–]\s*([^-–()]+?)\s*$/.exec(x);
+        if(md && md.index > 0 && cultoColarTom(md[1])){ tom = cultoColarTom(md[1]); x = x.slice(0, md.index).trim(); }
+      }
+      return { s: x.replace(/\s*[-–—]\s*$/, '').trim(), tom };   // "passaro livre- (re maior)": o traço que sobrou antes do tom sai
+    };
     /* "Medley- A + B", "Medley: A / B", "A+B": as músicas viram UM medley; "+" com ou sem espaço, "/" com espaço */
     const temMedley = /^medley\b/i.test(s) || /^medley\b/i.test(parte);
     const separa = temMedley ? /\s*\+\s*|\s+\/\s+/ : /\s*\+\s*/;
     s = s.replace(/^medley\b\s*[-–:]?\s*/i, '');
-    const pecas = s.split(separa).map(x=>x.trim()).filter(Boolean);
+    const pecas = s.split(separa).map(x=>tirarTom(x.trim())).filter(p=>p.s);
+    /* pedido do Davi: "A - Fá + B - Dó" = cada uma no seu tom; o tom só no fim da linha ("A + B (Mi maior)") vale para todas */
+    const tomLinha = pecas.length > 1 && pecas.slice(0, -1).every(p=>!p.tom) ? pecas[pecas.length - 1].tom : null;
     const medley = !!medleyAberto || temMedley || pecas.length > 1;
     const grupo = medleyAberto ? medleyAberto.grupo : medley ? 'md' + itens.length : '';
     const nomeParte = medleyAberto ? medleyAberto.parte : (/^medley\b/i.test(parte) ? (cabecalho || 'Hinos') : (parte || cabecalho || 'Hinos'));
-    pecas.forEach(peca=>{
-      let titulo = peca.trim(), artista = '';
+    pecas.forEach(p=>{
+      const tom = p.tom || tomLinha;
+      let titulo = p.s, artista = '';
       const ma = /\(\s*([^()]+?)\s*\)\s*$/.exec(titulo);
       if(ma && !cultoColarTom(ma[1])){ artista = ma[1]; titulo = titulo.slice(0, ma.index).trim(); }
       /* nome e cantor só se separam no traço com espaço de um dos lados: "Usa-me" é um nome só ("Dia de sol- Gerson Rufino" separa) */
@@ -825,10 +830,13 @@ async function cultoColarMedleyMontar(membros, pdfs){
     const ts = titulos.map(cuNorm).filter(t=>t.length >= 4);
     let cands = ts.length ? pdfs.filter(f=>ts.every(t=>nome(f).includes(t))) : [];
     if(!cands.length) cands = pdfs.filter(f=>/medley/.test(nome(f)) && ts.some(t=>nome(f).includes(t)));
+    /* nomes não iguais: o PDF onde cada música está igual ou parecida, sempre perguntando */
+    const parecidos = !cands.length && titulos.length > 0;
+    if(parecidos) cands = pdfs.filter(f=>titulos.every(t=>{ const n = cuNorm(t); return (n.length >= 4 && nome(f).includes(n)) || cuParecido(t, f.name.replace(/\.pdf$/i, '')) >= 0.6; })).slice(0, 6);
     let f = cands[0];
-    if(cands.length > 1){
+    if(cands.length > 1 || (parecidos && f)){
       passo(membros[0], 'esperando você escolher o arquivo…');
-      const r = await cultoColarPerguntarOpcao(membros[0], `Achei ${cands.length} PDFs desse medley no Drive. Qual é?`,
+      const r = await cultoColarPerguntarOpcao(membros[0], parecidos ? 'Não achei esse medley com o nome igual no Drive. É algum destes?' : `Achei ${cands.length} PDFs desse medley no Drive. Qual é?`,
         cands.slice(0, 8).map(f=>({ nome: f.name.replace(/\.pdf$/i, ''), sub: f.pasta })), 'Nenhum: montar com as cifras', false);
       f = r.i === undefined ? null : cands[r.i];
     }
@@ -871,6 +879,21 @@ async function cultoColarMedleyMontar(membros, pdfs){
   membros.forEach(m=>{ m.id = l.id; });
   return l;
 }
+/* nome parecido (pedido do Davi: "Jesus amado" acha "Jesus querido amado"): parte das palavras do nome colado
+   que estão no nome do arquivo; precisa de 2 palavras iguais e 60% delas. Plural/uma letra no fim conta igual */
+function cuParecido(t, nomeArq){
+  const pal = x=>cuNorm(x).split(' ').filter(p=>p.length >= 3 && !CU_MINUSCULAS.has(p));
+  const a = pal(t), b = pal(nomeArq);
+  if(a.length < 2) return 0;
+  const raiz = p=>p.length >= 5 ? p.slice(0, -1) : p;
+  const n = a.filter(p=>b.some(q=>q === p || raiz(q) === raiz(p))).length;
+  return n >= 2 ? n / a.length : 0;
+}
+/* os PDFs mais parecidos com o nome (no máximo 6, o mais parecido primeiro) */
+function cuParecidos(t, pdfs){
+  return pdfs.map(f=>({ f, n: cuParecido(t, f.name.replace(/\.pdf$/i, '')) })).filter(x=>x.n >= 0.6)
+    .sort((x, y)=>y.n - x.n).slice(0, 6).map(x=>x.f);
+}
 /* Drive: PDF com o nome da música (Harpa: o número num PDF da Harpa) → música só com o arquivo, sem tirar o texto.
    Mais de um PDF possível (cantores diferentes) → pergunta qual. */
 async function cultoColarDoDrive(it, pdfs){
@@ -880,11 +903,16 @@ async function cultoColarDoDrive(it, pdfs){
     ? pdfs.filter(f=>/harpa/i.test(f.pasta + ' ' + f.name) && new RegExp('(^|\\D)' + it.harpaNum + '(\\D|$)').test(f.name))
     : t.length >= 4 ? pdfs.filter(f=>nome(f).includes(t)) : [];
   if(a && !it.harpaNum) cands = cands.filter(f=>nome(f).includes(a));   // com cantor: só o dele
+  /* nome não igual (uma palavra a mais ou a menos): os parecidos, sempre perguntando */
+  const parecidos = !cands.length && !it.harpaNum;
+  if(parecidos) cands = cuParecidos(it.titulo, pdfs);
   if(!cands.length) return null;
   let f = cands[0];
-  if(cands.length > 1){
+  if(cands.length > 1 || parecidos){
     cultoColarPasso(it, 'esperando você escolher o arquivo…');
-    const r = await cultoColarPerguntarOpcao(it, `Achei ${cands.length} PDFs de <b>${lvEsc(it.harpaNum ? 'Harpa ' + it.harpaNum : it.titulo)}</b> no Drive. Qual é?`,
+    const r = await cultoColarPerguntarOpcao(it, parecidos
+      ? `Não achei <b>${lvEsc(it.titulo)}</b> com o nome igual no Drive. É algum destes?`
+      : `Achei ${cands.length} PDFs de <b>${lvEsc(it.harpaNum ? 'Harpa ' + it.harpaNum : it.titulo)}</b> no Drive. Qual é?`,
       cands.slice(0, 8).map(f=>({ nome: f.name.replace(/\.pdf$/i, ''), sub: f.pasta })), 'Nenhum: buscar no Cifra Club', false);
     if(r.i === undefined) return null;
     f = cands[r.i];
