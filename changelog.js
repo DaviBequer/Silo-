@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v20.7', itens: [
+    'Medley colado: a música que só existe dentro de outro medley do Drive é lida do PDF e só ela entra (você confere o trecho antes)',
+    'Parte de medley com PDF próprio no Drive usa a cifra desse PDF antes do Cifra Club'
+  ] },
   { versao: 'v20.6', itens: [
     'Medley colado do WhatsApp: cada música no seu tom (Nome - Fá + Nome - Dó)',
     'Nome um pouco diferente do Drive: o app mostra os parecidos e pergunta se é aquele'

@@ -168,6 +168,10 @@ async function rodarTestes(){
     igual('colar: medley "A - Fá + B - Dó" = cada uma no seu tom', cultoColarParse('Medley: jesus querido - Fá + santo espirito - Dó').map(i=>[i.titulo, i.artista, i.tom && i.tom.raiz, i.grupo]),
       [['Jesus Querido', '', 'F', 'md0'], ['Santo Espirito', '', 'C', 'md0']]);
     igual('colar: medley com o tom só no fim vale para as duas', cultoColarParse('Medley- Adorador (Eliane Fernandes) + Nada pode calar um adorador (Mi maior)').map(i=>i.tom && i.tom.raiz), ['E', 'E']);
+    /* medley do Drive: corta só a música pedida (do título dela até o título da próxima do nome do arquivo) */
+    const txtMd = 'MEDLEY JESUS QUERIDO + SANTO ESPIRITO\nJesus Querido (F)\nF       C\nJesus querido amado\nBb\nmeu Senhor\n--\nSanto Espírito\nC       G\nSanto Espírito vem\nAm\nenche este lugar';
+    igual('medley do Drive: corta só a música pedida', [cultoMedleyCortar(txtMd, 'Santo Espírito', 'Medley Jesus Querido + Santo Espírito - Ana'), cultoMedleyCortar(txtMd, 'Jesus querido', 'Medley Jesus Querido + Santo Espírito'), cultoMedleyCortar(txtMd, 'Grande é o Senhor', 'Medley Jesus Querido + Santo Espírito')],
+      ['C       G\nSanto Espírito vem\nAm\nenche este lugar', 'F       C\nJesus querido amado\nBb\nmeu Senhor', '']);
     igual('Drive: nome parecido (palavra a mais ou a menos)', [cuParecido('Jesus amado', 'Jesus Querido Amado - Ana - G'), cuParecido('Jesus querido amado meu', 'Jesus Querido Amado') >= 0.6, cuParecido('Grande é o Senhor', 'Santo Espírito - F')], [1, true, 0]);
     /* Drive: ✓ no nome = ajustado no app; a mesma música continua sendo achada com ou sem o ✓ */
     igual('Drive: marca ✓ antes da extensão, sem repetir', [driveComMarca('Ana - Hino - G.pdf'), driveComMarca('Ana - Hino - G ✓.pdf'), driveComMarca('Slide Hino')], ['Ana - Hino - G ✓.pdf', 'Ana - Hino - G ✓.pdf', 'Slide Hino ✓']);

@@ -2360,6 +2360,7 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 @keyframes cuBarra{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
 .cu-colar-pergunta{grid-column:1/-1;margin:10px 0 2px;padding:12px 14px;border-left:2px solid var(--text);background:var(--primary-tint);animation:cuEntra .35s var(--mola) both}
 .cu-perg-tit{font-size:15px;line-height:1.4;color:var(--text)}
+.cu-perg-trecho{margin:8px 0;max-height:220px;overflow:auto;padding:10px 12px;border:1px solid var(--fio);border-radius:10px;font:12.5px/1.45 ui-monospace,Consolas,monospace;white-space:pre;color:var(--text)}
 .cu-perg-desc{margin:4px 0 10px;font-size:12.5px;color:var(--text-faint)}
 .cu-colar-pergunta .voz-escrever{display:flex;gap:8px}
 .cu-colar-pergunta .voz-escrever input{flex:1;min-width:0}

@@ -697,7 +697,7 @@ async function cultoColarCorrigirIA(lista){
     cultoColarRender();
   }catch(e){}   // sem IA: fica a forma local (maiúsculas sem acento)
 }
-const CU_COLAR_ST = { app:'já está no app', drive:'do Drive (só o arquivo)', cifra:'criada pelo Cifra Club', vazia:'criada só com o nome', pulada:'não entrou' };
+const CU_COLAR_ST = { app:'já está no app', drive:'do Drive (só o arquivo)', drivetexto:'cifra do PDF do Drive', cifra:'criada pelo Cifra Club', vazia:'criada só com o nome', pulada:'não entrou' };
 const CU_COLAR_ICO = {
   ok:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   erro:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 7v6"/><path d="M12 17h.01"/></svg>'
@@ -705,7 +705,7 @@ const CU_COLAR_ICO = {
 let cuColarMontando = false;
 function cultoColarRender(entrar){
   const partes = [...new Set([...cultoAtual().partes.map(p=>p.nome).filter(Boolean), ...cuColar.map(it=>it.parte)])];
-  const feito = s=>['app','drive','cifra'].includes(s), ruim = s=>['erro','vazia','pulada'].includes(s);
+  const feito = s=>['app','drive','drivetexto','cifra'].includes(s), ruim = s=>['erro','vazia','pulada'].includes(s);
   const opcoesParte = sel=>partes.map(p=>`<option${p === sel ? ' selected' : ''}>${lvEsc(p)}</option>`).join('');
   const grupoVisto = {};
   const lista = document.getElementById('cuColarLista');
@@ -814,6 +814,64 @@ async function cultoColarMontar(){
   const n = c.partes.reduce((s, p)=>s + p.musicas.length, 0);
   showToast(`✓ Roteiro montado · ${n} ${n === 1 ? 'música' : 'músicas'}`);
 }
+/* corta UMA música de dentro do texto de um medley (pedido do Davi): do título dela até o título de outra música
+   do medley (os nomes saem do nome do arquivo: "Medley A + B - Cantor"). Título = linha curta com o nome; "" se não achar */
+function cultoMedleyCortar(texto, titulo, nomeArquivo){
+  const t = cuNorm(titulo); if(t.length < 4) return '';
+  const outros = String(nomeArquivo || '').replace(/medley/ig, ' ').split(/\s*[+\/,]\s*|\s+[-–]\s+/)
+    .map(cuNorm).filter(o=>o.length >= 4 && o !== t && !t.includes(o) && !o.includes(t));
+  const linhas = String(texto || '').split('\n');
+  const limpa = x=>cuNorm(String(x).replace(/^\s*\[|\]\s*$/g, ''));
+  const ehTitulo = (x, n)=>{ if(lvTipoLinha(x) === 'acorde') return false; const s = limpa(x); return s.length <= n.length + 20 && s.includes(n); };
+  const deOutro = x=>outros.some(o=>ehTitulo(x, o));
+  /* o cabeçalho com o nome do medley inteiro (tem outra música junto) não conta */
+  const ini = linhas.findIndex(x=>(ehTitulo(x, t) || (lvTipoLinha(x) !== 'acorde' && limpa(x).length <= t.length + 20 && cuParecido(titulo, x) >= 0.6)) && !outros.some(o=>limpa(x).includes(o)));
+  if(ini < 0) return '';
+  let fim = linhas.findIndex((x, i)=>i > ini && deOutro(x));
+  if(fim < 0) fim = linhas.length;
+  return linhas.slice(ini + 1, fim).join('\n').replace(/^(\s*(--?-?)?\s*\n)+|(\n\s*(--?-?)?\s*)+$/g, '').trim();
+}
+/* parte de um medley vinda do Drive: o PDF só dessa música (lido inteiro) ou um medley do Drive que tem ela (lido e cortado).
+   Sempre pergunta o arquivo e mostra o trecho para o Davi conferir. → { texto, tom, menor } ou null (segue para o Cifra Club) */
+async function cultoMedleyParteDoDrive(m, pdfs){
+  const t = cuNorm(m.titulo); if(t.length < 4) return null;
+  const nome = f=>f.name.replace(/\.pdf$/i, '');
+  const ehMedley = f=>/medley/.test(cuNorm(nome(f)));
+  const bate = f=>cuNorm(nome(f)).includes(t) || cuParecido(m.titulo, nome(f)) >= 0.6;
+  const cands = [...pdfs.filter(f=>!ehMedley(f) && bate(f)), ...pdfs.filter(f=>ehMedley(f) && bate(f))].slice(0, 8);
+  if(!cands.length) return null;
+  for(;;){
+    cultoColarPasso(m, 'esperando você escolher o arquivo…');
+    const r = await cultoColarPerguntarOpcao(m, `<b>${lvEsc(m.titulo)}</b>: usar a cifra deste PDF do Drive?`,
+      cands.map(f=>({ nome: nome(f), sub: (ehMedley(f) ? 'medley: pega só esta música · ' : '') + (f.pasta || '') })), 'Nenhum: buscar no Cifra Club', false);
+    if(r.i === undefined) return null;
+    const f = cands[r.i];
+    cultoColarPasso(m, 'Lendo o PDF do Drive…');
+    let d = null;
+    try{
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`, { headers:{ Authorization:'Bearer ' + driveToken } });
+      if(!res.ok) throw new Error('Drive ' + res.status);
+      const antes = lviModoFiel; lviModoFiel = true;
+      try{ d = await lviImportar(new File([await res.blob()], f.name, { type:'application/pdf' }), driveNada); } finally { lviModoFiel = antes; }
+    }catch(e){ d = null; }
+    let texto = String(d && d.conteudo || '').trim(), tom = null;
+    if(texto && ehMedley(f)){
+      texto = cultoMedleyCortar(texto, m.titulo, nome(f));
+      const p = texto && ccTomPelosAcordes(null, texto); tom = p ? p.tom : null;
+    } else if(d && d.tom && d.tom.tomOriginal) tom = d.tom;
+    const msg = !d ? 'Não consegui ler esse PDF.' : !texto ? `Não achei <b>${lvEsc(m.titulo)}</b> dentro desse PDF.` : '';
+    const ok = await cultoColarPerguntar(m, `
+      <div class="cu-perg-tit">${msg || `É este o trecho de <b>${lvEsc(m.titulo)}</b>?${tom ? ` <span class="cu-tom">${lvEsc(tom.tomModoMenor ? lvRelativoMenor(tom.tomOriginal) + 'm' : tom.tomOriginal)}</span>` : ''}`}</div>
+      ${texto ? `<pre class="cu-perg-trecho">${lvEsc(texto.split('\n').slice(0, 16).join('\n'))}${texto.split('\n').length > 16 ? '\n…' : ''}</pre>` : ''}
+      <div class="cu-perg-links">${texto ? '<button type="button" class="btn btn-primary cu-perg-sim">Usar este</button>' : ''}<button type="button" class="link-txt cu-perg-outro">Escolher outro PDF</button><button type="button" class="link-txt cu-perg-pular">Buscar no Cifra Club</button></div>`, (fim, el)=>{
+      const sim = el.querySelector('.cu-perg-sim'); if(sim) sim.onclick = ()=>fim('sim');
+      el.querySelector('.cu-perg-outro').onclick = ()=>fim('outro');
+      el.querySelector('.cu-perg-pular').onclick = ()=>fim('nao');
+    });
+    if(ok === 'sim') return { texto, tom: tom ? tom.tomOriginal : '', menor: !!(tom && tom.tomModoMenor) };
+    if(ok === 'nao') return null;
+  }
+}
 /* medley = UM arquivo só (pedido do Davi: nada de uma música para cada parte).
    1º o Drive: PDF com o nome de todas as músicas do medley (ou "Medley" + uma delas) → música só com o arquivo.
    Senão as cifras (a do app, se já existe com cifra; senão a do Cifra Club, sem criar a música sozinha) viram uma música só:
@@ -853,7 +911,9 @@ async function cultoColarMedleyMontar(membros, pdfs){
   for(const m of membros){
     let texto = '', tom = '', menor = false;
     const app = m.id && L(m.id);
+    const dr = !(app && (app.conteudo || '').trim()) && pdfs ? await cultoMedleyParteDoDrive(m, pdfs) : null;
     if(app && (app.conteudo || '').trim()){ texto = app.conteudo; tom = lvTomMaiorAtual(app); menor = !!app.tomModoMenor; m.status = 'app'; }
+    else if(dr){ texto = dr.texto; tom = dr.tom; menor = dr.menor; m.status = 'drivetexto'; }
     else {
       const res = await cultoColarDoCifraClub(m, false);
       if(res){ texto = res.r.dados.conteudo; tom = res.r.dados.tomOriginal; menor = !!res.r.dados.tomModoMenor; links.push({ titulo: m.titulo, url: res.url }); m.status = 'cifra'; }
