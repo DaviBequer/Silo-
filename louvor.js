@@ -1485,8 +1485,8 @@ function lvAjustarZoomFolha(){
   if(pai.classList.contains("lv-tela-cheia")){
     const paisagem = el.classList.contains('paisagem');
     const altPag = w * (paisagem ? 210 / 297 : 297 / 210);
-    const dispH = pai.clientHeight - (parseFloat(cs.paddingTop)||0) - (parseFloat(cs.paddingBottom)||0);
-    const base = disp < 700 ? disp / w : Math.min(disp / w, dispH / altPag);
+    const dispH = (window.innerHeight || pai.clientHeight) - (parseFloat(cs.paddingTop)||0) - (parseFloat(cs.paddingBottom)||0);   // a tela cheia ocupa a janela toda
+    const base = Math.min(disp / w, dispH / altPag);   // a folha toda aparece, pela altura (celular e computador)
     el.style.zoom = (base * lvZoomTela).toFixed(3);
   }
   else if(w > disp) el.style.zoom = (disp / w).toFixed(3);
@@ -1510,7 +1510,7 @@ var lvZoomTela = 1;   // var: lvAjustarZoomFolha pode rodar antes desta linha
 function lvZoomPara(novo, cx, cy){
   const wrap = document.getElementById('lvPdfWrap'), el = document.getElementById('lvPdfPreview');
   if(!wrap || !el) return;
-  novo = Math.max(1, Math.min(5, novo));
+  novo = Math.max(0.6, Math.min(5, novo));   // diminui até um pouco menor que a folha inteira
   const antes = parseFloat(el.style.zoom) || 1;
   const r = wrap.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
   const px = wrap.scrollLeft + x, py = wrap.scrollTop + y;

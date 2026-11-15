@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.5', itens: [
+    'Tela cheia da folha: a página inteira cabe na tela pela altura, no celular e no computador; Ctrl + roda e pinça aumentam e também diminuem'
+  ] },
   { versao: 'v21.4', itens: [
     'Tela cheia da folha abre com a página inteira na tela (antes a letra crescia demais); daí Ctrl + roda ou pinça dão o zoom'
   ] },
