@@ -729,14 +729,37 @@ const CU_COLAR_ICO = {
   ok:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   erro:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 7v6"/><path d="M12 17h.01"/></svg>'
 };
-let cuColarMontando = false;
+let cuColarMontando = false, cuColarFaiscas = null;
 function cultoColarRender(entrar){
   const partes = [...new Set([...cultoAtual().partes.map(p=>p.nome).filter(Boolean), ...cuColar.map(it=>it.parte)])];
   const feito = s=>['app','drive','drivetexto','cifra'].includes(s), ruim = s=>['erro','vazia','pulada'].includes(s);
   const opcoesParte = sel=>partes.map(p=>`<option${p === sel ? ' selected' : ''}>${lvEsc(p)}</option>`).join('');
   const grupoVisto = {};
   const lista = document.getElementById('cuColarLista');
-  lista.innerHTML = cuColar.length ? cuColar.map((it, i)=>{
+  /* montando (modelo E5 escolhido pelo Davi, 15/11): placa azul no alto com o anel, a frase do que está fazendo e de onde veio cada música;
+     a pergunta aparece no meio com o fundo desfocado; no fim o anel fica com ✓ */
+  const fim = s=>feito(s) || ruim(s) || s === 'drivetexto';
+  const montado = cuColarMontando || cuColar.some(it=>it.status && it.status !== 'app');
+  let placa = '';
+  if(montado && cuColar.length){
+    const total = cuColar.length, prontos = cuColar.filter(it=>fim(it.status)).length;
+    const busc = cuColar.find(it=>it.status === 'buscando'), perg = cuColar.find(it=>it.pergunta);
+    const acabou = prontos === total && !busc && !perg;
+    const frase = perg ? 'Preciso de você' : acabou ? 'Roteiro montado' : busc ? `${busc.titulo || busc.artista}: ${busc.passo || 'buscando…'}` : 'Montando…';
+    const r = 34, c = 2 * Math.PI * r;
+    const n = st=>cuColar.filter(it=>st.includes(it.status)).length;
+    const est = acabou && cuColarFaiscas !== cuColar ? [[18,30],[70,18],[40,70],[85,60],[12,75]].map(([x, y], k)=>`<span class="cu-faisca" style="left:${x}%;top:${y}%;animation-delay:${k * 90}ms"></span>`).join('') : '';
+    if(acabou) cuColarFaiscas = cuColar;   // as faíscas só uma vez
+    placa = `<div class="cu-placa">${est}<div class="cu-placa-linha">
+        <div class="cu-anel${acabou ? ' pronto' : ''}"><svg width="80" height="80" viewBox="0 0 80 80"><circle class="f" cx="40" cy="40" r="${r}"/><circle class="v" cx="40" cy="40" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - prontos / total)).toFixed(1)}"/></svg>
+          <b>${acabou ? '<svg class="cu-anel-ck" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : prontos}</b></div>
+        <div class="cu-placa-txt"><small>${lvEsc(cultoDataTexto((document.getElementById('cuColarData') || {}).value || cultoData, true))} · culto</small><span>${lvEsc(frase)}</span></div></div>
+      <div class="cu-placa-cont"><span><i>S</i>${n(['app'])} no app</span><span><i>D</i>${n(['drive','drivetexto'])} do Drive</span><span><i>C</i>${n(['cifra'])} Cifra Club</span></div></div>`;
+  }
+  const origem = s=>s === 'app' ? '<span class="cu-origem"><i>S</i>no app</span>' : (s === 'drive' || s === 'drivetexto') ? '<span class="cu-origem"><i>D</i>Drive</span>' : s === 'cifra' ? '<span class="cu-origem"><i>C</i>Cifra Club</span>' : '';
+  const perguntaDe = cuColar.findIndex(it=>it.pergunta);
+  lista.classList.toggle('montado', montado);
+  lista.innerHTML = placa + (cuColar.length ? cuColar.map((it, i)=>{
     const primeiro = it.grupo && !grupoVisto[it.grupo]; if(it.grupo) grupoVisto[it.grupo] = true;
     const doGrupo = it.grupo ? cuColar.filter(x=>x.grupo === it.grupo) : [];
     const posNoGrupo = doGrupo.indexOf(it);
@@ -748,15 +771,15 @@ function cultoColarRender(entrar){
     <div class="cu-colar-item${it.status === 'buscando' ? ' ativo' : ''}${it.grupo ? ' no-medley' : ''}${it.pergunta ? ' perguntando' : ''}${entrar ? ' entra' : ''}" style="--i:${i}" data-i="${i}">
       <span class="cu-colar-ico ${feito(it.status) ? 'ok' : ruim(it.status) ? 'erro' : it.status === 'buscando' ? 'gira' : ''}">${feito(it.status) ? CU_COLAR_ICO.ok : ruim(it.status) ? CU_COLAR_ICO.erro : it.grupo ? posNoGrupo + 1 : ''}</span>
       <div class="cu-colar-musica"><b>${lvEsc(it.titulo || it.artista)}${it.tom ? ` <span class="cu-tom">${lvEsc(it.tom.raiz + (it.tom.menor ? 'm' : ''))}</span>` : ''}</b>${it.titulo && it.artista ? `<small>${lvEsc(it.artista)}</small>` : ''}</div>
-      ${it.grupo
-        ? ''
+      ${montado ? origem(it.status)
+        : it.grupo ? ''
         : `<select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${opcoesParte(it.parte)}</select>`}
-      <span class="cu-colar-st ${it.status}">${lvEsc(it.status === 'erro' ? it.erro : it.status === 'buscando' ? (it.passo || 'buscando…') : (CU_COLAR_ST[it.status] || (it.grupo ? 'vai buscar a cifra' : 'vai buscar no Drive ou no Cifra Club')))}</span>
-      ${it.status === 'buscando' && !it.pergunta ? '<div class="cu-colar-barra"><i></i></div>' : ''}
-      ${it.pergunta ? `<div class="cu-colar-pergunta">${it.pergunta.html}</div>` : ''}
+      <span class="cu-colar-st ${it.status}">${lvEsc(it.status === 'erro' ? it.erro : it.status === 'buscando' ? (it.passo || 'buscando…') : montado && !it.status ? 'na fila' : (CU_COLAR_ST[it.status] || (it.grupo ? 'vai buscar a cifra' : 'vai buscar no Drive ou no Cifra Club')))}</span>
     </div>`;
-  }).join('') : '<div class="gm-vazio">Toque em "Colar o que copiei" (ou cole no campo): cada linha vira uma música no roteiro.</div>';
-  cuColar.forEach((it, i)=>{ if(it.pergunta){ const el = lista.querySelector(`.cu-colar-item[data-i="${i}"] .cu-colar-pergunta`); if(el) it.pergunta.montar(it.pergunta.fim, el); } });
+  }).join('') : '<div class="gm-vazio">Toque em "Colar o que copiei" (ou cole no campo): cada linha vira uma música no roteiro.</div>')
+    + (perguntaDe >= 0 ? `<div class="cu-perg-veu"><div class="cu-colar-pergunta cu-perg-card" data-i="${perguntaDe}">${cuColar[perguntaDe].pergunta.html}</div></div>` : '');
+  /* a pergunta (qual PDF, qual medley, cantor) fica no meio da tela, por cima da lista */
+  if(perguntaDe >= 0){ const it = cuColar[perguntaDe], el = lista.querySelector(`.cu-perg-card[data-i="${perguntaDe}"]`); if(el) it.pergunta.montar(it.pergunta.fim, el); }
   document.getElementById('cuColarAcoes').style.display = cuColar.length ? '' : 'none';
 }
 /* medleys criados nesta montagem (grupo → id da música do medley) */

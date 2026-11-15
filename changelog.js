@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.3', itens: [
+    'Colar do WhatsApp com cara nova (modelo E5): placa azul com o anel do andamento, a frase do que está fazendo e quantas vieram do app, do Drive e do Cifra Club',
+    'A pergunta (qual PDF, qual medley) aparece no meio da tela com o fundo desfocado; no fim o anel fica com ✓'
+  ] },
   { versao: 'v22.2', itens: [
     'Música Pronta não mostra o botão Refazer pelo Cifra Club (só Em Produção), para não perder o que está pronto'
   ] },
