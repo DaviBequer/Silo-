@@ -42,9 +42,17 @@ function lvAtualizarBtnComparar(l){
   /* logo do Cifra Club: abre a música no Cifra Club JÁ NO TOM da música (medley: uma por música; do Drive: acha pelo nome) */
   const el = document.getElementById('lvLinksCifra'); if(!el) return;
   const alvos = l ? lvCcAlvos(l).slice(0, 4) : [];
-  el.innerHTML = alvos.map((x, i)=>
-    `<button type="button" class="lv-icone-btn lv-link-cifra" onclick="lvAbrirCifraClub(${i})" title="Abrir no Cifra Club${alvos.length > 1 ? ': ' + lvEsc(x.titulo || '') : ''}${x.tom ? ' (tom ' + lvEsc(x.tom) + ')' : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20">${alvos.length > 1 ? `<span class="lv-cc-num">${i + 1}</span>` : ''}</button>`).join('');   // medley: número da música no canto (pedido do Davi)
+  /* medley (pedido do Davi, 15/11): cada música ganha o seu grupinho [Cifra Club + Spotify] com o número, separado por uma
+     divisória; os grupos alternam cor original e cinza para não confundir. O Spotify geral some. */
+  const medley = alvos.length > 1, spGeral = document.querySelector('#lvAcoesBarra > .lv-spotify-btn');
+  if(spGeral) spGeral.style.display = medley ? 'none' : '';
+  const num = i=>medley ? `<span class="lv-cc-num">${i + 1}</span>` : '';
+  el.innerHTML = alvos.map((x, i)=>(i ? '<span class="lv-acoes-div" aria-hidden="true"></span>' : '') + `<span class="lv-medley-grupo${i % 2 ? ' cinza' : ''}">`
+    + `<button type="button" class="lv-icone-btn lv-link-cifra" onclick="lvAbrirCifraClub(${i})" title="Abrir no Cifra Club${medley ? ': ' + lvEsc(x.titulo || '') : ''}${x.tom ? ' (tom ' + lvEsc(x.tom) + ')' : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20">${num(i)}</button>`
+    + (medley ? `<button type="button" class="lv-icone-btn lv-sp-musica" onclick="lvSpotify(false,${i})" title="Spotify: ${lvEsc(x.titulo || '')}" aria-label="Tocar no Spotify ${lvEsc(x.titulo || '')}">${LV_SP_SVG}${num(i)}</button>` : '')
+    + '</span>').join('');
 }
+const LV_SP_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954"/><path d="M6.5 9.3c3.7-1.1 7.9-.8 11 1M7.2 12.4c3-.9 6.4-.6 9 .9M7.8 15.3c2.4-.6 4.9-.4 7 .8" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
 /* pedido do Davi (15/11): o Cifra Club abre direto no tom pelo endereço: ?keyShape=N = N semitons acima do tom do site
    (conferido: Deus Tremendo está em A no site e ?keyShape=3 abre em C) */
 function lvCcComTom(url, tomSite, tomApp){
@@ -63,7 +71,8 @@ function lvCcAlvos(l){
     return l.medley.musicas.map(m=>{
       const s = (state.louvores || []).find(x=>x.id === m.id) || {}, o = s.origem && s.origem.tipo === 'cifraclub' && ccUrl(s.origem.url) ? s.origem : null;
       return { titulo: s.titulo || '', artista: s.artista || '', tom: tomTxt(m.tom, m.menor) || lvTomAtual(s), url: (o && o.url) || s.ccUrl || '', tomSite: (o && o.tomSite) || s.ccTomSite || '',
-        guardar: (u, t)=>{ if(o) o.tomSite = t; else { s.ccUrl = u; s.ccTomSite = t; } persist(); } };
+        guardar: (u, t)=>{ if(o) o.tomSite = t; else { s.ccUrl = u; s.ccTomSite = t; } persist(); },
+        sp: s.spotify || '', guardarSp: id=>{ s.spotify = id; persist(); } };
     });
   }
   /* medley do colar do WhatsApp: "[♪ Nome — Tom X]" no texto marca cada música */
@@ -72,7 +81,9 @@ function lvCcAlvos(l){
     return marcas.map(mk=>{
       const lk = (l.cifraLinks || []).find(x=>cuNorm(x.titulo) === cuNorm(mk[1]));
       return { titulo: mk[1], artista: '', tom: mk[2] || '', url: lk && ccUrl(lk.url) ? lk.url : '', tomSite: lk ? lk.tomSite || '' : '',
-        guardar: (u, t)=>{ if(lk){ lk.url = u; lk.tomSite = t; } else l.cifraLinks = [...(l.cifraLinks || []), { titulo: mk[1], url: u, tomSite: t }]; persist(); } };
+        guardar: (u, t)=>{ if(lk){ lk.url = u; lk.tomSite = t; } else l.cifraLinks = [...(l.cifraLinks || []), { titulo: mk[1], url: u, tomSite: t }]; persist(); },
+        sp: ((l.spotifyLinks || []).find(x=>cuNorm(x.titulo) === cuNorm(mk[1])) || {}).id || '',
+        guardarSp: id=>{ l.spotifyLinks = [...(l.spotifyLinks || []).filter(x=>cuNorm(x.titulo) !== cuNorm(mk[1])), { titulo: mk[1], id }]; persist(); } };
     });
   }
   const o = l.origem && l.origem.tipo === 'cifraclub' && ccUrl(l.origem.url) ? l.origem : null;
@@ -373,22 +384,29 @@ document.addEventListener('click', ev=>{ if(ev.target.closest && ev.target.close
    A faixa fica em l.spotify. O tocador pode ser minimizado (bolinha verde) e continua tocando; "trocar" mostra outras faixas.
    Sem a função configurada: lê um link copiado do Spotify ou abre a busca no app do Spotify instalado. */
 function lvSpotifyId(txt){ const m = String(txt || '').match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/([A-Za-z0-9]{22})/) || String(txt || '').match(/spotify:track:([A-Za-z0-9]{22})/); return m ? m[1] : ''; }
-let lvSpotifyFaixas = [];
-async function lvSpotify(trocar){
+let lvSpotifyFaixas = [], lvSpotifyAlvo = null;   // null = a música; número = a música N do medley
+/* o que o Spotify toca: a música inteira, ou (medley) a música N, cada uma com a faixa guardada no lugar dela */
+function lvSpotifyQual(l, i){
+  if(i == null) return { id: l.spotify || '', q: [l.titulo, l.artista].filter(Boolean).join(' '), guardar: id=>{ l.spotify = id; persist(); } };
+  const x = lvCcAlvos(l)[i] || {};
+  return { id: x.sp || '', q: [x.titulo, /^medley$/i.test(x.artista || '') ? '' : x.artista].filter(Boolean).join(' '), guardar: x.guardarSp || (()=>{}) };
+}
+async function lvSpotify(trocar, i){
   const l = getLouvorAtual(); if(!l) return;
-  if(l.spotify && !trocar){ lvSpotifyTocador(l); return; }
-  const q = [l.titulo, l.artista].filter(Boolean).join(' ');
+  lvSpotifyAlvo = i == null ? null : i;
+  const a = lvSpotifyQual(l, lvSpotifyAlvo);
+  if(a.id && !trocar){ lvSpotifyTocador(a.id); return; }
   try{
-    const r = await ccChamar({ spotify: q });
+    const r = await ccChamar({ spotify: a.q });
     lvSpotifyFaixas = (r && r.faixas) || [];
     if(!lvSpotifyFaixas.length){ showToast('Não achei essa música no Spotify'); return; }
-    if(trocar){ lvSpotifyEscolher(l); return; }
-    l.spotify = lvSpotifyFaixas[0].id; persist(); lvSpotifyTocador(l); return;
+    if(trocar){ lvSpotifyEscolher(a); return; }
+    a.guardar(lvSpotifyFaixas[0].id); lvSpotifyTocador(lvSpotifyFaixas[0].id); return;
   }catch(e){ var erro = (e && e.message) || 'erro'; }
   /* plano B: link do Spotify copiado (o app do Spotify não é aberto: o Davi quer tocar dentro do Siloé) */
   let texto = ''; try{ texto = await navigator.clipboard.readText(); }catch(e){}
   const id = lvSpotifyId(texto);
-  if(id && id !== l.spotify){ l.spotify = id; persist(); lvSpotifyTocador(l); return; }
+  if(id && id !== a.id){ a.guardar(id); lvSpotifyTocador(id); return; }
   showToast('Spotify: ' + erro);
 }
 function lvSpotifyCaixa(){
@@ -396,30 +414,30 @@ function lvSpotifyCaixa(){
   if(!box){ box = document.createElement('div'); box.id = 'lvSpotifyBox'; box.className = 'lv-spotify-box'; document.body.appendChild(box); }
   return box;
 }
-function lvSpotifyTocador(l){
+function lvSpotifyTocador(id){
   let box = document.getElementById('lvSpotifyBox');
-  if(box && box.dataset.id === l.spotify){ box.classList.toggle('mini'); return; }   // tocar de novo minimiza/abre
+  if(box && box.dataset.id === id){ box.classList.toggle('mini'); return; }   // tocar de novo minimiza/abre
   box = lvSpotifyCaixa(); box.classList.remove('mini');
-  box.dataset.id = l.spotify;
-  box.innerHTML = `<button type="button" class="lv-spotify-bolha" aria-label="Abrir o Spotify" title="Abrir o Spotify" onclick="document.getElementById('lvSpotifyBox').classList.remove('mini')">${document.querySelector('.lv-spotify-btn').innerHTML}</button>
-    <div class="lv-spotify-acoes"><button type="button" onclick="lvSpotify(true)">outras versões</button><button type="button" aria-label="Minimizar" title="Minimizar" onclick="document.getElementById('lvSpotifyBox').classList.add('mini')">–</button><button type="button" aria-label="Fechar o Spotify" title="Fechar" onclick="document.getElementById('lvSpotifyBox').remove()">×</button></div>
+  box.dataset.id = id; box.dataset.musica = louvorAtualId || '';
+  box.innerHTML = `<button type="button" class="lv-spotify-bolha" aria-label="Abrir o Spotify" title="Abrir o Spotify" onclick="document.getElementById('lvSpotifyBox').classList.remove('mini')">${LV_SP_SVG}</button>
+    <div class="lv-spotify-acoes"><button type="button" onclick="lvSpotify(true,lvSpotifyAlvo)">outras versões</button><button type="button" aria-label="Minimizar" title="Minimizar" onclick="document.getElementById('lvSpotifyBox').classList.add('mini')">–</button><button type="button" aria-label="Fechar o Spotify" title="Fechar" onclick="document.getElementById('lvSpotifyBox').remove()">×</button></div>
     <div class="lv-spotify-lista"></div>
-    <iframe src="https://open.spotify.com/embed/track/${encodeURIComponent(l.spotify)}?utm_source=generator&theme=0" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="Spotify"></iframe>`;
+    <iframe src="https://open.spotify.com/embed/track/${encodeURIComponent(id)}?utm_source=generator&theme=0" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="Spotify"></iframe>`;
 }
-function lvSpotifyEscolher(l){
-  if(!document.getElementById('lvSpotifyBox')){ l.spotify = l.spotify || lvSpotifyFaixas[0].id; lvSpotifyTocador(l); }
+function lvSpotifyEscolher(a){
+  if(!document.getElementById('lvSpotifyBox')){ if(!a.id) a.guardar(lvSpotifyFaixas[0].id); lvSpotifyTocador(a.id || lvSpotifyFaixas[0].id); }
   const box = document.getElementById('lvSpotifyBox'); box.classList.remove('mini');
   box.querySelector('.lv-spotify-lista').innerHTML = lvSpotifyFaixas.map((f, i)=>`<button type="button" onclick="lvSpotifyUsar(${i})">${f.capa ? `<img src="${lvEsc(f.capa)}" alt="" width="32" height="32">` : ''}<span><b>${lvEsc(f.nome)}</b><small>${lvEsc(f.artista)}${f.album && f.album !== f.nome ? ' · ' + lvEsc(f.album) : ''}${f.ano ? ' · ' + f.ano : ''}</small></span></button>`).join('');
 }
 function lvSpotifyUsar(i){
   const l = getLouvorAtual(), f = lvSpotifyFaixas[i]; if(!l || !f) return;
-  l.spotify = f.id; persist();
-  document.getElementById('lvSpotifyBox').remove(); lvSpotifyTocador(l);
+  lvSpotifyQual(l, lvSpotifyAlvo).guardar(f.id);
+  document.getElementById('lvSpotifyBox').remove(); lvSpotifyTocador(f.id);
 }
 /* trocou de música ou saiu do Louvor: o tocador de outra música fecha */
 document.addEventListener('click', ()=>setTimeout(()=>{
   const box = document.getElementById('lvSpotifyBox'); if(!box) return;
   const l = typeof getLouvorAtual === 'function' ? getLouvorAtual() : null;
   const noLouvor = document.querySelector('#aba-louvor.active, #pageLvComparar.active');
-  if(!l || !noLouvor || (l.spotify && l.spotify !== box.dataset.id)) box.remove();
+  if(!l || !noLouvor || (box.dataset.musica && box.dataset.musica !== l.id)) box.remove();
 }, 50), true);

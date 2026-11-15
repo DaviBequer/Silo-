@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v23.4', itens: [
+    'Medley: cada música tem o seu Cifra Club e o seu Spotify com o número, separados por uma divisória (a 2ª música em cinza)',
+    'O Spotify de cada música do medley guarda a versão escolhida'
+  ] },
   { versao: 'v23.3', itens: [
     'Louvor: o filtro começa escondido e a busca não fica mais em cima da placa do culto',
     'Selecionando músicas, a placa do culto encolhe e fica só a linha de cima',

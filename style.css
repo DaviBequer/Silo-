@@ -3313,3 +3313,10 @@ body{font-weight:400;letter-spacing:.005em}
 .lv-culto-partes{max-height:1600px;overflow:hidden;transition:max-height .35s ease,opacity .25s ease,margin .35s ease}
 #aba-louvor.lv-selecionando .lv-culto-partes{max-height:0;opacity:0;margin-top:0}
 @media (prefers-reduced-motion: reduce){ .lv-culto-partes{transition:none} }
+/* medley na barrinha (pedido do Davi, 15/11): [Cifra 1 + Spotify 1] | [Cifra 2 + Spotify 2]; a 2ª (e a 4ª) em cinza */
+.lv-medley-grupo{display:flex;gap:4px}
+.lv-sp-musica{position:relative}
+.lv-sp-musica svg{display:block}
+.lv-medley-grupo.cinza img,.lv-medley-grupo.cinza svg{filter:grayscale(1) brightness(1.45)}
+.lv-acoes-div{flex:none;width:1px;height:24px;margin:0 4px;background:rgba(159,193,230,.35);align-self:center}
+.lv-acoes-barra .lv-cc-num{box-shadow:0 0 0 2px var(--graf)}
