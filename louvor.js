@@ -392,7 +392,10 @@ function lvMudarData(l, v){
   if(antiga === v || typeof cultoDaData !== 'function') return;
   const velho = antiga && antiga >= hoje && cultoDaData(antiga);
   if(velho) velho.partes.forEach(p=>{ p.musicas = p.musicas.filter(id=>id !== l.id); });
-  const novo = v && cultoDaData(v);
+  /* culto da data nova que ainda não existe: nasce agora (com as músicas dessa data em Hinos) — a placa azul já mostra */
+  let novo = v && cultoDaData(v);
+  if(v && v >= hoje && !novo){ novo = cultoNovo(v); cultosLista().push(novo); }
+  if(typeof cultoRascunho !== 'undefined' && cultoRascunho && cultoRascunho.data === v) cultoRascunho = null;   // rascunho velho da data (sem estas músicas) sai
   if(novo && !novo.partes.some(p=>p.musicas.includes(l.id))){
     let p = novo.partes.find(p=>cuNorm(p.nome) === 'hinos');
     if(!p){
@@ -401,6 +404,11 @@ function lvMudarData(l, v){
       fim >= 0 ? novo.partes.splice(fim, 0, p) : novo.partes.push(p);
     }
     p.musicas.push(l.id);
+  }
+  /* a placa azul vai para o próximo culto com músicas; se estava presa numa data que ficou vazia, solta */
+  if(typeof cultoProximaData === 'function'){
+    const fixo = cultoDaData(cultoData), vazio = !fixo || !fixo.partes.some(p=>p.musicas.length);
+    if(!lvCultoFixo || vazio){ lvCultoFixo = false; cultoData = cultoProximaData(); }
   }
 }
 /* ---------- selecionar várias músicas (v19.3, pedido do Davi): mudar data, status ou tipo de todas de uma vez, ou excluir ---------- */

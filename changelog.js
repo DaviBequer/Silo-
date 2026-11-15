@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.6', itens: [
+    'Louvor: pôr a data numa música já monta o culto daquele dia (se não existia) e ela aparece na placa azul',
+    'A placa azul mostra o próximo culto que tem músicas; culto vazio criado sem querer não passa na frente'
+  ] },
   { versao: 'v21.5', itens: [
     'Tela cheia da folha: a página inteira cabe na tela pela altura, no celular e no computador; Ctrl + roda e pinça aumentam e também diminuem'
   ] },

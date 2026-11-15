@@ -18,6 +18,10 @@ function cultoDataTexto(iso, longo){
 function cultoProximaData(){
   const hoje = cultoHojeISO();
   const datas = [...cultosLista().map(c=>c.data), ...(state.louvores||[]).map(l=>l.dataAgendamento)].filter(d=>d && d >= hoje).sort();
+  /* pedido do Davi (15/11): culto sem nenhuma música (criado sem querer) não passa na frente do que tem músicas */
+  const temMusica = d=>{ const c = cultoDaData(d); return c ? c.partes.some(p=>p.musicas.length) : (state.louvores||[]).some(l=>l.dataAgendamento === d); };
+  const comMusica = datas.find(temMusica);
+  if(comMusica) return comMusica;
   if(datas.length) return datas[0];
   const d = new Date(); d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
   return calISO(d);

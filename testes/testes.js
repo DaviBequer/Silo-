@@ -175,8 +175,12 @@ async function rodarTestes(){
       const lt = { id:'lvT', titulo:'Teste', dataAgendamento: outro };
       lvMudarData(lt, dia); const entrou = state.cultos[0].partes[1].musicas.includes('lvT');
       lvMudarData(lt, outro); const saiu = !state.cultos[0].partes.some(p=>p.musicas.includes('lvT'));
-      state.cultos = cultosAntes;
-      igual('louvor: data do culto põe a música no roteiro e tirar a data tira', [entrou, saiu], [true, true]);
+      /* data sem culto montado: o culto nasce com a música em Hinos (pedido do Davi, 15/11) */
+      const dAntes = cultoData, fAntes = lvCultoFixo;
+      state.cultos = []; lvMudarData(lt, '2099-04-20');
+      const nasceu = (state.cultos.find(c=>c.data === '2099-04-20')?.partes || []).some(p=>p.musicas.includes('lvT'));
+      state.cultos = cultosAntes; cultoData = dAntes; lvCultoFixo = fAntes;
+      igual('louvor: data do culto põe a música no roteiro e tirar a data tira', [entrou, saiu, nasceu], [true, true, true]);
     }
     /* medley do Drive: corta só a música pedida (do título dela até o título da próxima do nome do arquivo) */
     const txtMd = 'MEDLEY JESUS QUERIDO + SANTO ESPIRITO\nJesus Querido (F)\nF       C\nJesus querido amado\nBb\nmeu Senhor\n--\nSanto Espírito\nC       G\nSanto Espírito vem\nAm\nenche este lugar';
