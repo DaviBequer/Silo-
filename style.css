@@ -3320,3 +3320,8 @@ body{font-weight:400;letter-spacing:.005em}
 .lv-medley-grupo.cinza img,.lv-medley-grupo.cinza svg{filter:grayscale(1) brightness(1.45)}
 .lv-acoes-div{flex:none;width:1px;height:24px;margin:0 4px;background:rgba(159,193,230,.35);align-self:center}
 .lv-acoes-barra .lv-cc-num{box-shadow:0 0 0 2px var(--graf)}
+/* barrinha de progresso das prontas na placa do culto (pedido do Davi, só enfeite, na cor do título) */
+.lvcp-prog{display:block;width:100%;max-width:220px;height:3px;margin-top:8px;border-radius:2px;background:rgba(159,193,230,.18);overflow:hidden}
+.lvcp-prog i{display:block;height:100%;border-radius:2px;background:var(--latao);transition:width .6s ease}
+@media (prefers-reduced-motion: reduce){ .lvcp-prog i{transition:none} }
+.lvcp-prog[hidden]{display:none}

@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v23.5', itens: [
+    'Placa do culto: barrinha de progresso das músicas prontas',
+    'As partes vêm sozinhas: a 1ª música é a Abertura, Harpa Cristã vai para Harpa e corinho para Boas-vindas',
+    'Subir uma música para o 1º lugar faz dela a Abertura; a parte escolhida à mão não muda mais sozinha'
+  ] },
   { versao: 'v23.4', itens: [
     'Medley: cada música tem o seu Cifra Club e o seu Spotify com o número, separados por uma divisória (a 2ª música em cinza)',
     'O Spotify de cada música do medley guarda a versão escolhida'

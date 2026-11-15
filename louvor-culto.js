@@ -314,6 +314,37 @@ function renderCultoHistorico(){
 }
 
 /* linha de baixo do botão "Culto" na aba Louvor: o próximo culto */
+/* REGRA DO DAVI (15/11): a parte vem sozinha. Quem está na parte geral (Hinos/Hino): Harpa Cristã → "Harpa", corinho → "Boas-vindas";
+   e a 1ª música do culto é sempre a "Abertura". Parte escolhida à mão (c.manual[id]) nunca muda sozinha. */
+function cuParteAuto(l){
+  if(l.categoria === 'Harpa Cristã' || /harpa/i.test(l.artista || '')) return 'Harpa';
+  if(l.categoria === 'Corinhos' || /corinho/i.test((l.titulo || '') + ' ' + (l.artista || ''))) return 'Boas-vindas';
+  return 'Hinos';
+}
+/* acha a parte pelo nome; se não existe, cria na ordem de sempre do culto (Abertura … Final), senão antes do Final */
+function cuParteGarantir(c, nome){
+  let p = c.partes.find(q=>cuNorm(q.nome) === cuNorm(nome));
+  if(p) return p;
+  p = { id: cultoId('cp'), nome, quem:'', musicas:[] };
+  const ordem = n=>{ const k = CU_PARTES_COMUNS.findIndex(s=>cuNorm(s) === cuNorm(n)); return k < 0 ? CU_PARTES_COMUNS.length - 1.5 : k; };
+  const depois = c.partes.findIndex(q=>ordem(q.nome) > ordem(nome));
+  depois >= 0 ? c.partes.splice(depois, 0, p) : c.partes.push(p);
+  return p;
+}
+function cultoPartesAuto(c){
+  const manual = c.manual || {}, achar = id=>(state.louvores || []).find(l=>l.id === id);
+  let mudou = false;
+  const mover = (id, de, para, noInicio)=>{ if(de === para) return; de.musicas = de.musicas.filter(x=>x !== id); noInicio ? para.musicas.unshift(id) : para.musicas.push(id); mudou = true; };
+  c.partes.filter(p=>['hinos', 'hino', ''].includes(cuNorm(p.nome || ''))).forEach(p=>p.musicas.slice().forEach(id=>{
+    const l = achar(id); if(!l || manual[id]) return;
+    const alvo = cuParteAuto(l);
+    if(alvo !== 'Hinos') mover(id, p, cuParteGarantir(c, alvo));
+  }));
+  const p1 = c.partes.find(p=>p.musicas.some(achar));
+  const id1 = p1 && p1.musicas.find(achar);
+  if(id1 && cuNorm(p1.nome) !== 'abertura' && !manual[id1]) mover(id1, p1, cuParteGarantir(c, 'Abertura'), true);
+  return mudou;
+}
 function renderCultoBotao(){
   cultoTirarDeOutraData();
   if(typeof atualizarStatusDrive === 'function'){ atualizarStatusDrive(); if(driveClienteId()) drivePreparar(); }
@@ -321,12 +352,15 @@ function renderCultoBotao(){
   /* placa do culto (v19.4): é o Culto inteiro. Mostra o próximo culto, ou a data escolhida em "Outra data" */
   if(!cultoData || (cultoData < cultoHojeISO() && !lvCultoFixo)) cultoData = cultoProximaData();
   const d = cultoData, c = cultoAtual();
+  if(cultoPartesAuto(c) && cultoDaData(c.data)) persist();
   const achar = id=>(state.louvores||[]).find(l=>l.id === id);
   const itens = c.partes.flatMap(p=>p.musicas.map(id=>({ parte: p, l: achar(id) }))).filter(x=>x.l);
   lvcpItens = itens;
   const dias = Math.round((calParse(d) - calParse(cultoHojeISO())) / 86400000);
   const quando = dias <= 0 ? 'hoje' : dias === 1 ? 'amanhã' : 'faltam ' + dias + ' dias';
   const prontas = itens.filter(x=>x.l.status === 'finalizada').length;
+  /* barrinha de progresso das prontas (pedido do Davi, só de enfeite, na cor do título) */
+  const prog = document.getElementById('lvCultoProg'); if(prog){ prog.hidden = !itens.length; prog.firstElementChild.style.width = (itens.length ? Math.round(prontas / itens.length * 100) : 0) + '%'; }
   const lbl = document.querySelector('#lvCultoPlaca .placa-lbl'); if(lbl) lbl.textContent = cultoDataTexto(d, true) + ' · culto';
   el.innerHTML = `${quando}${itens.length ? ` · <b>${itens.length}</b> ${itens.length === 1 ? 'música' : 'músicas'} · ${prontas} pronta${prontas === 1 ? '' : 's'}` : ' · toque para adicionar músicas'}`;
   /* computador: o lado direito sem música aberta fica só com a dica (o culto fica só na placa da lista) */
@@ -425,15 +459,8 @@ function lvcpMudarParte(i, qual){
   if(cuNorm(nome) === cuNorm(x.parte.nome)) return;
   const c = cultoAtual();
   x.parte.musicas = x.parte.musicas.filter(id=>id !== x.l.id);
-  let p = c.partes.find(q=>cuNorm(q.nome) === cuNorm(nome));
-  if(!p){
-    p = { id: cultoId('cp'), nome, quem:'', musicas:[] };
-    /* parte nova entra na ordem de sempre do culto (Abertura … Final), senão antes do Final */
-    const ordem = n=>{ const k = CU_PARTES_COMUNS.findIndex(s=>cuNorm(s) === cuNorm(n)); return k < 0 ? CU_PARTES_COMUNS.length - 1.5 : k; };
-    const depois = c.partes.findIndex(q=>ordem(q.nome) > ordem(nome));
-    depois >= 0 ? c.partes.splice(depois, 0, p) : c.partes.push(p);
-  }
-  p.musicas.push(x.l.id);
+  cuParteGarantir(c, nome).musicas.push(x.l.id);
+  c.manual = { ...(c.manual || {}), [x.l.id]: true };   // escolhida à mão: a regra automática não mexe mais nela
   cultoGravar();
   showToast(`${x.l.titulo || 'Música'} → ${nome}`);
 }
@@ -462,6 +489,18 @@ function lvcpFechar(){
 /* sobe/desce na ordem do culto: dentro da parte troca com a vizinha; na ponta, passa para a parte de cima/de baixo */
 function lvcpMover(i, d){
   const x = lvcpItens[i]; if(!x) return;
+  /* REGRA DO DAVI (15/11): a 1ª é sempre a Abertura. Trocar a 1ª com a 2ª = a outra vira a Abertura e a antiga volta para a parte dela */
+  if((i === 0 && d === 1) || (i === 1 && d === -1)){
+    const a = lvcpItens[0], b = lvcpItens[1]; if(!a || !b) return;
+    const c = cultoAtual(), pa = a.parte, pb = b.parte, kb = pb.musicas.indexOf(b.l.id);
+    pb.musicas.splice(kb, 1);
+    pa.musicas.splice(pa.musicas.indexOf(a.l.id), 1, b.l.id);
+    if(cuNorm(pa.nome) === 'abertura' && !(c.manual || {})[a.l.id]){ const casa = cuParteGarantir(c, cuParteAuto(a.l)); casa === pb ? pb.musicas.splice(kb, 0, a.l.id) : casa.musicas.unshift(a.l.id); }
+    else pb.musicas.splice(pa === pb ? 1 : kb, 0, a.l.id);
+    cultoGravar();
+    lvcpOpcoes(Math.max(0, lvcpItens.findIndex(y=>y.l.id === x.l.id)));
+    return;
+  }
   const ps = cultoAtual().partes, p = x.parte, pi = ps.indexOf(p), k = p.musicas.indexOf(x.l.id), j = k + d;
   if(j >= 0 && j < p.musicas.length){ [p.musicas[k], p.musicas[j]] = [p.musicas[j], p.musicas[k]]; }
   else {
@@ -470,7 +509,7 @@ function lvcpMover(i, d){
     if(d < 0) outra.musicas.push(x.l.id); else outra.musicas.unshift(x.l.id);
   }
   cultoGravar();
-  lvcpOpcoes(Math.max(0, Math.min(lvcpItens.length - 1, i + d)));   // as setas acompanham a música no lugar novo
+  lvcpOpcoes(Math.max(0, lvcpItens.findIndex(y=>y.l.id === x.l.id)));   // as setas acompanham a música no lugar novo (as partes automáticas podem mudar a posição)
 }
 /* ---------- sugestão de repertório (IA): tema da pregação → músicas do app que combinam, sem repetir as recentes ---------- */
 const CU_SUGESTAO_ESQUEMA = { type:'object', properties:{ musicas:{ type:'array', items:{ type:'object', properties:{

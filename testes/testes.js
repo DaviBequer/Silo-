@@ -203,6 +203,13 @@ async function rodarTestes(){
       const sozinha = state.cultos[0].partes.map(p=>p.nome + ':' + p.musicas.join(','));
       state.cultos = cultosAntes; state.louvores = lAntes;
       igual('culto: música com a data do culto entra em Hinos antes do Final', sozinha, ['Abertura:', 'Hinos:lvV', 'Final:']);
+      /* partes automáticas (pedido do Davi, 15/11): 1ª = Abertura, Harpa → Harpa, corinho → Boas-vindas, escolhida à mão fica */
+      state.louvores = [...lAntes, { id:'a1', titulo:'Hino 1' }, { id:'a2', titulo:'Grandioso És Tu', categoria:'Harpa Cristã' }, { id:'a3', titulo:'Corinho de Fogo' }, { id:'a4', titulo:'Hino 4', categoria:'Harpa Cristã' }];
+      const cA = { id:'cuA', data:'2099-06-07', manual:{ a4:true }, partes:[{ id:'h', nome:'Hinos', quem:'', musicas:['a1', 'a2', 'a3', 'a4'] }, { id:'f', nome:'Final', quem:'', musicas:[] }] };
+      cultoPartesAuto(cA);
+      const auto = cA.partes.filter(p=>p.musicas.length).map(p=>p.nome + ':' + p.musicas.join(','));
+      state.louvores = lAntes;
+      igual('culto: partes automáticas (Abertura, Harpa, Boas-vindas; à mão não muda)', auto, ['Abertura:a1', 'Hinos:a4', 'Harpa:a2', 'Boas-vindas:a3']);
     }
     /* medley do Drive: corta só a música pedida (do título dela até o título da próxima do nome do arquivo) */
     const txtMd = 'MEDLEY JESUS QUERIDO + SANTO ESPIRITO\nJesus Querido (F)\nF       C\nJesus querido amado\nBb\nmeu Senhor\n--\nSanto Espírito\nC       G\nSanto Espírito vem\nAm\nenche este lugar';
