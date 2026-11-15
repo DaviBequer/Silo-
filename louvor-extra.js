@@ -833,7 +833,7 @@ function imprimirLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;
   const editava = window.lvEditandoFolha;
   window.lvEditandoFolha = false;
-  renderLouvorPdfPreview();
+  renderLouvorPdfPreview(true);   // a folha em HTML (canvas copiado sai em branco)
   const src = document.getElementById('lvPdfPreview');
   let area = document.getElementById('lvPrintArea');
   if(!area){ area = document.createElement('div'); area.id = 'lvPrintArea'; document.body.appendChild(area); }
@@ -853,7 +853,8 @@ function imprimirLouvorPdf(){
     document.title = tituloAntes;
     area.innerHTML = '';
     window.removeEventListener('afterprint', fim);
-    if(editava){ window.lvEditandoFolha = true; renderLouvorPdfPreview(); }
+    if(editava) window.lvEditandoFolha = true;
+    renderLouvorPdfPreview();
   };
   window.addEventListener('afterprint', fim);
   setTimeout(()=>window.print(), 50);

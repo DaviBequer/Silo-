@@ -1334,7 +1334,7 @@ function ajustarLvPdfMargem(delta){
   persist();
   renderLouvorPdfPreview();
 }
-function renderLouvorPdfPreview(){
+function renderLouvorPdfPreview(forcarHtml){
   const l = getLouvorAtual(); if(!l) return;
   ensureLouvorConfig(l);
   document.getElementById('lvColuna1').classList.toggle('active', l.colunas===1);
@@ -1352,6 +1352,9 @@ function renderLouvorPdfPreview(){
   document.getElementById('lvFonteMono')?.classList.toggle('active', (l.pdfFonte||'mono')==='mono');
   document.getElementById('lvFonteSans')?.classList.toggle('active', l.pdfFonte==='sans');
 
+  /* pedido do Davi (15/11): o PDF desta música já está na tela → fica nela até o novo ficar pronto (sem piscar a folha em HTML) */
+  const pv = document.getElementById('lvPdfPreview');
+  if(!forcarHtml && pv && pv.classList.contains('real') && pv.dataset.lv === l.id && !window.lvEditandoFolha){ lvPdfRealAgendar(); return; }
   const delta = l.transpose || 0;
   const olhar = new Set((l.revisar || []).map(t=>t.trim()));
   const { items } = lvParseContent(l.conteudo);
@@ -1387,6 +1390,7 @@ function renderLouvorPdfPreview(){
   const paisagem = l.pdfOrientacao==='paisagem';
   previewEl.style.zoom = 1;   // mede no tamanho real; o zoom de tela é aplicado no fim
   previewEl.classList.remove('real');
+  previewEl.classList.toggle('esperando', !forcarHtml && !window.lvEditandoFolha);   // a folha em HTML fica invisível até o PDF de verdade chegar
   previewEl.classList.toggle('paisagem', paisagem);
   previewEl.classList.toggle('sans', l.pdfFonte==='sans');
   /* cifra antiga, sem nenhum "--": mantém a linha automática embaixo de cada bloco, como era antes */
@@ -1437,6 +1441,8 @@ function lvPdfRealAgendar(){
   clearTimeout(lvPdfRealTimer);
   const vez = ++lvPdfRealVez;
   lvPdfRealTimer = setTimeout(()=>lvPdfRealDesenhar(vez), 180);
+  /* segurança: se o PDF não ficar pronto em 6 s, mostra a folha em HTML */
+  setTimeout(()=>{ if(vez === lvPdfRealVez) document.getElementById('lvPdfPreview')?.classList.remove('esperando'); }, 6000);
 }
 async function lvPdfRealDesenhar(vez){
   const l = getLouvorAtual(), el = document.getElementById('lvPdfPreview');
@@ -1459,10 +1465,11 @@ async function lvPdfRealDesenhar(vez){
       if(vez !== lvPdfRealVez) return;
     }
     if(vez !== lvPdfRealVez || louvorAtualId !== l.id) return;
-    el.classList.add('real'); el.style.padding = '0';
+    el.classList.add('real'); el.classList.remove('esperando'); el.style.padding = '0'; el.dataset.lv = l.id;
+    el.classList.toggle('paisagem', l.pdfOrientacao === 'paisagem');
     el.replaceChildren(caixa);
     lvAjustarZoomFolha();
-  }catch(e){}   // sem o leitor de PDF: fica a folha em HTML
+  }catch(e){ el.classList.remove('esperando'); }   // sem o leitor de PDF: aparece a folha em HTML
 }
 /* Prioridade: tudo numa folha A4. Se passou um pouco, a letra encolhe aos poucos até caber; se precisaria
    ficar pequena demais (abaixo de 9pt ou de 78% do tamanho escolhido), volta ao tamanho normal e segue na 2ª página. */

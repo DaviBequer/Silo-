@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.7', itens: [
+    'Visualizar: ao mudar tamanho, colunas ou margem, o PDF fica na tela até o novo ficar pronto (não pisca mais a folha pequena)'
+  ] },
   { versao: 'v21.6', itens: [
     'Louvor: pôr a data numa música já monta o culto daquele dia (se não existia) e ela aparece na placa azul',
     'A placa azul mostra o próximo culto que tem músicas; culto vazio criado sem querer não passa na frente'
