@@ -280,7 +280,7 @@ async function lvcmpDesenhar(caixa, blob){
   }
   try{
     await lviPdfPronto();
-    const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer(), isEvalSupported: false }).promise;
     caixa.innerHTML = '';
     const larg = Math.max(280, caixa.clientWidth || 340);
     for(let p = 1; p <= pdf.numPages; p++){

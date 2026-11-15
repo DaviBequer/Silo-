@@ -80,6 +80,8 @@ async function rodarTestes(){
       [{ id:1, v:'a' }, { id:2, v:'B' }, { id:3, v:'c' }]
     ), [{ id:1, v:'A' }, { id:2, v:'B' }, { id:3, v:'c' }]);
     igual('mescla: item apagado de um lado some', mesclarValor([{ id:1 }, { id:2 }], [{ id:1 }], [{ id:1 }, { id:2 }]), [{ id:1 }]);
+    { const m1 = { id:1, t:'a' }, m2 = { id:2, t:'b' }, junto = mesclarValor([{ id:1, t:'a' }, { id:2, t:'b' }], [m1, m2], [{ id:1, t:'a' }, { id:2, t:'B' }]);
+      igual('mescla: item que ninguém mexeu continua o mesmo objeto (importação em andamento não se perde)', [junto[0] === m1, junto[1].t], [true, 'B']); }
 
     /* ---------- louvor: tom e medley ---------- */
     igual('tom: C sobe 2 = D', lvTransposeChord('C', 2, 'D', 'C'), 'D');

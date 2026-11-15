@@ -71,7 +71,7 @@ function lviAgruparLinhas(items, tol, page){
 
 /* ---------- leitura do PDF com texto ---------- */
 function lviClustersDoPdf(file){
-  return lviPdfPronto().then(()=>file.arrayBuffer()).then(buf=>pdfjsLib.getDocument({ data: buf }).promise).then(async pdf=>{
+  return lviPdfPronto().then(()=>file.arrayBuffer()).then(buf=>pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise).then(async pdf=>{
     let out = [];
     for(let p=1; p<=pdf.numPages; p++){
       const tc = await (await pdf.getPage(p)).getTextContent();
@@ -101,7 +101,7 @@ function lviCanvasDoArquivo(file){
       img.src = url;
     });
   }
-  return lviPdfPronto().then(()=>file.arrayBuffer()).then(buf=>pdfjsLib.getDocument({ data: buf }).promise).then(async pdf=>{
+  return lviPdfPronto().then(()=>file.arrayBuffer()).then(buf=>pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise).then(async pdf=>{
     const out = [];
     for(let p=1; p<=pdf.numPages; p++){
       const page = await pdf.getPage(p);

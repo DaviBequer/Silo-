@@ -180,9 +180,10 @@ function persist(){
     try{ state.avisos = { vendas: calcularAvisosVendas(), t: Date.now() }; }catch(e){}
   }
   salvarPendente = true;
-  espelharLocal();
+  /* a cópia no aparelho é feita junto com a gravação (meio segundo depois), não a cada tecla: era o registro inteiro a cada letra.
+     Ao fechar ou esconder o app ela é feita na hora (pagehide e visibilitychange, mais abaixo) */
   clearTimeout(persistTimer);
-  persistTimer = setTimeout(persistAgora, 500);
+  persistTimer = setTimeout(()=>{ espelharLocal(); persistAgora(); }, 500);
   atualizarStatusSalvo('salvando');
 }
 function tempoUltimaEdicaoLocal(){
@@ -200,8 +201,13 @@ function mesmoValor(a, b){ return a === b || JSON.stringify(a) === JSON.stringif
 function ehObjeto(v){ return v && typeof v === 'object' && !Array.isArray(v); }
 function listaComIds(v){ return Array.isArray(v) && v.length > 0 && v.every(i => ehObjeto(i) && i.id != null); }
 function mesclarValor(base, local, remoto){
-  if(mesmoValor(local, base)) return remoto;
-  if(mesmoValor(remoto, base) || mesmoValor(local, remoto)) return local;
+  /* nada mudou dos dois lados: fica o objeto daqui (uma importação em andamento que guardou a música continua escrevendo nos dados de verdade) */
+  if(mesmoValor(local, base)){
+    if(mesmoValor(local, remoto)) return local;
+    /* só o outro aparelho mudou: objeto ou lista com ids segue junto item a item (o que não mudou continua o mesmo objeto) */
+    if(!(ehObjeto(local) && ehObjeto(remoto)) && !(listaComIds(local) && listaComIds(remoto))) return remoto;
+  }
+  else if(mesmoValor(remoto, base) || mesmoValor(local, remoto)) return local;
   if(ehObjeto(local) && ehObjeto(remoto)){
     const b = ehObjeto(base) ? base : {};
     const out = {};
@@ -345,7 +351,7 @@ function tentarNuvemDeNovo(){
   carregar();
 }
 document.addEventListener('visibilitychange', async ()=>{
-  if(document.hidden){ if(persistTimer || salvarPendente) persistAgora(); return; }
+  if(document.hidden){ if(persistTimer || salvarPendente){ espelharLocal(); persistAgora(); } return; }
   if(!remoteReady){ tentarNuvemDeNovo(); return; }
   /* voltou pro app: se outro aparelho salvou algo novo e aqui não há nada pendente, recarrega */
   if(remoteReady && !salvarPendente && !persistTimer && !salvandoPromise && window.SiloSupabase){
@@ -353,7 +359,7 @@ document.addEventListener('visibilitychange', async ()=>{
     if(r.ok && r.mudou && !salvarPendente && !persistTimer && !salvandoPromise) location.reload();
   }
 });
-window.addEventListener('pagehide', ()=>{ if(persistTimer || salvarPendente) persistAgora(); });
+window.addEventListener('pagehide', ()=>{ if(persistTimer || salvarPendente){ espelharLocal(); persistAgora(); } });
 
 /* uma carga por vez (as novas tentativas podem vir do relógio, da volta da internet ou da volta ao app) */
 let carregandoAgora = false;

@@ -1515,7 +1515,7 @@ async function lvPdfRealDesenhar(vez){
     if(typeof lviPdfPronto === 'function') await lviPdfPronto();
     if(vez !== lvPdfRealVez || typeof pdfjsLib === 'undefined') return;
     const r = lvMontarPdf(l); if(!r) return;
-    const pdf = await pdfjsLib.getDocument({ data: r.doc.output('arraybuffer') }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: r.doc.output('arraybuffer'), isEvalSupported: false }).promise;
     const larg = (l.pdfOrientacao === 'paisagem' ? 297 : 210) * 96 / 25.4;   // A4 em px, igual à folha
     const nitidez = Math.min(3, (window.devicePixelRatio || 1) * 1.5);   // mais pixels: o zoom da tela cheia fica nítido
     const caixa = document.createElement('div'); caixa.className = 'lv-pdf-real';
