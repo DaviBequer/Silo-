@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=23.1">
+<link rel="stylesheet" href="style.css?v=23.2">
 </head>
 <body class="carregando">
 
@@ -25,7 +25,7 @@
       <div id="headerLogoFallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-weight:600;font-size:20px;color:#fff">S</div>
     </div>
     <div>
-      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 231</span></div>
+      <div class="header-title">Siloé <span class="header-version" onclick="switchAba('ajustes')" style="cursor:pointer">Nº 232</span></div>
       <div class="header-sub">Finanças Pessoais</div>
     </div>
   </div>
@@ -1268,8 +1268,8 @@
             <input type="text" id="lvArtista" class="lv-artist-input" placeholder="Artista / Autor" oninput="salvarLouvorCampo()">
             <div class="dificuldade-chips lv-categoria-mini" id="lvCategoriaChips"></div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
-            <button type="button" class="lv-status-btn" id="lvStatusBtn" onclick="toggleLouvorStatus()"></button>
+          <!-- modelo C (escolha do Davi, 15/11): TOM e CAPO, embaixo a data em bloquinho e o Pronto num interruptor -->
+          <div class="lv-topo-dir">
             <!-- Importar e Organizar ao lado do Tom -->
             <div class="lv-topo-acoes">
               <button type="button" class="lv-tom-box-header" id="lvTomBox" onclick="abrirLvTomPicker('edit')">
@@ -1281,7 +1281,8 @@
                 <span class="lv-capo-val">—</span>
               </button>
             </div>
-            <input type="date" id="lvDataAgendamento" class="lv-data-agendamento" onchange="salvarLouvorData(this.value)">
+            <input type="date" id="lvDataAgendamento" class="lv-data-agendamento lv-data-bloco" onchange="salvarLouvorData(this.value)">
+            <button type="button" class="lv-status-btn lv-status-tog" id="lvStatusBtn" onclick="toggleLouvorStatus()"></button>
           </div>
         </div>
         <div class="lv-import-status" id="lvEdicaoImportStatus"></div>
@@ -2026,30 +2027,30 @@
   window.SUPABASE_URL = 'https://zlhccxkhcbpgqsupodcd.supabase.co';
   window.SUPABASE_ANON_KEY = 'sb_publishable_55lsaxzES25y2uvajyguiA_KBLG3YH1';
 </script>
-<script src="supabase.js?v=23.1"></script>
-<script src="core.js?v=23.1"></script>
-<script src="layout.js?v=23.1"></script>
-<script src="changelog.js?v=23.1"></script>
-<script src="app.js?v=23.1"></script>
-<script src="app-recursos.js?v=23.1"></script>
-<script src="panorama.js?v=23.1"></script>
-<script src="planner.js?v=23.1"></script>
-<script src="voz.js?v=23.1"></script>
-<script src="ponto.js?v=23.1"></script>
-<script src="louvor.js?v=23.1"></script>
-<script src="louvor-extra.js?v=23.1"></script>
-<script src="ia.js?v=23.1"></script>
-<script src="louvor-cifraclub.js?v=23.1"></script>
-<script src="louvor-medley.js?v=23.1"></script>
-<script src="louvor-culto.js?v=23.1"></script>
-<script src="louvor-drive.js?v=23.1"></script>
-<script src="atualizar.js?v=23.1"></script>
-<script src="louvor-comparar.js?v=23.1"></script>
-<script src="fatura-pdf.js?v=23.1"></script>
-<script src="emprestimo.js?v=23.1"></script>
-<script src="vendas.js?v=23.1"></script>
-<script src="efeitos.js?v=23.1"></script>
-<script src="digital.js?v=23.1"></script>
+<script src="supabase.js?v=23.2"></script>
+<script src="core.js?v=23.2"></script>
+<script src="layout.js?v=23.2"></script>
+<script src="changelog.js?v=23.2"></script>
+<script src="app.js?v=23.2"></script>
+<script src="app-recursos.js?v=23.2"></script>
+<script src="panorama.js?v=23.2"></script>
+<script src="planner.js?v=23.2"></script>
+<script src="voz.js?v=23.2"></script>
+<script src="ponto.js?v=23.2"></script>
+<script src="louvor.js?v=23.2"></script>
+<script src="louvor-extra.js?v=23.2"></script>
+<script src="ia.js?v=23.2"></script>
+<script src="louvor-cifraclub.js?v=23.2"></script>
+<script src="louvor-medley.js?v=23.2"></script>
+<script src="louvor-culto.js?v=23.2"></script>
+<script src="louvor-drive.js?v=23.2"></script>
+<script src="atualizar.js?v=23.2"></script>
+<script src="louvor-comparar.js?v=23.2"></script>
+<script src="fatura-pdf.js?v=23.2"></script>
+<script src="emprestimo.js?v=23.2"></script>
+<script src="vendas.js?v=23.2"></script>
+<script src="efeitos.js?v=23.2"></script>
+<script src="digital.js?v=23.2"></script>
 <script>carregar();</script>
 </body>
 </html>

@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v23.2', itens: [
+    'Tela da música no modelo C: categoria em bolinhas (L, H, C) em cima do nome',
+    'Data num bloquinho com o dia grande e o Pronto num interruptor, embaixo do TOM e do CAPO'
+  ] },
   { versao: 'v23.1', itens: [
     'A letra da cifra volta para a fonte de antes',
     'PDF: a letra fica sempre no tamanho escolhido; se não couber, vai para a página seguinte',

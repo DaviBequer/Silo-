@@ -727,6 +727,11 @@ function melhorarCampoData(inp){
   inp.after(btn);
   const sync = ()=>{
     const v = _valorInput.get.call(inp);
+    if(inp.classList.contains('lv-data-bloco')){   // tela da música, modelo C do Davi: dia grande, mês e dia da semana ao lado
+      const d = v ? new Date(v + 'T12:00') : null;
+      btn.innerHTML = d ? `<b>${d.getDate()}</b><small><span>${d.toLocaleDateString('pt-BR', { month:'short' }).replace('.', '')}</span><span>${d.toLocaleDateString('pt-BR', { weekday:'short' }).replace('.', '')}</span></small>` : `${CAL_ICONE}<small><span>Agendar</span></small>`;
+      btn.classList.add('data-bloco');
+    } else
     btn.innerHTML = `<span class="${v?'':'data-vazia'}">${v ? calTextoBotao(v) : (btn.classList.contains('data-btn-compacto') ? 'Agendar' : 'Escolher data')}</span>${CAL_ICONE}`;
     btn.setAttribute('aria-label', v ? 'Data: '+calTextoBotao(v) : 'Escolher data');
     btn.disabled = inp.disabled;

@@ -263,7 +263,9 @@ function renderLvStatusBtn(){
   /* o mesmo botão na música e no Comparar (música só com o PDF do Drive abre direto no Comparar) */
   ['lvStatusBtn', 'lvcmpStatus'].forEach(id=>{
     const btn = document.getElementById(id); if(!btn) return;
-    btn.textContent = finalizada ? 'Pronto' : 'Em Produção';
+    const txt = finalizada ? 'Pronto' : 'Em produção';
+    if(btn.classList.contains('lv-status-tog')){ btn.innerHTML = `<span>${txt}</span><i aria-hidden="true"></i>`; btn.setAttribute('aria-pressed', finalizada); }   // modelo C: interruptor
+    else btn.textContent = finalizada ? 'Pronto' : 'Em Produção';
     btn.classList.toggle('finalizada', finalizada);
   });
   /* pedido do Davi (15/11): música Pronta não mostra o Refazer pelo Cifra Club (um toque sem querer apagaria o trabalho) */
@@ -291,9 +293,10 @@ function closeLouvorDetalhe(){
 }
 function renderLvCategoriaChips(){
   const l = getLouvorAtual(); if(!l) return;
+  /* modelo C (escolha do Davi, 15/11): bolinhas com a inicial (L, H, C) e o nome da escolhida ao lado */
   document.getElementById('lvCategoriaChips').innerHTML = LOUVOR_CATEGORIAS.map(c=>
-    `<button type="button" class="dif-chip${l.categoria===c?' active':''}" onclick="selecionarLvCategoria('${c}')">${c}</button>`
-  ).join('');
+    `<button type="button" class="lv-cat-bola${l.categoria===c?' on':''}" onclick="selecionarLvCategoria('${c}')" title="${c}" aria-label="${c}" aria-pressed="${l.categoria===c}">${c[0]}</button>`
+  ).join('') + `<span class="lv-cat-nome">${l.categoria || ''}</span>`;
 }
 function selecionarLvCategoria(c){
   const l = getLouvorAtual(); if(!l) return;
