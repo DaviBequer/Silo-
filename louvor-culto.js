@@ -1007,7 +1007,7 @@ async function cultoColarMedleyMontar(membros, pdfs){
   /* 2. as cifras juntas numa música só */
   const L = id=>(state.louvores || []).find(x=>x.id === id);
   const blocos = [], links = [], cantores = {};
-  let tomPrimeira = null;
+  let tomPrimeira = null, tomAntes = null;
   for(const m of membros){
     let texto = '', tom = '', menor = false, cantor = m.artista || '';
     const app = m.id && L(m.id);
@@ -1026,6 +1026,10 @@ async function cultoColarMedleyMontar(membros, pdfs){
       tom = alvo.tomOriginal; menor = alvo.tomModoMenor;
     }
     if(!tomPrimeira && tom) tomPrimeira = { tom, menor };
+    /* tom diferente da música anterior: passagem de tom (II–V do tom novo) no fim da anterior */
+    const ps = blocos.length && tomAntes ? lvPassagemTom(tomAntes, { tom, menor }) : '';
+    if(ps) blocos[blocos.length - 1] += '\n--\n' + ps;
+    if(tom) tomAntes = { tom, menor };
     const tomTxt = tom ? (menor ? lvRelativoMenor(tom) + 'm' : tom) : '';
     blocos.push(`[♪ ${(m.titulo || 'Música').replace(/[\[\]]/g, '')}${tomTxt ? ' — Tom ' + tomTxt : ''}]` + (texto ? '\n' + texto.trim() : ''));
     if(cantor && m.titulo) cantores[cuNorm(m.titulo)] = cantor;   // o separador do medley no PDF mostra o cantor

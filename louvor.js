@@ -1630,7 +1630,7 @@ document.addEventListener('keydown', e=>{
 /* a folha se ajusta à largura sempre que o espaço muda (abrir a música, girar o celular, trocar de modo) */
 if(window.ResizeObserver){ const _w = document.getElementById('lvPdfWrap'); let _larg = 0; if(_w) new ResizeObserver(()=>{ if(_w.clientWidth && _w.clientWidth !== _larg){ _larg = _w.clientWidth; lvAjustarZoomFolha(); } }).observe(_w); }   // só quando a largura muda
 window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelEdicao')?.classList.contains('active')) lvAjustarZoomFolha(); });
-/* fonte da letra no PDF (fonts/Inconsolata, licença OFL): carregada uma vez (ao abrir uma música ou o Culto) e guardada em base64 */
+/* fonte da letra no PDF (fonts/AzeretMono, licença OFL): carregada uma vez (ao abrir uma música ou o Culto) e guardada em base64 */
 let lvPdfFonte = null, lvPdfFontePedido = null;
 function lvPdfCarregarFonte(){
   if(lvPdfFonte) return Promise.resolve(lvPdfFonte);
@@ -1642,7 +1642,7 @@ function lvPdfCarregarFonte(){
   };
   /* junto vem o gerador de PDF (jsPDF), que não carrega mais na abertura do app */
   /* + Outfit (a letra do app, OFL) para o cabeçalho D1 e o separador do medley (escolha do Davi, 15/11) */
-  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf'), garantirJsPDF(),
+  lvPdfFontePedido = Promise.all([b64('AzeretMono-Regular.ttf'), b64('AzeretMono-Bold.ttf'), garantirJsPDF(),
       b64('Outfit-Light.ttf').catch(()=>null), b64('Outfit-Regular.ttf').catch(()=>null), b64('Outfit-Medium.ttf').catch(()=>null)])
     .then(([r, b, _, ol, or, om])=>(lvPdfFonte = { r, b, ol, or, om })).catch(()=>{ lvPdfFontePedido = null; return null; });
   return lvPdfFontePedido;
@@ -1660,6 +1660,18 @@ function exportarLouvorPdf(){
   };
   if(lvPdfFonte && window.jspdf) fazer();
   else { showToast('Preparando o PDF…'); lvPdfCarregarFonte().then(fazer); }
+}
+/* PASSAGEM DE TOM no medley (pedido do Davi, 15/11): quando a música seguinte está noutro tom, entra uma parte "[Passagem]"
+   no fim da música anterior com a cadência II–V do tom novo: IIm7 · V7(4) · V7 (tom maior) ou IIm7(b5) · V7(b9) (tom menor).
+   de/para = { tom: o tom maior (o relativo, no menor), menor } · mesmo tom → '' */
+function lvPassagemTom(de, para){
+  if(!de || !para || !de.tom || !para.tom) return '';
+  const tonica = t=>{ const pc = lvPc(t.tom); return pc < 0 ? -1 : t.menor ? (pc + 9) % 12 : pc; };
+  const a = tonica(de), b = tonica(para);
+  if(a < 0 || b < 0 || (a === b && !!de.menor === !!para.menor)) return '';
+  const n = pc=>lvNomeNoTom(((pc % 12) + 12) % 12, para.tom);
+  const acordes = para.menor ? [n(b + 2) + 'm7(b5)', n(b + 7) + '7(b9)'] : [n(b + 2) + 'm7', n(b + 7) + '7(4)', n(b + 7) + '7'];
+  return '[Passagem]\n' + acordes.join('   ');
 }
 /* cantor de uma música do medley (pelo nome): o guardado ao montar o medley, a música do medley do app, ou a música com esse nome no app */
 function lvMedleyCantor(l, nome){
@@ -1742,13 +1754,13 @@ function lvMontarPdf(l){
   doc.setLineWidth(1);
   doc.line(marginX, linhaY, pageW-marginX, linhaY);
 
-  /* letra e acordes em Inconsolata (como o modelo do Davi); sem a fonte carregada, Courier */
+  /* letra e acordes em Azeret Mono (escolha do Davi, 15/11; antes Inconsolata); sem a fonte carregada, Courier */
   let mono = 'courier';
   if(lvPdfFonte){
     try{
-      doc.addFileToVFS('Inconsolata-Regular.ttf', lvPdfFonte.r); doc.addFont('Inconsolata-Regular.ttf', 'Inconsolata', 'normal');
-      doc.addFileToVFS('Inconsolata-Bold.ttf', lvPdfFonte.b); doc.addFont('Inconsolata-Bold.ttf', 'Inconsolata', 'bold');
-      mono = 'Inconsolata';
+      doc.addFileToVFS('AzeretMono-Regular.ttf', lvPdfFonte.r); doc.addFont('AzeretMono-Regular.ttf', 'AzeretMono', 'normal');
+      doc.addFileToVFS('AzeretMono-Bold.ttf', lvPdfFonte.b); doc.addFont('AzeretMono-Bold.ttf', 'AzeretMono', 'bold');
+      mono = 'AzeretMono';
     }catch(e){ mono = 'courier'; }
   }
   const { items } = lvParseContent(l.conteudo);

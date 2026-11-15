@@ -37,7 +37,7 @@ function lmLouvor(id){ return state.louvores.find(l=>l.id===id); }
 function lmGerarTexto(md){
   const linhas = [];
   const seq = (md.seq || []).filter(s=>lmLouvor(s.id));
-  let i = 0, musicaAtual = null, ditas = null;
+  let i = 0, musicaAtual = null, ditas = null, cfgAntes = null;
   while(i < seq.length){
     const s = seq[i];
     let n = 1;
@@ -48,6 +48,10 @@ function lmGerarTexto(md){
     if(!parte) continue;   // a parte saiu da música original
     const cfg = (md.musicas || []).find(m=>m.id === s.id) || {};
     if(s.id !== musicaAtual){
+      /* tom diferente da música anterior: passagem de tom (II–V do tom novo) antes de trocar de música */
+      const ps = cfgAntes && typeof lvPassagemTom === 'function' ? lvPassagemTom({ tom: cfgAntes.tom, menor: cfgAntes.menor }, { tom: cfg.tom, menor: cfg.menor }) : '';
+      if(ps) linhas.push('--', ...ps.split('\n'));
+      cfgAntes = cfg;
       if(linhas.length) linhas.push('--');
       const tomTxt = lmTomTexto(cfg);
       linhas.push(`[♪ ${(src.titulo||'Sem título').replace(/[\[\]]/g,'')}${tomTxt ? ' — Tom ' + tomTxt : ''}]`);

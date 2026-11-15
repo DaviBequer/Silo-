@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.8', itens: [
+    'Letra e acordes na fonte Azeret Mono, no PDF e no editor da música',
+    'Medley com músicas em tons diferentes ganha uma Passagem de tom (II–V do tom novo) entre elas'
+  ] },
   { versao: 'v22.7', itens: [
     'Placa do culto: toque no nome da parte de uma música (Abertura, Hinos…) para trocar: Após a Palavra, Apresentação, Harpa, Ofertório ou uma parte com outro nome'
   ] },

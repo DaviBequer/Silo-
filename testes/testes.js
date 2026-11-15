@@ -164,6 +164,9 @@ async function rodarTestes(){
     igual('colar: Harpa com o nome escrito', ((x)=>[x.titulo, x.artista])(cultoColarParse('Harpa: 15 - mais perto quero estar')[0]), ['Mais Perto Quero Estar', 'Harpa Cristã - 15']);
     igual('colar: maiúsculas no nome, palavrinhas e siglas', [cultoNomeFormatado('o SENHOR é meu pastor'), cultoNomeFormatado('ministério IAP de louvor')], ['O Senhor é Meu Pastor', 'Ministério IAP de Louvor']);
     igual('colar: "Harpa 127" em qualquer parte vira hino da Harpa', cultoColarParse('Hinos: Harpa Cristã 545 (D)')[0].harpaNum, '545');
+    igual('medley: passagem de tom (II–V do tom novo; menor com m7(b5) e 7(b9); mesmo tom não tem)', [
+      lvPassagemTom({ tom:'E' }, { tom:'F' }), lvPassagemTom({ tom:'F' }, { tom:'C', menor:true }), lvPassagemTom({ tom:'G' }, { tom:'G' })
+    ], ['[Passagem]\nGm7   C7(4)   C7', '[Passagem]\nBm7(b5)   E7(b9)', '']);
     igual('Cifra Club no tom da música (?keyShape=)', [lvCcComTom('https://www.cifraclub.com.br/a/b/', 'A', 'C'), lvCcComTom('https://www.cifraclub.com.br/a/b/?x=1', 'A', 'G'), lvCcComTom('https://www.cifraclub.com.br/a/b/', 'Am', 'Am'), lvCcComTom('https://www.cifraclub.com.br/a/b/', '', 'C')],
       ['https://www.cifraclub.com.br/a/b/?keyShape=3', 'https://www.cifraclub.com.br/a/b/?keyShape=10', 'https://www.cifraclub.com.br/a/b/', 'https://www.cifraclub.com.br/a/b/']);
     igual('Cifra Club: medley colado tem um botão por música, do Drive tem botão pelo nome', [
