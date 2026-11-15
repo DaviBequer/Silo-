@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.5', itens: [
+    'PDF com cabeçalho novo (D1): cantor em azul em cima, nome fino e grande, Tom e Capo só com os números, na letra do app',
+    'Medley no PDF: cada música começa com o número numa bolinha azul, o cantor e o nome (sem o tom)'
+  ] },
   { versao: 'v22.4', itens: [
     'Botão do Cifra Club abre a música já no tom dela (o site aceita o tom no endereço)',
     'Medley: um botão do Cifra Club para cada música; música do Drive ganha o botão e o app acha ela no Cifra Club pelo nome'

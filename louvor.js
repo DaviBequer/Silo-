@@ -1583,8 +1583,10 @@ function lvPdfCarregarFonte(){
     return btoa(s);
   };
   /* junto vem o gerador de PDF (jsPDF), que não carrega mais na abertura do app */
-  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf'), garantirJsPDF()])
-    .then(([r, b])=>(lvPdfFonte = { r, b })).catch(()=>{ lvPdfFontePedido = null; return null; });
+  /* + Outfit (a letra do app, OFL) para o cabeçalho D1 e o separador do medley (escolha do Davi, 15/11) */
+  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf'), garantirJsPDF(),
+      b64('Outfit-Light.ttf').catch(()=>null), b64('Outfit-Regular.ttf').catch(()=>null), b64('Outfit-Medium.ttf').catch(()=>null)])
+    .then(([r, b, _, ol, or, om])=>(lvPdfFonte = { r, b, ol, or, om })).catch(()=>{ lvPdfFontePedido = null; return null; });
   return lvPdfFontePedido;
 }
 /* pedido do Davi (15/11): o clique às vezes "não fazia nada". Agora baixa na hora do clique (sem esperar nada, quando o gerador
@@ -1600,6 +1602,15 @@ function exportarLouvorPdf(){
   };
   if(lvPdfFonte && window.jspdf) fazer();
   else { showToast('Preparando o PDF…'); lvPdfCarregarFonte().then(fazer); }
+}
+/* cantor de uma música do medley (pelo nome): o guardado ao montar o medley, a música do medley do app, ou a música com esse nome no app */
+function lvMedleyCantor(l, nome){
+  const n = cuNorm(nome);
+  if(l.medleyCantores && l.medleyCantores[n]) return l.medleyCantores[n];
+  const L = state.louvores || [];
+  for(const m of (l.medley && l.medley.musicas) || []){ const s = L.find(x=>x.id === m.id); if(s && cuNorm(s.titulo) === n) return s.artista || ''; }
+  const s = L.find(x=>x.id !== l.id && !x.medley && !/^medley$/i.test(x.artista || '') && cuNorm(x.titulo) === n);
+  return s ? s.artista || '' : '';
 }
 /* monta o PDF (jsPDF) de um louvor qualquer → { doc, nome } (também usado no envio ao Drive) */
 function lvMontarPdf(l){
@@ -1623,37 +1634,55 @@ function lvMontarPdf(l){
   const delta = l.transpose || 0;
   const tomAtual = lvTomAtual(l);
 
-  doc.setTextColor(20,20,22);
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(l.pdfTamanhoTitulo);
-  doc.text(l.titulo||'Sem título', marginX, 34);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(11);
-  doc.setTextColor(140,140,144);
-  doc.text(l.artista||'', marginX, 52);
-
-  if(tomAtual){
-    const boxW = 66, boxH = 46, boxX = pageW - marginX - boxW, boxY = 16;
-    doc.setDrawColor(222,222,226);
-    doc.setLineWidth(1);
-    doc.roundedRect(boxX, boxY, boxW, boxH, 8, 8, 'S');
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(150,150,154);
-    doc.text('TOM', boxX+boxW/2, boxY+16, { align:'center' });
-    doc.setFontSize(17);
-    doc.setTextColor(30,30,32);
-    doc.text(tomAtual, boxX+boxW/2, boxY+35, { align:'center' });
-    if(lvCapo(l)){   // capotraste: ao lado da caixa do tom, em laranja como os acordes
-      doc.setFontSize(7.5);
-      doc.setTextColor(...orange);
-      doc.text(`CAPO ${lvCapo(l)}ª · FORMA ${lvFormaAtual(l)}`, boxX - 8, boxY+35, { align:'right' });
-    }
+  /* Outfit (a letra do app) para o cabeçalho e o separador do medley; sem ela, Helvetica */
+  let sans = { leve:['helvetica','normal'], normal:['helvetica','normal'], medio:['helvetica','bold'] };
+  if(lvPdfFonte && lvPdfFonte.ol && lvPdfFonte.or && lvPdfFonte.om){
+    try{
+      doc.addFileToVFS('Outfit-Light.ttf', lvPdfFonte.ol); doc.addFont('Outfit-Light.ttf', 'OutfitLight', 'normal');
+      doc.addFileToVFS('Outfit-Regular.ttf', lvPdfFonte.or); doc.addFont('Outfit-Regular.ttf', 'Outfit', 'normal');
+      doc.addFileToVFS('Outfit-Medium.ttf', lvPdfFonte.om); doc.addFont('Outfit-Medium.ttf', 'OutfitMedium', 'normal');
+      sans = { leve:['OutfitLight','normal'], normal:['Outfit','normal'], medio:['OutfitMedium','normal'] };
+    }catch(e){}
   }
+  const azulCantor = [47,109,176], noite = [27,38,56];
+  const espacado = (t, x, y, esp, alinhar)=>{   // texto com letras espaçadas (rótulos em maiúsculas)
+    if(doc.setCharSpace) doc.setCharSpace(esp);
+    const w = doc.getTextWidth(t) + t.length * esp;
+    doc.text(t, alinhar === 'right' ? x - w : x, y);
+    if(doc.setCharSpace) doc.setCharSpace(0);
+    return w;
+  };
 
+  /* cabeçalho D1 (escolha do Davi, 15/11): cantor em azul, pequeno e espacado, em cima; nome fino e grande;
+     à direita "TOM" e "CAPO" só com os números, na letra do app */
+  const cantorY = 30, tituloY = (l.artista ? cantorY + 8 : 22) + l.pdfTamanhoTitulo * 0.82;
+  if(l.artista){
+    doc.setFont(...sans.medio); doc.setFontSize(7.6); doc.setTextColor(...azulCantor);
+    espacado(String(l.artista).toUpperCase(), marginX, cantorY, 1.6);
+  }
+  doc.setFont(...sans.leve); doc.setFontSize(l.pdfTamanhoTitulo); doc.setTextColor(20,20,22);
+  doc.text(l.titulo||'Sem título', marginX, tituloY);
+  if(tomAtual){
+    const valY = tituloY, rotY = tituloY - 21;
+    let x = pageW - marginX;
+    const coluna = (rot, val)=>{
+      doc.setFont(...sans.leve); doc.setFontSize(21); doc.setTextColor(20,20,22);
+      const wv = doc.getTextWidth(val);
+      doc.setFont(...sans.normal); doc.setFontSize(6.8); doc.setTextColor(150,150,154);
+      const wr = doc.getTextWidth(rot) + rot.length * 1.2;
+      const w = Math.max(wv, wr);
+      espacado(rot, x, rotY, 1.2, 'right');
+      doc.setFont(...sans.leve); doc.setFontSize(21); doc.setTextColor(20,20,22);
+      doc.text(val, x, valY, { align:'right' });
+      x -= w + 16;
+    };
+    if(lvCapo(l)) coluna('CAPO', String(lvCapo(l)));
+    coluna('TOM', tomAtual);
+  }
+  const linhaY = Math.max(70, tituloY + 14);
   doc.setDrawColor(230,230,233);
   doc.setLineWidth(1);
-  doc.line(marginX, 70, pageW-marginX, 70);
+  doc.line(marginX, linhaY, pageW-marginX, linhaY);
 
   /* letra e acordes em Inconsolata (como o modelo do Davi); sem a fonte carregada, Courier */
   let mono = 'courier';
@@ -1676,11 +1705,11 @@ function lvMontarPdf(l){
   let cols = l.colunas === 'auto' ? 1 : Math.min(maxCols, Number(l.colunas) || 2), colWidth, colX;
   const montarCols = ()=>{ colWidth = (pageW - marginX*2 - 20*(cols-1)) / cols; colX = Array.from({ length: cols }, (_, i)=>marginX + i*(colWidth + 20)); };
   montarCols();
-  const startY = 96;
+  const startY = linhaY + 26;
 
   /* desenha tudo com a letra em "fontSize"; desenhar=false só conta quantas páginas precisaria */
   function layout(fontSize, desenhar){
-    let colIdx = 0, y = startY, paginas = 1;
+    let colIdx = 0, y = startY, paginas = 1, nMusica = 0;
     const lineH = fontSize * l.pdfAlturaLinha;
     const nextColumnOrPage = ()=>{
       if(colIdx < cols - 1){ colIdx++; y = startY; }
@@ -1700,6 +1729,30 @@ function lvMontarPdf(l){
         ensureSpace(lineH*0.8);
         if(desenhar){ doc.setDrawColor(207,207,214); doc.setLineWidth(0.7); doc.line(colX[colIdx], y - lineH*0.4, colX[colIdx] + colWidth*0.35, y - lineH*0.4); }
         y += lineH*0.45;
+        return;
+      }
+      /* medley (separador 4A, escolha do Davi, 15/11): número numa bolinha azul-noite, cantor pequeno em cima, nome embaixo
+         e uma linha fina até o fim da coluna. Sem o tom */
+      const musica = it.type==='section' && /^♪\s*(.+?)(?:\s+—\s+Tom\s+(\S+))?$/.exec(it.label);
+      if(musica){
+        nMusica++;
+        ensureSpace(lineH*4.2);
+        const cantor = lvMedleyCantor(l, musica[1]);
+        y += 4;
+        if(desenhar){
+          const x0 = colX[colIdx], cy = y - 4, r = 10;
+          doc.setFillColor(...noite); doc.circle(x0 + r, cy, r, 'F');
+          doc.setFont(...sans.medio); doc.setFontSize(10); doc.setTextColor(255,255,255);
+          doc.text(String(nMusica), x0 + r, cy + 3.5, { align:'center' });
+          const tx = x0 + r*2 + 9;
+          let fimTexto = tx;
+          if(cantor){ doc.setFont(...sans.medio); doc.setFontSize(6.8); doc.setTextColor(140,140,146); fimTexto = Math.max(fimTexto, tx + espacado(cantor.toUpperCase(), tx, cy - 3.5, 1.3)); }
+          doc.setFont(...sans.normal); doc.setFontSize(12); doc.setTextColor(20,20,22);
+          doc.text(musica[1], tx, cantor ? cy + 8 : cy + 4);
+          fimTexto = Math.max(fimTexto, tx + doc.getTextWidth(musica[1]));
+          if(fimTexto + 10 < x0 + colWidth){ doc.setDrawColor(217,219,226); doc.setLineWidth(0.8); doc.line(fimTexto + 8, cy, x0 + colWidth, cy); }
+        }
+        y += lineH*1.75;
         return;
       }
       if(it.type==='section'){

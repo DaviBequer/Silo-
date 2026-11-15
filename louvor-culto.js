@@ -967,17 +967,17 @@ async function cultoColarMedleyMontar(membros, pdfs){
   }
   /* 2. as cifras juntas numa música só */
   const L = id=>(state.louvores || []).find(x=>x.id === id);
-  const blocos = [], links = [];
+  const blocos = [], links = [], cantores = {};
   let tomPrimeira = null;
   for(const m of membros){
-    let texto = '', tom = '', menor = false;
+    let texto = '', tom = '', menor = false, cantor = m.artista || '';
     const app = m.id && L(m.id);
     const dr = !(app && (app.conteudo || '').trim()) && pdfs ? await cultoMedleyParteDoDrive(m, pdfs) : null;
-    if(app && (app.conteudo || '').trim()){ texto = app.conteudo; tom = lvTomMaiorAtual(app); menor = !!app.tomModoMenor; m.status = 'app'; }
+    if(app && (app.conteudo || '').trim()){ texto = app.conteudo; tom = lvTomMaiorAtual(app); menor = !!app.tomModoMenor; cantor = app.artista || cantor; m.status = 'app'; }
     else if(dr){ texto = dr.texto; tom = dr.tom; menor = dr.menor; m.status = 'drivetexto'; }
     else {
       const res = await cultoColarDoCifraClub(m, false);
-      if(res){ texto = res.r.dados.conteudo; tom = res.r.dados.tomOriginal; menor = !!res.r.dados.tomModoMenor; links.push({ titulo: m.titulo, url: res.url }); m.status = 'cifra'; }
+      if(res){ texto = res.r.dados.conteudo; tom = res.r.dados.tomOriginal; menor = !!res.r.dados.tomModoMenor; cantor = res.r.dados.artista || cantor; links.push({ titulo: m.titulo, url: res.url }); m.status = 'cifra'; }
     }
     /* no tom pedido ("Mi maior", "(E)") */
     const alvo = m.tom ? lviTomSiloe(m.tom.raiz, m.tom.menor) : null;
@@ -989,12 +989,13 @@ async function cultoColarMedleyMontar(membros, pdfs){
     if(!tomPrimeira && tom) tomPrimeira = { tom, menor };
     const tomTxt = tom ? (menor ? lvRelativoMenor(tom) + 'm' : tom) : '';
     blocos.push(`[♪ ${(m.titulo || 'Música').replace(/[\[\]]/g, '')}${tomTxt ? ' — Tom ' + tomTxt : ''}]` + (texto ? '\n' + texto.trim() : ''));
+    if(cantor && m.titulo) cantores[cuNorm(m.titulo)] = cantor;   // o separador do medley no PDF mostra o cantor
     m.id = '';   // a música sozinha não entra no app nem no roteiro
   }
   const conteudo = blocos.join('\n--\n');
   const ja = (state.louvores || []).find(l=>[cuNorm(nomeMedley), cuNorm('Medley ' + nomeMedley)].includes(cuNorm(l.titulo)) && (cuNorm(l.artista) === 'medley' || /^medley/.test(cuNorm(l.titulo))));
   const l = ja || lvCriarDireto({ titulo: nomeMedley, artista: artistas, categoria: 'Louvor' }, false);
-  Object.assign(l, { titulo: nomeMedley, artista: artistas, conteudo, tomOriginal: tomPrimeira ? tomPrimeira.tom : '', tomModoMenor: tomPrimeira ? tomPrimeira.menor : false, transpose: 0 });
+  Object.assign(l, { titulo: nomeMedley, artista: artistas, medleyCantores: cantores, conteudo, tomOriginal: tomPrimeira ? tomPrimeira.tom : '', tomModoMenor: tomPrimeira ? tomPrimeira.menor : false, transpose: 0 });
   if(links.length){ l.cifraLinks = links; if(!l.origem) l.origem = { tipo:'cifraclub', url: links[0].url, texto:'', letras: null, quando: Date.now() }; }
   persist();
   membros.forEach(m=>{ m.id = l.id; });
