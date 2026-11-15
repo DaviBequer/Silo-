@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.9', itens: [
+    'Letra da cifra volta para a fonte de antes (a Azeret Mono ficou pesada) até escolher uma mais fina',
+    'Medley no PDF: sem a linha ao lado do cantor e do nome da música'
+  ] },
   { versao: 'v22.8', itens: [
     'Letra e acordes na fonte Azeret Mono, no PDF e no editor da música',
     'Medley com músicas em tons diferentes ganha uma Passagem de tom (II–V do tom novo) entre elas'

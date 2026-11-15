@@ -1630,7 +1630,7 @@ document.addEventListener('keydown', e=>{
 /* a folha se ajusta à largura sempre que o espaço muda (abrir a música, girar o celular, trocar de modo) */
 if(window.ResizeObserver){ const _w = document.getElementById('lvPdfWrap'); let _larg = 0; if(_w) new ResizeObserver(()=>{ if(_w.clientWidth && _w.clientWidth !== _larg){ _larg = _w.clientWidth; lvAjustarZoomFolha(); } }).observe(_w); }   // só quando a largura muda
 window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelEdicao')?.classList.contains('active')) lvAjustarZoomFolha(); });
-/* fonte da letra no PDF (fonts/AzeretMono, licença OFL): carregada uma vez (ao abrir uma música ou o Culto) e guardada em base64 */
+/* fonte da letra no PDF (fonts/Inconsolata, licença OFL): carregada uma vez (ao abrir uma música ou o Culto) e guardada em base64 */
 let lvPdfFonte = null, lvPdfFontePedido = null;
 function lvPdfCarregarFonte(){
   if(lvPdfFonte) return Promise.resolve(lvPdfFonte);
@@ -1642,7 +1642,7 @@ function lvPdfCarregarFonte(){
   };
   /* junto vem o gerador de PDF (jsPDF), que não carrega mais na abertura do app */
   /* + Outfit (a letra do app, OFL) para o cabeçalho D1 e o separador do medley (escolha do Davi, 15/11) */
-  lvPdfFontePedido = Promise.all([b64('AzeretMono-Regular.ttf'), b64('AzeretMono-Bold.ttf'), garantirJsPDF(),
+  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf'), garantirJsPDF(),
       b64('Outfit-Light.ttf').catch(()=>null), b64('Outfit-Regular.ttf').catch(()=>null), b64('Outfit-Medium.ttf').catch(()=>null)])
     .then(([r, b, _, ol, or, om])=>(lvPdfFonte = { r, b, ol, or, om })).catch(()=>{ lvPdfFontePedido = null; return null; });
   return lvPdfFontePedido;
@@ -1754,13 +1754,13 @@ function lvMontarPdf(l){
   doc.setLineWidth(1);
   doc.line(marginX, linhaY, pageW-marginX, linhaY);
 
-  /* letra e acordes em Azeret Mono (escolha do Davi, 15/11; antes Inconsolata); sem a fonte carregada, Courier */
+  /* letra e acordes em Inconsolata (a Azeret Mono ficou pesada demais: Davi vai escolher uma mais fina); sem a fonte carregada, Courier */
   let mono = 'courier';
   if(lvPdfFonte){
     try{
-      doc.addFileToVFS('AzeretMono-Regular.ttf', lvPdfFonte.r); doc.addFont('AzeretMono-Regular.ttf', 'AzeretMono', 'normal');
-      doc.addFileToVFS('AzeretMono-Bold.ttf', lvPdfFonte.b); doc.addFont('AzeretMono-Bold.ttf', 'AzeretMono', 'bold');
-      mono = 'AzeretMono';
+      doc.addFileToVFS('Inconsolata-Regular.ttf', lvPdfFonte.r); doc.addFont('Inconsolata-Regular.ttf', 'Inconsolata', 'normal');
+      doc.addFileToVFS('Inconsolata-Bold.ttf', lvPdfFonte.b); doc.addFont('Inconsolata-Bold.ttf', 'Inconsolata', 'bold');
+      mono = 'Inconsolata';
     }catch(e){ mono = 'courier'; }
   }
   const { items } = lvParseContent(l.conteudo);
@@ -1820,7 +1820,6 @@ function lvMontarPdf(l){
           doc.setFont(...sans.normal); doc.setFontSize(12); doc.setTextColor(20,20,22);
           doc.text(musica[1], tx, cantor ? cy + 8 : cy + 4);
           fimTexto = Math.max(fimTexto, tx + doc.getTextWidth(musica[1]));
-          if(fimTexto + 10 < x0 + colWidth){ doc.setDrawColor(217,219,226); doc.setLineWidth(0.8); doc.line(fimTexto + 8, cy, x0 + colWidth, cy); }
         }
         y += lineH*1.75;
         return;
