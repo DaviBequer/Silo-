@@ -92,6 +92,21 @@ function cultoTirarDeOutraData(){
     p.musicas = p.musicas.filter(id=>{ const d = dataDe(id); return !d || d === c.data; });
     if(p.musicas.length !== antes) mudou = true;
   }));
+  /* REGRA DO DAVI (15/11): música com a data do culto ESTÁ no culto. A que tem a data e ficou de fora entra em Hinos
+     (antes da parte "Final"), sem perguntar a parte */
+  cultosLista().filter(c=>c.data >= hoje).forEach(c=>{
+    const dentro = new Set(c.partes.flatMap(p=>p.musicas));
+    const faltam = (state.louvores||[]).filter(l=>l.dataAgendamento === c.data && !dentro.has(l.id));
+    if(!faltam.length) return;
+    let p = c.partes.find(x=>cuNorm(x.nome) === 'hinos');
+    if(!p){
+      p = { id: cultoId('cp'), nome:'Hinos', quem:'', musicas:[] };
+      const fim = c.partes.findIndex(x=>cuNorm(x.nome) === 'final');
+      fim >= 0 ? c.partes.splice(fim, 0, p) : c.partes.push(p);
+    }
+    faltam.forEach(l=>p.musicas.push(l.id));
+    mudou = true;
+  });
   if(mudou) persist();
 }
 function renderCulto(){
@@ -186,7 +201,14 @@ function cultoNovaParte(){
   cultoGravar(); renderCulto();
   const nomes = document.querySelectorAll('.cu-parte-nome'); if(nomes.length){ nomes[nomes.length - 1].focus(); nomes[nomes.length - 1].scrollIntoView({ block:'center', behavior:'smooth' }); }
 }
-function cultoTirarMusica(parteId, louvorId){ const p = cultoParte(parteId); if(!p) return; p.musicas = p.musicas.filter(id=>id !== louvorId); cultoGravar(); renderCulto(); }
+function cultoTirarMusica(parteId, louvorId){
+  const p = cultoParte(parteId); if(!p) return;
+  p.musicas = p.musicas.filter(id=>id !== louvorId);
+  /* tirou do culto: a data dele sai da música (senão ela voltaria sozinha, pela regra "data do culto = está no culto") */
+  const l = (state.louvores||[]).find(x=>x.id === louvorId), c = cultoAtual();
+  if(l && l.dataAgendamento === c.data && !c.partes.some(x=>x.musicas.includes(louvorId))) l.dataAgendamento = '';
+  cultoGravar(); renderCulto();
+}
 async function cultoApagar(){
   const c = cultoDaData(cultoData);
   if(!c){ cultoRascunho = null; renderCulto(); return; }

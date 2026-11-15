@@ -1655,6 +1655,12 @@ function lvMontarPdf(l){
     }catch(e){ mono = 'courier'; }
   }
   const { items } = lvParseContent(l.conteudo);
+  /* pedido do Davi (15/11): parte só com acordes (intro, passagem, solo) → os acordes ficam centralizados embaixo da etiqueta */
+  const centrar = new Set();
+  { let run = [];
+    const fechar = ()=>{ const pares = run.filter(it=>it.type === 'pair'); if(pares.length && pares.every(it=>!(it.lyricLine || '').trim() && (it.chordLine || '').trim())) pares.forEach(it=>centrar.add(it)); run = []; };
+    items.forEach(it=>{ if(it.type === 'section' || it.type === 'divider') fechar(); else run.push(it); });
+    fechar(); }
   /* colunas: escolhidas, ou no automático 1 → 2 (→ 3 no paisagem) até caber numa página (Nº 203) */
   const paisagem = l.pdfOrientacao === 'paisagem', maxCols = paisagem ? 3 : 2;
   let cols = l.colunas === 'auto' ? 1 : Math.min(maxCols, Number(l.colunas) || 2), colWidth, colX;
@@ -1713,10 +1719,13 @@ function lvMontarPdf(l){
         const largura = Math.max(chordLine.trim() ? doc.getTextWidth(chordLine) : 0, doc.getTextWidth(lyricLine));
         const tamanho = largura > colWidth ? fontSize * Math.max(0.5, colWidth / largura) : fontSize;   // linha comprida encolhe só ela
         if(chordLine.trim()){
-          if(desenhar){ doc.setFont(mono,'bold'); doc.setFontSize(tamanho); doc.setTextColor(...orange); doc.text(chordLine, colX[colIdx], y); }
+          if(desenhar){
+            doc.setFont(mono,'bold'); doc.setFontSize(tamanho); doc.setTextColor(...orange);
+            if(centrar.has(it)){ const t = chordLine.trim(); doc.text(t, colX[colIdx] + Math.max(0, (colWidth - doc.getTextWidth(t)) / 2), y); }
+            else doc.text(chordLine, colX[colIdx], y);
+          }
           y += lineH*0.85;
-        }
-        if(desenhar){ doc.setFont(mono,'normal'); doc.setFontSize(tamanho); doc.setTextColor(32,32,36); doc.text(lyricLine, colX[colIdx], y); }
+        }        if(desenhar){ doc.setFont(mono,'normal'); doc.setFontSize(tamanho); doc.setTextColor(32,32,36); doc.text(lyricLine, colX[colIdx], y); }
         y += lineH;
         if(doc.setCharSpace) doc.setCharSpace(0);
       }

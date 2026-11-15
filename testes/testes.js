@@ -181,6 +181,14 @@ async function rodarTestes(){
       const nasceu = (state.cultos.find(c=>c.data === '2099-04-20')?.partes || []).some(p=>p.musicas.includes('lvT'));
       state.cultos = cultosAntes; cultoData = dAntes; lvCultoFixo = fAntes;
       igual('louvor: data do culto põe a música no roteiro e tirar a data tira', [entrou, saiu, nasceu], [true, true, true]);
+      /* culto já criado vazio + música que já tinha a data: entra sozinha (Nº 219) */
+      const lAntes = state.louvores;
+      state.cultos = [{ id:'cuV', data:'2099-05-03', partes:[{ id:'pA', nome:'Abertura', quem:'', musicas:[] }, { id:'pF', nome:'Final', quem:'', musicas:[] }] }];
+      state.louvores = [...lAntes, { id:'lvV', titulo:'V', dataAgendamento:'2099-05-03' }];
+      cultoTirarDeOutraData();
+      const sozinha = state.cultos[0].partes.map(p=>p.nome + ':' + p.musicas.join(','));
+      state.cultos = cultosAntes; state.louvores = lAntes;
+      igual('culto: música com a data do culto entra em Hinos antes do Final', sozinha, ['Abertura:', 'Hinos:lvV', 'Final:']);
     }
     /* medley do Drive: corta só a música pedida (do título dela até o título da próxima do nome do arquivo) */
     const txtMd = 'MEDLEY JESUS QUERIDO + SANTO ESPIRITO\nJesus Querido (F)\nF       C\nJesus querido amado\nBb\nmeu Senhor\n--\nSanto Espírito\nC       G\nSanto Espírito vem\nAm\nenche este lugar';

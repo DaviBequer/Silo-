@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.9', itens: [
+    'Culto: toda música com a data do culto entra sozinha no roteiro e na placa azul (em Hinos), mesmo as que já tinham a data',
+    'PDF: parte só com acordes (intro, passagem, solo) fica com os acordes centralizados embaixo da etiqueta'
+  ] },
   { versao: 'v21.8', itens: [
     'Spotify minimizado fica acima do botão de baixar o PDF, sem cobrir ele'
   ] },
