@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.1', itens: [
+    'Culto: a Abertura fica sempre como a 1ª música (o colar do WhatsApp deixava o Hino antes)'
+  ] },
   { versao: 'v24.0', itens: [
     'Backup e Panorama baixados com a data de hoje (depois das 21h saía a de amanhã)',
     'Assistente: Esquecer um apelido com apóstrofo funciona'

@@ -216,9 +216,13 @@ function cultoPartesAuto(c){
     const alvo = cuParteAuto(l);
     if(alvo !== 'Hinos') mover(id, p, cuParteGarantir(c, alvo));
   }));
+  /* a parte Abertura fica sempre em primeiro (print do Davi: o colar do WhatsApp deixou "Hino" antes e a Abertura virou a 4ª;
+     e com ela lá embaixo, cada desenho da placa passava mais uma música do Hino para a Abertura) */
+  const aberturaNaFrente = ()=>{ const ia = c.partes.findIndex(p=>cuNorm(p.nome) === 'abertura' && p.musicas.some(achar)); if(ia > 0){ c.partes.unshift(c.partes.splice(ia, 1)[0]); mudou = true; } };
+  aberturaNaFrente();
   const p1 = c.partes.find(p=>p.musicas.some(achar));
   const id1 = p1 && p1.musicas.find(achar);
-  if(id1 && cuNorm(p1.nome) !== 'abertura' && !manual[id1]) mover(id1, p1, cuParteGarantir(c, 'Abertura'), true);
+  if(id1 && cuNorm(p1.nome) !== 'abertura' && !manual[id1]){ mover(id1, p1, cuParteGarantir(c, 'Abertura'), true); aberturaNaFrente(); }
   return mudou;
 }
 function renderCultoBotao(){

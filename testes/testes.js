@@ -212,6 +212,14 @@ async function rodarTestes(){
       const auto = cA.partes.filter(p=>p.musicas.length).map(p=>p.nome + ':' + p.musicas.join(','));
       state.louvores = lAntes;
       igual('culto: partes automáticas (Abertura, Harpa, Boas-vindas; à mão não muda)', auto, ['Abertura:a1', 'Hinos:a4', 'Harpa:a2', 'Boas-vindas:a3']);
+      /* print do Davi (15/11): colar deixou "Hino" antes da Abertura → a Abertura vai para a frente, e desenhar de novo não muda nada */
+      state.louvores = [...lAntes, { id:'h1', titulo:'Deus Tremendo' }, { id:'h2', titulo:'Semente' }, { id:'h3', titulo:'Há uma Saída' }];
+      const cH = { id:'cuH', data:'2099-06-14', partes:[{ id:'x', nome:'Hino', quem:'', musicas:['h1', 'h2'] }, { id:'y', nome:'Abertura', quem:'', musicas:['h3'] }] };
+      const cV = { id:'cuV2', data:'2099-06-21', partes:[{ id:'x2', nome:'Hino', quem:'', musicas:['h1', 'h2'] }, { id:'y2', nome:'Abertura', quem:'', musicas:[] }] };
+      cultoPartesAuto(cH); cultoPartesAuto(cV); const deNovo = cultoPartesAuto(cV);
+      state.louvores = lAntes;
+      igual('culto: a Abertura fica sempre em primeiro (e não puxa mais músicas a cada desenho)', [cH.partes.map(p=>p.nome + ':' + p.musicas.join(',')), cV.partes.map(p=>p.nome + ':' + p.musicas.join(',')), deNovo],
+        [['Abertura:h3', 'Hino:h1,h2'], ['Abertura:h1', 'Hino:h2'], false]);
       /* setas: subir a 2ª para o 1º lugar = ela vira a Abertura e a antiga volta para a parte dela (Harpa) */
       {
         const cAntes = state.cultos, dAntes2 = cultoData, fAntes2 = lvCultoFixo;
