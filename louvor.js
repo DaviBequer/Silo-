@@ -1480,7 +1480,15 @@ function lvAjustarZoomFolha(){
   const disp = pai.clientWidth - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
   const w = el.offsetWidth;
   if(!w || !disp) return;
-  if(pai.classList.contains("lv-tela-cheia")) el.style.zoom = (Math.min(disp / w, 2) * lvZoomTela).toFixed(3);   // tela cheia: ocupa a largura (até 2x) vezes o zoom dos dedos/Ctrl+roda
+  /* tela cheia (pedido do Davi, 14/11): começa com a folha INTEIRA na tela (no computador cabe pela altura; no celular em pé, pela largura);
+     antes ia até 2x a largura e a letra ficava enorme. Daí o zoom dos dedos/Ctrl+roda multiplica */
+  if(pai.classList.contains("lv-tela-cheia")){
+    const paisagem = el.classList.contains('paisagem');
+    const altPag = w * (paisagem ? 210 / 297 : 297 / 210);
+    const dispH = pai.clientHeight - (parseFloat(cs.paddingTop)||0) - (parseFloat(cs.paddingBottom)||0);
+    const base = disp < 700 ? disp / w : Math.min(disp / w, dispH / altPag);
+    el.style.zoom = (base * lvZoomTela).toFixed(3);
+  }
   else if(w > disp) el.style.zoom = (disp / w).toFixed(3);
 }
 /* Tela cheia da folha: ocupa a tela toda (e usa a tela cheia do navegador quando ele deixa) */

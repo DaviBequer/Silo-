@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.4', itens: [
+    'Tela cheia da folha abre com a página inteira na tela (antes a letra crescia demais); daí Ctrl + roda ou pinça dão o zoom'
+  ] },
   { versao: 'v21.3', itens: [
     'Visualizar mostra o PDF de verdade, igual ao que baixa: mesmo tamanho de letra, mesma pílula das partes e cada parte no mesmo lugar'
   ] },
