@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.2', itens: [
+    'Música Pronta não mostra o botão Refazer pelo Cifra Club (só Em Produção), para não perder o que está pronto'
+  ] },
   { versao: 'v22.1', itens: [
     'Colar do WhatsApp: só o número (e o tom) já é hino da Harpa, em qualquer parte',
     'Harpa no Drive achada pelo número: na pasta da Harpa, com zeros na frente, pelo começo do nome e, se não achar, buscando no Drive inteiro'

@@ -96,6 +96,7 @@ let ccRefazerId = null;
 function lvRefazerCifraClub(){
   const l = getLouvorAtual(); if(!l) return;
   if(l.medley){ showToast('Medley se refaz pelas músicas dele (Montar o medley)'); return; }
+  if(l.status === 'finalizada'){ showToast('Música Pronta não se refaz: volte para Em Produção antes'); return; }
   const url = l.origem && l.origem.tipo === 'cifraclub' && l.origem.url;
   ccAbrir(url ? '' : [l.titulo, (l.artista || '').replace(/^Harpa Cristã.*$/i, '')].filter(Boolean).join(' '), l.id);   // sem a origem: busca pelo nome e você escolhe
   document.querySelector('#modalCifraClub .modal-header h3').textContent = 'Refazer pelo Cifra Club';

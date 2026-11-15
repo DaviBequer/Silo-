@@ -266,6 +266,8 @@ function renderLvStatusBtn(){
     btn.textContent = finalizada ? 'Pronto' : 'Em Produção';
     btn.classList.toggle('finalizada', finalizada);
   });
+  /* pedido do Davi (15/11): música Pronta não mostra o Refazer pelo Cifra Club (um toque sem querer apagaria o trabalho) */
+  const rf = document.getElementById('lvBtnRefazer'); if(rf) rf.hidden = finalizada;
 }
 function toggleLouvorStatus(){
   const l = getLouvorAtual(); if(!l) return;

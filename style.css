@@ -1887,6 +1887,7 @@ a.drive-falta:hover{color:var(--primary)}
   .lv-page-top-text{flex:1 1 100%}
   .lv-page-top > div:last-child{flex:1 1 100%;flex-direction:row !important;flex-wrap:wrap;align-items:center !important;justify-content:space-between}
 }
+#lvBtnRefazer[hidden]{display:none!important}
 .lv-icone-btn{width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--dur) var(--ease),color var(--dur) var(--ease),border-color var(--dur) var(--ease),transform .12s var(--ease)}
 .lv-icone-btn:hover{background:var(--card-2);color:var(--text)}
 .lv-icone-btn.ativo{background:var(--gold);border-color:var(--gold);color:#fff}
