@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v21.8', itens: [
+    'Spotify minimizado fica acima do botão de baixar o PDF, sem cobrir ele'
+  ] },
   { versao: 'v21.7', itens: [
     'Visualizar: ao mudar tamanho, colunas ou margem, o PDF fica na tela até o novo ficar pronto (não pisca mais a folha pequena)'
   ] },
