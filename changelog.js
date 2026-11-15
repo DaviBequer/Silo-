@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.0', itens: [
+    'Baixar PDF da música: baixa na hora do clique e sempre avisa (Baixando… ou o erro)'
+  ] },
   { versao: 'v21.9', itens: [
     'Culto: toda música com a data do culto entra sozinha no roteiro e na placa azul (em Hinos), mesmo as que já tinham a data',
     'PDF: parte só com acordes (intro, passagem, solo) fica com os acordes centralizados embaixo da etiqueta'

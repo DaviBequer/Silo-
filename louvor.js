@@ -1585,11 +1585,19 @@ function lvPdfCarregarFonte(){
     .then(([r, b])=>(lvPdfFonte = { r, b })).catch(()=>{ lvPdfFontePedido = null; return null; });
   return lvPdfFontePedido;
 }
-async function exportarLouvorPdf(){
+/* pedido do Davi (15/11): o clique às vezes "não fazia nada". Agora baixa na hora do clique (sem esperar nada, quando o gerador
+   já está carregado — o navegador aceita melhor o download) e sempre avisa o que aconteceu */
+function exportarLouvorPdf(){
   const l = getLouvorAtual(); if(!l) return;
-  await lvPdfCarregarFonte();
-  const r = lvMontarPdf(l);
-  if(r) r.doc.save(r.nome);
+  const fazer = ()=>{
+    try{
+      const r = lvMontarPdf(l); if(!r) return;
+      r.doc.save(r.nome);
+      showToast('Baixando ' + r.nome);
+    }catch(e){ showToast('Não consegui gerar o PDF: ' + ((e && e.message) || e)); }
+  };
+  if(lvPdfFonte && window.jspdf) fazer();
+  else { showToast('Preparando o PDF…'); lvPdfCarregarFonte().then(fazer); }
 }
 /* monta o PDF (jsPDF) de um louvor qualquer → { doc, nome } (também usado no envio ao Drive) */
 function lvMontarPdf(l){
