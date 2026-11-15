@@ -505,11 +505,11 @@ function abrirDetalheCategoria(cat, mKey){
     : `<div class="detalhe-categoria-lista">${itens.map(it=>{
         const logo = it.logoUrl
           ? `<img src="${it.logoUrl}" class="conta-logo">`
-          : `<div class="conta-logo conta-logo-placeholder">${it.desc.charAt(0).toUpperCase()}</div>`;
+          : `<div class="conta-logo conta-logo-placeholder">${escBanco(it.desc.charAt(0).toUpperCase())}</div>`;
         return `<div class="detalhe-categoria-item">
           ${logo}
           <div class="dci-info">
-            <div class="dci-desc">${it.desc}</div>
+            <div class="dci-desc">${escBanco(it.desc)}</div>
             <div class="dci-meta"><span class="user-tag ${it.user}">${it.user==='davi'?'Davi':'Cris'}</span> · dia ${it.dia}</div>
           </div>
           <div class="dci-valor">${fmtMoney(it.valor)}</div>
@@ -915,7 +915,7 @@ function renderContasPagar(){
     const ok = f.st==='pago', valor = ok ? f.pago : f.pago + f.resta;
     conta(valor, ok, ok ? 0 : f.pago);
     const sub = f.datas ? (venceHojeFatura(f) ? 'vence hoje · sem juros' : (f.st==='vencido' ? 'vencida · gerando juros' : 'vence '+fmtDiaMesCurto(f.datas.vence))) : 'Fatura '+monthLabel(m);
-    cartaoHtml += cpItem({ titulo:c.nome, tag, logoUrl:c.logoUrl, sub:`<span class="cp-dia${f.st==='vencido'?' atrasada':''}">${sub}</span>`,
+    cartaoHtml += cpItem({ titulo:escBanco(c.nome), tag, logoUrl:c.logoUrl, sub:`<span class="cp-dia${f.st==='vencido'?' atrasada':''}">${sub}</span>`,
       valor, valorSub: (!ok && f.pago>0.004) ? 'pago '+fmtMoney(f.pago) : '', feito: ok, parcial: !ok && f.pago>0.004,
       attrs:`onclick="abrirPagarFatura('${c.id}','${m}')"` });
   };

@@ -1252,7 +1252,7 @@ function renderCredoVistaCategoriaChips(){
   if(!el) return;
   const cats = getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom');
   el.innerHTML = cats.map(c=>
-    `<button type="button" class="dif-chip${window.credoVistaCategoriaSelecionada===c?' active':''}" onclick="selecionarCredoVistaCategoria('${c}')">${c}</button>`
+    `<button type="button" class="dif-chip${window.credoVistaCategoriaSelecionada===c?' active':''}" data-c="${escBanco(c)}" onclick="selecionarCredoVistaCategoria(this.dataset.c)">${escBanco(c)}</button>`
   ).join('') + `<button type="button" class="dif-chip cat-chip-add" onclick="abrirNovaCategoriaExtra('credoVista')">+ Nova</button>`;
 }
 function openCredoVistaModal(cartaoId, credoId){
@@ -1333,7 +1333,7 @@ function renderAssinaturaCategoriaChips(){
   if(!el) return;
   const cats = getCategoriasComCustom(CREDOVISTA_CATEGORIAS, 'credoVistaCategoriasCustom');
   el.innerHTML = cats.map(c =>
-    `<button type="button" class="dif-chip${window.assinaturaCategoriaSelecionada===c?' active':''}" onclick="selecionarAssinaturaCategoria('${c}')">${c}</button>`
+    `<button type="button" class="dif-chip${window.assinaturaCategoriaSelecionada===c?' active':''}" data-c="${escBanco(c)}" onclick="selecionarAssinaturaCategoria(this.dataset.c)">${escBanco(c)}</button>`
   ).join('') + `<button type="button" class="dif-chip cat-chip-add" onclick="abrirNovaCategoriaExtra('assinatura')">+ Nova</button>`;
 }
 function openAssinaturaModal(cartaoId, assinaturaId){

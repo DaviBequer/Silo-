@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v23.8', itens: [
+    'Nomes com apóstrofo ou sinal de menor não quebram mais as telas (categorias, compras, cartões)',
+    'Leitor de planilhas na versão nova e segura',
+    'Planilha: data com horário entra no dia certo (antes podia ir para o dia seguinte)'
+  ] },
   { versao: 'v23.7', itens: [
     'Segurança: o leitor de PDF não roda mais código escondido dentro de um PDF',
     'Juntar os dados de dois aparelhos não perde mais uma importação que estava em andamento',

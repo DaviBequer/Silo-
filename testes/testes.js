@@ -212,6 +212,17 @@ async function rodarTestes(){
       const auto = cA.partes.filter(p=>p.musicas.length).map(p=>p.nome + ':' + p.musicas.join(','));
       state.louvores = lAntes;
       igual('culto: partes automáticas (Abertura, Harpa, Boas-vindas; à mão não muda)', auto, ['Abertura:a1', 'Hinos:a4', 'Harpa:a2', 'Boas-vindas:a3']);
+      /* setas: subir a 2ª para o 1º lugar = ela vira a Abertura e a antiga volta para a parte dela (Harpa) */
+      {
+        const cAntes = state.cultos, dAntes2 = cultoData, fAntes2 = lvCultoFixo;
+        state.louvores = [...lAntes, { id:'b1', titulo:'Grandioso', categoria:'Harpa Cristã' }, { id:'b2', titulo:'Hino B' }, { id:'b3', titulo:'Hino C' }];
+        state.cultos = [{ id:'cuB', data:'2099-07-05', partes:[{ id:'pa', nome:'Abertura', quem:'', musicas:['b1'] }, { id:'ph', nome:'Hinos', quem:'', musicas:['b2', 'b3'] }] }];
+        cultoData = '2099-07-05'; lvCultoFixo = true;
+        renderCultoBotao(); lvcpMover(1, -1); lvcpFechar();
+        const troca = state.cultos[0].partes.filter(p=>p.musicas.length).map(p=>p.nome + ':' + p.musicas.join(','));
+        state.cultos = cAntes; state.louvores = lAntes; cultoData = dAntes2; lvCultoFixo = fAntes2; renderCultoBotao();
+        igual('culto: subir a 2ª música faz dela a Abertura e a antiga volta para a parte dela', troca, ['Abertura:b2', 'Hinos:b3', 'Harpa:b1']);
+      }
     }
     /* medley do Drive: corta só a música pedida (do título dela até o título da próxima do nome do arquivo) */
     const txtMd = 'MEDLEY JESUS QUERIDO + SANTO ESPIRITO\nJesus Querido (F)\nF       C\nJesus querido amado\nBb\nmeu Senhor\n--\nSanto Espírito\nC       G\nSanto Espírito vem\nAm\nenche este lugar';
@@ -478,6 +489,7 @@ async function rodarTestes(){
     const cImp = { id:'cimp', nome:'Nubank', fechamento:5, vencimento:12, credoVista:[] };
     state.cartoesTracker.push(cImp);
     igual('planilha: valor e data em vários jeitos', [impValor('R$ 1.234,56'), impValor(23.5), impValor('10.5'), impData('05/10/2026'), impData('5/1/26'), impData(46300)], [1234.56, 23.5, 10.5, '2026-10-05', '2026-01-05', '2026-10-05']);
+    igual('planilha: data com horário fica no dia dela (não passa para o seguinte)', [impData(new Date(2026, 9, 5, 14, 30)), impData(new Date(2026, 9, 5, 23, 30)), impData(new Date(2026, 9, 4, 23, 53, 32)), impData(46300.9), impData(46300.25)], ['2026-10-05', '2026-10-05', '2026-10-05', '2026-10-05', '2026-10-05']);
     const impL = impInterpretar([
       ['Data', 'Nome', 'Categoria', 'Valor total', 'Forma', 'Cartão ou banco', 'Tipo', 'Parcelas'],
       ['05/10/2026', 'Mercado', 'Mercado', 'R$ 100,00', 'Cartão', 'nubank', 'À vista', ''],

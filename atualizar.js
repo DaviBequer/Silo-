@@ -1020,7 +1020,7 @@ function atzEdVisivel(campo){ setTimeout(()=>{ try{ campo.scrollIntoView({ block
    Cada linha entra no mês da coluna Fatura (cartão: na fatura desse mês; Pix: nesse mês do app); sem Fatura, no mês escolhido na janela.
    Aba Saldos (Banco | Saldo atual): o saldo de cada banco fica o da planilha; sem ela, o saldo não muda.
    "Do zero" apaga antes os gastos de cartão e Pix dos meses que estão na planilha (ou de todos); contas fixas, bancos, cartões e assinaturas ficam. */
-const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const XLSX_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';   // 0.20.3: a 0.18.5 do cdnjs tinha falhas conhecidas (CVE-2023-30533) e o cdnjs parou nela
 const IMP_COLUNAS = { mes:/^(fatura|mes)/, data:/^data/, nome:/^(nome|descri|o que|compra)/, cat:/^categ/, valor:/^valor/, forma:/^(forma|pagamento|pago)/, onde:/^(cartao|banco|onde)/, tipo:/^tipo/, parcelas:/^parcela/ };
 const IMP_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 let impLinhas = [], impSaldos = [];
@@ -1079,8 +1079,10 @@ function impValor(v){
   return isNaN(n) ? 0 : Math.round(Math.abs(n) * 100) / 100;
 }
 function impData(v){
-  if(v instanceof Date && !isNaN(v)) return calISO(new Date(v.getTime() + 12 * 3600e3));   // meio-dia: o fuso não troca o dia
-  if(typeof v === 'number' && v > 20000) return calISO(new Date(Math.round((v - 25569) * 864e5) + 12 * 3600e3));
+  /* data com horário (extrato de banco: "05/10 14:30") fica no dia dela; antes somava 12 h e passava para o dia seguinte.
+     +15 min só cobre o desvio do leitor (fuso antigo do Brasil: a meia-noite chega como 23:53 do dia antes) */
+  if(v instanceof Date && !isNaN(v)) return calISO(new Date(v.getTime() + 15 * 60e3));
+  if(typeof v === 'number' && v > 20000) return new Date((Math.floor(v + 15 / 1440) - 25569) * 864e5).toISOString().slice(0, 10);   // número de série do Excel: só a parte do dia
   const m = String(v).trim().match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/);
   if(m){ const a = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : String(new Date().getFullYear()); return `${a}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; }
   return /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).slice(0, 10) : '';
