@@ -306,7 +306,7 @@ function exportarDadosApp(){
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const dataStr = new Date().toISOString().slice(0,10);
+  const dataStr = calISO(new Date());   // data daqui (toISOString é UTC: depois das 21h dava o dia seguinte)
   a.href = url;
   a.download = `siloe-backup-${dataStr}.json`;
   document.body.appendChild(a);
@@ -396,7 +396,7 @@ function exportarPanorama(){
   try{ txt = panoramaParaAnalise(); }catch(e){ console.error(e); showToast('Não deu para montar o panorama.'); return; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([txt], { type: 'text/markdown;charset=utf-8' }));
-  a.download = `siloe-panorama-${new Date().toISOString().slice(0,10)}.md`;
+  a.download = `siloe-panorama-${calISO(new Date())}.md`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
   showToast('Panorama baixado: mande o arquivo no outro chat');

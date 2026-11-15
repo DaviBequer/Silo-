@@ -777,7 +777,7 @@ function atzRenderApelidos(){
   const el = document.getElementById('iaApelidosLista'); if(!el) return;
   const lista = Object.entries(state.iaApelidos || {}).sort((a, b)=>a[1].nome.localeCompare(b[1].nome, 'pt-BR'));
   el.innerHTML = lista.length ? lista.map(([k, a])=>`<div class="atz-ap"><span>${escBanco(a.nome)}</span><b>${escBanco(a.categoria)}</b>
-      <button type="button" class="ico-btn" aria-label="Esquecer" title="Esquecer" onclick="atzEsquecerApelido('${escBanco(k).replace(/'/g, '&#39;')}')">${CU_ICO.x}</button></div>`).join('')
+      <button type="button" class="ico-btn" aria-label="Esquecer" title="Esquecer" data-k="${escBanco(k)}" onclick="atzEsquecerApelido(this.dataset.k)">${CU_ICO.x}</button></div>`).join('')
     : '<div class="atz-vazio">Ainda nada. Quando você trocar a categoria de um gasto no Assistente, ou disser "Top é mercado", aparece aqui.</div>';
 }
 

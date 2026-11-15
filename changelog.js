@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.0', itens: [
+    'Backup e Panorama baixados com a data de hoje (depois das 21h saía a de amanhã)',
+    'Assistente: Esquecer um apelido com apóstrofo funciona'
+  ] },
   { versao: 'v23.9', itens: [
     'Limpeza: saiu a tela antiga do Culto (a placa faz tudo) e o Passo a passo do Assistente que não abria mais',
     'Uma regra só para tirar acento nas buscas e comparações'
