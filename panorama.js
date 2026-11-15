@@ -1138,7 +1138,7 @@ const ONDE_VAI_CORES = ['#1b2638','#9fc1e6','#8b8f95','#3f6ea3','#5a6b7a','#b8c6
 function ondeVaiDados(u, mKey){
   const g = {}, vista = {}, pix = {}, envelope = {};
   const soma = (obj, nome, v)=>{ v = Number(v)||0; if(v > 0.004) obj[nome] = (obj[nome]||0) + v; };
-  const sa = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const sa = vozSemAcento;
   if(u === 'davi'){
     (state.cartoesTracker||[]).forEach(c=>{
       Object.entries(cartaoGastosPorMes(c, mKey).porCategoria).forEach(([cat, v])=>soma(vista, cat === 'Ajuste' ? 'Ajuste da fatura' : cat, v));
@@ -1321,7 +1321,7 @@ function renderExtrato(){
         const catIco = typeof atzIcoCategoria === 'function' && atzIcoCategoria(x.cat) === ATZ_ICO_OUTROS ? x.desc : x.cat;
         const ico = typeof atzIcoItem === 'function' ? atzIcoItem({ tipo: x.parc ? 'parcelada' : x.tipo === 'vista' || x.tipo === 'cartao' ? 'vista' : 'pix', categoria: catIco }, 17) : '';
         const como = x.tipo === 'mov' ? `<em class="ext-como pix">Banco</em> ${escBanco(x.onde)}` : x.tipo === 'pix' ? `<em class="ext-como pix">Pix/débito</em> ${escBanco(x.onde)}` : `<em class="ext-como">Cartão</em> ${escBanco(x.onde)}`;
-        const cat = x.cat && x.cat !== 'Outros' && semAcentoCore(x.cat) !== semAcentoCore(x.desc) ? ' · ' + escBanco(x.cat) : '';
+        const cat = x.cat && x.cat !== 'Outros' && vozSemAcento(x.cat) !== vozSemAcento(x.desc) ? ' · ' + escBanco(x.cat) : '';
         return `<div class="ext-linha"${extEditando && x.ref ? ` role="button" tabindex="0" onclick="extratoEditar(${extVisiveis.indexOf(x)})"` : ''}>${ico}<span class="ext-info"><b>${escBanco(x.desc)}</b><small>${como}${cat}</small></span><span class="ext-valor">${x.tipo === 'mov' ? (x.valor > 0 ? '+' : '−') + fmtMoney(Math.abs(x.valor)) : fmtMoney(x.valor)}</span></div>`;
       }).join('')}</div>`;
   }).join('');

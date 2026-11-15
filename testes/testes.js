@@ -288,9 +288,9 @@ async function rodarTestes(){
     state.cultos[0].ordemWhats = ['s2'];
     igual('culto: ordem do WhatsApp não mexe nas partes', [cultoTexto(state.cultos[0]).split('\n').slice(2), state.cultos[0].partes.map(p=>p.nome)], [['1. Outro Hino - G', '2. Hino Teste - C'], ['Hinos', 'Final']]);
     let erroTela = '';
-    try{ cultoData = '2020-01-05'; cultoAba = 'roteiro'; renderCulto(); cultoNovaParte(); renderCultoHistorico(); renderCultoBotao(); }catch(e){ erroTela = String(e && e.stack || e); }
-    t('culto: telas desenham sem erro e Adicionar parte funciona', !erroTela && state.cultos[0].partes.length === 3, erroTela || state.cultos[0].partes.length);
-    state.cultos[0].partes.pop(); cultoData = '';
+    try{ cultoData = '2020-01-05'; if(!/cu-hist|gm-vazio/.test(renderCultoHistorico())) throw new Error('Mais tocadas vazio'); renderCultoBotao(); }catch(e){ erroTela = String(e && e.stack || e); }
+    t('culto: placa e Mais tocadas desenham sem erro', !erroTela, erroTela);
+    cultoData = '';
     const hist = cultoHistoricoDados();
     igual('culto: histórico conta a música tocada', hist.map(h=>[h.l.id, h.n]).sort(), [['s1', 1], ['s2', 1]]);
 
@@ -316,7 +316,7 @@ async function rodarTestes(){
     cInter.credoVista.pop();
     atzItens = itensAntes;
     let erroAtz = '';
-    try{ atzConversa = [{ quem:'eu', texto:'teste' }, { quem:'ia', texto:'Anotado.', novos: norm.map(atzChave) }]; atzItens = norm; atzRenderConversa(); atzDetalhes = true; atzRenderConversa(); atzDetalhes = false; atzAba = 'passo'; atzRenderConversa(); atzAba = 'conversa'; }
+    try{ atzConversa = [{ quem:'eu', texto:'teste' }, { quem:'ia', texto:'Anotado.', novos: norm.map(atzChave) }]; atzItens = norm; atzRenderConversa(); atzDetalhes = true; atzRenderConversa(); atzDetalhes = false; atzAba = 'conversa'; }
     catch(e){ erroAtz = String(e && e.stack || e); }
     finally{ atzConversa = []; atzItens = []; }
     t('assistente: tela desenha sem erro (conversa, detalhes, passo a passo)', !erroAtz, erroAtz);
@@ -542,7 +542,6 @@ async function rodarTestes(){
       renderPanorama(); renderPlanner(); renderPonto(); renderVendas(); renderLouvorLista(); renderAjustes();
       abrirContasPagar(M); fecharContasPagar();
       abrirHistoricoMeses(); closeModal('modalHistoricoMeses');
-      abrirCulto(); fecharCulto();
       abrirAtualizar('resumo'); abrirAtualizar('conversa'); fecharAtualizar();
       switchAba('planner');
     }catch(e){ erroTelas = String(e && e.stack || e); }

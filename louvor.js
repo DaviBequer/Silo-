@@ -497,7 +497,6 @@ async function lvSelExcluir(){
 function lvAtualizarTelas(){
   renderLouvorLista();
   if(typeof renderCultoBotao === 'function') renderCultoBotao();
-  if(document.getElementById('pageCulto')?.classList.contains('active') && typeof renderCulto === 'function') renderCulto();
 }
 function excluirLouvorAtual(){
   const l = getLouvorAtual(); if(!l) return;

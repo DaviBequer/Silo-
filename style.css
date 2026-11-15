@@ -1652,41 +1652,8 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lvcp span{font-size:13px;font-weight:500;color:var(--graf-tx);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lvcp small{display:block;font-size:11px;font-weight:400;color:var(--graf-dim);overflow:hidden;text-overflow:ellipsis}
 .lvcp em{margin-right:10px;font-style:normal;font-weight:600;color:var(--latao)}
-#pageCulto{z-index:499}
-.cu{max-width:720px;padding-bottom:0}
-.cu-abas{margin-bottom:14px}
-.cu-data{position:relative;display:flex;align-items:center;gap:8px;padding:4px 0 2px}
-.cu-data-seta{display:flex;align-items:center;justify-content:center;width:40px;height:40px;flex-shrink:0;border:1px solid var(--line);border-radius:50%;background:var(--card);color:var(--text-dim);cursor:pointer}
-.cu-data-meio{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;padding:4px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer}
-.cu-data-nome{font-family:var(--font-display);font-weight:600;font-size:28px;line-height:1.1;text-align:center}
-.cu-data-sub{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-faint)}
-.cu-data-sub #cultoDataSub:not(:empty){padding:1px 8px;border-radius:999px;background:var(--brilho-tint);color:var(--success);font-weight:600}
-.cu-data-sub #cultoDataSub:not(:empty) + span{display:none}
-.cu-data-input{position:absolute}
-.cu-data .data-btn{position:absolute;left:50%;top:100%;width:1px;height:1px;padding:0;border:0;opacity:0;pointer-events:none}
-.cu-estado{min-height:0;margin:4px 0 0;font-size:12px;color:var(--text-faint);text-align:center}
-.cu-estado:empty{display:none}
 /* partes: linha do tempo (número na bolinha, linha fina ligando as partes) */
-.cu-partes{position:relative}
-.cu-parte{position:relative;display:flex;gap:12px;padding:10px 0 12px;}
-.cu-parte::before{content:'';position:absolute;left:13px;top:38px;bottom:-8px;width:1px;background:var(--line)}
-.cu-parte:last-child::before{display:none}
-.cu-parte-num{display:flex;align-items:center;justify-content:center;width:27px;height:27px;flex-shrink:0;border-radius:50%;background:var(--noite);color:var(--brilho);font-size:12px;font-weight:600}
-.cu-parte-corpo{flex:1;min-width:0;padding:8px 12px 10px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card)}
-.cu-parte-topo{display:flex;align-items:center;gap:6px}
-.cu-parte-nome{flex:1;min-width:0;padding:2px 0;border:none;border-bottom:1px solid transparent;background:none;color:var(--text);font:inherit;font-size:16px;font-weight:600}
-.cu-parte-nome:focus{outline:none;border-bottom-color:var(--gold)}
-.cu-parte-acoes{display:flex;gap:0;opacity:1}
-.cu-parte-acoes .btn-icon-sm:disabled{opacity:.3}
-.cu-musicas{margin:4px 0 2px;border-top:1px solid var(--line)}
-.cu-musica{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
-.cu-musica-nome{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:9px 0;border:none;background:none;color:var(--text);font:inherit;font-size:14px;text-align:left;cursor:pointer}
-.cu-musica-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cu-tom{flex-shrink:0;padding:2px 8px;border-radius:999px;background:var(--card-2);color:var(--text-dim);font-size:12px;font-weight:600}
-.cu-parte-corpo .cu-add-musica{display:flex;margin:4px 0 0 auto;color:var(--text-dim)}
-.cu .lm-add{margin-top:6px}
-.cu-tit-acoes{display:flex;align-items:center;gap:6px}
-.cu-tit-acoes .ico-btn{color:var(--gold)}
 .cu-sug-qtd{flex:0 0 64px;width:64px}
 .cu-sug-item{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer}
 .cu-sug-item input{width:18px;height:18px;flex-shrink:0;accent-color:var(--gold)}
@@ -1694,17 +1661,7 @@ body:has(.modal-overlay.active){overflow:hidden}
 #cuSugAcoes{display:flex;gap:8px}
 #cuSugAcoes .voz-campo{flex:1}
 /* ordem no WhatsApp */
-.cu-ordem{border-top:1px solid var(--line)}
-.cu-ordem-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
-.cu-ordem-num{width:24px;flex-shrink:0;font-size:13px;font-weight:600;color:var(--text-faint);text-align:center;font-variant-numeric:tabular-nums}
-.cu-ordem-nome{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cu-ordem-nome small{margin-left:6px;color:var(--text-faint);font-size:12px}
-.cu-ordem-item .btn-icon-sm:disabled{opacity:.3}
 /* Culto, ordem no WhatsApp (v12, escolha C): a lista dentro de uma placa grafite; o tom em latão */
-.cu-ordem{padding:6px 14px;border:none;border-radius:16px;background:var(--graf);color:var(--graf-tx)}
-.cu-ordem-item{border-bottom-color:var(--graf-line)}.cu-ordem-item:last-child{border-bottom:none}
-.cu-ordem-num{color:var(--latao)}.cu-ordem-nome small{color:var(--latao)}
-.cu-ordem-item .btn-icon-sm{color:var(--graf-tx)}
 /* Culto, histórico (v12, escolha A): linhas soltas com a posição num círculo dourado e a barrinha em latão */
 .cu-hist-pos{display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--latao);border-radius:50%;color:var(--gold)}
 .cu-hist-barra i{background:var(--latao)}
@@ -1715,13 +1672,6 @@ body:has(.modal-overlay.active){overflow:hidden}
 #modalLvTom{align-items:center}
 #modalLvTom .modal{max-width:360px;margin:0 16px;border-radius:18px;max-height:80vh}
 /* prévia do texto como mensagem do WhatsApp */
-.cu-bolha{position:relative;margin:0 0 10px 12px;padding:12px 14px;border-radius:4px 14px 14px 14px;background:color-mix(in srgb,var(--brilho) 16%,var(--card));box-shadow:var(--sombra-card)}
-.cu-bolha::before{content:'';position:absolute;left:-8px;top:0;border:8px solid transparent;border-top-color:color-mix(in srgb,var(--brilho) 16%,var(--card));border-right-color:color-mix(in srgb,var(--brilho) 16%,var(--card))}
-.cu-previa{margin:0;padding:0;border:none;background:none;color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.cu-apagar{margin:14px 0 6px}
-.cu-rodape{display:flex;align-items:center;justify-content:center;gap:24px}
-.cu-rodape .cu-ico{flex:none;width:52px;height:52px}
-.cu-rodape .cu-ico svg{width:30px;height:28px}
 .drive-whats{display:flex;align-items:center;justify-content:center;width:56px;height:56px;margin:14px auto 0;padding:0;border:none;background:none;cursor:pointer}
 .drive-whats svg{width:40px;height:40px}
 .drive-whats:active{transform:scale(.9)}
@@ -2242,11 +2192,11 @@ a.drive-falta:hover{color:var(--primary)}
 /* ---------- botões de ícone (v12, escolha C): o ícone num círculo com contorno fino, como os atalhos ----------
    O nome aparece segurando (title/aria-label). Fechar da janela, setinhas de abrir e a barra da música ficam sem contorno. */
 .section-toggle,.lv-filtro-toggle,.modal-close{border:none !important;border-radius:0;background:none !important;box-shadow:none !important}
-.section-add,.btn-icon-sm,.lv-icone-btn,.cu-data-seta,.pano-nav-btn,.ico-btn{border:1px solid color-mix(in srgb,currentColor 32%,transparent) !important;border-radius:999px !important;background:none !important;box-shadow:none !important}
-.ico-btn,.lv-icone-btn,.section-add,.pano-nav-btn,.cu-data-seta{min-width:34px;height:34px}
+.section-add,.btn-icon-sm,.lv-icone-btn,.pano-nav-btn,.ico-btn{border:1px solid color-mix(in srgb,currentColor 32%,transparent) !important;border-radius:999px !important;background:none !important;box-shadow:none !important}
+.ico-btn,.lv-icone-btn,.section-add,.pano-nav-btn{min-width:34px;height:34px}
 .btn-icon-sm{width:28px;height:28px}
-.section-add,.lv-icone-btn,.lv-filtro-toggle,.cu-data-seta,.pano-nav-btn,.ico-btn{color:var(--text-dim)}
-.section-add:hover,.btn-icon-sm:hover,.lv-icone-btn:hover,.lv-filtro-toggle:hover,.cu-data-seta:hover,.pano-nav-btn:hover,.ico-btn:hover{color:var(--text)}
+.section-add,.lv-icone-btn,.lv-filtro-toggle,.pano-nav-btn,.ico-btn{color:var(--text-dim)}
+.section-add:hover,.btn-icon-sm:hover,.lv-icone-btn:hover,.lv-filtro-toggle:hover,.pano-nav-btn:hover,.ico-btn:hover{color:var(--text)}
 .lv-filtro-toggle.active{color:var(--text)}
 .lv-icone-btn.ativo,.lv-icone-btn[aria-pressed="true"]{color:var(--gold)}
 /* botão de ícone genérico (substitui os botões com texto) */
@@ -2371,7 +2321,7 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 }
 
 /* ===== Sem caixas (v9.2, pedido do Davi): os blocos viram divisórias finas — fundo do papel, sem canto, linha em cima ===== */
-.card,.section,.resumo-stats,.cp-resumo,.cp-bloco,.lv-config,.cu-parte-corpo,.lm-musica,.lvi-rel,.lvcmp-texto{background:none!important;border:none!important;border-top:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important}
+.card,.section,.resumo-stats,.cp-resumo,.cp-bloco,.lv-config,.lm-musica,.lvi-rel,.lvcmp-texto{background:none!important;border:none!important;border-top:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important}
 .card,.section,.resumo-stats,.cp-bloco{padding-left:0!important;padding-right:0!important}
 .resumo-card,.atalho-card{border-top:none!important}
 /* Culto: colar o roteiro do WhatsApp */
@@ -2458,10 +2408,6 @@ button:has(> svg),.ico-btn{-webkit-touch-callout:none;-webkit-user-select:none;u
 .cu-md-txt{min-width:0}
 
 /* Culto (v9.9): cada parte num bloco de cor pastel; entra com animação só ao abrir/trocar a data */
-.cu-parte.entra{animation:surgir .35s var(--mola) both;animation-delay:calc(var(--i,0) * 40ms)}
-.cu-parte{will-change:transform}
-.cu-partes .cu-parte-corpo{background:var(--tinta,var(--card-2))!important;border:none!important;border-radius:14px!important;padding:10px 12px 8px 14px}
-.cu-partes .cu-parte-corpo .cu-musica{border-color:rgba(30,42,62,.1)}
 .cu-sug-drive{font-style:normal;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--card-2);color:var(--text-dim);font-size:10.5px;font-weight:600;vertical-align:1px}
 .lvcmp-converter-btn{color:var(--graf-tx)!important}   /* fica na faixa grafite do Comparar: em branco */
 .lvcmp-converter-btn:hover{color:var(--latao)!important}
@@ -2622,17 +2568,6 @@ input[type=search].voz-campo::-webkit-search-cancel-button{-webkit-appearance:no
 .atz-ci-sel{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--graf);color:var(--latao);border:2px solid #fff}
 .atz-fx-it .atz-ci-sel{display:none}
 /* passo a passo */
-.atz-passo{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px;padding:14px;border-radius:14px;background:var(--vidro);border:1px solid var(--fio)}
-.atz-passo-prog{height:4px;border-radius:4px;background:var(--fio);overflow:hidden}.atz-passo-prog i{display:block;height:100%;background:var(--latao)}
-.atz-passo-n{font:600 10.5px/1.3 var(--font-narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
-.atz-passo>b{font-size:16px;font-weight:500;line-height:1.4}
-.atz-passo>small{font-size:13px;color:var(--text-dim)}
-.atz-passo-st{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
-.atz-passo-chips{display:flex;flex-wrap:wrap;gap:6px}
-.atz-passo-chips button{padding:6px 11px;border:1px solid var(--fio);border-radius:999px;background:#fff;color:var(--text);font:inherit;font-size:13px;cursor:pointer}
-.atz-passo-chips button small{color:var(--text-faint)}
-.atz-passo-chips button.on{background:var(--graf);border-color:var(--graf);color:var(--graf-tx)}.atz-passo-chips button.on small{color:var(--graf-dim)}
-.atz-passo-acoes{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
 .atz-corpo{display:flex;flex-direction:column}
 .atz-det{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .atz-det-bloco{padding:9px 12px;border-radius:12px;background:var(--vidro);border:1px solid var(--fio)}
@@ -2869,9 +2804,6 @@ body.ef-rolou .header{background:rgba(238,241,245,.72);box-shadow:0 1px 0 var(--
 #lvTomBoxValor.ef-gira{animation:efTomGira .6s cubic-bezier(.3,1.3,.5,1)}
 @keyframes efTomGira{0%{transform:translateY(-110%);opacity:0}100%{transform:none;opacity:1}}
 /* F19 linha do tempo do culto se desenhando */
-.cu-parte.entra{animation-delay:calc(var(--i,0) * 160ms)}
-.cu-parte.entra::before{background:var(--latao);width:2px;transform-origin:top;animation:efLinha .45s ease both;animation-delay:calc(var(--i,0) * 160ms + 200ms)}
-.cu-parte.entra .cu-parte-num{animation:efAcende .6s ease both;animation-delay:calc(var(--i,0) * 160ms)}
 @keyframes efLinha{from{transform:scaleY(0)}}
 @keyframes efAcende{0%{box-shadow:0 0 0 0 rgba(159,193,230,.8)}100%{box-shadow:0 0 0 10px rgba(159,193,230,0)}}
 /* F20 menu do + sai em arco */
@@ -2879,7 +2811,7 @@ body.ef-rolou .header{background:rgba(238,241,245,.72);box-shadow:0 1px 0 var(--
 .lv-fab-menu.aberto .lv-fab-op:nth-child(2){animation-delay:.05s}.lv-fab-menu.aberto .lv-fab-op:nth-child(3){animation-delay:.1s}.lv-fab-menu.aberto .lv-fab-op:nth-child(4){animation-delay:.15s}.lv-fab-menu.aberto .lv-fab-op:nth-child(5){animation-delay:.2s}.lv-fab-menu.aberto .lv-fab-op:nth-child(n+6){animation-delay:.25s}
 @keyframes efArco{0%{opacity:0;transform:translate(34vw,90px) rotate(-28deg) scale(.4)}60%{opacity:1}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){
-  .nav-pilula,.fullpage.active,.splash-nome span,.pin-pontos i,.vs-p,.ef-leque .cc,.ef-vira .cal,.toast.com-acao::after,.ef-painel b i,.lv-capa svg,#lvPdfWrap.ef-abre > *,#lvTomBoxValor,.cu-parte.entra::before,.cu-parte-num,.lv-fab-op{animation:none!important;transition:none!important}
+  .nav-pilula,.fullpage.active,.splash-nome span,.pin-pontos i,.vs-p,.ef-leque .cc,.ef-vira .cal,.toast.com-acao::after,.ef-painel b i,.lv-capa svg,#lvPdfWrap.ef-abre > *,#lvTomBoxValor,.lv-fab-op{animation:none!important;transition:none!important}
   .splash-nome span{-webkit-text-fill-color:currentColor}
 }
 
@@ -2912,7 +2844,7 @@ body.ef-rolou .header{background:rgba(238,241,245,.72);box-shadow:0 1px 0 var(--
 .fullpage-title{font-weight:300;font-size:19px;letter-spacing:-.01em}
 .card-title,.section-title{font-weight:300;font-size:19px;letter-spacing:-.01em}
 .card-title .left::before,.section-title::before,.card-title:not(:has(.left))::before{width:2px;height:18px;border-radius:1px}
-.modal-title,.lv-card-titulo,.lv-sheet-title,.cu-musica-txt,.lv-cc-titulo{font-weight:400}
+.modal-title,.lv-card-titulo,.lv-sheet-title,.lv-cc-titulo{font-weight:400}
 .resumo-stat-val,.gm-valor,.pc-item .v,.bl b,.blocos-mes b{font-weight:500}
 .resumo-stat-lbl,.placa-lbl,.resumo-label,.mes-label{font-family:var(--font-narrow);font-weight:600;letter-spacing:.14em;text-transform:uppercase}
 .versiculo,.versiculo-texto{font-weight:300}
@@ -3125,9 +3057,6 @@ body{font-weight:400;letter-spacing:.005em}
   .foco-cols{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px;align-items:start}
 }
 /* v15.8: Assistente — passo a passo no alto (no lugar da placa), pergunta curta com a logo, saldos/faturas pequenos */
-.atz-passo-topo{position:sticky;top:0;z-index:3;margin:4px 0 8px;background:#f9fafc;box-shadow:0 6px 18px rgba(16,24,38,.08)}
-.atz-passo-q{display:flex;align-items:center;gap:10px;font-size:20px!important}
-.atz-passo-logo{width:28px;height:28px;border-radius:8px;object-fit:cover;flex-shrink:0}
 .atz-minis{display:flex;flex-wrap:wrap;gap:5px}
 .atz-mini{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:99px;border:1px solid var(--fio);font-size:11.5px;color:var(--text-dim);white-space:nowrap}
 .atz-mini img{width:14px;height:14px;border-radius:4px;object-fit:cover}
@@ -3135,7 +3064,6 @@ body{font-weight:400;letter-spacing:.005em}
 .atz-mini s{color:var(--text-faint)}
 .atz-mini.on{border-color:var(--graf);background:var(--graf);color:var(--graf-dim)}.atz-mini.on b{color:var(--graf-tx)}
 .atz-placa .atz-mini{border-color:rgba(238,242,248,.16);color:var(--graf-dim)}.atz-placa .atz-mini b{color:var(--graf-tx)}
-@media(min-width:1280px){ #atzConversa>.atz-passo-topo{grid-column:2;grid-row:1;top:12px;margin-top:12px} }
 
 /* Spotify (v16.1) */
 .lv-spotify-btn svg{display:block}

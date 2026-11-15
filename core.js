@@ -1143,7 +1143,8 @@ function restanteConta(paidKey, valor){
 /* Conta-reserva: uma conta com o mesmo nome de uma categoria do cartão (ex.: "Mercado") já foi gasta em parte
    no cartão (compras à vista dessa categoria na fatura do mês) — essa parte sai da conta para não contar duas vezes
    (ela já está na fatura). paidKey = mês_usuário_categoria_id */
-function semAcentoCore(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
+/* tirar acento e maiúsculas: a regra única do app (antes havia 5 cópias) */
+function vozSemAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
 function contaDoPaidKey(paidKey){
   const p = String(paidKey).split('_'), user = p[1], cat = p[2], id = p.slice(3).join('_');
   if(!state.users || !state.users[user]) return null;
@@ -1154,18 +1155,18 @@ function contaUsadaNoCartao(paidKey){
   const mKey = p[0], user = p[1];
   const item = contaDoPaidKey(paidKey);
   if(!item || !item.desc) return 0;
-  const nome = semAcentoCore(item.desc);
+  const nome = vozSemAcento(item.desc);
   let usado = 0;
   if(user === 'davi') (state.cartoesTracker||[]).forEach(c=>(c.credoVista||[]).forEach(cv=>{
-    if(cv.mKey === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) usado += Number(cv.valor)||0;
+    if(cv.mKey === mKey && !cv.ajuste && !cv.conta && vozSemAcento(cv.categoria) === nome) usado += Number(cv.valor)||0;
   }));
   /* a mesma assinatura cadastrada dentro do cartão já está na fatura: não conta duas vezes */
   if(user === 'davi') (state.cartoesTracker||[]).forEach(c=>(c.assinaturas||[]).forEach(a=>{
-    if(semAcentoCore(a.nome) === nome) usado += assinaturaValorNoMes(a, mKey);
+    if(vozSemAcento(a.nome) === nome) usado += assinaturaValorNoMes(a, mKey);
   }));
   /* compras faladas no Pix/débito (state.lancamentos) da mesma categoria também contam */
   (state.lancamentos||[]).forEach(la=>{
-    if(la.mKey === mKey && (la.usuario || 'davi') === user && semAcentoCore(la.categoria) === nome) usado += Number(la.valor)||0;
+    if(la.mKey === mKey && (la.usuario || 'davi') === user && vozSemAcento(la.categoria) === nome) usado += Number(la.valor)||0;
   });
   return Math.round(usado*100)/100;
 }
@@ -1361,7 +1362,7 @@ function contaNoCartao(paidKey, cartao, valor){
   const mKey = paidKey.split('_')[0], item = contaDoPaidKey(paidKey), desc = (item && item.desc) || 'Conta';
   marcarContaPaga(paidKey, true, valor);
   /* assinatura cadastrada no próprio cartão já entra na fatura sozinha: não lança de novo */
-  if((cartao.assinaturas||[]).some(a=>semAcentoCore(a.nome) === semAcentoCore(desc) && assinaturaValorNoMes(a, mKey))) return;
+  if((cartao.assinaturas||[]).some(a=>vozSemAcento(a.nome) === vozSemAcento(desc) && assinaturaValorNoMes(a, mKey))) return;
   const cv = lancarVista(cartao, { descricao: desc, valor, categoria: desc, mKey: contaFaturaMes(cartao, item, mKey) });
   contaLigarAoCartao(paidKey, cartao, cv);
 }

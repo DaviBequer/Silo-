@@ -270,7 +270,7 @@ async function lviLetrasDe(titulo, artista){
   }
   return { achou:false, motivo:'essa música não está no Letras' };
 }
-const lviNormPalavra = w=>String(w||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+const lviNormPalavra = w=>vozSemAcento(w).replace(/[^a-z0-9]/g, '');
 /* maior sequência de palavras em comum (na ordem) entre a linha do Letras e um trecho da cifra → pares [i, k] */
 function lviLcsPares(a, b){
   const n = a.length, m = b.length, t = Array.from({ length:n+1 }, ()=>new Array(m+1).fill(0));

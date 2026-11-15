@@ -53,7 +53,7 @@ function vozFormaTexto(item){
   const f = contaForma(item, state.currentUser);
   return !f ? '' : f.cartao ? 'cartão ' + f.cartao.nome : 'Pix ' + f.banco;
 }
-function vozSemAcento(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+/* vozSemAcento fica em core.js (regra única de tirar acento) */
 /* sem IA: número + banco citado + palavras-chave */
 function vozEntenderSimples(texto, bancos, contas){
   const t = vozSemAcento(texto);

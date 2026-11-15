@@ -461,20 +461,20 @@ function contaComprasDe(pk){
   const p = String(pk).split('_'), mKey = p[0], user = p[1], cat = p[2], id = p.slice(3).join('_');
   const item = ((state.users[user] || {}).expenses || {})[cat]?.find(i=>String(i.id) === id);
   if(!item || !item.desc) return [];
-  const nome = semAcentoCore(item.desc), out = [];
+  const nome = vozSemAcento(item.desc), out = [];
   if(user === 'davi') (state.cartoesTracker || []).forEach(c=>(c.credoVista || []).forEach(cv=>{
-    if(cv.mKey === mKey && !cv.ajuste && !cv.conta && semAcentoCore(cv.categoria) === nome) out.push({ data: cv.data || '', desc: cv.descricao || 'Compra', onde: c.nome, tipo: 'cartao', valor: Number(cv.valor) || 0 });
+    if(cv.mKey === mKey && !cv.ajuste && !cv.conta && vozSemAcento(cv.categoria) === nome) out.push({ data: cv.data || '', desc: cv.descricao || 'Compra', onde: c.nome, tipo: 'cartao', valor: Number(cv.valor) || 0 });
   }));
   (state.lancamentos || []).forEach(la=>{
-    if(la.mKey === mKey && (la.usuario || 'davi') === user && semAcentoCore(la.categoria) === nome) out.push({ data: la.data || '', desc: la.descricao || 'Compra', onde: la.banco || 'Pix/débito', tipo: 'pix', valor: Number(la.valor) || 0 });
+    if(la.mKey === mKey && (la.usuario || 'davi') === user && vozSemAcento(la.categoria) === nome) out.push({ data: la.data || '', desc: la.descricao || 'Compra', onde: la.banco || 'Pix/débito', tipo: 'pix', valor: Number(la.valor) || 0 });
   });
   return out.sort((a, b)=>String(b.data).localeCompare(String(a.data)));
 }
 /* conta do mês com esse nome (Mercado) → { pk, desc, limite, gasto } ou null */
 function contaPorNome(nome, mKey){
-  const u = state.currentUser, n = semAcentoCore(nome), ex = (state.users[u] || {}).expenses || {};
+  const u = state.currentUser, n = vozSemAcento(nome), ex = (state.users[u] || {}).expenses || {};
   for(const cat of ['fixo', 'moradia', 'assinatura']){
-    const item = (ex[cat] || []).find(i=>!i.arquivado && semAcentoCore(i.desc) === n && !(i.mesInicio && mKey < i.mesInicio));
+    const item = (ex[cat] || []).find(i=>!i.arquivado && vozSemAcento(i.desc) === n && !(i.mesInicio && mKey < i.mesInicio));
     if(item){
       const pk = mKey + '_' + u + '_' + cat + '_' + item.id;
       const gasto = contaComprasDe(pk).reduce((s, c)=>s + c.valor, 0) + ((state.pagamentosParciais || {})[pk] || 0);

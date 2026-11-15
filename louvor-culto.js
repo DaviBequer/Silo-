@@ -3,7 +3,7 @@
    Ao abrir uma data nova, o roteiro nasce com as partes padrão e as músicas agendadas para essa data entram em "Hinos".
    O histórico conta cada música uma vez por data: as que estão em cultos que já passaram + as agendadas (data) que já passaram. */
 const CULTO_PARTES_PADRAO = ['Abertura', 'Hinos', 'Harpa', 'Boas-vindas', 'Hino', 'Pregação', 'Final'];
-let cultoData = '', cultoAba = 'roteiro', cultoEscolherParte = null;
+let cultoData = '', cultoEscolherParte = null;
 
 function cultosLista(){ if(!state.cultos) state.cultos = []; return state.cultos; }
 function cultoId(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -47,42 +47,11 @@ function cultoGravar(){
   if(typeof renderCultoBotao === 'function') renderCultoBotao();   // a placa do Louvor acompanha qualquer mudança no culto
 }
 
-function abrirCulto(){
-  if(typeof lvPdfCarregarFonte === 'function') lvPdfCarregarFonte();
-  cultoData = cultoData || cultoProximaData();
-  cultoAba = 'roteiro';
-  cuPartesEntrar = true;
-  cultoLimparPartesVazias();
-  document.getElementById('pageCulto').classList.add('active');
-  document.getElementById('cultoConteudo').scrollTop = 0;
-  renderCulto();
-  if(typeof atualizarStatusDrive === 'function'){ atualizarStatusDrive(); drivePreparar(); }
-}
-/* partes sem nome, sem "quem" e sem música (sobras de toques em "Adicionar parte") saem ao abrir */
-function cultoLimparPartesVazias(){
-  let mudou = false;
-  cultosLista().forEach(c=>{
-    const antes = c.partes.length;
-    c.partes = c.partes.filter(p=>(p.nome||'').trim() || (p.quem||'').trim() || (p.musicas||[]).length);
-    if(c.partes.length !== antes) mudou = true;
-  });
-  if(mudou) persist();
-}
-function fecharCulto(){ document.getElementById('pageCulto').classList.remove('active'); cultoRascunho = null; }
-function cultoTrocarAba(a){ cultoAba = a; renderCulto(); }
-function cultoMudarData(v){ if(!v) return; cultoData = v; cultoRascunho = null; cuPartesEntrar = true; renderCulto(); }
-function cultoPularData(dias){ const d = calParse(cultoData) || new Date(); d.setDate(d.getDate() + dias); cultoMudarData(calISO(d)); }
-function cultoEscolherData(){ document.querySelector('#cultoRoteiro .cu-data .data-btn')?.click(); }
-
 const CU_ICO = {
   sobe:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>',
   desce:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
   x:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
 };
-/* cor pastel de cada parte (segue a parte quando ela muda de lugar) */
-const CU_TINTAS = ['#f1e1d2','#e2ead8','#dce6ec','#efdfe6','#ece5cc','#e4e0ef','#d9ebe6'];
-function cultoTinta(id, partes){ const ids = partes.map(p=>p.id).sort(); return CU_TINTAS[Math.max(0, ids.indexOf(id)) % CU_TINTAS.length]; }
-let cuPartesEntrar = true;   // as partes entram com animação só ao abrir ou trocar a data
 /* música com outra data (ensaio, outro domingo) não fica no culto de hoje/futuro: cada uma vale só no seu dia */
 function cultoTirarDeOutraData(){
   const hoje = cultoHojeISO(); let mudou = false;
@@ -109,112 +78,19 @@ function cultoTirarDeOutraData(){
   });
   if(mudou) persist();
 }
-function renderCulto(){
-  cultoTirarDeOutraData();
-  document.querySelectorAll('#cultoAbas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.aba === cultoAba));
-  document.getElementById('cultoRoteiro').style.display = cultoAba === 'roteiro' ? '' : 'none';
-  document.getElementById('cultoHistorico').style.display = cultoAba === 'historico' ? '' : 'none';
-  document.getElementById('cultoRodape').style.display = cultoAba === 'roteiro' ? '' : 'none';
-  if(cultoAba === 'historico'){ renderCultoHistorico(); return; }
-  const inp = document.getElementById('cultoDataInput');
-  if(inp.value !== cultoData) inp.value = cultoData;
-  const hoje = cultoHojeISO();
-  document.getElementById('cultoDataNome').textContent = cultoDataTexto(cultoData, true);
-  document.getElementById('cultoDataSub').textContent = cultoData === hoje ? 'hoje' : cultoData < hoje ? 'já passou' : '';
-  const c = cultoAtual(), salvo = !!cultoDaData(cultoData);
-  document.getElementById('cultoEstado').textContent = salvo ? '' : 'Roteiro novo · as músicas agendadas para esse dia já entraram em Hinos';
-  document.getElementById('cultoPartesConta').textContent = c.partes.length ? `${c.partes.length} parte${c.partes.length === 1 ? '' : 's'}` : '';
-  document.getElementById('cultoPartes').innerHTML = c.partes.map((p, i)=>{
-    const musicas = p.musicas.map(id=>(state.louvores||[]).find(l=>l.id === id)).filter(Boolean);
-    return `<div class="cu-parte${cuPartesEntrar ? ' entra' : ''}" data-id="${p.id}" style="--tinta:${cultoTinta(p.id, c.partes)};--i:${i}">
-      <span class="cu-parte-num">${i + 1}</span>
-      <div class="cu-parte-corpo">
-        <div class="cu-parte-topo">
-          <input type="text" class="cu-parte-nome" value="${lvEsc(p.nome)}" placeholder="Nome da parte" onchange="cultoParteCampo('${p.id}','nome',this.value)">
-          <span class="cu-parte-acoes">
-            <button type="button" class="btn-icon-sm" aria-label="Subir" ${i === 0 ? 'disabled' : ''} onclick="cultoMoverParte('${p.id}',-1)">${CU_ICO.sobe}</button>
-            <button type="button" class="btn-icon-sm" aria-label="Descer" ${i === c.partes.length - 1 ? 'disabled' : ''} onclick="cultoMoverParte('${p.id}',1)">${CU_ICO.desce}</button>
-            <button type="button" class="btn-icon-sm" aria-label="Tirar a parte" onclick="cultoTirarParte('${p.id}')">${CU_ICO.x}</button>
-          </span>
-        </div>
-        ${musicas.length ? `<div class="cu-musicas">${musicas.map(l=>`
-          <div class="cu-musica">
-            <button type="button" class="cu-musica-nome" onclick="abrirLouvorDetalhe('${l.id}')"><span class="cu-musica-txt">${lvEsc(cultoNomeMusica(l))}</span>${lvTomAtual(l) ? `<span class="cu-tom">${lvEsc(lvTomAtual(l))}</span>` : ''}</button>
-            <button type="button" class="btn-icon-sm" aria-label="Tirar a música" onclick="cultoTirarMusica('${p.id}','${l.id}')">${CU_ICO.x}</button>
-          </div>`).join('')}</div>` : ''}
-        <button type="button" class="ico-btn cu-add-musica" title="Adicionar música" aria-label="Adicionar música" onclick="cultoAbrirEscolher('${p.id}')">${ICO(ICO_D.mais, 20)}</button>
-      </div>
-    </div>`;
-  }).join('') || `<div class="gm-vazio">Nenhuma parte. Toque em "Adicionar parte".</div>`;
-  cuPartesEntrar = false;
-  /* ordem dos louvores no texto do WhatsApp (não mexe nas partes) */
-  const ordem = cultoMusicasOrdem(c).map(id=>(state.louvores||[]).find(l=>l.id === id)).filter(Boolean);
-  document.getElementById('cultoOrdem').innerHTML = ordem.length ? `
-    <div class="lm-sec-titulo"><span>Ordem no WhatsApp</span><small>só muda o texto do grupo</small></div>
-    <div class="cu-ordem">${ordem.map((l, i)=>`
-      <div class="cu-ordem-item">
-        <span class="cu-ordem-num">${i + 1}</span>
-        <span class="cu-ordem-nome">${lvEsc(cultoNomeMusica(l))}${lvTomAtual(l) ? ` <small>${lvEsc(lvTomAtual(l))}</small>` : ''}</span>
-        <button type="button" class="btn-icon-sm" aria-label="Subir" ${i === 0 ? 'disabled' : ''} onclick="cultoMoverWhats('${l.id}',-1)">${CU_ICO.sobe}</button>
-        <button type="button" class="btn-icon-sm" aria-label="Descer" ${i === ordem.length - 1 ? 'disabled' : ''} onclick="cultoMoverWhats('${l.id}',1)">${CU_ICO.desce}</button>
-      </div>`).join('')}
-    </div>` : '';
-  document.getElementById('cultoTextoPrevia').textContent = cultoTexto(c);
-}
 /* músicas do culto (sem repetir), na ordem escolhida para o WhatsApp; as novas entram no fim */
 function cultoMusicasOrdem(c){
   const base = [...new Set(c.partes.flatMap(p=>p.musicas))];
   const ordem = (c.ordemWhats || []).filter(id=>base.includes(id));
   return ordem.concat(base.filter(id=>!ordem.includes(id)));
 }
-function cultoMoverWhats(id, d){
-  const c = cultoAtual(), lista = cultoMusicasOrdem(c), i = lista.indexOf(id), j = i + d;
-  if(i < 0 || j < 0 || j >= lista.length) return;
-  [lista[i], lista[j]] = [lista[j], lista[i]];
-  c.ordemWhats = lista;
-  cultoGravar(); renderCulto();
-}
 function cultoParte(id){ return cultoAtual().partes.find(p=>p.id === id); }
-function cultoParteCampo(id, campo, v){ const p = cultoParte(id); if(!p) return; p[campo] = String(v || '').trim(); cultoGravar(); document.getElementById('cultoTextoPrevia').textContent = cultoTexto(cultoAtual()); }
-function cultoMoverParte(id, d){
-  const ps = cultoAtual().partes, i = ps.findIndex(p=>p.id === id), j = i + d;
-  if(i < 0 || j < 0 || j >= ps.length) return;
-  [ps[i], ps[j]] = [ps[j], ps[i]];
-  /* as duas partes deslizam devagar até o lugar novo (guarda onde estavam, desenha e anima a diferença) */
-  const lista = document.getElementById('cultoPartes'), antes = {};
-  lista.querySelectorAll('.cu-parte').forEach(el=>antes[el.dataset.id] = el.getBoundingClientRect().top);
-  cultoGravar(); renderCulto();
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  lista.querySelectorAll('.cu-parte').forEach(el=>{
-    const dy = (antes[el.dataset.id] ?? 0) - el.getBoundingClientRect().top;
-    if(!dy) return;
-    el.animate([{ transform:`translateY(${dy}px)` }, { transform:'none' }], { duration: 650, easing:'cubic-bezier(.45,0,.2,1)' });
-    if(el.dataset.id === id) el.animate([{ boxShadow:'0 0 0 0 transparent' }, { boxShadow:'0 10px 26px -12px rgba(30,42,62,.35)' }, { boxShadow:'0 0 0 0 transparent' }], { duration: 650 });
-  });
-}
-function cultoTirarParte(id){
-  comDesfazer('Parte removida', ()=>{ const c = cultoAtual(); c.partes = c.partes.filter(p=>p.id !== id); cultoGravar(); renderCulto(); },
-    ()=>{ if(document.getElementById('pageCulto').classList.contains('active')) renderCulto(); });
-}
-function cultoNovaParte(){
-  cultoAtual().partes.push({ id: cultoId('cp'), nome:'', quem:'', musicas:[] });
-  cultoGravar(); renderCulto();
-  const nomes = document.querySelectorAll('.cu-parte-nome'); if(nomes.length){ nomes[nomes.length - 1].focus(); nomes[nomes.length - 1].scrollIntoView({ block:'center', behavior:'smooth' }); }
-}
-function cultoTirarMusica(parteId, louvorId){
-  const p = cultoParte(parteId); if(!p) return;
-  p.musicas = p.musicas.filter(id=>id !== louvorId);
-  /* tirou do culto: a data dele sai da música (senão ela voltaria sozinha, pela regra "data do culto = está no culto") */
-  const l = (state.louvores||[]).find(x=>x.id === louvorId), c = cultoAtual();
-  if(l && l.dataAgendamento === c.data && !c.partes.some(x=>x.musicas.includes(louvorId))) l.dataAgendamento = '';
-  cultoGravar(); renderCulto();
-}
 async function cultoApagar(){
   const c = cultoDaData(cultoData);
-  if(!c){ cultoRascunho = null; renderCulto(); return; }
+  if(!c){ cultoRascunho = null; return; }
   if(!(await iosConfirm('Apagar o roteiro de ' + cultoDataTexto(cultoData, true) + '?'))) return;
   state.cultos = cultosLista().filter(x=>x.id !== c.id);
-  persist(); renderCulto();
+  persist();
 }
 /* ---------- escolher música ---------- */
 function cultoAbrirEscolher(parteId){
@@ -244,7 +120,6 @@ function cultoEscolher(louvorId){
   else p.musicas.push(louvorId);
   closeModal('modalCultoEscolher');
   cultoGravar();
-  if(document.getElementById('pageCulto')?.classList.contains('active')) renderCulto();
 }
 
 /* "Cantor - Música" (padrão do Davi em todo o Culto) */
@@ -294,13 +169,14 @@ function cultoHistoricoDados(){
   }).filter(Boolean).sort((a, b)=>b.n - a.n || b.ultima.localeCompare(a.ultima));
 }
 function renderCultoHistorico(){
-  const dados = cultoHistoricoDados(), el = document.getElementById('cultoHistorico');
-  if(!dados.length){ el.innerHTML = `<div class="gm-vazio">Ainda não há músicas tocadas. Elas aparecem aqui depois da data do culto.</div>`; return; }
+  /* devolve o HTML (aparece na janela "Mais tocadas" da placa) */
+  const dados = cultoHistoricoDados();
+  if(!dados.length) return `<div class="gm-vazio">Ainda não há músicas tocadas. Elas aparecem aqui depois da data do culto.</div>`;
   const maior = dados[0].n;
   /* as que estão há mais tempo sem tocar (pelo menos 2 meses) */
   const limite = calParse(cultoHojeISO()); limite.setMonth(limite.getMonth() - 2);
   const esquecidas = dados.filter(d=>d.ultima < calISO(limite)).sort((a, b)=>a.ultima.localeCompare(b.ultima)).slice(0, 5);
-  el.innerHTML = `
+  return `
     <div class="lm-sec-titulo"><span>Mais tocadas</span><small>${dados.length} músicas</small></div>
     <div class="cu-hist">${dados.slice(0, 30).map((d, i)=>`
       <button type="button" class="cu-hist-item" onclick="abrirLouvorDetalhe('${d.l.id}')">
@@ -415,9 +291,8 @@ function lvCultoMudarData(v, voltar){
   renderCultoBotao();
 }
 function lvCultoHistorico(){
-  renderCultoHistorico();
   document.getElementById('perguntaTitulo').textContent = 'Mais tocadas';
-  document.getElementById('perguntaCorpo').innerHTML = document.getElementById('cultoHistorico').innerHTML;
+  document.getElementById('perguntaCorpo').innerHTML = renderCultoHistorico();
 }
 async function lvCultoApagar(){ await cultoApagar(); renderCultoBotao(); }
 function lvCultoDrive(){ if(typeof cultoEnviarDrive === 'function') cultoEnviarDrive(); }
@@ -585,7 +460,7 @@ async function cultoUsarSugestao(){
   p.musicas.push(...novas);
   cultoGravar();
   closeModal('modalCultoSugestao');
-  renderCulto();
+
   showToast(`${novas.length} ${novas.length === 1 ? 'música adicionada' : 'músicas adicionadas'} em ${p.nome || 'parte'}`);
 }
 
@@ -879,7 +754,7 @@ async function cultoColarMontar(){
   if(!cuColar.length) return;
   /* o roteiro vai para a data escolhida na janela */
   const dEsc = (document.getElementById('cuColarData') || {}).value;
-  if(dEsc && dEsc !== cultoData) cultoMudarData(dEsc);
+  if(dEsc && dEsc !== cultoData){ cultoData = dEsc; cultoRascunho = null; }
   const btn = document.getElementById('cuColarMontar'); btn.disabled = true; btn.textContent = 'Montando…';
   cuColarMontando = true; cuColarMedleys = {};
   document.getElementById('cuColarTexto').style.display = 'none';
@@ -948,7 +823,7 @@ async function cultoColarMontar(){
   const pos = p=>{ const i = ordemColada.indexOf(cuNorm(p.nome)); return i < 0 ? ordemColada.length + c.partes.indexOf(p) : i; };
   c.partes.sort((a, b)=>pos(a) - pos(b));
   persist();
-  cultoGravar(); renderCulto(); renderLouvor(); cultoColarRender();
+  cultoGravar(); renderLouvor(); cultoColarRender();
   btn.disabled = false; btn.textContent = 'Pronto'; btn.onclick = ()=>closeModal('modalCultoColar');
   const n = c.partes.reduce((s, p)=>s + p.musicas.length, 0);
   showToast(`✓ Roteiro montado · ${n} ${n === 1 ? 'música' : 'músicas'}`);

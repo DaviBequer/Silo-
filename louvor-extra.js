@@ -429,7 +429,7 @@ function lviMontaBlocos(rows){
   const tom = tomCab ? tomCab.raiz : (km ? km[1] : null);
   const menor = tomCab ? tomCab.menor : !!(km && km[2]);
   /* nome do cantor (ou "Cantor - Música") repetido no meio do texto não é letra */
-  const norm = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const norm = s=>vozSemAcento(s).replace(/[^a-z0-9]+/g,' ').trim();
   const fora = new Set(artista ? [norm(artista), norm(artista + ' ' + nome), norm(nome + ' ' + artista)] : []);
   fora.delete('');
   secoes.forEach(s=>{ if(fora.size) s.lines = s.lines.filter(l=>!(l.type==='lyric' && !(l.chords||[]).length && fora.has(norm(l.text)))); });

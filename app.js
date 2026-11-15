@@ -648,7 +648,6 @@ function posRestaurar(){
       pageExtrato: ()=>abrirExtrato(),
       pageAtualizar: ()=>abrirAtualizar(p.atzAba || 'conversa'),
       pageContasPagar: ()=>abrirContasPagar(),
-      pageCulto: ()=>abrirCulto(),
       pageLouvorDetalhe: ()=>{ if(temMusica) abrirLouvorDetalhe(p.louvor); },
       pageLvComparar: ()=>{ if(temMusica){ abrirLouvorDetalhe(p.louvor); lvCompararAbrir(); } }
     }[p.tela];
