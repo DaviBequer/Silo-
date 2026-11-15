@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v23.3', itens: [
+    'Louvor: o filtro começa escondido e a busca não fica mais em cima da placa do culto',
+    'Selecionando músicas, a placa do culto encolhe e fica só a linha de cima',
+    'Trocar a parte da música: janelinha pequena ao lado com Abertura, Harpa, Boas-vindas, Hino, Após a Palavra, Final e Outra'
+  ] },
   { versao: 'v23.2', itens: [
     'Tela da música no modelo C: categoria em bolinhas (L, H, C) em cima do nome',
     'Data num bloquinho com o dia grande e o Pronto num interruptor, embaixo do TOM e do CAPO'

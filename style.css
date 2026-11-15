@@ -3297,3 +3297,19 @@ body{font-weight:400;letter-spacing:.005em}
 .lv-status-tog.finalizada i{background:#2f7d57}
 .lv-status-tog.finalizada i::after{transform:translateX(13px)}
 @media (prefers-reduced-motion: reduce){ .lv-status-tog i,.lv-status-tog i::after{transition:none} }
+/* trocar a parte na placa do culto (pedido do Davi, 15/11): janelinha pequena, no mesmo estilo das setas do número */
+.lvcp-pop.lvcp-pop-partes{flex-direction:column;align-items:stretch;gap:2px;padding:5px;border-radius:12px;min-width:132px}
+.lvcp-pop.lvcp-pop-partes button{width:auto;height:28px;padding:0 10px;border:0;border-radius:8px;justify-content:start;place-items:center start;font:500 12px 'Outfit',sans-serif;letter-spacing:.02em;white-space:nowrap}
+.lvcp-pop.lvcp-pop-partes button.on{background:var(--latao);color:var(--graf)}
+.lvcp-pop.lvcp-pop-partes button.outra{margin-top:3px;border-top:1px solid rgba(159,193,230,.25);border-radius:0 0 8px 8px;color:rgba(159,193,230,.8)}
+.lvcp-pop-partes form{display:flex;gap:4px}
+.lvcp-pop-partes input{width:130px;height:30px;padding:0 9px;border:1px solid var(--latao);border-radius:8px;background:none;color:#fff;font:400 13px 'Outfit',sans-serif;outline:none}
+.lvcp-pop-partes input::placeholder{color:rgba(159,193,230,.6)}
+.lvcp-pop.lvcp-pop-partes form button{height:30px;border:1px solid var(--latao)}
+.lvcp-parte.aberto{text-decoration:underline;text-underline-offset:3px}
+/* filtro do Louvor escondido: a placa do culto não sobe por cima da busca (pedido do Davi) */
+#louvorFilterChips[style*="none"] + .lv-culto-placa{margin-top:12px}
+/* selecionando músicas: a placa do culto encolhe e fica só a linha de cima (data, quantas músicas), para a lista subir */
+.lv-culto-partes{max-height:1600px;overflow:hidden;transition:max-height .35s ease,opacity .25s ease,margin .35s ease}
+#aba-louvor.lv-selecionando .lv-culto-partes{max-height:0;opacity:0;margin-top:0}
+@media (prefers-reduced-motion: reduce){ .lv-culto-partes{transition:none} }

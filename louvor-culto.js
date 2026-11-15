@@ -387,28 +387,41 @@ function lvCultoHistorico(){
 }
 async function lvCultoApagar(){ await cultoApagar(); renderCultoBotao(); }
 function lvCultoDrive(){ if(typeof cultoEnviarDrive === 'function') cultoEnviarDrive(); }
-/* trocar a parte de uma música do culto: as partes do roteiro + as de sempre; "Outra parte…" para escrever um nome novo */
+/* trocar a parte de uma música do culto (pedido do Davi, 15/11): janelinha pequena ao lado do nome da parte, como as setas do número,
+   só com as partes de sempre + "Outra" (escreve o nome ali mesmo) */
 const CU_PARTES_COMUNS = ['Abertura', 'Hinos', 'Harpa', 'Boas-vindas', 'Apresentação', 'Hino', 'Pregação', 'Após a Palavra', 'Ofertório', 'Santa Ceia', 'Final'];
-let lvcpNomesParte = [];
+const LVCP_PARTES = ['Abertura', 'Harpa', 'Boas-vindas', 'Hino', 'Após a Palavra', 'Final'];
+let lvcpNomesParte = LVCP_PARTES;
 function lvcpParte(i){
   const x = lvcpItens[i]; if(!x) return;
   lvcpFechar();
-  const c = cultoAtual(), vistos = new Set();
-  lvcpNomesParte = [...c.partes.map(p=>p.nome), ...CU_PARTES_COMUNS].filter(n=>{ const k = cuNorm(n || ''); if(!k || vistos.has(k)) return false; vistos.add(k); return true; });
-  lvMenu(x.l.titulo || 'Música', [
-    ...lvcpNomesParte.map((n, k)=>[(cuNorm(n) === cuNorm(x.parte.nome) ? '✓ ' : '') + lvEsc(n), `lvcpMudarParte(${i},${k})`]),
-    ['Outra parte…', `lvcpParteOutra(${i})`]
-  ]);
+  const btn = document.querySelectorAll('#lvCultoPartes .lvcp-parte')[i]; if(!btn) return;
+  const pop = document.createElement('div');
+  pop.id = 'lvcpPop'; pop.className = 'lvcp-pop lvcp-pop-partes';
+  pop.innerHTML = LVCP_PARTES.map((n, k)=>`<button type="button" class="${cuNorm(n) === cuNorm(x.parte.nome) ? 'on' : ''}" onclick="lvcpMudarParte(${i},${k})">${lvEsc(n)}</button>`).join('')
+    + `<button type="button" class="outra" onclick="lvcpParteOutra(${i})">+ Outra</button>`;
+  document.body.appendChild(pop);
+  lvcpPosicionar(pop, btn);
+  btn.classList.add('aberto');
+  setTimeout(()=>{ document.addEventListener('click', lvcpForaClique, true); addEventListener('scroll', lvcpFechar, { capture: true, once: true }); }, 0);
+}
+/* abre embaixo do nome da parte; sem espaço embaixo, abre em cima; nunca sai da tela */
+function lvcpPosicionar(pop, btn){
+  const r = btn.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
+  pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px';
+  pop.style.top = (r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6) + 'px';
 }
 function lvcpParteOutra(i){
-  document.getElementById('perguntaCorpo').innerHTML = `<form class="voz-escrever" onsubmit="event.preventDefault();lvcpMudarParte(${i},this.querySelector('input').value)">
-    <input type="text" class="voz-campo" placeholder="Nome da parte (ex.: Testemunho)" autocomplete="off" enterkeyhint="done"><button type="submit" class="btn">Usar</button></form>`;
-  setTimeout(()=>document.querySelector('#perguntaCorpo input')?.focus(), 60);
+  const pop = document.getElementById('lvcpPop'), btn = document.querySelectorAll('#lvCultoPartes .lvcp-parte')[i]; if(!pop || !btn) return;
+  pop.innerHTML = `<form onsubmit="event.preventDefault();lvcpMudarParte(${i},this.querySelector('input').value)"><input type="text" placeholder="Nome da parte" aria-label="Nome da parte" autocomplete="off" enterkeyhint="done"><button type="submit" aria-label="Usar">OK</button></form>`;
+  lvcpPosicionar(pop, btn);
+  removeEventListener('scroll', lvcpFechar, { capture: true });   // o teclado do celular rola a tela: não fechar
+  setTimeout(()=>pop.querySelector('input')?.focus(), 30);
 }
 function lvcpMudarParte(i, qual){
   const x = lvcpItens[i]; if(!x) return;
   const nome = String(typeof qual === 'number' ? lvcpNomesParte[qual] : qual || '').trim(); if(!nome) return;
-  closeModal('modalPergunta');
+  lvcpFechar();
   if(cuNorm(nome) === cuNorm(x.parte.nome)) return;
   const c = cultoAtual();
   x.parte.musicas = x.parte.musicas.filter(id=>id !== x.l.id);
@@ -440,10 +453,10 @@ function lvcpOpcoes(i){
   btn.classList.add('aberto');
   setTimeout(()=>{ document.addEventListener('click', lvcpForaClique, true); addEventListener('scroll', lvcpFechar, { capture: true, once: true }); }, 0);
 }
-function lvcpForaClique(e){ if(!e.target.closest('#lvcpPop, .lvcp-num')) lvcpFechar(); }
+function lvcpForaClique(e){ if(!e.target.closest('#lvcpPop, .lvcp-num, .lvcp-parte')) lvcpFechar(); }
 function lvcpFechar(){
   document.getElementById('lvcpPop')?.remove();
-  document.querySelectorAll('.lvcp-num.aberto').forEach(b=>b.classList.remove('aberto'));
+  document.querySelectorAll('.lvcp-num.aberto, .lvcp-parte.aberto').forEach(b=>b.classList.remove('aberto'));
   document.removeEventListener('click', lvcpForaClique, true);
 }
 /* sobe/desce na ordem do culto: dentro da parte troca com a vizinha; na ponta, passa para a parte de cima/de baixo */

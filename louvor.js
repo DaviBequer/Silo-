@@ -5,7 +5,7 @@ let louvorFiltroAtivo = 'Atual';
 let louvorSearchTerm = '';
 let louvorAtualId = null;
 let lvSlideIndex = 0;
-let louvorFiltrosVisiveis = true;
+let louvorFiltrosVisiveis = false;   // pedido do Davi: o filtro começa sempre escondido
 
 function getLouvorAtual(){ return state.louvores.find(l=>l.id===louvorAtualId); }
 
