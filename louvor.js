@@ -794,6 +794,64 @@ function lvLigarToqueTom(grid){
     if(btn && e.detail === 0) lvTomGridEscolher(btn.dataset.nota, false);
   });
 }
+/* pedido do Davi (15/11): no computador, rodinha do mouse em cima do Tom ou do Capo = meio tom (ou uma casa) por "clique" da rodinha
+   (para cima sobe, para baixo desce), sem abrir nada. Tocar e segurar no Tom (fora do seletor) troca para o relativo (maior ↔ menor).
+   Enquanto roda, o Drive não é atualizado a cada passo: só quando para */
+const LV_TONS_RODA = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+var lvTomRodando = false;
+let lvTomRodaTimer = null;
+function lvTomRodaFim(){
+  clearTimeout(lvTomRodaTimer);
+  lvTomRodaTimer = setTimeout(()=>{ lvTomRodando = false; const l = getLouvorAtual(); if(l && typeof driveTomMudou === 'function') driveTomMudou(l); }, 1200);
+}
+function lvTomPasso(d){
+  const l = getLouvorAtual(); if(!l) return;
+  const maior = lvTomMaiorAtual(l); if(!maior){ abrirLvTomPicker('edit'); return; }
+  if(typeof driveSoArquivo === 'function' && driveSoArquivo(l)){ showToast('Música só com o PDF do Drive: toque no tom para escolher'); return; }   // trocar o tom lê o PDF: não a cada passo da rodinha
+  lvTomRodando = true;
+  lvTomPickerModo = 'edit';
+  lvTomGridEscolher(LV_TONS_RODA[((lvPc(maior) + d) % 12 + 12) % 12], !!l.tomModoMenor);
+  lvTomRodaFim();
+}
+function lvCapoPasso(d){
+  const l = getLouvorAtual(); if(!l || l.medley || (typeof driveSoArquivo === 'function' && driveSoArquivo(l))) return;
+  const n = Math.max(0, Math.min(9, lvCapo(l) + d)); if(n === lvCapo(l)) return;
+  lvTomRodando = true;
+  lvCapoEscolher(n);
+  lvTomRodaFim();
+}
+(function(){
+  const roda = (el, passo)=>{
+    if(!el) return;
+    let acumulado = 0, ultimo = 0;
+    el.addEventListener('wheel', e=>{
+      e.preventDefault();
+      acumulado += e.deltaY;
+      const agora = Date.now();
+      if(Math.abs(acumulado) < 40 || agora - ultimo < 70) return;   // touchpad manda muitos eventos pequenos
+      passo(acumulado < 0 ? 1 : -1);
+      acumulado = 0; ultimo = agora;
+    }, { passive:false });
+  };
+  roda(document.getElementById('lvTomBox'), lvTomPasso);
+  roda(document.getElementById('lvCapoBtn'), lvCapoPasso);
+  /* segurar no Tom = relativo; o clique que vem depois de segurar não abre o seletor */
+  const tom = document.getElementById('lvTomBox'); if(!tom) return;
+  let t = null, segurou = false;
+  tom.addEventListener('pointerdown', ()=>{
+    segurou = false; clearTimeout(t);
+    t = setTimeout(()=>{
+      const l = getLouvorAtual(); const maior = l && lvTomMaiorAtual(l); if(!maior) return;
+      segurou = true;
+      if(navigator.vibrate) try{ navigator.vibrate(15); }catch(_){}
+      lvTomPickerModo = 'edit';
+      lvTomGridEscolher(maior, !l.tomModoMenor);
+    }, LV_TOM_SEGURAR_MS);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>tom.addEventListener(ev, ()=>clearTimeout(t)));
+  tom.addEventListener('click', e=>{ if(segurou){ segurou = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  tom.addEventListener('contextmenu', e=>e.preventDefault());
+})();
 /* reescreve as linhas de acordes: sobe/desce "delta" e usa os nomes do tom de destino */
 function lvTransposeConteudoTexto(conteudo, delta, tom, tomAntes){
   if(!delta && !tom) return conteudo;
@@ -891,7 +949,7 @@ function lvTomGridEscolher(nota, modoMenor){
     if(el){ el.value = a.conteudo; lvAtualizarEditor(); }
     atualizarLvTomBox();
     renderLouvorPdfPreview();
-    if(typeof driveTomMudou === 'function') driveTomMudou(a);   // já estava no Drive: troca o arquivo pelo do tom novo
+    if(typeof driveTomMudou === 'function' && !lvTomRodando) driveTomMudou(a);   // já estava no Drive: troca o arquivo pelo do tom novo (rodinha: só quando parar)
     lvAtualizarTelas();
   };
   if(porGrau){
@@ -2005,5 +2063,5 @@ function lvCapoEscolher(n){
   atualizarLvTomBox();
   renderLouvorPdfPreview();
   lvCapoPintar(l);
-  if(typeof driveTomMudou === 'function') driveTomMudou(l);   // os acordes do arquivo do Drive mudaram
+  if(typeof driveTomMudou === 'function' && !lvTomRodando) driveTomMudou(l);   // os acordes do arquivo do Drive mudaram
 }

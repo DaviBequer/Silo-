@@ -1876,8 +1876,10 @@ a.drive-falta:hover{color:var(--primary)}
 #lvPanelEdicao[data-modo="folha"] .lv-page-sheet{min-height:0;max-width:none;margin-bottom:0;padding:4px 2px 0;border:none;background:none;box-shadow:none}
 .lv-page-top{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3);margin-bottom:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .lv-page-top-text{flex:1;min-width:0}
-.lv-title-input{width:100%;padding:0;border:none;background:none;color:var(--text);font-family:var(--font-title);font-size:24px;font-weight:600;outline:none}
-.lv-artist-input{width:100%;margin-top:2px;padding:0;border:none;background:none;color:var(--text-faint);font:inherit;font-size:14px;outline:none}
+.lv-title-input{width:100%;padding:0;border:none;background:none;color:#141416;font-family:'Outfit',var(--font-title);font-size:30px;font-weight:300;line-height:1.1;outline:none}
+.lv-artist-input{width:100%;margin:0 0 4px;padding:0;border:none;background:none;color:#2f6db0;font-family:'Outfit',sans-serif;font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;outline:none}
+/* cabeçalho da música igual ao do PDF (D1, escolha do Davi): cantor azul, pequeno e espaçado EM CIMA do nome fino e grande */
+.lv-page-top-text{display:flex;flex-direction:column-reverse}
 .lv-categoria-mini{margin-top:10px;gap:6px}
 .lv-categoria-mini .dif-chip{flex:0 0 auto;min-width:0;padding:5px 11px;border-radius:20px;font-size:11.5px}
 .lv-topo-acoes{display:flex;align-items:center;gap:6px}
@@ -1940,7 +1942,7 @@ a.drive-falta:hover{color:var(--primary)}
 @font-face{font-family:'Inconsolata';src:url('fonts/Inconsolata-Bold.ttf') format('truetype');font-weight:600;font-display:swap}
 .lv-editor-wrap{position:relative;flex:1;margin-top:6px}
 .lv-editor-realce,.lv-editor-wrap .lv-editor-textarea{margin:0;padding:0;border:0;font-family:'Inconsolata',ui-monospace,'Courier New',monospace;font-size:16px;line-height:1.7;letter-spacing:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;tab-size:4}
-.lv-editor-realce{position:absolute;inset:0;color:var(--text);pointer-events:none}
+.lv-editor-realce{position:absolute;inset:0;color:#202024;pointer-events:none}   /* a folha é branca: letra escura como no PDF */
 .lv-editor-textarea{width:100%;flex:1;min-height:0;padding:0;border:none;border-radius:0;background:transparent;color:var(--text);resize:none}
 .lv-editor-textarea:focus{outline:none}
 .lv-editor-wrap .lv-editor-textarea{position:relative;z-index:1;display:block;width:100%;min-height:420px;overflow:hidden;resize:none;background:transparent;color:transparent;caret-color:var(--text);-webkit-text-fill-color:transparent}
@@ -1949,8 +1951,8 @@ a.drive-falta:hover{color:var(--primary)}
 .lv-editor-realce .rl-cursor{display:inline-block;width:2px;height:1.15em;margin-left:1px;vertical-align:-.2em;background:var(--text);animation:piscar .9s steps(2) infinite}
 .lv-editor-wrap.escrevendo .lv-editor-textarea{caret-color:transparent}
 .lvcmp-status{flex-shrink:0}
-.rl-acorde{color:#e8711a}
-.rl-bloco{border-radius:4px;background:#d8e0ec;color:var(--text);font-weight:600}
+.rl-acorde{color:#f07a14;font-weight:600}   /* igual ao PDF: laranja e negrito (Inconsolata Bold tem a mesma largura) */
+.rl-bloco{border-radius:3px;background:#74768a;color:#fff;font-weight:600;text-transform:uppercase}   /* a pílula das partes do PDF (maiúsculas não mudam a largura na letra mono) */
 .rl-marca{border-radius:4px;background:var(--card-2);color:var(--text-faint)}
 .rl-olhar{border-radius:3px;background:rgba(250,204,21,.38);box-shadow:0 0 0 2px rgba(250,204,21,.38)}
 /* seletor de tom */

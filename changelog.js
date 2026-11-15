@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.6', itens: [
+    'Computador: rodinha do mouse em cima do Tom sobe ou desce meio tom; em cima do Capo muda a casa',
+    'Tocar e segurar no Tom (sem abrir o seletor) troca para o relativo, maior ou menor',
+    'Editor da música com a mesma cara do PDF: cantor azul em cima, nome fino, partes na pílula cinza e acordes laranja em negrito'
+  ] },
   { versao: 'v22.5', itens: [
     'PDF com cabeçalho novo (D1): cantor em azul em cima, nome fino e grande, Tom e Capo só com os números, na letra do app',
     'Medley no PDF: cada música começa com o número numa bolinha azul, o cantor e o nome (sem o tom)'
