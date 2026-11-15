@@ -867,10 +867,8 @@ function cultoColarRender(entrar){
         : `<select class="cu-colar-parte" aria-label="Parte" onchange="cuColar[${i}].parte=this.value">${opcoesParte(it.parte)}</select>`}
       <span class="cu-colar-st ${it.status}">${lvEsc(it.status === 'erro' ? it.erro : it.status === 'buscando' ? (it.passo || 'buscando…') : montado && !it.status ? 'na fila' : (CU_COLAR_ST[it.status] || (it.grupo ? 'vai buscar a cifra' : 'vai buscar no Drive ou no Cifra Club')))}</span>
     </div>`;
-  }).join('') : '<div class="gm-vazio">Toque em "Colar o que copiei" (ou cole no campo): cada linha vira uma música no roteiro.</div>')
-    + (perguntaDe >= 0 ? `<div class="cu-perg-veu"><div class="cu-colar-pergunta cu-perg-card" data-i="${perguntaDe}">${cuColar[perguntaDe].pergunta.html}</div></div>` : '');
-  /* a pergunta (qual PDF, qual medley, cantor) fica no meio da tela, por cima da lista */
-  if(perguntaDe >= 0){ const it = cuColar[perguntaDe], el = lista.querySelector(`.cu-perg-card[data-i="${perguntaDe}"]`); if(el) it.pergunta.montar(it.pergunta.fim, el); }
+  }).join('') : '<div class="gm-vazio">Toque em "Colar o que copiei" (ou cole no campo): cada linha vira uma música no roteiro.</div>');
+  cuPerguntaMostrar(perguntaDe);
   document.getElementById('cuColarAcoes').style.display = cuColar.length ? '' : 'none';
 }
 /* medleys criados nesta montagem (grupo → id da música do medley) */
@@ -1223,3 +1221,17 @@ async function cultoColarDoCifraClub(it, criar){   // criar=false: só lê (medl
   it.status = 'cifra';
   return l;
 }
+/* a pergunta (qual PDF, qual medley, cantor) fica no meio da TELA, por cima de tudo. Vai direto no <body>: dentro da janela
+   ela ficava presa no pedaço da lista e por cima da placa (print do Davi, 15/11). Só refaz quando a pergunta muda (sem piscar). */
+function cuPerguntaMostrar(i){
+  let veu = document.getElementById('cuPergVeu');
+  const it = i >= 0 ? cuColar[i] : null;
+  if(!it || !it.pergunta || !document.getElementById('modalCultoColar')?.classList.contains('active')){ veu?.remove(); return; }
+  if(veu && veu.perg === it.pergunta) return;
+  if(!veu){ veu = document.createElement('div'); veu.id = 'cuPergVeu'; veu.className = 'cu-perg-veu'; document.body.appendChild(veu); }
+  veu.perg = it.pergunta;
+  veu.innerHTML = `<div class="cu-colar-pergunta cu-perg-card" data-i="${i}" role="dialog" aria-modal="true">${it.pergunta.html}</div>`;
+  it.pergunta.montar(it.pergunta.fim, veu.firstElementChild);
+}
+/* a janela do colar fechou (Cancelar, voltar do celular): a pergunta some junto */
+{ const m = document.getElementById('modalCultoColar'); if(m) new MutationObserver(()=>{ if(!m.classList.contains('active')) document.getElementById('cuPergVeu')?.remove(); }).observe(m, { attributes:true, attributeFilter:['class'] }); }

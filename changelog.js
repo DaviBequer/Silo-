@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v23.6', itens: [
+    'Colar do WhatsApp: a pergunta do medley (qual PDF usar) aparece no meio da tela com fundo firme, sem ficar embaralhada em cima da placa'
+  ] },
   { versao: 'v23.5', itens: [
     'Placa do culto: barrinha de progresso das músicas prontas',
     'As partes vêm sozinhas: a 1ª música é a Abertura, Harpa Cristã vai para Harpa e corinho para Boas-vindas',
