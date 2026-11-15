@@ -164,6 +164,12 @@ async function rodarTestes(){
     igual('colar: Harpa com o nome escrito', ((x)=>[x.titulo, x.artista])(cultoColarParse('Harpa: 15 - mais perto quero estar')[0]), ['Mais Perto Quero Estar', 'Harpa Cristã - 15']);
     igual('colar: maiúsculas no nome, palavrinhas e siglas', [cultoNomeFormatado('o SENHOR é meu pastor'), cultoNomeFormatado('ministério IAP de louvor')], ['O Senhor é Meu Pastor', 'Ministério IAP de Louvor']);
     igual('colar: "Harpa 127" em qualquer parte vira hino da Harpa', cultoColarParse('Hinos: Harpa Cristã 545 (D)')[0].harpaNum, '545');
+    igual('Cifra Club no tom da música (?keyShape=)', [lvCcComTom('https://www.cifraclub.com.br/a/b/', 'A', 'C'), lvCcComTom('https://www.cifraclub.com.br/a/b/?x=1', 'A', 'G'), lvCcComTom('https://www.cifraclub.com.br/a/b/', 'Am', 'Am'), lvCcComTom('https://www.cifraclub.com.br/a/b/', '', 'C')],
+      ['https://www.cifraclub.com.br/a/b/?keyShape=3', 'https://www.cifraclub.com.br/a/b/?keyShape=10', 'https://www.cifraclub.com.br/a/b/', 'https://www.cifraclub.com.br/a/b/']);
+    igual('Cifra Club: medley colado tem um botão por música, do Drive tem botão pelo nome', [
+      lvCcAlvos({ titulo:'A + B', artista:'Medley', conteudo:'[♪ Hino A — Tom F]\nF\nletra\n--\n[♪ Hino B — Tom C]\nC\nletra' }).map(x=>x.titulo + ':' + x.tom),
+      lvCcAlvos({ titulo:'Deus Tremendo', artista:'Shirley', tomOriginal:'E', transpose:0, origem:{ tipo:'drive' }, conteudo:'' }).map(x=>x.titulo + ':' + x.url)
+    ], [['Hino A:F', 'Hino B:C'], ['Deus Tremendo:']]);
     igual('colar: só o número e o tom = Harpa (qualquer parte)', ((x)=>[x.harpaNum, x.tom && x.tom.raiz])(cultoColarParse('Abertura: 127 - Dó')[0]), ['127', 'C']);
     igual('Harpa no Drive pelo número (pasta Harpa, zeros, ou nome começando pelo número)', [
       cultoHarpaNoDrive('127', [{ name:'0127 - O Senhor da Ceifa.pdf', pasta:'Harpa' }, { name:'1270.pdf', pasta:'Harpa' }]).map(f=>f.name),

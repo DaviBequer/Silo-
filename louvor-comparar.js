@@ -39,11 +39,69 @@ function lvAtualizarBtnComparar(l){
   const sd = document.getElementById('lvBtnSoDrive');
   if(sd) sd.style.display = l && l.origem && l.origem.tipo === 'drive' && l.origem.id && !l.origem.apagadoNoDrive && (l.conteudo || '').trim() ? '' : 'none';
   setTimeout(lvAcoesBarraAtualizar, 0);
-  /* logo do Cifra Club: abre no navegador a página de onde a cifra veio (medley: uma por música) */
+  /* logo do Cifra Club: abre a música no Cifra Club JÁ NO TOM da música (medley: uma por música; do Drive: acha pelo nome) */
   const el = document.getElementById('lvLinksCifra'); if(!el) return;
-  const links = l && (l.cifraLinks && l.cifraLinks.length ? l.cifraLinks : l.origem && l.origem.tipo === 'cifraclub' && l.origem.url ? [{ titulo: l.titulo, url: l.origem.url }] : []);
-  el.innerHTML = (links || []).filter(x=>/^https:\/\/(www\.|m\.)?cifraclub\.com\.br\//.test(x.url || '')).slice(0, 4).map(x=>
-    `<a class="lv-icone-btn lv-link-cifra" href="${lvEsc(x.url)}" target="_blank" rel="noopener" title="Abrir no Cifra Club${links.length > 1 ? ': ' + lvEsc(x.titulo || '') : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20"></a>`).join('');
+  const alvos = l ? lvCcAlvos(l).slice(0, 4) : [];
+  el.innerHTML = alvos.map((x, i)=>
+    `<button type="button" class="lv-icone-btn lv-link-cifra" onclick="lvAbrirCifraClub(${i})" title="Abrir no Cifra Club${alvos.length > 1 ? ': ' + lvEsc(x.titulo || '') : ''}${x.tom ? ' (tom ' + lvEsc(x.tom) + ')' : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20"></button>`).join('');
+}
+/* pedido do Davi (15/11): o Cifra Club abre direto no tom pelo endereço: ?keyShape=N = N semitons acima do tom do site
+   (conferido: Deus Tremendo está em A no site e ?keyShape=3 abre em C) */
+function lvCcComTom(url, tomSite, tomApp){
+  const raiz = t=>lvPc(String(t || '').trim().replace(/m$/, ''));
+  const a = raiz(tomSite), b = raiz(tomApp), u = String(url).replace(/[?#].*$/, '');
+  if(a < 0 || b < 0) return u;
+  const n = ((b - a) % 12 + 12) % 12;
+  return n ? u + '?keyShape=' + n : u;
+}
+/* o que cada botão do Cifra Club abre: { titulo, artista, tom (o da música no app), url, tomSite, guardar(url, tomSite) } */
+function lvCcAlvos(l){
+  const ccUrl = u=>/^https:\/\/(www\.|m\.)?cifraclub\.com\.br\//.test(u || '');
+  const tomTxt = (t, menor)=>t ? (menor ? lvRelativoMenor(t) + 'm' : t) : '';
+  /* medley montado no app: cada música aponta para a música dela */
+  if(l.medley && (l.medley.musicas || []).length){
+    return l.medley.musicas.map(m=>{
+      const s = (state.louvores || []).find(x=>x.id === m.id) || {}, o = s.origem && s.origem.tipo === 'cifraclub' && ccUrl(s.origem.url) ? s.origem : null;
+      return { titulo: s.titulo || '', artista: s.artista || '', tom: tomTxt(m.tom, m.menor) || lvTomAtual(s), url: (o && o.url) || s.ccUrl || '', tomSite: (o && o.tomSite) || s.ccTomSite || '',
+        guardar: (u, t)=>{ if(o) o.tomSite = t; else { s.ccUrl = u; s.ccTomSite = t; } persist(); } };
+    });
+  }
+  /* medley do colar do WhatsApp: "[♪ Nome — Tom X]" no texto marca cada música */
+  const marcas = [...String(l.conteudo || '').matchAll(/^\[♪\s*(.+?)(?:\s+—\s+Tom\s+(\S+))?\]\s*$/gm)];
+  if(marcas.length){
+    return marcas.map(mk=>{
+      const lk = (l.cifraLinks || []).find(x=>cuNorm(x.titulo) === cuNorm(mk[1]));
+      return { titulo: mk[1], artista: '', tom: mk[2] || '', url: lk && ccUrl(lk.url) ? lk.url : '', tomSite: lk ? lk.tomSite || '' : '',
+        guardar: (u, t)=>{ if(lk){ lk.url = u; lk.tomSite = t; } else l.cifraLinks = [...(l.cifraLinks || []), { titulo: mk[1], url: u, tomSite: t }]; persist(); } };
+    });
+  }
+  const o = l.origem && l.origem.tipo === 'cifraclub' && ccUrl(l.origem.url) ? l.origem : null;
+  if(!o && !(l.titulo || '').trim()) return [];
+  return [{ titulo: l.titulo || '', artista: l.artista || '', tom: lvTomAtual(l), url: (o && o.url) || l.ccUrl || '', tomSite: (o && o.tomSite) || l.ccTomSite || '',
+    guardar: (u, t)=>{ if(o) o.tomSite = t; else { l.ccUrl = u; l.ccTomSite = t; } persist(); } }];
+}
+/* abre a aba já no toque (o navegador não bloqueia) e manda para o endereço certo quando souber o tom do site */
+async function lvAbrirCifraClub(i){
+  const l = getLouvorAtual(); if(!l) return;
+  const x = lvCcAlvos(l)[i]; if(!x) return;
+  const pronto = x.url && x.tomSite;
+  const w = pronto ? null : window.open('about:blank', '_blank');
+  try{
+    let url = x.url, tomSite = x.tomSite;
+    if(!url){   // música do Drive (ou sem link): acha no Cifra Club pelo nome
+      showToast('Procurando no Cifra Club…');
+      const harpa = /harpa/i.test(x.artista) && (/(\d{1,3})/.exec(x.artista) || [])[1];
+      const lista = (await ccChamar({ busca: harpa ? 'harpa cristã ' + harpa : (x.titulo + ' ' + (/^medley$/i.test(x.artista) ? '' : x.artista)).trim() })).musicas || [];
+      const m = harpa ? lista.find(m=>/harpa-crista/i.test(m.url) && new RegExp('(^|\\D)0*' + harpa + '(\\D|$)').test(m.titulo + ' ' + m.artista + ' ' + m.url))
+        : lista.find(m=>cuNorm(m.titulo) === cuNorm(x.titulo) && (!x.artista || cuNorm(m.artista) === cuNorm(x.artista))) || lista.find(m=>cuNorm(m.titulo) === cuNorm(x.titulo)) || lista[0];
+      if(!m){ if(w) w.close(); showToast('Não achei essa música no Cifra Club'); return; }
+      url = m.url;
+    }
+    if(!tomSite && x.tom){ const c = await ccChamar({ url }); tomSite = (c && c.tom) || ''; }
+    if(url !== x.url || tomSite !== x.tomSite) x.guardar(url, tomSite);
+    const final = lvCcComTom(url, tomSite, x.tom);
+    if(w) w.location.href = final; else window.open(final, '_blank', 'noopener');
+  }catch(e){ if(w) w.close(); showToast('Cifra Club: ' + ((e && e.message) || e)); }
 }
 
 /* a pílula de ações da música some quando nenhum botão dela está à mostra */
