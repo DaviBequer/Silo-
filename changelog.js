@@ -1,6 +1,13 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v23.1', itens: [
+    'A letra da cifra volta para a fonte de antes',
+    'PDF: a letra fica sempre no tamanho escolhido; se não couber, vai para a página seguinte',
+    'Cabeçalho: cantor um pouco maior e TOM/CAPO centralizados em cima da nota',
+    'Música: botão de configurações em cima e funcionando, letra menor e partes como antes',
+    'Medley: número de cada música no atalho do Cifra Club'
+  ] },
   { versao: 'v23.0', itens: [
     'Letra e acordes da cifra na fonte Geist Mono, mais fina: letra leve e acordes um pouco mais fortes',
     'A mesma fonte no PDF, no Visualizar e no editor'

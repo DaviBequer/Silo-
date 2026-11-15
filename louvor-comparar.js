@@ -43,7 +43,7 @@ function lvAtualizarBtnComparar(l){
   const el = document.getElementById('lvLinksCifra'); if(!el) return;
   const alvos = l ? lvCcAlvos(l).slice(0, 4) : [];
   el.innerHTML = alvos.map((x, i)=>
-    `<button type="button" class="lv-icone-btn lv-link-cifra" onclick="lvAbrirCifraClub(${i})" title="Abrir no Cifra Club${alvos.length > 1 ? ': ' + lvEsc(x.titulo || '') : ''}${x.tom ? ' (tom ' + lvEsc(x.tom) + ')' : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20"></button>`).join('');
+    `<button type="button" class="lv-icone-btn lv-link-cifra" onclick="lvAbrirCifraClub(${i})" title="Abrir no Cifra Club${alvos.length > 1 ? ': ' + lvEsc(x.titulo || '') : ''}${x.tom ? ' (tom ' + lvEsc(x.tom) + ')' : ''}" aria-label="Abrir no Cifra Club ${lvEsc(x.titulo || '')}"><img src="logo-cifraclub.png" alt="" width="20" height="20">${alvos.length > 1 ? `<span class="lv-cc-num">${i + 1}</span>` : ''}</button>`).join('');   // medley: número da música no canto (pedido do Davi)
 }
 /* pedido do Davi (15/11): o Cifra Club abre direto no tom pelo endereço: ?keyShape=N = N semitons acima do tom do site
    (conferido: Deus Tremendo está em A no site e ?keyShape=3 abre em C) */

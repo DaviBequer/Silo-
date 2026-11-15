@@ -1630,7 +1630,7 @@ document.addEventListener('keydown', e=>{
 /* a folha se ajusta à largura sempre que o espaço muda (abrir a música, girar o celular, trocar de modo) */
 if(window.ResizeObserver){ const _w = document.getElementById('lvPdfWrap'); let _larg = 0; if(_w) new ResizeObserver(()=>{ if(_w.clientWidth && _w.clientWidth !== _larg){ _larg = _w.clientWidth; lvAjustarZoomFolha(); } }).observe(_w); }   // só quando a largura muda
 window.addEventListener('resize', ()=>{ if(document.getElementById('lvPanelEdicao')?.classList.contains('active')) lvAjustarZoomFolha(); });
-/* fonte da letra no PDF (fonts/GeistMono, licença OFL): carregada uma vez (ao abrir uma música ou o Culto) e guardada em base64 */
+/* fonte da letra no PDF (fonts/Inconsolata, licença OFL): carregada uma vez (ao abrir uma música ou o Culto) e guardada em base64 */
 let lvPdfFonte = null, lvPdfFontePedido = null;
 function lvPdfCarregarFonte(){
   if(lvPdfFonte) return Promise.resolve(lvPdfFonte);
@@ -1642,7 +1642,7 @@ function lvPdfCarregarFonte(){
   };
   /* junto vem o gerador de PDF (jsPDF), que não carrega mais na abertura do app */
   /* + Outfit (a letra do app, OFL) para o cabeçalho D1 e o separador do medley (escolha do Davi, 15/11) */
-  lvPdfFontePedido = Promise.all([b64('GeistMono-Light.ttf'), b64('GeistMono-Medium.ttf'), garantirJsPDF(),
+  lvPdfFontePedido = Promise.all([b64('Inconsolata-Regular.ttf'), b64('Inconsolata-Bold.ttf'), garantirJsPDF(),
       b64('Outfit-Light.ttf').catch(()=>null), b64('Outfit-Regular.ttf').catch(()=>null), b64('Outfit-Medium.ttf').catch(()=>null)])
     .then(([r, b, _, ol, or, om])=>(lvPdfFonte = { r, b, ol, or, om })).catch(()=>{ lvPdfFontePedido = null; return null; });
   return lvPdfFontePedido;
@@ -1725,9 +1725,9 @@ function lvMontarPdf(l){
 
   /* cabeçalho D1 (escolha do Davi, 15/11): cantor em azul, pequeno e espacado, em cima; nome fino e grande;
      à direita "TOM" e "CAPO" só com os números, na letra do app */
-  const cantorY = 30, tituloY = (l.artista ? cantorY + 8 : 22) + l.pdfTamanhoTitulo * 0.82;
+  const cantorY = 30, tituloY = (l.artista ? cantorY + 10 : 22) + l.pdfTamanhoTitulo * 0.82;
   if(l.artista){
-    doc.setFont(...sans.medio); doc.setFontSize(7.6); doc.setTextColor(...azulCantor);
+    doc.setFont(...sans.medio); doc.setFontSize(9); doc.setTextColor(...azulCantor);   // pedido do Davi: cantor um pouco maior
     espacado(String(l.artista).toUpperCase(), marginX, cantorY, 1.6);
   }
   doc.setFont(...sans.leve); doc.setFontSize(l.pdfTamanhoTitulo); doc.setTextColor(20,20,22);
@@ -1740,10 +1740,10 @@ function lvMontarPdf(l){
       const wv = doc.getTextWidth(val);
       doc.setFont(...sans.normal); doc.setFontSize(6.8); doc.setTextColor(150,150,154);
       const wr = doc.getTextWidth(rot) + rot.length * 1.2;
-      const w = Math.max(wv, wr);
-      espacado(rot, x, rotY, 1.2, 'right');
+      const w = Math.max(wv, wr), cx = x - w/2;   // rótulo e número centralizados um em cima do outro (pedido do Davi: o tom ficava à direita do rótulo)
+      espacado(rot, cx - (wr - 1.2)/2, rotY, 1.2);
       doc.setFont(...sans.leve); doc.setFontSize(21); doc.setTextColor(20,20,22);
-      doc.text(val, x, valY, { align:'right' });
+      doc.text(val, cx, valY, { align:'center' });
       x -= w + 16;
     };
     if(lvCapo(l)) coluna('CAPO', String(lvCapo(l)));
@@ -1754,13 +1754,13 @@ function lvMontarPdf(l){
   doc.setLineWidth(1);
   doc.line(marginX, linhaY, pageW-marginX, linhaY);
 
-  /* letra e acordes em Geist Mono (escolha do Davi, 15/11: fina e maior; letra Light, acordes Medium); sem a fonte carregada, Courier */
+  /* letra e acordes em Inconsolata (a Geist Mono deu problema: Davi pediu a antiga de volta, 15/11); sem a fonte carregada, Courier */
   let mono = 'courier';
   if(lvPdfFonte){
     try{
-      doc.addFileToVFS('GeistMono-Light.ttf', lvPdfFonte.r); doc.addFont('GeistMono-Light.ttf', 'GeistMono', 'normal');
-      doc.addFileToVFS('GeistMono-Medium.ttf', lvPdfFonte.b); doc.addFont('GeistMono-Medium.ttf', 'GeistMono', 'bold');
-      mono = 'GeistMono';
+      doc.addFileToVFS('Inconsolata-Regular.ttf', lvPdfFonte.r); doc.addFont('Inconsolata-Regular.ttf', 'Inconsolata', 'normal');
+      doc.addFileToVFS('Inconsolata-Bold.ttf', lvPdfFonte.b); doc.addFont('Inconsolata-Bold.ttf', 'Inconsolata', 'bold');
+      mono = 'Inconsolata';
     }catch(e){ mono = 'courier'; }
   }
   const { items } = lvParseContent(l.conteudo);
@@ -1864,16 +1864,9 @@ function lvMontarPdf(l){
     });
     return paginas;
   }
-  /* cabe numa folha só? encolhe a letra até 78% (mín. 9pt), como a folha da tela; se nem assim couber, fica no tamanho normal */
+  /* pedido do Davi (15/11): a letra fica sempre no tamanho escolhido; não coube, vai para a página seguinte (antes encolhia para caber numa folha) */
   if(l.colunas === 'auto') while(cols < maxCols && layout(l.pdfTamanhoTexto, false) > 1){ cols++; montarCols(); }
-  let fs = l.pdfTamanhoTexto;
-  if(layout(fs, false) > 1){
-    const minimo = Math.max(9, l.pdfTamanhoTexto * 0.78);
-    let f = fs;
-    while(f - 0.5 >= minimo && layout(f, false) > 1) f -= 0.5;
-    if(layout(f, false) === 1) fs = f;
-  }
-  layout(fs, true);
+  layout(l.pdfTamanhoTexto, true);
 
   const tomRaiz = lvTomAtual(l);
   const nomePartes = [l.artista, l.titulo||'Sem título', tomRaiz].filter(Boolean);
