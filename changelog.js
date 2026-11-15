@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.1', itens: [
+    'Colar do WhatsApp: só o número (e o tom) já é hino da Harpa, em qualquer parte',
+    'Harpa no Drive achada pelo número: na pasta da Harpa, com zeros na frente, pelo começo do nome e, se não achar, buscando no Drive inteiro'
+  ] },
   { versao: 'v22.0', itens: [
     'Baixar PDF da música: baixa na hora do clique e sempre avisa (Baixando… ou o erro)'
   ] },

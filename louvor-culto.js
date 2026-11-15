@@ -582,7 +582,8 @@ function cultoColarParse(texto){
       if(!titulo) return;
       /* hino da Harpa pelo número: na parte "Harpa" (127) ou escrito "Harpa 127" / "Harpa Cristã 127" em qualquer parte */
       const mh = /^harpa(?:\s+crist[aã])?\s*:?\s*(\d{1,3})$/i.exec(titulo);
-      const harpaNum = mh ? mh[1] : /harpa/.test(vozSemAcento(nomeParte)) && /^\d{1,3}$/.test(titulo) ? titulo : '';
+      /* só o número (com ou sem a parte "Harpa") = hino da Harpa: música não tem nome que é só número (pedido do Davi, 15/11) */
+      const harpaNum = mh ? mh[1] : /^\d{1,3}$/.test(titulo) ? String(Number(titulo)) : '';
       /* Harpa (pedido do Davi): cantor "Harpa Cristã - 127"; o nome só se veio escrito ("Harpa: 127 - Mais perto quero estar"),
          senão fica vazio e vem do Drive ou do Cifra Club ao montar */
       if(harpaNum){ titulo = artista; artista = 'Harpa Cristã - ' + harpaNum; }
@@ -996,9 +997,15 @@ function cuParecidos(t, pdfs){
 async function cultoColarDoDrive(it, pdfs){
   cultoColarPasso(it, 'Procurando no Drive…');
   const t = cuNorm(it.titulo), a = cuNorm(it.artista), nome = f=>cuNorm(f.name.replace(/\.pdf$/i, ''));
-  let cands = it.harpaNum
-    ? pdfs.filter(f=>/harpa/i.test(f.pasta + ' ' + f.name) && new RegExp('(^|\\D)' + it.harpaNum + '(\\D|$)').test(f.name))
-    : t.length >= 4 ? pdfs.filter(f=>nome(f).includes(t)) : [];
+  let cands = it.harpaNum ? cultoHarpaNoDrive(it.harpaNum, pdfs) : t.length >= 4 ? pdfs.filter(f=>nome(f).includes(t)) : [];
+  /* Harpa que não está nas pastas lidas (subpasta mais funda): busca no Drive inteiro pelo número, como na busca do Drive */
+  if(it.harpaNum && !cands.length){
+    try{
+      const q = `name contains '${Number(it.harpaNum)}' and mimeType='application/pdf' and trashed=false`;
+      const r = await driveApi('files?pageSize=100&fields=files(id,name,modifiedTime,webViewLink,parents)&q=' + encodeURIComponent(q));
+      cands = cultoHarpaNoDrive(it.harpaNum, (r.files || []).map(f=>({ ...f, pasta: '' })));
+    }catch(e){}
+  }
   if(a && !it.harpaNum) cands = cands.filter(f=>nome(f).includes(a));   // com cantor: só o dele
   /* nome não igual (uma palavra a mais ou a menos): os parecidos, sempre perguntando */
   const parecidos = !cands.length && !it.harpaNum;
@@ -1025,6 +1032,16 @@ async function cultoColarDoDrive(it, pdfs){
   }
   it.status = 'drive';
   return l;
+}
+/* hino da Harpa no Drive pelo número (pedido do Davi: "no Drive é só pesquisar pelo número"): primeiro os da pasta/nome com "Harpa"
+   (aceita zeros: 0127); se nenhum, os PDFs cujo nome começa pelo número ("127 - O Senhor da Ceifa.pdf", "Hino 127 ...") */
+function cultoHarpaNoDrive(num, pdfs){
+  const n = String(Number(num));
+  const re = new RegExp('(^|\\D)0*' + n + '(\\D|$)');
+  const harpa = pdfs.filter(f=>/harpa/i.test((f.pasta || '') + ' ' + f.name) && re.test(f.name));
+  if(harpa.length) return harpa;
+  const inicio = new RegExp('^\\D{0,12}?0*' + n + '(\\D|$)');
+  return pdfs.filter(f=>inicio.test(f.name.replace(/\.pdf$/i, '')));
 }
 /* "127 - Harpa Cristã", "Harpa Cristã 127 - O Senhor da Ceifa Chama - E" → só o nome do hino ("" quando não tem nome) */
 function cultoHarpaLimparNome(s, num){
