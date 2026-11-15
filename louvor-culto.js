@@ -334,9 +334,11 @@ function renderCultoBotao(){
   if(pv) pv.innerHTML = `<p class="lpv-dica">Escolha uma música na lista ao lado.</p>`;
   const pe = document.getElementById('lvCultoPartes');
   if(pe) pe.innerHTML = itens.map((x, i)=>{
-    const nome = [x.parte.nome, x.l.titulo || 'Sem título'].filter(Boolean).join(' · ');
-    return `<div class="lvcp"><button type="button" class="lvcp-num" onclick="lvcpOpcoes(${i})" title="Opções de ${lvEsc(x.l.titulo || 'Sem título')}" aria-label="Opções de ${lvEsc(x.l.titulo || 'Sem título')}"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}">${i + 1}</i></button>
-      <button type="button" class="lvcp-abrir" onclick="abrirLouvorDetalhe('${x.l.id}')"><span>${lvEsc(nome)}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></button></div>`;
+    const tit = x.l.titulo || 'Sem título';
+    /* pedido do Davi (15/11): o nome da parte é um botão — toca e escolhe outra parte (Abertura, Após a Palavra, Apresentação…) */
+    return `<div class="lvcp"><button type="button" class="lvcp-num" onclick="lvcpOpcoes(${i})" title="Opções de ${lvEsc(tit)}" aria-label="Opções de ${lvEsc(tit)}"><i class="${x.l.status === 'finalizada' ? 'pronta' : ''}">${i + 1}</i></button>
+      <div class="lvcp-meio"><button type="button" class="lvcp-parte" onclick="lvcpParte(${i})" title="Trocar a parte de ${lvEsc(tit)}" aria-label="Parte: ${lvEsc(x.parte.nome || 'sem parte')}. Trocar">${lvEsc(x.parte.nome || 'Parte')}<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      <button type="button" class="lvcp-abrir" onclick="abrirLouvorDetalhe('${x.l.id}')"><span>${lvEsc(tit)}<small>${lvEsc(x.l.artista || x.l.categoria || '')}</small></span><em>${lvEsc(lvTomAtual(x.l) || '')}</em></button></div></div>`;
   }).join('');
 }
 /* ---------- placa = Culto (v19.4): opções do culto e de cada música, sem abrir outra tela ---------- */
@@ -385,6 +387,43 @@ function lvCultoHistorico(){
 }
 async function lvCultoApagar(){ await cultoApagar(); renderCultoBotao(); }
 function lvCultoDrive(){ if(typeof cultoEnviarDrive === 'function') cultoEnviarDrive(); }
+/* trocar a parte de uma música do culto: as partes do roteiro + as de sempre; "Outra parte…" para escrever um nome novo */
+const CU_PARTES_COMUNS = ['Abertura', 'Hinos', 'Harpa', 'Boas-vindas', 'Apresentação', 'Hino', 'Pregação', 'Após a Palavra', 'Ofertório', 'Santa Ceia', 'Final'];
+let lvcpNomesParte = [];
+function lvcpParte(i){
+  const x = lvcpItens[i]; if(!x) return;
+  lvcpFechar();
+  const c = cultoAtual(), vistos = new Set();
+  lvcpNomesParte = [...c.partes.map(p=>p.nome), ...CU_PARTES_COMUNS].filter(n=>{ const k = cuNorm(n || ''); if(!k || vistos.has(k)) return false; vistos.add(k); return true; });
+  lvMenu(x.l.titulo || 'Música', [
+    ...lvcpNomesParte.map((n, k)=>[(cuNorm(n) === cuNorm(x.parte.nome) ? '✓ ' : '') + lvEsc(n), `lvcpMudarParte(${i},${k})`]),
+    ['Outra parte…', `lvcpParteOutra(${i})`]
+  ]);
+}
+function lvcpParteOutra(i){
+  document.getElementById('perguntaCorpo').innerHTML = `<form class="voz-escrever" onsubmit="event.preventDefault();lvcpMudarParte(${i},this.querySelector('input').value)">
+    <input type="text" class="voz-campo" placeholder="Nome da parte (ex.: Testemunho)" autocomplete="off" enterkeyhint="done"><button type="submit" class="btn">Usar</button></form>`;
+  setTimeout(()=>document.querySelector('#perguntaCorpo input')?.focus(), 60);
+}
+function lvcpMudarParte(i, qual){
+  const x = lvcpItens[i]; if(!x) return;
+  const nome = String(typeof qual === 'number' ? lvcpNomesParte[qual] : qual || '').trim(); if(!nome) return;
+  closeModal('modalPergunta');
+  if(cuNorm(nome) === cuNorm(x.parte.nome)) return;
+  const c = cultoAtual();
+  x.parte.musicas = x.parte.musicas.filter(id=>id !== x.l.id);
+  let p = c.partes.find(q=>cuNorm(q.nome) === cuNorm(nome));
+  if(!p){
+    p = { id: cultoId('cp'), nome, quem:'', musicas:[] };
+    /* parte nova entra na ordem de sempre do culto (Abertura … Final), senão antes do Final */
+    const ordem = n=>{ const k = CU_PARTES_COMUNS.findIndex(s=>cuNorm(s) === cuNorm(n)); return k < 0 ? CU_PARTES_COMUNS.length - 1.5 : k; };
+    const depois = c.partes.findIndex(q=>ordem(q.nome) > ordem(nome));
+    depois >= 0 ? c.partes.splice(depois, 0, p) : c.partes.push(p);
+  }
+  p.musicas.push(x.l.id);
+  cultoGravar();
+  showToast(`${x.l.titulo || 'Música'} → ${nome}`);
+}
 /* toque no número (pedido do Davi): uma janelinha ao lado dele só com as setas (a primeira só desce, a última só sobe) */
 function lvcpOpcoes(i){
   lvcpFechar();

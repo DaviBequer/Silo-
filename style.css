@@ -1634,6 +1634,11 @@ body:has(.modal-overlay.active){overflow:hidden}
 .lvcp-pop button:hover{background:rgba(159,193,230,.18)}
 .lvcp-pop button:focus-visible{outline:2px solid var(--latao);outline-offset:2px}
 .lvcp-abrir{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-width:0}
+.lvcp-meio{display:grid;justify-items:start;min-width:0}
+.lvcp-parte{display:inline-flex;align-items:center;gap:4px;min-height:24px;margin:-4px 0 -2px;padding:2px 0;border:none;background:none;color:var(--latao);font:inherit;font-size:10.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.lvcp-parte:hover{text-decoration:underline;text-underline-offset:3px}
+.lvcp-parte:focus-visible{outline:2px solid var(--latao);outline-offset:2px;border-radius:6px}
+.lvcp-meio .lvcp-abrir{width:100%}
 .lvcp-data:focus-visible,.lvcp-drive:focus-visible,.lvcp-num:focus-visible,.lvcp-abrir:focus-visible{outline:2px solid var(--latao);outline-offset:2px;border-radius:8px}
 .pg-banco:disabled{opacity:.35;cursor:default}
 .lvm-perigo .gm-nome{color:var(--danger)}

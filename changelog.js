@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v22.7', itens: [
+    'Placa do culto: toque no nome da parte de uma música (Abertura, Hinos…) para trocar: Após a Palavra, Apresentação, Harpa, Ofertório ou uma parte com outro nome'
+  ] },
   { versao: 'v22.6', itens: [
     'Computador: rodinha do mouse em cima do Tom sobe ou desce meio tom; em cima do Capo muda a casa',
     'Tocar e segurar no Tom (sem abrir o seletor) troca para o relativo, maior ou menor',
