@@ -964,7 +964,7 @@ async function impGarantirXlsx(){
 }
 function impEscolher(){
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = '.ods,.xlsx,.xls,.csv';
+  inp.type = 'file';   // sem accept: no celular o arquivo baixado às vezes vem sem o tipo e ficava cinza
   inp.onchange = ()=>{ if(inp.files[0]) impLer(inp.files[0]); };
   inp.click();
 }
