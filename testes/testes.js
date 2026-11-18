@@ -220,6 +220,8 @@ async function rodarTestes(){
       state.louvores = lAntes;
       igual('culto: a Abertura fica sempre em primeiro (e não puxa mais músicas a cada desenho)', [cH.partes.map(p=>p.nome + ':' + p.musicas.join(',')), cV.partes.map(p=>p.nome + ':' + p.musicas.join(',')), deNovo],
         [['Abertura:h3', 'Hino:h1,h2'], ['Abertura:h1', 'Hino:h2'], false]);
+      { const g = gestCalc('2026-01-01', new Date(2026, 3, 20, 15)), dpp = g.dpp;
+        igual('gestação: DUM 01/01 em 20/04 = 15 sem 4 d, parto 08/10', [g.sem, g.d, g.tri, dpp.getDate(), dpp.getMonth(), dpp.getFullYear(), gestCalc('2026-01-01', new Date(2025, 11, 1))], [15, 4, 2, 8, 9, 2026, null]); }
       /* setas: subir a 2ª para o 1º lugar = ela vira a Abertura e a antiga volta para a parte dela (Harpa) */
       {
         const cAntes = state.cultos, dAntes2 = cultoData, fAntes2 = lvCultoFixo;

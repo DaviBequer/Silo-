@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.2', itens: [
+    'Tela inicial: acompanhamento da gestação (semanas e dias de hoje, tamanho do bebê e previsão do parto)'
+  ] },
   { versao: 'v24.1', itens: [
     'Culto: a Abertura fica sempre como a 1ª música (o colar do WhatsApp deixava o Hino antes)'
   ] },

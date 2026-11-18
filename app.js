@@ -75,6 +75,7 @@ function renderAll(){
   if(typeof renderEmprestimos==='function') renderEmprestimos();
   if(typeof renderVendas==='function') renderVendas();
   if(typeof renderVersiculo==='function') renderVersiculo();
+  if(typeof renderGestacao==='function') renderGestacao();
   if(typeof atualizarSino==='function') atualizarSino();
 }
 

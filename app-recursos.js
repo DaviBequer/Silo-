@@ -588,6 +588,59 @@ function renderVersiculo(){
   el.onclick = ()=>el.classList.toggle('inteiro');
 }
 
+/* ---------- gestação (pedido do Davi, 17/11/2026): semanas e dias de hoje a partir da DUM ----------
+   state.gestacao = { dum:'AAAA-MM-DD' } (a data fica no banco, nunca no código). Tamanho aproximado por semana. */
+const GEST_TAM = [ // [semana, cm, comparação]
+  [4,.1,'uma semente de papoula'],[5,.2,'uma semente de gergelim'],[6,.6,'uma lentilha'],[7,1.3,'um mirtilo'],[8,1.6,'uma framboesa'],
+  [9,2.3,'uma uva'],[10,3.1,'uma azeitona'],[11,4.1,'um figo'],[12,5.4,'um limão'],[13,7.4,'uma vagem'],[14,8.7,'um limão-siciliano'],
+  [15,10.1,'uma maçã'],[16,11.6,'um abacate'],[17,13,'uma pera'],[18,14.2,'um pimentão'],[19,15.3,'uma manga'],[20,25.6,'uma banana'],
+  [21,26.7,'uma cenoura'],[22,27.8,'um mamão papaia'],[23,28.9,'uma toranja'],[24,30,'uma espiga de milho'],[25,34.6,'uma couve-flor'],
+  [26,35.6,'um pé de alface'],[27,36.6,'um brócolis'],[28,37.6,'uma berinjela'],[29,38.6,'uma abóbora pequena'],[30,39.9,'um repolho'],
+  [31,41.1,'um coco'],[32,42.4,'um abacaxi'],[33,43.7,'um melão'],[34,45,'um melão cantalupo'],[35,46.2,'um mamão formosa'],
+  [36,47.4,'uma alface romana'],[37,48.6,'uma acelga'],[38,49.8,'uma abóbora'],[39,50.7,'uma melancia pequena'],[40,51.2,'uma melancia']];
+function gestCalc(dumIso, hoje = new Date()){
+  const dum = calParse(dumIso); if(!dum) return null;
+  const h = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const dias = Math.round((h - dum) / 864e5);
+  if(dias < 0 || dias > 300) return null;
+  const sem = Math.floor(dias / 7), dpp = new Date(dum); dpp.setDate(dpp.getDate() + 280);
+  const t = GEST_TAM[Math.min(Math.max(sem, 4), 40) - 4];
+  return { dias, sem, d: dias % 7, dpp, cm: t[1], comp: t[2], tri: sem < 14 ? 1 : sem < 28 ? 2 : 3, falta: Math.max(0, 280 - dias) };
+}
+function gestBebeSvg(sem){
+  const s = (.5 + .55 * Math.min(Math.max(sem, 4), 40) / 40).toFixed(3);
+  return `<svg viewBox="0 0 120 120" aria-hidden="true"><defs><radialGradient id="gestUt" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#fdeee9"/><stop offset="1" stop-color="#f3d3cc"/></radialGradient></defs>
+  <circle cx="60" cy="60" r="56" fill="url(#gestUt)"/><circle cx="60" cy="60" r="56" fill="none" stroke="#e8bdb3" stroke-width="1.2"/>
+  <g class="gest-bebe" style="transform:scale(${s})"><path d="M70 37c-22-4-38 12-36 33 2 19 19 30 36 25 11-3 18-13 15-24-2-7-8-10-14-8" fill="#f6c6b4"/>
+  <circle cx="71" cy="43" r="18" fill="#f8cdbc"/><path d="M47 84c6 6 14 8 22 6" fill="none" stroke="#e9ac98" stroke-width="5" stroke-linecap="round"/>
+  <path d="M58 60c4 5 9 6 13 4" fill="none" stroke="#e9ac98" stroke-width="4" stroke-linecap="round"/><path d="M76 41a3 2 0 0 0 6 0" fill="none" stroke="#c98b7a" stroke-width="1.2" stroke-linecap="round"/>
+  <circle class="gest-cora" cx="55" cy="70" r="2.4" fill="#e0707a"/></g></svg>`;
+}
+function renderGestacao(){
+  const el = document.getElementById('gestacao'); if(!el) return;
+  const g = state.gestacao && gestCalc(state.gestacao.dum);
+  const inp = `<input type="hidden" id="gestDum" value="${(state.gestacao && state.gestacao.dum) || ''}" onchange="gestMudarDum(this.value)">`;
+  if(!g){
+    el.innerHTML = `<button type="button" class="gest-vazio" onclick="abrirCalendario(document.getElementById('gestDum'), this)">${gestBebeSvg(8)}<span>Acompanhar a gestação<small>Toque e escolha a data de início (DUM)</small></span></button>${inp}`;
+    return;
+  }
+  const f = d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const fs = Math.floor(g.falta / 7), fd = g.falta % 7;
+  el.innerHTML = `<div class="gest-card">${gestBebeSvg(g.sem)}<div class="gest-info">
+    <span class="gest-rot">Gestação · ${g.tri}º trimestre</span>
+    <b class="gest-sem">${g.sem}<small> semanas</small>${g.d ? ` ${g.d}<small> dia${g.d > 1 ? 's' : ''}</small>` : ''}</b>
+    <span class="gest-tam">~${String(g.cm).replace('.', ',')} cm · do tamanho de ${g.comp}</span>
+    <i class="gest-prog"><i style="width:${Math.min(100, g.dias / 2.8).toFixed(1)}%"></i></i>
+    <span class="gest-dpp">Faltam ${fs} sem${fd ? ` e ${fd} d` : ''} · previsão ${f(g.dpp)}</span></div>
+    <button type="button" class="ico-btn gest-editar" title="Mudar a data de início" aria-label="Mudar a data de início" onclick="abrirCalendario(document.getElementById('gestDum'), this)">${ICO('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 16)}</button>${inp}</div>`;
+}
+function gestMudarDum(iso){
+  if(!calParse(iso)) return;
+  state.gestacao = { ...(state.gestacao || {}), dum: iso };
+  persist(); renderGestacao();
+}
+if(typeof aoMudarEstado === 'function') aoMudarEstado(renderGestacao);
+
 /* ---------- nome do ícone ao segurar o dedo (botões só com ícone) ----------
    Vale para todo botão com desenho e sem texto que tenha title/aria-label. Segurou → mostra o nome e não aperta. */
 let icoSegurar = null;   // { el, timer, x, y, mostrou }
