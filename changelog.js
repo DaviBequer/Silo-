@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.5', itens: [
+    'Importar planilha: volta a abrir os arquivos (não a galeria) e não perde o arquivo escolhido no celular'
+  ] },
   { versao: 'v24.4', itens: [
     'Importar planilha: qualquer arquivo pode ser escolhido (no celular a planilha aparecia cinza)'
   ] },

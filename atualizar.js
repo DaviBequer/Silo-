@@ -964,8 +964,11 @@ async function impGarantirXlsx(){
 }
 function impEscolher(){
   const inp = document.createElement('input');
-  inp.type = 'file';   // sem accept: no celular o arquivo baixado às vezes vem sem o tipo e ficava cinza
-  inp.onchange = ()=>{ if(inp.files[0]) impLer(inp.files[0]); };
+  inp.type = 'file';
+  /* extensões + tipos: no Android sem accept abre a galeria (fotos/vídeos); octet-stream = planilha baixada sem tipo */
+  inp.accept = '.xlsx,.xls,.ods,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.oasis.opendocument.spreadsheet,text/csv,application/octet-stream';
+  inp.style.display = 'none'; document.body.appendChild(inp);   // solto fora da página, alguns celulares perdem o arquivo escolhido
+  inp.onchange = ()=>{ const f = inp.files[0]; inp.remove(); if(f) impLer(f); };
   inp.click();
 }
 async function impLer(arquivo){
