@@ -408,6 +408,8 @@ function triggerImportarDados(){
 function onImportFileSelected(event){
   const file = event.target.files[0];
   if(!file) return;
+  /* planilha de gastos pelo mesmo botão (pedido do Davi): vai para a importação de planilha */
+  if(/\.(xlsx|xls|ods|csv)$/i.test(file.name)){ event.target.value = ""; impLer(file); return; }
   const reader = new FileReader();
   reader.onload = function(e){
     let backup;

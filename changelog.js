@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.6', itens: [
+    'Ajustes: o botão Importar também aceita a planilha de gastos (xlsx, xls, ods, csv)'
+  ] },
   { versao: 'v24.5', itens: [
     'Importar planilha: volta a abrir os arquivos (não a galeria) e não perde o arquivo escolhido no celular'
   ] },
