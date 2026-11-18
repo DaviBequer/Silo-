@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.3', itens: [
+    'Histórico: painel de Gastos com período, várias categorias juntas e ordenação em vários níveis',
+    'Planilha: compra parcelada guarda a categoria'
+  ] },
   { versao: 'v24.2', itens: [
     'Tela inicial: acompanhamento da gestação (semanas e dias de hoje, tamanho do bebê e previsão do parto)'
   ] },

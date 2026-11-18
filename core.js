@@ -1332,7 +1332,7 @@ function lancarVista(cartao, o){
 function lancarParcelada(cartao, o){
   if(!state.comprasTracker) state.comprasTracker = [];
   const cp = { id: lancId('cp'), nome: String(o.nome||'').trim() || 'Compra', descricao: o.descricao || '', logoUrl: o.logoUrl || '', cartaoId: cartao.id,
-    valorTotal: lancValor(o.valorTotal), parcelas: Math.max(1, Number(o.parcelas)||1),
+    valorTotal: lancValor(o.valorTotal), parcelas: Math.max(1, Number(o.parcelas)||1), categoria: o.categoria || '',
     mesInicio: o.mesInicio || (o.data && faturaDaData(cartao, o.data)) || faturaAbertaMes(cartao), data: o.data || calISO(new Date()), criadoEm: Date.now() };
   state.comprasTracker.push(cp);
   return cp;

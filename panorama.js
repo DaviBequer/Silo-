@@ -1114,9 +1114,9 @@ function abrirHistoricoMeses(){
       <span class="hm-legenda">entrou ${fmtMoney(r.renda||0)}<br>saiu ${fmtMoney(r.gastoTotal||0)}</span>${comp}
     </button>`;
   };
-  document.getElementById('historicoMesesLista').innerHTML = `<div class="hm-rolo">${hmMeses.map(cartao).join('')}</div><div class="hm-detalhe" id="hmDetalhe"></div>`
+  document.getElementById('historicoMesesLista').innerHTML = `<div class="hm-rolo">${hmMeses.map(cartao).join('')}</div><div class="hm-detalhe" id="hmDetalhe"></div><div class="hg" id="hgPainel"></div>`
     + (fechados.length ? '' : '<div class="hm-dica">Os meses aparecem aqui quando você toca em Finalizar, em Contas do mês. O resumo fica guardado mesmo depois que os dados do mês são limpos.</div>');
-  hmEscolher(0);
+  hmEscolher(0); renderHistGastos();
   document.getElementById('modalHistoricoMeses').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
@@ -1131,6 +1131,65 @@ function hmEscolher(i){
     : '<div class="gm-vazio">Mês fechado antes do resumo detalhado.</div>');
 }
 
+
+/* ===== GASTOS NO HISTÓRICO (pedido do Davi, 18/11/2026): todas as compras (cartão à vista, parceladas e Pix/débito)
+   com período, várias categorias juntas e ordenação em vários níveis (ex.: valor ↓, depois categoria ↑) ===== */
+const HG_CAMPOS = [['valor','Valor'],['data','Data'],['cat','Categoria'],['nome','Nome'],['onde','Onde']];
+const HG_PERIODOS = [['1','Este mês'],['3','3 meses'],['6','6 meses'],['tudo','Tudo']];
+const hg = { periodo:'6', cats:[], ordem:[['valor','desc']], todas:false };
+function histGastosItens(u){
+  const it = [], cartoes = state.cartoesTracker || [];
+  if(u === 'davi'){
+    cartoes.forEach(c=>(c.credoVista||[]).forEach(cv=>{ if(!cv.ajuste) it.push({ data:cv.data||'', mes:cv.mKey||'', nome:cv.descricao||'Compra', cat:cv.categoria||'Outros', valor:Number(cv.valor)||0, onde:c.nome }); }));
+    (state.comprasTracker||[]).forEach(cp=>{ const c = cartoes.find(x=>x.id === cp.cartaoId);
+      it.push({ data:cp.data||'', mes:cp.mesInicio||'', nome:cp.nome||'Compra', cat:cp.categoria||'Parcelado', valor:Number(cp.valorTotal)||0, onde:c ? c.nome : 'Cartão', parc:cp.parcelas }); });
+  }
+  (state.lancamentos||[]).filter(la=>(la.usuario || 'davi') === u).forEach(la=>it.push({ data:la.data||'', mes:la.mKey||'', nome:la.descricao||'Compra', cat:la.categoria||'Outros', valor:Number(la.valor)||0, onde:la.banco||'Pix' }));
+  return it;
+}
+function hgOrdenar(lista, ordem){
+  return lista.slice().sort((a, b)=>{
+    for(const [campo, dir] of ordem){
+      const x = a[campo], y = b[campo];
+      const r = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'pt', { sensitivity:'base' });
+      if(r) return dir === 'desc' ? -r : r;
+    }
+    return 0;
+  });
+}
+function renderHistGastos(){
+  const el = document.getElementById('hgPainel'); if(!el) return;
+  const atual = mesFinanceiroAtual(), desde = hg.periodo === 'tudo' ? '' : addMonths(atual, 1 - Number(hg.periodo));
+  const doPeriodo = histGastosItens(userDash()).filter(i=>!desde || i.mes >= desde);
+  const porCat = {}; doPeriodo.forEach(i=>{ porCat[i.cat] = (porCat[i.cat]||0) + i.valor; });
+  const cats = Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
+  hg.cats = hg.cats.filter(c=>c in porCat);
+  const lista = hgOrdenar(doPeriodo.filter(i=>!hg.cats.length || hg.cats.includes(i.cat)), hg.ordem);
+  const total = lista.reduce((s,i)=>s + i.valor, 0), maior = cats.length ? cats[0][1] : 1;
+  const cor = c=>ONDE_VAI_CORES[cats.findIndex(x=>x[0] === c) % ONDE_VAI_CORES.length];
+  const chip = (on, attrs, txt)=>`<button type="button" class="hg-chip${on ? ' on' : ''}" ${attrs}>${txt}</button>`;
+  const fData = d=>{ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d); return m ? `${m[3]}/${m[2]}` : ''; };
+  el.innerHTML = `<div class="hg-tit">Gastos</div>
+    <div class="hg-chips">${HG_PERIODOS.map(([k, n])=>chip(hg.periodo === k, `onclick="hgPeriodo('${k}')"`, n)).join('')}</div>
+    <div class="hg-resumo"><b>${fmtMoney(total)}</b><span>${lista.length} ${lista.length === 1 ? 'compra' : 'compras'}${hg.cats.length ? ' · ' + hg.cats.length + (hg.cats.length === 1 ? ' categoria' : ' categorias') : ''}</span></div>
+    <div class="hg-barras">${cats.filter(([c], i)=>hg.todas || i < 8 || hg.cats.includes(c)).map(([c, v])=>`<button type="button" class="hg-barra${hg.cats.includes(c) ? ' on' : ''}${hg.cats.length && !hg.cats.includes(c) ? ' apagada' : ''}" data-c="${escBanco(c)}" onclick="hgCat(this.dataset.c)">
+      <span class="hg-b-nome"><i style="background:${cor(c)}"></i>${escBanco(c)}</span><span class="hg-b-trilho"><span style="width:${Math.max(2, v/maior*100).toFixed(1)}%;background:${cor(c)}"></span></span><b>${fmtMoney(v)}</b></button>`).join('')}</div>
+    ${cats.length > 8 ? `<button type="button" class="hg-limpar" onclick="hg.todas = !hg.todas; renderHistGastos()">${hg.todas ? 'Ver menos' : `Ver todas as categorias (${cats.length})`}</button>` : ''}${hg.cats.length ? `<button type="button" class="hg-limpar" onclick="hgCat('')">Limpar seleção</button>` : ''}
+    <div class="hg-ordem"><span class="hg-ordem-rot">Ordenar</span>${hg.ordem.map(([campo, dir], i)=>`<span class="hg-nivel">${i ? '<em>depois</em>' : ''}
+      <select aria-label="Ordenar por" onchange="hgOrdemCampo(${i}, this.value)">${HG_CAMPOS.map(([k, n])=>`<option value="${k}"${k === campo ? ' selected' : ''}>${n}</option>`).join('')}</select>
+      <button type="button" class="hg-dir" title="${dir === 'desc' ? 'Do maior para o menor' : 'Do menor para o maior'}" aria-label="Inverter a ordem" onclick="hgOrdemDir(${i})">${dir === 'desc' ? '↓' : '↑'}</button>
+      ${hg.ordem.length > 1 ? `<button type="button" class="hg-x" aria-label="Tirar este critério" title="Tirar este critério" onclick="hgOrdemTirar(${i})">×</button>` : ''}</span>`).join('')}
+      ${hg.ordem.length < HG_CAMPOS.length ? `<button type="button" class="hg-mais" onclick="hgOrdemMais()">+ critério</button>` : ''}</div>
+    <div class="hg-lista">${lista.map(i=>`<div class="hg-item"><span class="hg-data">${fData(i.data)}</span>
+      <span class="hg-nome">${escBanco(i.nome)}${i.parc > 1 ? ` <small>${i.parc}x</small>` : ''}<small class="hg-cat"><i style="background:${cor(i.cat)}"></i>${escBanco(i.cat)} · ${escBanco(i.onde)}</small></span>
+      <b>${fmtMoney(i.valor)}</b></div>`).join('') || '<div class="gm-vazio">Nenhuma compra nesse período.</div>'}</div>`;
+}
+function hgPeriodo(p){ hg.periodo = p; renderHistGastos(); }
+function hgCat(c){ hg.cats = !c ? [] : hg.cats.includes(c) ? hg.cats.filter(x=>x !== c) : [...hg.cats, c]; renderHistGastos(); }
+function hgOrdemCampo(i, campo){ hg.ordem[i] = [campo, campo === 'valor' ? 'desc' : 'asc']; hg.ordem = hg.ordem.filter(([c], j)=>j === i || c !== campo); renderHistGastos(); }
+function hgOrdemDir(i){ hg.ordem[i][1] = hg.ordem[i][1] === 'desc' ? 'asc' : 'desc'; renderHistGastos(); }
+function hgOrdemTirar(i){ hg.ordem.splice(i, 1); renderHistGastos(); }
+function hgOrdemMais(){ const livre = HG_CAMPOS.find(([k])=>!hg.ordem.some(([c])=>c === k)); if(livre) hg.ordem.push([livre[0], 'asc']); renderHistGastos(); }
 /* ===== PARA ONDE VAI O DINHEIRO: tudo o que sai no mês (pago ou não), por grupo;
    o cartão entra aberto pelas categorias das compras à vista/assinaturas + parcelas ===== */
 let ondeVaiMes = null;

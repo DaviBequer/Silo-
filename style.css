@@ -3277,3 +3277,38 @@ body{font-weight:400;letter-spacing:.005em}
 .gest-prog i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#e9b3a5,#c98272)}
 .gest-editar{position:absolute;top:8px;right:8px;color:var(--text-faint)}
 @media (prefers-reduced-motion:reduce){.gest-cora{animation:none}}
+
+/* ---------- Gastos no Histórico (pedido do Davi, 18/11/2026) ---------- */
+.hg{border-top:1px solid var(--fio);padding-top:14px}
+.hg-tit{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);font-weight:500;margin-bottom:8px}
+.hg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.hg-chip{min-height:34px;padding:0 14px;border:1px solid var(--fio);border-radius:999px;background:var(--vidro);color:var(--text-dim);font:400 13px 'Outfit',sans-serif;cursor:pointer}
+.hg-chip.on{background:var(--graf);border-color:var(--graf);color:#fff}
+.hg-resumo{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.hg-resumo b{font-size:28px;font-weight:200;letter-spacing:-.02em;color:var(--text)}
+.hg-resumo span{font-size:12.5px;color:var(--text-faint)}
+.hg-barras{display:flex;flex-direction:column;gap:2px}
+.hg-barra{display:grid;grid-template-columns:minmax(96px,32%) 1fr auto;align-items:center;gap:10px;min-height:36px;padding:2px 8px;border:1px solid transparent;border-radius:10px;background:none;text-align:left;font:400 13px 'Outfit',sans-serif;color:var(--text);cursor:pointer}
+.hg-barra.on{border-color:var(--fio);background:var(--vidro)}
+.hg-barra.apagada{opacity:.45}
+.hg-b-nome{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hg-b-nome i,.hg-cat i{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.hg-b-trilho{height:6px;border-radius:4px;background:var(--card-2);overflow:hidden}
+.hg-b-trilho span{display:block;height:100%;border-radius:4px}
+.hg-barra b{font-weight:400;font-size:12.5px;color:var(--text-dim)}
+.hg-limpar{margin:6px 14px 0 0;padding:6px 0;border:none;background:none;color:var(--primary);font:400 12.5px 'Outfit',sans-serif;cursor:pointer}
+.hg-ordem{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:14px 0 8px}
+.hg-ordem-rot{font-size:12.5px;color:var(--text-faint);margin-right:2px}
+.hg-nivel{display:inline-flex;align-items:center;gap:4px}
+.hg-nivel em{font-style:normal;font-size:12px;color:var(--text-faint);margin-right:2px}
+.hg-nivel select{min-height:34px;padding:0 8px;border:1px solid var(--fio);border-radius:10px;background:var(--vidro);font:400 13px 'Outfit',sans-serif;color:var(--text)}
+.hg-dir,.hg-x,.hg-mais{min-width:34px;min-height:34px;border:1px solid var(--fio);border-radius:10px;background:var(--vidro);font:400 15px 'Outfit',sans-serif;color:var(--text);cursor:pointer}
+.hg-x{border-color:transparent;background:none;color:var(--text-faint)}
+.hg-mais{padding:0 12px;font-size:13px;color:var(--primary)}
+.hg-lista{display:flex;flex-direction:column}
+.hg-item{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--fio);font-size:13.5px}
+.hg-data{font-size:12px;color:var(--text-faint)}
+.hg-nome{display:flex;flex-direction:column;min-width:0;color:var(--text)}
+.hg-nome small{font-size:11.5px;color:var(--text-faint)}
+.hg-cat{display:flex;align-items:center;gap:5px}
+.hg-item b{font-weight:400;white-space:nowrap}

@@ -1092,7 +1092,7 @@ function impGravarLinhas(linhas, mPadrao){
   linhas.forEach(l=>{
     const m = l.mes || mPadrao, data = l.data || calISO(new Date());
     if(l.tipo === 'pix') lancarPix({ mKey: m, data, descricao: l.nome, valor: l.valor, categoria: l.cat, banco: l.banco ? l.banco.nome : l.onde });
-    else if(l.tipo === 'parcelada') lancarParcelada(l.cartao, { nome: l.nome, valorTotal: l.valor, parcelas: l.parcelas, mesInicio: m, data });
+    else if(l.tipo === 'parcelada') lancarParcelada(l.cartao, { nome: l.nome, valorTotal: l.valor, parcelas: l.parcelas, mesInicio: m, data, categoria: l.cat });
     else lancarVista(l.cartao, { descricao: l.nome, valor: l.valor, categoria: l.cat, mKey: m, data });
   });
 }
