@@ -3346,3 +3346,4 @@ body{font-weight:400;letter-spacing:.005em}
 .lv-mtom-bts button{width:26px;height:26px;border:none;border-radius:8px;background:none;color:var(--text-dim);font:500 16px 'Outfit',sans-serif;cursor:pointer;position:relative}
 .lv-mtom-bts button::before{content:"";position:absolute;inset:-6px -2px}
 .lv-mtom-bts button:active{background:var(--card-2)}
+.gest-meses{display:inline-block;margin-left:8px;font-style:normal;font-size:12px;font-weight:300;letter-spacing:0;color:var(--text-faint);vertical-align:middle}

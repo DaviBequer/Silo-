@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v25.2', itens: [
+    'Gestação: ao lado das semanas, pequenininho, o mesmo tempo em meses e dias'
+  ] },
   { versao: 'v25.1', itens: [
     'Botão Refazer: refaz tudo pelo mesmo caminho do Buscar (Drive, também pelo nome do hino, e Cifra Club; Harpa só com partitura pega outro artista) e troca na própria música',
     'Harpa no Drive: se não achar pelo número, procura pelo nome do hino e pergunta'

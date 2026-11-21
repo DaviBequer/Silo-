@@ -616,6 +616,11 @@ function gestBebeSvg(sem){
   <path d="M58 60c4 5 9 6 13 4" fill="none" stroke="#e9ac98" stroke-width="4" stroke-linecap="round"/><path d="M76 41a3 2 0 0 0 6 0" fill="none" stroke="#c98b7a" stroke-width="1.2" stroke-linecap="round"/>
   <circle class="gest-cora" cx="55" cy="70" r="2.4" fill="#e0707a"/></g></svg>`;
 }
+/* semanas → meses e dias (mês médio de 30,44 dias), só para ter a ideia (pedido do Davi, 20/11) */
+function gestMesesTxt(dias){
+  const m = Math.floor(dias / 30.4375), d = Math.round(dias - m * 30.4375);
+  return `${m} ${m === 1 ? 'mês' : 'meses'}${d ? ` e ${d} dia${d > 1 ? 's' : ''}` : ''}`;
+}
 function renderGestacao(){
   const el = document.getElementById('gestacao'); if(!el) return;
   const g = state.gestacao && gestCalc(state.gestacao.dum);
@@ -628,7 +633,7 @@ function renderGestacao(){
   const fs = Math.floor(g.falta / 7), fd = g.falta % 7;
   el.innerHTML = `<div class="gest-card">${gestBebeSvg(g.sem)}<div class="gest-info">
     <span class="gest-rot">Gestação · ${g.tri}º trimestre</span>
-    <b class="gest-sem">${g.sem}<small> semanas</small>${g.d ? ` ${g.d}<small> dia${g.d > 1 ? 's' : ''}</small>` : ''}</b>
+    <b class="gest-sem">${g.sem}<small> semanas</small>${g.d ? ` ${g.d}<small> dia${g.d > 1 ? 's' : ''}</small>` : ''}<em class="gest-meses">${gestMesesTxt(g.dias)}</em></b>
     <span class="gest-tam">~${String(g.cm).replace('.', ',')} cm · do tamanho de ${g.comp}</span>
     <i class="gest-prog"><i style="width:${Math.min(100, g.dias / 2.8).toFixed(1)}%"></i></i>
     <span class="gest-dpp">Faltam ${fs} sem${fd ? ` e ${fd} d` : ''} · previsão ${f(g.dpp)}</span></div>
