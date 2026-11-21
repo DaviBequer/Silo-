@@ -625,7 +625,48 @@ function lvBuscarFora(q){
   cultoColarLer();
   cultoColarMontar();
 }
+/* Refazer (pedido do Davi, 20/11): refaz a música aberta pelo mesmo caminho do Buscar — Harpa pelo número (e pelo nome no Drive),
+   Drive, Cifra Club (Harpa só com partitura → outro artista) — e troca o conteúdo DESTA música (dá para desfazer). Pronto não refaz. */
+let lvRefazerId = null;
+function lvRefazerTudo(){
+  const l = getLouvorAtual(); if(!l) return;
+  if(l.medley){ showToast('Medley se refaz pelas músicas dele (Montar o medley)'); return; }
+  if(l.status === 'finalizada'){ showToast('Música Pronta não se refaz: volte para Em Produção antes'); return; }
+  const num = (/harpa/i.test(l.artista || '') && /(\d{1,3})/.exec(l.artista)) || null;
+  const linha = num ? num[1] : [l.titulo, l.artista].filter(Boolean).join(' - ');
+  if(!linha.trim()){ showToast('A música está sem nome para buscar'); return; }
+  lvRefazerId = l.id;
+  cultoColarAbrir(true);
+  document.querySelector('#modalCultoColar .modal-header h3').textContent = 'Refazer';
+  document.getElementById('cuColarTexto').value = linha;
+  cultoColarLer();
+  cuColar.forEach(it=>{ it.id = ''; it.status = ''; if(num && !it.titulo) it.titulo = l.titulo || ''; });   // a própria música não vale como "já está no app"
+  cultoColarRender();
+  cultoColarMontar();
+}
+function lvRefazerAplicar(l, novo){
+  const campos = ['conteudo', 'tomOriginal', 'tomModoMenor', 'transpose', 'capo', 'origem', 'revisar', 'ccUrl', 'ccTomSite'];
+  const antes = {}; campos.forEach(k=>{ antes[k] = l[k]; });
+  campos.forEach(k=>{ if(novo[k] === undefined) delete l[k]; else l[k] = novo[k]; });
+  if(!(l.titulo || '').trim() && novo.titulo) l.titulo = novo.titulo;
+  delete l.conteudoAntesOrganizar; delete l.conteudoOrganizado;
+  state.louvores = state.louvores.filter(x=>x.id !== novo.id);   // a cópia que a busca criou sai; fica a música de sempre (data, culto, status)
+  persist();
+  showToast('✓ Música refeita');
+  return antes;
+}
 function lvBuscarForaFim(btn){
+  if(lvRefazerId){
+    const l = state.louvores.find(x=>x.id === lvRefazerId), it = cuColar[0], novo = it && it.id && state.louvores.find(x=>x.id === it.id);
+    lvRefazerId = null;
+    btn.disabled = false; btn.textContent = 'Fechar'; btn.onclick = ()=>closeModal('modalCultoColar');
+    if(l && novo && novo.id !== l.id){
+      lvRefazerAplicar(l, novo);
+      btn.textContent = 'Abrir a música'; btn.onclick = ()=>{ closeModal('modalCultoColar'); abrirLouvorDetalhe(l.id); };
+    } else showToast('Não achei outra versão: a música ficou como estava');
+    renderLouvor(); cultoColarRender();
+    return;
+  }
   persist(); renderLouvor(); cultoColarRender();
   const it = cuColar.find(x=>x.id) || null, id = it ? it.id : (Object.values(cuColarMedleys).find(Boolean) || '');
   btn.disabled = false;
@@ -1045,15 +1086,20 @@ async function cultoColarDoDrive(it, pdfs){
       cands = cultoHarpaNoDrive(it.harpaNum, (r.files || []).map(f=>({ ...f, pasta: '' })));
     }catch(e){}
   }
+  /* Harpa salva no Drive com o nome do hino em vez do número (pedido do Davi, 20/11): procura pelo nome e sempre pergunta */
+  const porNome = it.harpaNum && !cands.length && t.length >= 4;
+  if(porNome) cands = pdfs.filter(f=>nome(f).includes(t));
   if(a && !it.harpaNum) cands = cands.filter(f=>nome(f).includes(a));   // com cantor: só o dele
   /* nome não igual (uma palavra a mais ou a menos): os parecidos, sempre perguntando */
   const parecidos = !cands.length && !it.harpaNum;
   if(parecidos) cands = cuParecidos(it.titulo, pdfs);
   if(!cands.length) return null;
   let f = cands[0];
-  if(cands.length > 1 || parecidos){
+  if(cands.length > 1 || parecidos || porNome){
     cultoColarPasso(it, 'esperando você escolher o arquivo…');
-    const r = await cultoColarPerguntarOpcao(it, parecidos
+    const r = await cultoColarPerguntarOpcao(it, porNome
+      ? `No Drive não achei o número ${lvEsc(it.harpaNum)}, mas achei pelo nome <b>${lvEsc(it.titulo)}</b>. É algum destes?`
+      : parecidos
       ? `Não achei <b>${lvEsc(it.titulo)}</b> com o nome igual no Drive. É algum destes?`
       : `Achei ${cands.length} PDFs de <b>${lvEsc(it.harpaNum ? 'Harpa ' + it.harpaNum : it.titulo)}</b> no Drive. Qual é?`,
       cands.slice(0, 8).map(f=>({ nome: f.name.replace(/\.pdf$/i, ''), sub: f.pasta })), 'Nenhum: buscar no Cifra Club', false);
@@ -1162,7 +1208,7 @@ async function cultoColarDoCifraClub(it, criar){   // criar=false: só lê (medl
     const outras = await cultoHarpaOutrasVersoes(it, m.url);
     for(const o of outras){
       cultoColarPasso(it, `Sem letra: tentando ${o.artista}…`);
-      try{ const r2 = await ccMontar(o.url, t=>cultoColarPasso(it, t), ()=>{}); if(cultoTemLetra(r2)){ r = r2; m = o; r.dados.artista = 'Harpa Cristã - ' + it.harpaNum; r.dados.categoria = 'Harpa Cristã'; break; } }catch(e){}
+      try{ const r2 = await ccMontar(o.url, t=>cultoColarPasso(it, t), ()=>{}); if(cultoTemLetra(r2)){ r = r2; m = o; r.dados.artista = 'Harpa Cristã - ' + it.harpaNum; r.dados.categoria = 'Harpa Cristã'; r.dados.titulo = it.titulo || cultoHarpaLimparNome(r2.dados.titulo || o.titulo, it.harpaNum); break; } }catch(e){}
     }
   }
   if(criar === false) return { r, url: m.url };
