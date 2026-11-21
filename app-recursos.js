@@ -636,8 +636,8 @@ function renderGestacao(){
     <b class="gest-sem">${g.sem}<small> semanas</small>${g.d ? ` ${g.d}<small> dia${g.d > 1 ? 's' : ''}</small>` : ''}<em class="gest-meses">${gestMesesTxt(g.dias)}</em></b>
     <span class="gest-tam">~${String(g.cm).replace('.', ',')} cm · do tamanho de ${g.comp}</span>
     <i class="gest-prog"><i style="width:${Math.min(100, g.dias / 2.8).toFixed(1)}%"></i></i>
-    <span class="gest-dpp">Faltam ${fs} sem${fd ? ` e ${fd} d` : ''} · previsão ${f(g.dpp)}</span></div>
-    <button type="button" class="ico-btn gest-editar" title="Mudar a data de início" aria-label="Mudar a data de início" onclick="abrirCalendario(document.getElementById('gestDum'), this)">${ICO('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 16)}</button>${prBotaoHtml()}${inp}</div>`;
+    <div class="gest-rodape"><span class="gest-dpp">Faltam ${fs} sem${fd ? ` e ${fd} d` : ''} · previsão ${f(g.dpp)}</span>${prBotaoHtml()}</div></div>
+    <button type="button" class="ico-btn gest-editar" title="Mudar a data de início" aria-label="Mudar a data de início" onclick="abrirCalendario(document.getElementById('gestDum'), this)">${ICO('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 16)}</button>${inp}</div>`;
 }
 function gestMudarDum(iso){
   if(!calParse(iso)) return;
