@@ -621,7 +621,7 @@ let cuColarSoBuscar = false;
 function lvBuscarFora(q){
   q = String(q || '').trim(); if(!q) return;
   cultoColarAbrir(true);
-  document.getElementById('cuColarTexto').value = q;
+  document.getElementById('cuColarTexto').value = q.split(';').map(x=>x.trim()).filter(Boolean).join('\n');   // "110; 2" = dois hinos
   cultoColarLer();
   cultoColarMontar();
 }
@@ -629,7 +629,8 @@ function lvBuscarForaFim(btn){
   persist(); renderLouvor(); cultoColarRender();
   const it = cuColar.find(x=>x.id) || null, id = it ? it.id : (Object.values(cuColarMedleys).find(Boolean) || '');
   btn.disabled = false;
-  if(id){ btn.textContent = 'Abrir a música'; btn.onclick = ()=>{ closeModal('modalCultoColar'); limparLouvorSearch(); abrirLouvorDetalhe(id); }; showToast('✓ Música no app'); }
+  if(cuColar.length > 1){ btn.textContent = 'Pronto'; btn.onclick = ()=>{ closeModal('modalCultoColar'); limparLouvorSearch(); }; showToast('✓ Busca terminada'); }
+  else if(id){ btn.textContent = 'Abrir a música'; btn.onclick = ()=>{ closeModal('modalCultoColar'); limparLouvorSearch(); abrirLouvorDetalhe(id); }; showToast('✓ Música no app'); }
   else { btn.textContent = 'Fechar'; btn.onclick = ()=>closeModal('modalCultoColar'); }
 }
 function cultoColarAbrir(soBuscar){
@@ -1109,6 +1110,26 @@ async function cultoCriarDoDrive(f, titulo, artista){
 }
 /* Cifra Club: pega sozinho só quando o nome E o cantor batem; senão mostra as opções primeiro.
    Nenhuma é a certa → digitar o cantor e buscar de novo (ou criar só com o nome). */
+/* tem letra de verdade (não só partitura/tablatura): pelo menos 3 linhas de letra */
+function cultoTemLetra(r){
+  return String(r && r.dados && r.dados.conteudo || '').split('\n').filter(x=>lvTipoLinha(x.trim()) === 'letra').length >= 3;
+}
+/* o mesmo hino da Harpa por outros artistas no Cifra Club: busca pelo número e pelo nome, mesmo título */
+async function cultoHarpaOutrasVersoes(it, urlJa){
+  const num = new RegExp('(^|\\D)' + it.harpaNum + '(\\D|$)'), t = cuNorm(it.titulo || '');
+  const achadas = [];
+  for(const busca of [it.titulo, 'harpa ' + it.harpaNum + ' ' + (it.titulo || '')]){
+    if(!(busca || '').trim()) continue;
+    try{ achadas.push(...((await ccChamar({ busca })).musicas || [])); }catch(e){}
+  }
+  const vistas = new Set([urlJa]);
+  return achadas.filter(x=>{
+    if(vistas.has(x.url)) return false;
+    const ok = (t && cuNorm(x.titulo) === t) || num.test(x.titulo);
+    if(ok) vistas.add(x.url);
+    return ok;
+  }).slice(0, 5);
+}
 async function cultoColarDoCifraClub(it, criar){   // criar=false: só lê (medley) → { r, url } ou null
   const t = cuNorm(it.titulo);
   let m = null;
@@ -1135,7 +1156,15 @@ async function cultoColarDoCifraClub(it, criar){   // criar=false: só lê (medl
     it.status = 'vazia';
     return l;
   }
-  const r = await ccMontar(m.url, t=>cultoColarPasso(it, t), ()=>{});
+  let r = await ccMontar(m.url, t=>cultoColarPasso(it, t), ()=>{});
+  /* Harpa (pedido do Davi, 20/11): a versão da Harpa Cristã às vezes é só partitura, sem letra → tenta o mesmo hino de outro artista */
+  if(it.harpaNum && !cultoTemLetra(r)){
+    const outras = await cultoHarpaOutrasVersoes(it, m.url);
+    for(const o of outras){
+      cultoColarPasso(it, `Sem letra: tentando ${o.artista}…`);
+      try{ const r2 = await ccMontar(o.url, t=>cultoColarPasso(it, t), ()=>{}); if(cultoTemLetra(r2)){ r = r2; m = o; r.dados.artista = 'Harpa Cristã - ' + it.harpaNum; r.dados.categoria = 'Harpa Cristã'; break; } }catch(e){}
+    }
+  }
   if(criar === false) return { r, url: m.url };
   const l = lvCriarDireto(r.dados, false);
   ccGuardarOrigem(l, r, m.url);

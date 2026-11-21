@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v25.0', itens: [
+    'Buscar do Louvor: vários de uma vez com ponto e vírgula (ex.: 110; 2)',
+    'Harpa: se a cifra do Cifra Club vier só com partitura, sem letra, pega o mesmo hino de outro artista'
+  ] },
   { versao: 'v24.9', itens: [
     'Medley: um tom para cada música, lado a lado (TOM 1, TOM 2…), com − e + de meio em meio tom'
   ] },
