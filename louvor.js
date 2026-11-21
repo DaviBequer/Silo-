@@ -696,13 +696,16 @@ function lvCampoCores(g, ehDominante){
 /* campo harmônico do tom escolhido (nomes literais do tom, dominante de cada grau embaixo).
    Tocar num grau: some a linha dos dominantes e, embaixo de cada outro grau, aparecem as ligações até ele; embaixo do grau tocado, as cores dele */
 let lvCampoSel = null, lvCampoEsc = null, lvCampoDe = null;
-function lvCampoTocar(i){ lvCampoSel = lvCampoSel === i ? null : i; lvCampoEsc = null; const l = getLouvorAtual(); if(l) renderLvHarmonicBar(l); }
-function lvCampoEscolher(j, n){ lvCampoEsc = { j, n }; const l = getLouvorAtual(); if(l) renderLvHarmonicBar(l); }
-function renderLvHarmonicBar(l){
-  const el = document.getElementById('lvHarmonicBar');
+function lvCampoTocar(i){ lvCampoSel = lvCampoSel === i ? null : i; lvCampoEsc = null; lvCampoRedesenhar(); }
+/* a mesma barra aparece na música e no Comparar (pedido do Davi, 20/11) */
+function lvCampoRedesenhar(){ const l = getLouvorAtual(); if(!l) return; renderLvHarmonicBar(l); if(document.getElementById('pageLvComparar')?.classList.contains('active')) renderLvHarmonicBar(l, 'lvcmpCampo'); }
+function lvCampoEscolher(j, n){ lvCampoEsc = { j, n }; lvCampoRedesenhar(); }
+function renderLvHarmonicBar(l, alvo = 'lvHarmonicBar'){
+  const el = document.getElementById(alvo);
   if(!el) return;
-  let det = document.getElementById('lvCampoDet');
-  if(!det){ det = document.createElement('div'); det.id = 'lvCampoDet'; det.className = 'lv-campo-det'; el.after(det); }
+  const detId = alvo === 'lvHarmonicBar' ? 'lvCampoDet' : alvo + 'Det';
+  let det = document.getElementById(detId);
+  if(!det){ det = document.createElement('div'); det.id = detId; det.className = 'lv-campo-det'; el.after(det); }
   if(lvCampoDe !== l.id){ lvCampoSel = null; lvCampoEsc = null; lvCampoDe = l.id; }   // outra música: começa fechado
   const G = lvCampoGraus(l), tom = lvTomMaiorAtual(l);
   if(!G){ el.innerHTML = ''; det.hidden = true; return; }

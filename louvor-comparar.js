@@ -34,7 +34,7 @@ async function lvOriginalLer(id){
 /* ---------- botão na música ---------- */
 function lvAtualizarBtnComparar(l){
   const b = document.getElementById('lvBtnComparar');
-  if(b) b.style.display = l && l.origem ? '' : 'none';
+  if(b) b.style.display = l && (l.origem || lvMedleyFontes(l).length) ? '' : 'none';
   /* "voltar a ser só o PDF do Drive": música que veio do Drive e já teve o texto tirado (pedido do Davi) */
   const sd = document.getElementById('lvBtnSoDrive');
   if(sd) sd.style.display = l && l.origem && l.origem.tipo === 'drive' && l.origem.id && !l.origem.apagadoNoDrive && (l.conteudo || '').trim() ? '' : 'none';
@@ -133,12 +133,57 @@ function lvCompararFechar(){ document.getElementById('pageLvComparar').classList
 const lvcmpNorm = t=>String(t||'').split(/\s+/).map(lviNormPalavra).filter(Boolean).join(' ');
 async function lvCompararAbrir(){
   const l = getLouvorAtual(); if(!l) return;
-  if(!l.origem){ showToast('Essa música não guardou o original (foi feita antes ou à mão)'); return; }
+  const fontes = lvMedleyFontes(l);
+  if(!l.origem && !fontes.length){ showToast('Essa música não guardou o original (foi feita antes ou à mão)'); return; }
   document.getElementById('lvcmpTitulo').textContent = l.titulo || 'Comparar';
   lvCompararAba(l.revisar && l.revisar.length ? 'app' : 'original');
   document.getElementById('pageLvComparar').classList.add('active');
   lvCompararRenderApp(l);
+  renderLvHarmonicBar(l, 'lvcmpCampo'); lvcmpInserirRender(l);
+  if(fontes.length){ lvCompararRenderMedley(fontes); return; }
   await lvCompararRenderOriginal(l);
+}
+/* medley (pedido do Davi, 20/11): o original de cada música do medley, uma embaixo da outra.
+   Medley do app = l.medley.musicas; colado do WhatsApp = as marcas [♪ Nome] → a música de mesmo nome no app */
+function lvMedleyFontes(l){
+  if(!l) return [];
+  const L = state.louvores || [];
+  if(l.medley && (l.medley.musicas || []).length) return l.medley.musicas.map(m=>{ const s = L.find(x=>x.id === m.id); return { titulo: (s && s.titulo) || 'Música', s }; });
+  const marcas = [...String(l.conteudo || '').matchAll(/^\[♪\s*(.+?)(?:\s+—\s+Tom\s+\S+)?\]\s*$/gm)].map(m=>m[1]);
+  if(marcas.length < 2) return [];
+  return marcas.map(t=>({ titulo: t, s: L.find(x=>x.id !== l.id && !x.medley && cuNorm(x.titulo) === cuNorm(t)) }));
+}
+function lvCompararRenderMedley(fontes){
+  const linhas = txt=>String(txt || '').split('\n').map(x=>`<div class="lvcmp-l${({ acorde: ' ac', parte: ' rot' })[lvTipoLinha(x)] || ''}">${lvEsc(x) || '&nbsp;'}</div>`).join('');
+  document.getElementById('lvcmpOriginal').innerHTML = fontes.map((f, i)=>{
+    const s = f.s, o = s && s.origem;
+    const cc = o && o.tipo === 'cifraclub' && o.texto;
+    const de = cc ? 'do Cifra Club' : s && (s.conteudo || '').trim() ? 'da música no app' : '';
+    const link = cc && o.url ? `<a href="${lvEsc(o.url)}" target="_blank" rel="noopener">abrir no site</a>` : '';
+    return `<div class="lvcmp-tit lvcmp-medley-tit"><span class="lv-cc-num">${i + 1}</span><b>${lvEsc(f.titulo)}</b><small>${de || 'sem o original no app'}</small>${link}</div>`
+      + (de ? `<div class="lvcmp-texto">${linhas(cc ? o.texto : s.conteudo)}</div>` : '');
+  }).join('');
+}
+/* acordes do tom para pôr na linha de acordes que está sendo editada (toque na linha dourada e depois no acorde) */
+function lvcmpInserirRender(l){
+  const el = document.getElementById('lvcmpInserir'); if(!el) return;
+  const G = lvCampoGraus(l) || [];
+  el.hidden = !G.length;
+  el.innerHTML = G.length ? `<span>Pôr na linha:</span>` + G.map(g=>`<button type="button" class="lvcmp-ins" data-a="${lvEsc(g.nome)}" onmousedown="event.preventDefault()" onclick="lvcmpInserir(this.dataset.a)">${lvEsc(g.nome)}</button>`).join('') : '';
+}
+/* lembra a última linha de acordes tocada e onde estava o cursor (o toque no botão tira o foco no celular) */
+let lvcmpCursor = null;
+document.addEventListener('selectionchange', ()=>{
+  const s = getSelection(), n = s && s.anchorNode, ed = n && (n.nodeType === 1 ? n : n.parentElement)?.closest?.('.lvcmp-edita');
+  if(ed) lvcmpCursor = { ed, pos: s.anchorOffset };
+});
+function lvcmpInserir(acorde){
+  const c = lvcmpCursor;
+  if(!c || !c.ed.isConnected){ showToast('Toque primeiro numa linha de acordes (dourada), no lugar onde o acorde entra'); return; }
+  const t = c.ed.textContent, pos = Math.min(c.pos, t.length);
+  c.ed.textContent = t.slice(0, pos) + acorde + ' ' + t.slice(pos);
+  c.pos = pos + acorde.length + 1;
+  lvcmpAcordeMudou(c.ed);
 }
 /* o que ficou no app: o texto com as linhas para conferir em amarelo */
 function lvCompararRenderApp(l){
