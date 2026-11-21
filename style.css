@@ -3335,3 +3335,14 @@ body{font-weight:400;letter-spacing:.005em}
 .lvcmp .lvcmp-orig .lvcmp-medley-tit{background:none;color:var(--text);padding:6px 0;border:none;box-shadow:none}
 .lvcmp .lvcmp-orig .lvcmp-medley-tit small{color:var(--text-faint)}
 .lvcmp .lvcmp-orig .lvcmp-medley-tit a{margin-left:auto;color:var(--primary)}
+
+/* ---------- medley: um tom por música (pedido do Davi, 20/11/2026) ---------- */
+.lv-medley-tons{display:flex;gap:6px}
+.lv-medley-tons[hidden]{display:none}
+.lv-mtom{display:flex;flex-direction:column;align-items:center;min-width:58px;padding:4px 4px 2px;border:1px solid var(--fio);border-radius:12px;background:var(--vidro)}
+.lv-mtom b{font-size:18px;font-weight:600;color:var(--text);line-height:1.2}
+.lv-mtom .lv-tom-box-lbl{color:var(--text-dim);opacity:1}
+.lv-mtom-bts{display:flex;gap:2px}
+.lv-mtom-bts button{width:26px;height:26px;border:none;border-radius:8px;background:none;color:var(--text-dim);font:500 16px 'Outfit',sans-serif;cursor:pointer;position:relative}
+.lv-mtom-bts button::before{content:"";position:absolute;inset:-6px -2px}
+.lv-mtom-bts button:active{background:var(--card-2)}

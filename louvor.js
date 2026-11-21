@@ -613,7 +613,53 @@ function atualizarLvTomBox(){
   document.getElementById('lvTomBoxValor').textContent = lvTomAtual(l) || '—';
   if(typeof lvCapoRender === 'function') lvCapoRender(l);
   renderLvHarmonicBar(l);
+  lvMedleyTonsRender(l);
 }
+
+/* ---------- medley: um tom para cada música (pedido do Davi, 20/11/2026) ----------
+   As músicas do medley começam com [♪ Nome — Tom X]. Cada uma ganha a sua caixinha de tom com − e +, lado a lado.
+   Medley montado no app: muda o tom dela (l.medley.musicas[i].tom) e o texto é montado de novo;
+   colado do WhatsApp (ou medley já editado à mão): transpõe só as linhas de acordes daquela música. */
+const LV_MARCA_MEDLEY = /^\[♪\s*(.+?)(?:\s+—\s+Tom\s+(\S+))?\]\s*$/;
+function lvMedleyMarcas(l){
+  return String(l && l.conteudo || '').split('\n').map((x, i)=>{ const m = LV_MARCA_MEDLEY.exec(x.trim()); return m ? { i, nome: m[1], tom: m[2] || '' } : null; }).filter(Boolean);
+}
+function lvMedleyTonsRender(l){
+  const el = document.getElementById('lvMedleyTons'), box = document.getElementById('lvTomBox'); if(!el || !box) return;
+  const mk = lvMedleyMarcas(l), medley = mk.length >= 2;
+  el.hidden = !medley; box.style.display = medley ? 'none' : '';
+  el.innerHTML = !medley ? '' : mk.map((m, i)=>`<div class="lv-mtom" title="${lvEsc(m.nome)}">
+    <span class="lv-tom-box-lbl">TOM ${i + 1}</span><b>${lvEsc(m.tom || '—')}</b>
+    <span class="lv-mtom-bts"><button type="button" onclick="lvMedleyTomPasso(${i},-1)" aria-label="Meio tom abaixo: ${lvEsc(m.nome)}">−</button><button type="button" onclick="lvMedleyTomPasso(${i},1)" aria-label="Meio tom acima: ${lvEsc(m.nome)}">+</button></span></div>`).join('');
+}
+function lvMedleyTomPasso(i, d){
+  const l = getLouvorAtual(); if(!l) return;
+  const mk = lvMedleyMarcas(l), m = mk[i]; if(!m) return;
+  const r = /^([A-G](?:#|b)?)(m(?!aj))?/.exec(m.tom || '');
+  if(!r){ showToast('Essa música do medley está sem tom: escreva "Tom X" na marca dela'); return; }
+  const pc = lvPc(r[1]), menor = !!r[2], nova = LV_TONS_RODA[((pc + d) % 12 + 12) % 12];
+  const maiorDe = (raiz, ehMenor)=>ehMenor ? LV_TONS_RODA[(lvPc(raiz) + 3) % 12] : raiz;   // forma dos acordes = o tom maior (relativo)
+  const cfg = l.medley && (l.medley.musicas || [])[i];
+  if(cfg && !l.medleyEditado){
+    cfg.tom = LV_TONS_RODA[((lvPc(cfg.tom || maiorDe(r[1], menor)) + d) % 12 + 12) % 12];
+    l.conteudo = lmGerarTexto(l.medley);
+  } else {
+    const linhas = l.conteudo.split('\n'), fim = mk[i + 1] ? mk[i + 1].i : linhas.length;
+    for(let k = m.i + 1; k < fim; k++){
+      if(lvTipoLinha(linhas[k].trim()) === 'acorde') linhas[k] = lvTransposeChordLine(linhas[k], ((d % 12) + 12) % 12, maiorDe(nova, menor), maiorDe(r[1], menor));
+    }
+    linhas[m.i] = `[♪ ${m.nome} — Tom ${nova}${menor ? 'm' : ''}]`;
+    if(cfg) cfg.tom = maiorDe(nova, menor);
+    l.conteudo = linhas.join('\n');
+  }
+  persist();
+  lvMedleyTonsRender(l);
+  const ta = document.getElementById('lvConteudo');
+  if(ta && ta.value !== l.conteudo){ ta.value = l.conteudo; if(typeof lvAtualizarEditor === 'function') lvAtualizarEditor(); }
+  if(typeof renderLouvorPdfPreview === 'function') renderLouvorPdfPreview();
+  clearTimeout(lvMedleyTomT); lvMedleyTomT = setTimeout(()=>{ if(typeof driveTomMudou === 'function') driveTomMudou(l); }, 1500);   // Drive só quando parar de tocar
+}
+let lvMedleyTomT = 0;
 const LV_GRAUS_MAIOR = [
   { grau:'I', semitom:0, qualidade:'' },
   { grau:'II', semitom:2, qualidade:'m' },

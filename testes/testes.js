@@ -223,6 +223,11 @@ async function rodarTestes(){
       { const g = gestCalc('2026-01-01', new Date(2026, 3, 20, 15)), dpp = g.dpp;
         igual('gestação: DUM 01/01 em 20/04 = 15 sem 4 d, parto 08/10', [g.sem, g.d, g.tri, dpp.getDate(), dpp.getMonth(), dpp.getFullYear(), gestCalc('2026-01-01', new Date(2025, 11, 1))], [15, 4, 2, 8, 9, 2026, null]); }
       igual('histórico: ordenar valor ↓ e depois categoria ↑', hgOrdenar([{valor:10,cat:'b'},{valor:20,cat:'z'},{valor:10,cat:'a'}], [['valor','desc'],['cat','asc']]).map(i=>i.valor + i.cat), ['20z', '10a', '10b']);
+      { const id0 = louvorAtualId, l = { id:'tmz', titulo:'M', conteudo:'[♪ A — Tom C]\nC   G\nlá\n[♪ B — Tom Em]\nEm  D\nlá' };
+        state.louvores.push(l); louvorAtualId = 'tmz'; const dt = window.driveTomMudou; window.driveTomMudou = ()=>{};
+        lvMedleyTomPasso(1, -2); clearTimeout(lvMedleyTomT); window.driveTomMudou = dt;
+        igual('medley: tom só da 2ª música muda', l.conteudo, '[♪ A — Tom C]\nC   G\nlá\n[♪ B — Tom Dm]\nDm  C\nlá');
+        state.louvores = state.louvores.filter(x=>x !== l); louvorAtualId = id0; }
       /* setas: subir a 2ª para o 1º lugar = ela vira a Abertura e a antiga volta para a parte dela (Harpa) */
       {
         const cAntes = state.cultos, dAntes2 = cultoData, fAntes2 = lvCultoFixo;

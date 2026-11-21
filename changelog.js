@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.9', itens: [
+    'Medley: um tom para cada música, lado a lado (TOM 1, TOM 2…), com − e + de meio em meio tom'
+  ] },
   { versao: 'v24.8', itens: [
     'Comparar no medley: mostra o original de cada música do medley, numerado',
     'Comparar: campo harmônico igual ao da música e botões de acorde para pôr na linha de acordes'
