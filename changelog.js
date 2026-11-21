@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v25.3', itens: [
+    'Gestação: botão da pressão no canto do bloco (fica azul-claro com a pressão do dia depois de medir)',
+    'Pressão: medir agora (como ela está, sintomas, + Outro, anotação) e histórico com gráfico',
+    'Pressão: PDF para o médico e envio pelo WhatsApp'
+  ] },
   { versao: 'v25.2', itens: [
     'Gestação: ao lado das semanas, pequenininho, o mesmo tempo em meses e dias'
   ] },

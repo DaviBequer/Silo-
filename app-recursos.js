@@ -637,7 +637,7 @@ function renderGestacao(){
     <span class="gest-tam">~${String(g.cm).replace('.', ',')} cm · do tamanho de ${g.comp}</span>
     <i class="gest-prog"><i style="width:${Math.min(100, g.dias / 2.8).toFixed(1)}%"></i></i>
     <span class="gest-dpp">Faltam ${fs} sem${fd ? ` e ${fd} d` : ''} · previsão ${f(g.dpp)}</span></div>
-    <button type="button" class="ico-btn gest-editar" title="Mudar a data de início" aria-label="Mudar a data de início" onclick="abrirCalendario(document.getElementById('gestDum'), this)">${ICO('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 16)}</button>${inp}</div>`;
+    <button type="button" class="ico-btn gest-editar" title="Mudar a data de início" aria-label="Mudar a data de início" onclick="abrirCalendario(document.getElementById('gestDum'), this)">${ICO('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 16)}</button>${prBotaoHtml()}${inp}</div>`;
 }
 function gestMudarDum(iso){
   if(!calParse(iso)) return;
@@ -645,6 +645,186 @@ function gestMudarDum(iso){
   persist(); renderGestacao();
 }
 if(typeof aoMudarEstado === 'function') aoMudarEstado(renderGestacao);
+
+/* ---------- pressão da gestação (pedido do Davi, 21/11/2026; modelo aprovado no artefato) ----------
+   state.pressao = [{ id, em:'AAAA-MM-DDTHH:MM', max, min, bpm, sint:[], nota }], state.pressaoSintomas = sintomas criados no "+ Outro".
+   O nome que vai no PDF fica em state.gestacao.nome (no banco, nunca no código). */
+const PR_SINTOMAS = ['Bem', 'Dor de cabeça', 'Pontada no coração', 'Falta de ar', 'Queimação no peito', 'Dor no peito', 'Cólica', 'Inchaço', 'Tontura', 'Vista embaçada'];
+let prAba = 'nova', prSel = [];
+const prHoje = ()=>calISO(new Date());
+function prLista(){ return (state.pressao || []).slice().sort((a, b)=>b.em.localeCompare(a.em)); }
+function prHojeMedida(){ return prLista().find(p=>p.em.slice(0, 10) === prHoje()) || null; }
+/* referência para gestantes: verde até 130/80, amarela até 139/89, vermelha a partir de 140/90 */
+function prNivel(max, min){ return max >= 140 || min >= 90 ? 'alta' : max > 130 || min > 80 ? 'atencao' : 'ok'; }
+const PR_NIVEL_TXT = { ok: 'dentro do esperado', atencao: 'um pouco alta: meça de novo daqui a pouco', alta: 'alta: fale com o médico' };
+const prPor = (max, min)=>{ const f = v=>String(Math.round(v) / 10).replace('.', ','); return `${f(max)} por ${f(min)}`; };   // 110/70 → "11 por 7"
+function prBotaoHtml(){
+  const h = prHojeMedida();
+  const coracao = `<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>`;
+  return h
+    ? `<button type="button" class="gest-pressao feito" onclick="prAbrir('hist')" aria-label="Pressão de hoje: ${prPor(h.max, h.min)}. Abrir o registro"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coracao}<path d="m8.5 12 2.5 2.5 4.5-5"/></svg>${prPor(h.max, h.min)}</button>`
+    : `<button type="button" class="gest-pressao" onclick="prAbrir('nova')" title="Medir a pressão" aria-label="Medir a pressão"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coracao}<path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg></button>`;
+}
+function prAbrir(aba){
+  prAba = aba || 'nova'; prSel = [];
+  let m = document.getElementById('modalPressao');
+  if(!m){
+    m = document.createElement('div'); m.className = 'modal-overlay'; m.id = 'modalPressao';
+    m.innerHTML = `<div class="modal pr-modal"><div class="modal-header"><h3>Pressão</h3><button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPressao')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button></div>
+      <div class="dash-tabs pr-abas"><button type="button" class="dash-tab" data-a="nova" onclick="prTrocar('nova')">Medir agora</button><button type="button" class="dash-tab" data-a="hist" onclick="prTrocar('hist')">Histórico</button></div><div id="prCorpo"></div></div>`;
+    document.body.appendChild(m);
+  }
+  m.classList.add('active'); document.body.style.overflow = 'hidden';
+  prRender();
+}
+function prTrocar(a){ prAba = a; prRender(); }
+function prRender(){
+  document.querySelectorAll('#modalPressao .pr-abas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.a === prAba));
+  const el = document.getElementById('prCorpo'); if(!el) return;
+  if(prAba === 'nova'){
+    const agora = new Date(), hora = String(agora.getHours()).padStart(2, '0') + ':' + String(agora.getMinutes()).padStart(2, '0');
+    const sint = [...PR_SINTOMAS, ...(state.pressaoSintomas || [])];
+    el.innerHTML = `<div class="pr-quando">hoje · ${hora}</div>
+      <div class="pr-dois"><label>Máxima<input id="prMax" type="text" inputmode="numeric" placeholder="110" oninput="prPrevia()"></label><label>Mínima<input id="prMin" type="text" inputmode="numeric" placeholder="70" oninput="prPrevia()"></label></div>
+      <label class="pr-bpm">Batimentos<input id="prBpm" type="text" inputmode="numeric" placeholder="80"></label>
+      <div class="pr-nivel" id="prNivel" hidden></div>
+      <div class="pr-pergunta">Como ela está?</div>
+      <div class="pr-sint">${sint.map(s=>`<button type="button" class="pr-chip${prSel.includes(s) ? ' on' : ''}" data-s="${escBanco(s)}" onclick="prSintoma(this.dataset.s)">${escBanco(s)}</button>`).join('')}<button type="button" class="pr-chip pr-outro" onclick="prOutro()">+ Outro</button></div>
+      <label class="pr-nota">Anotação<input id="prNota" type="text" placeholder="ex.: depois do almoço, braço esquerdo"></label>
+      <button type="button" class="btn btn-block pr-guardar" onclick="prGuardar()">Guardar</button>`;
+    return;
+  }
+  const L = prLista();
+  if(!L.length){ el.innerHTML = '<div class="gm-vazio">Nenhuma medida ainda. Toque em "Medir agora".</div>'; return; }
+  const ult = L.slice(0, 14).reverse(), media = k=>Math.round(L.slice(0, 14).reduce((s, p)=>s + (Number(p[k]) || 0), 0) / Math.max(1, L.slice(0, 14).filter(p=>p[k]).length));
+  const nome = (state.gestacao && state.gestacao.nome) || '';
+  el.innerHTML = `<div class="pr-placa"><div class="pr-placa-topo"><span>Últimas ${ult.length} medidas</span><b>${prPor(media('max'), media('min'))}</b></div>${prGrafico(ult, 322, 150, true)}
+      <div class="pr-legenda"><span><i class="max"></i>máxima</span><span><i class="min"></i>mínima</span>${media('bpm') ? `<span class="pr-bpm-media">batimentos ${media('bpm')} em média</span>` : ''}</div></div>
+    <div class="pr-lista">${L.map(p=>{ const d = calParse(p.em.slice(0, 10)), dia = p.em.slice(0, 10) === prHoje() ? 'hoje' : String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+      const extra = [p.bpm ? p.bpm + ' bpm' : '', (p.sint || []).join(', ').toLowerCase(), p.nota].filter(Boolean).join(' · ');
+      return `<div class="pr-item"><span class="pr-dia">${dia}<br>${p.em.slice(11, 16)}</span><span class="pr-val">${p.max} / ${p.min}${extra ? `<small>${escBanco(extra)}</small>` : ''}</span><i class="pr-bola ${prNivel(p.max, p.min)}"></i><button type="button" class="pr-x" aria-label="Apagar esta medida" title="Apagar" data-id="${p.id}" onclick="prApagar(this.dataset.id)">×</button></div>`; }).join('')}</div>
+    <label class="pr-nota">Nome no relatório<input type="text" value="${escBanco(nome)}" placeholder="nome da gestante" onchange="prNome(this.value)"></label>
+    <div class="pr-acoes"><button type="button" class="btn btn-outline" onclick="prPdf()">PDF para o médico</button><button type="button" class="btn btn-outline" onclick="prWhats()">WhatsApp</button></div>`;
+}
+/* gráfico: máxima e mínima; faixa tranquila clarinha e 140/90 pontilhada; o ponto acima de 140/90 em amarelo */
+function prGrafico(ps, W, H, escuro){
+  const top = 8, base = H - 22, y = v=>top + (160 - Math.max(50, Math.min(160, v))) / 110 * (base - top);
+  const x = i=>ps.length < 2 ? W / 2 : 8 + i * (W - 16) / (ps.length - 1);
+  const linha = k=>ps.map((p, i)=>`${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
+  const cMax = escuro ? '#9fc1e6' : '#1b2638', cMin = escuro ? 'rgba(255,255,255,.6)' : '#9fc1e6', cTx = escuro ? 'rgba(255,255,255,.55)' : '#5f6983';
+  const dd = p=>p.em.slice(8, 10) + '/' + p.em.slice(5, 7);
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico da máxima e da mínima"><rect x="0" y="${y(140)}" width="${W}" height="${y(80) - y(140)}" rx="8" fill="${escuro ? 'rgba(159,193,230,.10)' : '#eef4fb'}"/>
+    <line x1="0" y1="${y(140)}" x2="${W}" y2="${y(140)}" stroke="#c98a1e" stroke-dasharray="3 4"/><line x1="0" y1="${y(90)}" x2="${W}" y2="${y(90)}" stroke="#c98a1e" stroke-opacity=".5" stroke-dasharray="3 4"/>
+    <polyline points="${linha('max')}" fill="none" stroke="${cMax}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${linha('min')}" fill="none" stroke="${cMin}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${ps.map((p, i)=>prNivel(p.max, p.min) !== 'ok' ? `<circle cx="${x(i)}" cy="${y(p.max)}" r="4.5" fill="#e2b45a"/>` : '').join('')}
+    <text x="4" y="${H - 6}" font-size="10" fill="${cTx}" font-family="Outfit">${dd(ps[0])}</text><text x="${W - 4}" y="${H - 6}" text-anchor="end" font-size="10" fill="${cTx}" font-family="Outfit">${dd(ps[ps.length - 1])}</text></svg>`;
+}
+function prPrevia(){
+  const max = Number(document.getElementById('prMax').value), min = Number(document.getElementById('prMin').value), el = document.getElementById('prNivel');
+  if(!(max > 50 && min > 30)){ el.hidden = true; return; }
+  const n = prNivel(max, min); el.hidden = false; el.className = 'pr-nivel ' + n;
+  el.innerHTML = `<i class="pr-bola ${n}"></i>${prPor(max, min)} · ${PR_NIVEL_TXT[n]}`;
+}
+function prSintoma(s){
+  if(s === 'Bem') prSel = prSel.includes('Bem') ? [] : ['Bem'];
+  else { prSel = prSel.filter(x=>x !== 'Bem'); prSel = prSel.includes(s) ? prSel.filter(x=>x !== s) : [...prSel, s]; }
+  document.querySelectorAll('#prCorpo .pr-chip[data-s]').forEach(b=>b.classList.toggle('on', prSel.includes(b.dataset.s)));
+}
+function prOutro(){
+  const s = (prompt('Qual sintoma? (fica guardado para as próximas vezes)') || '').trim();
+  if(!s) return;
+  if(![...PR_SINTOMAS, ...(state.pressaoSintomas || [])].some(x=>vozSemAcento(x) === vozSemAcento(s))) state.pressaoSintomas = [...(state.pressaoSintomas || []), s];
+  const vals = ['prMax', 'prMin', 'prBpm', 'prNota'].map(id=>document.getElementById(id).value);
+  prSel = [...prSel.filter(x=>x !== 'Bem'), s]; persist(); prRender();
+  ['prMax', 'prMin', 'prBpm', 'prNota'].forEach((id, i)=>{ document.getElementById(id).value = vals[i]; }); prPrevia();
+}
+function prGuardar(){
+  const n = id=>Math.round(Number(String(document.getElementById(id).value).replace(',', '.')) || 0);
+  let max = n('prMax'), min = n('prMin'); const bpm = n('prBpm');
+  if(max > 0 && max < 30) max *= 10;   // "11 por 7" → 110 / 70
+  if(min > 0 && min < 20) min *= 10;
+  if(!(max >= 60 && max <= 250 && min >= 30 && min <= 160 && max > min)){ showToast('Confira a máxima e a mínima (ex.: 110 e 70)'); return; }
+  const d = new Date(), em = calISO(d) + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const p = { id: 'pr' + Date.now().toString(36), em, max, min, sint: prSel.slice(), nota: document.getElementById('prNota').value.trim() };
+  if(bpm >= 30 && bpm <= 220) p.bpm = bpm;
+  state.pressao = [...(state.pressao || []), p];
+  persist(); renderGestacao();
+  showToast(`✓ ${prPor(max, min)} guardado`);
+  if(prNivel(max, min) === 'alta') showToast('Pressão alta (14 por 9 ou mais): fale com o médico');
+  prSel = []; prTrocar('hist');
+}
+function prApagar(id){
+  const p = (state.pressao || []).find(x=>x.id === id); if(!p) return;
+  comDesfazer('Medida apagada', ()=>{ state.pressao = state.pressao.filter(x=>x.id !== id); persist(); }, ()=>{ prRender(); renderGestacao(); });
+}
+function prNome(v){ state.gestacao = { ...(state.gestacao || {}), nome: String(v || '').trim() }; persist(); }
+/* texto para o WhatsApp: as medidas das últimas 2 semanas */
+function prTexto(){
+  const L = prLista().filter(p=>p.em >= calISO(new Date(Date.now() - 14 * 864e5)));
+  const nome = (state.gestacao && state.gestacao.nome) || '';
+  return `*Pressão${nome ? ' · ' + nome : ''}*\n` + L.map(p=>`${p.em.slice(8, 10)}/${p.em.slice(5, 7)} ${p.em.slice(11, 16)} · ${p.max}/${p.min}${p.bpm ? ' · ' + p.bpm + ' bpm' : ''}${(p.sint || []).length ? ' · ' + p.sint.join(', ').toLowerCase() : ''}${p.nota ? ' · ' + p.nota : ''}`).join('\n');
+}
+async function prWhats(){
+  const t = prTexto();
+  if(navigator.share){ try{ await navigator.share({ text: t }); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
+  window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank');
+}
+/* PDF para o médico: cabeçalho, 4 quadros, gráfico, tabela e sintomas do período (modelo aprovado) */
+async function prPdf(){
+  const L = prLista(); if(!L.length) return;
+  await garantirJsPDF();
+  if(!window.jspdf){ showToast('Não foi possível carregar o gerador de PDF. Verifique a internet.'); return; }
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = 595, M = 40, azul = [27, 38, 56], cinza = [95, 105, 131], claro = [244, 246, 251], ouro = [138, 90, 0];
+  const g = state.gestacao && gestCalc(state.gestacao.dum), nome = (state.gestacao && state.gestacao.nome) || '';
+  const fmt = iso=>iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+  const asc = L.slice().reverse(), de = asc[0].em, ate = asc[asc.length - 1].em;
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(63, 110, 163); doc.setFontSize(8.5); doc.text('ACOMPANHAMENTO DA PRESSÃO', M, 52);
+  doc.setTextColor(...azul); doc.setFontSize(20); doc.text(nome || 'Gestante', M, 76);
+  doc.setFontSize(10); doc.setTextColor(...cinza);
+  if(g) doc.text(`Gestação de ${g.sem} semanas${g.d ? ' e ' + g.d + ' dia' + (g.d > 1 ? 's' : '') : ''} · previsão do parto ${fmt(calISO(g.dpp))}`, M, 92);
+  doc.text('Período', W - M, 60, { align: 'right' }); doc.setTextColor(...azul); doc.setFontSize(11.5); doc.text(`${fmt(de)} a ${fmt(ate)}`, W - M, 75, { align: 'right' });
+  doc.setFontSize(9.5); doc.setTextColor(...cinza); doc.text(`${L.length} ${L.length === 1 ? 'medida' : 'medidas'}`, W - M, 89, { align: 'right' });
+  doc.setDrawColor(...azul); doc.setLineWidth(1.4); doc.line(M, 102, W - M, 102);
+  const media = k=>{ const v = L.filter(p=>p[k]); return v.length ? Math.round(v.reduce((s, p)=>s + p[k], 0) / v.length) : 0; };
+  const maior = L.reduce((a, p)=>p.max > a.max ? p : a, L[0]), menor = L.reduce((a, p)=>p.max < a.max ? p : a, L[0]);
+  const quadros = [['MÉDIA', `${media('max')} / ${media('min')}`, 'mmHg'], ['MAIOR', `${maior.max} / ${maior.min}`, fmt(maior.em).slice(0, 5) + ' · ' + maior.em.slice(11, 16)], ['MENOR', `${menor.max} / ${menor.min}`, fmt(menor.em).slice(0, 5) + ' · ' + menor.em.slice(11, 16)], ['BATIMENTOS', media('bpm') ? String(media('bpm')) : '—', 'por minuto, em média']];
+  const qw = (W - 2 * M - 30) / 4;
+  quadros.forEach(([t, v, s], i)=>{ const x = M + i * (qw + 10); doc.setFillColor(...claro); doc.roundedRect(x, 118, qw, 62, 8, 8, 'F');
+    doc.setFontSize(7.5); doc.setTextColor(...cinza); doc.text(t, x + 10, 134); doc.setFontSize(17); doc.setTextColor(...(i === 1 && prNivel(maior.max, maior.min) !== 'ok' ? ouro : azul)); doc.text(v, x + 10, 156); doc.setFontSize(8); doc.setTextColor(...cinza); doc.text(s, x + 10, 171); });
+  /* gráfico */
+  doc.setFontSize(10.5); doc.setTextColor(...azul); doc.text('Pressão dia a dia', M, 206);
+  const gx = M + 22, gw = W - 2 * M - 22, gt = 216, gb = 336, gy = v=>gt + (160 - Math.max(50, Math.min(160, v))) / 110 * (gb - gt);
+  doc.setFillColor(238, 244, 251); doc.rect(gx, gy(140), gw, gy(80) - gy(140), 'F');
+  doc.setFontSize(7.5); doc.setTextColor(...cinza); [140, 110, 80, 60].forEach(v=>doc.text(String(v), gx - 4, gy(v) + 3, { align: 'right' }));
+  doc.setDrawColor(201, 138, 30); doc.setLineWidth(.8); doc.setLineDashPattern([3, 3], 0); doc.line(gx, gy(140), gx + gw, gy(140)); doc.setLineDashPattern([], 0);
+  const px = i=>asc.length < 2 ? gx + gw / 2 : gx + 6 + i * (gw - 12) / (asc.length - 1);
+  const traco = (k, cor)=>{ doc.setDrawColor(...cor); doc.setLineWidth(1.6); for(let i = 1; i < asc.length; i++) doc.line(px(i - 1), gy(asc[i - 1][k]), px(i), gy(asc[i][k])); };
+  traco('max', azul); traco('min', [159, 193, 230]);
+  asc.forEach((p, i)=>{ if(prNivel(p.max, p.min) !== 'ok'){ doc.setFillColor(201, 138, 30); doc.circle(px(i), gy(p.max), 3.2, 'F'); } });
+  doc.setFontSize(7.5); doc.setTextColor(...cinza); doc.text(fmt(de).slice(0, 5), gx, gb + 12); doc.text(fmt(ate).slice(0, 5), gx + gw, gb + 12, { align: 'right' });
+  /* tabela */
+  doc.autoTable({ startY: gb + 28, margin: { left: M, right: M }, head: [['Data', 'Pressão', 'Batim.', 'Como estava · anotação']],
+    body: L.map(p=>[fmt(p.em).slice(0, 5) + ' ' + p.em.slice(11, 16), `${p.max} / ${p.min}`, p.bpm || '', [(p.sint || []).join(', ').toLowerCase(), p.nota].filter(Boolean).join(' · ')]),
+    styles: { font: 'helvetica', fontSize: 9, textColor: azul, cellPadding: { top: 5, bottom: 5, left: 4, right: 4 }, lineColor: [238, 241, 245], lineWidth: { bottom: .6 } },
+    headStyles: { fillColor: [255, 255, 255], textColor: cinza, fontStyle: 'normal', lineColor: [211, 217, 227], lineWidth: { bottom: .8 } },
+    columnStyles: { 0: { cellWidth: 72 }, 1: { cellWidth: 62 }, 2: { cellWidth: 44 } },
+    didParseCell: d=>{ if(d.section === 'body'){ const p = L[d.row.index]; if(p && prNivel(p.max, p.min) !== 'ok' && d.column.index < 2){ d.cell.styles.textColor = ouro; d.cell.styles.fontStyle = 'bold'; } } } });
+  /* sintomas do período */
+  const conta = {}; L.forEach(p=>(p.sint || []).filter(s=>s !== 'Bem').forEach(s=>{ conta[s] = (conta[s] || 0) + 1; }));
+  let y = doc.lastAutoTable.finalY + 24;
+  const itens = Object.entries(conta).sort((a, b)=>b[1] - a[1]);
+  if(itens.length){
+    if(y > 760){ doc.addPage(); y = 60; }
+    doc.setFontSize(10.5); doc.setTextColor(...azul); doc.text('Sintomas no período', M, y); y += 12;
+    let x = M; doc.setFontSize(9);
+    itens.forEach(([s, n])=>{ const t = `${s} · ${n}x`, w = doc.getTextWidth(t) + 18; if(x + w > W - M){ x = M; y += 24; } doc.setFillColor(...claro); doc.roundedRect(x, y, w, 18, 9, 9, 'F'); doc.setTextColor(...azul); doc.text(t, x + 9, y + 12.5); x += w + 6; });
+  }
+  const paginas = doc.getNumberOfPages();
+  for(let i = 1; i <= paginas; i++){ doc.setPage(i); doc.setDrawColor(211, 217, 227); doc.setLineWidth(.6); doc.line(M, 800, W - M, 800); doc.setFontSize(8); doc.setTextColor(...cinza);
+    doc.text('Medidas feitas em casa', M, 812); doc.text(`Gerado pelo Siloé em ${fmt(prHoje())}`, W - M, 812, { align: 'right' }); }
+  doc.save(`pressao-${prHoje()}.pdf`);
+}
 
 /* ---------- nome do ícone ao segurar o dedo (botões só com ícone) ----------
    Vale para todo botão com desenho e sem texto que tenha title/aria-label. Segurou → mostra o nome e não aperta. */
