@@ -15,6 +15,12 @@ function cultoDataTexto(iso, longo){
   return longo ? dia.charAt(0).toUpperCase() + dia.slice(1) + ', ' + dm : dm + '/' + String(d.getFullYear()).slice(2);
 }
 /* próxima data com culto/música agendada a partir de hoje; senão o próximo domingo */
+/* datas de hoje em diante com música (pedido do Davi, 20/11: sábado e domingo aparecem juntos na placa) */
+function cultoDatasComMusica(){
+  const hoje = cultoHojeISO();
+  const datas = [...new Set([...cultosLista().map(c=>c.data), ...(state.louvores||[]).map(l=>l.dataAgendamento)])].filter(d=>d && d >= hoje).sort();
+  return datas.filter(d=>{ const c = cultoDaData(d); return c ? c.partes.some(p=>p.musicas.length) : (state.louvores||[]).some(l=>l.dataAgendamento === d); });
+}
 function cultoProximaData(){
   const hoje = cultoHojeISO();
   const datas = [...cultosLista().map(c=>c.data), ...(state.louvores||[]).map(l=>l.dataAgendamento)].filter(d=>d && d >= hoje).sort();
@@ -244,6 +250,16 @@ function renderCultoBotao(){
   const lbl = document.querySelector('#lvCultoPlaca .placa-lbl'); if(lbl) lbl.textContent = cultoDataTexto(d, true) + ' · culto';
   el.innerHTML = `${quando}${itens.length ? ` · <b>${itens.length}</b> ${itens.length === 1 ? 'música' : 'músicas'} · ${prontas} pronta${prontas === 1 ? '' : 's'}` : ' · toque para adicionar músicas'}`;
   /* computador: o lado direito sem música aberta fica só com a dica (o culto fica só na placa da lista) */
+  /* dois cultos seguidos (sábado e domingo): uma aba para cada data com música */
+  const datasEl = document.getElementById('lvCultoDatas');
+  if(datasEl){
+    const ds = cultoDatasComMusica().slice(0, 4);
+    if(!ds.includes(d) && ds.length) ds.push(d), ds.sort();
+    datasEl.hidden = ds.length < 2;
+    datasEl.innerHTML = ds.length < 2 ? '' : ds.map(x=>{ const dt = calParse(x), n = cultoDaData(x) ? cultoDaData(x).partes.reduce((s, p)=>s + p.musicas.length, 0) : 0;
+      return `<button type="button" class="lvcp-dia${x === d ? ' on' : ''}" onclick="lvCultoMudarData('${x}', ${x === cultoProximaData()})"><b>${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dt.getDay()]} ${dt.getDate()}</b><small>${n} ${n === 1 ? 'música' : 'músicas'}</small></button>`; }).join('');
+  }
+  lvCultoRecolher(null);
   const pv = document.getElementById('lvPainelVazio');
   if(pv) pv.innerHTML = `<p class="lpv-dica">Escolha uma música na lista ao lado.</p>`;
   const pe = document.getElementById('lvCultoPartes');
@@ -275,6 +291,13 @@ function lvCultoMenu(){
     ['Mais tocadas', 'lvCultoHistorico()'],
     cultoDaData(c.data) ? ['Apagar o roteiro desta data', "closeModal('modalPergunta');lvCultoApagar()", 'perigo'] : null
   ]);
+}
+/* recolher a placa (pedido do Davi): fica só a data e a contagem; lembra por aparelho. null = só aplica o guardado */
+function lvCultoRecolher(trocar){
+  let r = false; try{ r = localStorage.getItem('siloe-lv-placa-recolhida') === '1'; }catch(e){}
+  if(trocar !== null){ r = !r; try{ localStorage.setItem('siloe-lv-placa-recolhida', r ? '1' : '0'); }catch(e){} }
+  const p = document.getElementById('lvCultoPlaca'); if(p) p.classList.toggle('recolhida', r);
+  const b = document.getElementById('lvCultoRecolherBtn'); if(b){ b.setAttribute('aria-expanded', String(!r)); b.title = r ? 'Mostrar as músicas' : 'Recolher'; b.setAttribute('aria-label', b.title); }
 }
 function lvCultoAdicionar(){
   const c = cultoAtual();
@@ -593,15 +616,33 @@ function cultoColarDataDoTexto(texto){
   return '';
 }
 let cuColarDataMexida = false;
-function cultoColarAbrir(){
-  cuColar = []; cuColarMontando = false; cuColarMedleys = {};
+let cuColarSoBuscar = false;
+/* Buscar do Louvor (pedido do Davi): o mesmo caminho do Colar (Harpa pelo número, Drive, Cifra Club) para o que foi digitado na pesquisa, sem data nem roteiro */
+function lvBuscarFora(q){
+  q = String(q || '').trim(); if(!q) return;
+  cultoColarAbrir(true);
+  document.getElementById('cuColarTexto').value = q;
+  cultoColarLer();
+  cultoColarMontar();
+}
+function lvBuscarForaFim(btn){
+  persist(); renderLouvor(); cultoColarRender();
+  const it = cuColar.find(x=>x.id) || null, id = it ? it.id : (Object.values(cuColarMedleys).find(Boolean) || '');
+  btn.disabled = false;
+  if(id){ btn.textContent = 'Abrir a música'; btn.onclick = ()=>{ closeModal('modalCultoColar'); limparLouvorSearch(); abrirLouvorDetalhe(id); }; showToast('✓ Música no app'); }
+  else { btn.textContent = 'Fechar'; btn.onclick = ()=>closeModal('modalCultoColar'); }
+}
+function cultoColarAbrir(soBuscar){
+  cuColar = []; cuColarMontando = false; cuColarMedleys = {}; cuColarSoBuscar = !!soBuscar;
+  document.querySelector('#modalCultoColar .modal-header h3').textContent = soBuscar ? 'Buscar' : 'Colar do WhatsApp';
+  document.querySelector('#modalCultoColar .cu-colar-data').style.display = soBuscar ? 'none' : '';
   /* a data vem marcada (a do Culto aberto) e o calendário já abre para confirmar ou trocar; o texto colado pode trazer a data */
   cuColarDataMexida = false;
   const inpData = document.getElementById('cuColarData');
   if(inpData){
     inpData.value = cultoData || cultoProximaData();
     document.getElementById('cuColarDataDica').textContent = '';
-    setTimeout(()=>{ const b = inpData.nextElementSibling; if(b && document.getElementById('modalCultoColar').classList.contains('active')) abrirCalendario(inpData, b); }, 280);
+    if(!soBuscar) setTimeout(()=>{ const b = inpData.nextElementSibling; if(b && document.getElementById('modalCultoColar').classList.contains('active')) abrirCalendario(inpData, b); }, 280);
   }
   document.getElementById('cuColarTexto').value = '';
   document.getElementById('cuColarLista').innerHTML = '';
@@ -756,9 +797,9 @@ let cuColarMedleys = {};
 function cultoColarPasso(it, txt){ it.passo = txt; cultoColarRender(); }
 async function cultoColarMontar(){
   if(!cuColar.length) return;
-  /* o roteiro vai para a data escolhida na janela */
+  /* o roteiro vai para a data escolhida na janela (na Busca do Louvor não agenda nada) */
   const dEsc = (document.getElementById('cuColarData') || {}).value;
-  if(dEsc && dEsc !== cultoData){ cultoData = dEsc; cultoRascunho = null; }
+  if(!cuColarSoBuscar && dEsc && dEsc !== cultoData){ cultoData = dEsc; cultoRascunho = null; }
   const btn = document.getElementById('cuColarMontar'); btn.disabled = true; btn.textContent = 'Montando…';
   cuColarMontando = true; cuColarMedleys = {};
   document.getElementById('cuColarTexto').style.display = 'none';
@@ -799,6 +840,7 @@ async function cultoColarMontar(){
     const ts = lviTomSiloe(it.tom.raiz, it.tom.menor);
     if(ts.tomOriginal && (ts.tomOriginal !== l.tomOriginal || ts.tomModoMenor !== !!l.tomModoMenor)) lvAplicarTom(l, ts.tomOriginal, ts.tomModoMenor);
   });
+  if(cuColarSoBuscar){ lvBuscarForaFim(btn); return; }
   /* põe no roteiro (cria a parte se não existir, antes do "Final"); medley entra como UMA música (a do medley) */
   const c = cultoAtual(), feitos = {};
   cuColar.forEach(it=>{

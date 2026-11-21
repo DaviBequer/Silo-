@@ -111,16 +111,16 @@ function lvRenderLista(){
     });
   } else items.sort(porNome);
   if(items.length===0){
-    /* pesquisou e não achou: oferece buscar no Cifra Club (abre no navegador) */
+    /* pesquisou e não achou: oferece buscar como o Colar do WhatsApp (Drive → Cifra Club), sem agendar */
     const termo = (document.getElementById('louvorSearchInput')?.value || '').trim();
     el.innerHTML = termo
       ? `<div class="lv-cifraclub">
           <div class="lv-cc-titulo">“${lvEsc(termo)}” não está no app</div>
-          <button type="button" class="lv-cc-btn" onclick="ccAbrir(document.getElementById('louvorSearchInput').value)">
+          <button type="button" class="lv-cc-btn" onclick="lvBuscarFora(document.getElementById('louvorSearchInput').value)">
             <img class="cc-logo-mini" src="logo-cifraclub.png" alt="" width="22" height="22">
-            <span>Buscar no Cifra Club</span>
+            <span>Buscar</span>
           </button>
-          <div class="lv-cc-dica">O app busca e já importa a cifra</div>
+          <div class="lv-cc-dica">Igual ao Colar do WhatsApp: procura no Drive, depois no Cifra Club (número sozinho = Harpa)</div>
         </div>`
       : `<div class="empty-state"><div class="title">Nenhum louvor encontrado</div><div class="desc">Toque no + para adicionar</div></div>`;
     return;

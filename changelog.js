@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v24.7', itens: [
+    'Louvor: pesquisou e não achou, o botão Buscar faz igual ao Colar do WhatsApp (número sozinho = Harpa, Drive, depois Cifra Club), sem agendar',
+    'Placa do culto: botão para recolher e uma aba para cada culto (ex.: sábado e domingo)'
+  ] },
   { versao: 'v24.6', itens: [
     'Ajustes: o botão Importar também aceita a planilha de gastos (xlsx, xls, ods, csv)'
   ] },

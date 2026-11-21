@@ -3312,3 +3312,14 @@ body{font-weight:400;letter-spacing:.005em}
 .hg-nome small{font-size:11.5px;color:var(--text-faint)}
 .hg-cat{display:flex;align-items:center;gap:5px}
 .hg-item b{font-weight:400;white-space:nowrap}
+
+/* ---------- placa do culto: recolher e dois cultos (pedido do Davi, 20/11/2026) ---------- */
+.lvcp-recolher{flex-shrink:0;display:grid;place-items:center;width:44px;height:44px;margin:-8px 0 0;padding:0;border:none;border-radius:12px;background:none;color:var(--latao);cursor:pointer;transition:transform .3s ease}
+.lv-culto-placa.recolhida .lvcp-recolher{transform:rotate(180deg)}
+#aba-louvor .lv-culto-placa.recolhida .lv-culto-partes{max-height:0;opacity:0;margin-top:0}
+.lvcp-datas{display:flex;gap:6px;margin-top:10px;overflow-x:auto}
+.lvcp-datas[hidden]{display:none}
+.lvcp-dia{display:flex;flex-direction:column;align-items:flex-start;min-width:84px;min-height:44px;padding:6px 12px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.75);font:400 13px 'Outfit',sans-serif;cursor:pointer;text-align:left}
+.lvcp-dia b{font-weight:500}
+.lvcp-dia small{font-size:11.5px;opacity:.75}
+.lvcp-dia.on{border-color:var(--latao);background:rgba(159,193,230,.16);color:#fff}
