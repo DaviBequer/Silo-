@@ -420,6 +420,8 @@ function onImportFileSelected(event){
       event.target.value = '';
       return;
     }
+    /* arquivo de músicas novas (corinhos tirados dos PDFs do Drive, 22/11): só ACRESCENTA no Louvor, nada é substituído */
+    if(backup && Array.isArray(backup.siloeLouvoresNovos)){ event.target.value = ''; lvImportarNovos(backup.siloeLouvoresNovos); return; }
     if(!backup || typeof backup !== 'object' || !backup.state){
       showToast('Esse arquivo não é um backup válido do Siloé.');
       event.target.value = '';

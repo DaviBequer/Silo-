@@ -3413,3 +3413,32 @@ button.pr-per{cursor:pointer}
 .pr-dia-obs{margin-top:8px;font-size:12.5px;color:var(--text-dim)}
 .pr-dia-apagar{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:12px}
 .pr-dia-apagar .link-txt{color:var(--text-faint)}
+/* Nº 256 (pedido do Davi): busca do Louvor. A barra encolhe (o botão de seleção não corta mais em celular estreito);
+   a lupa é botão: busca fora do app (Drive, Cifra Club). Não achou = só o aviso */
+.lv-search-row .receitas-search{min-width:0}
+.lv-search-row .receitas-search input{min-width:0;width:100%}
+.lv-lupa{position:relative;display:grid;place-items:center;margin:-6px -4px -6px -8px;padding:6px !important;border:none;border-radius:50%;background:none;color:var(--text-dim) !important;cursor:pointer}
+.lv-lupa::before{content:'';position:absolute;inset:-6px}
+.lv-lupa:hover{color:var(--text) !important}
+.lv-nao-tem{padding:32px 16px;text-align:center;font-size:15px;color:var(--text-dim);animation:surgir .4s var(--mola) both}
+/* Nº 256: escolher música do medley com o tipo e várias de uma vez */
+.lm-esc-tipos{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.lm-esc-item>.lv-capa{flex:0 0 34px;width:34px;height:34px;border-radius:9px}
+.lm-esc-item .lv-capa svg{width:18px;height:18px}
+.lm-esc-pronto{width:100%;margin-top:10px}
+/* Nº 256 (pedido do Davi): Visualizar no computador = PDF no meio, mais para cima; nas laterais (que sobravam)
+   à esquerda Configurações e Tela cheia, à direita tipo, Tom, Capo, data e Pronto. Celular continua igual */
+@media(min-width:1024px){
+  #lvPanelEdicao.active[data-modo="folha"]{display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,794px) minmax(150px,1fr);column-gap:22px;align-items:start}
+  #lvPanelEdicao[data-modo="folha"] > *{grid-column:1 / -1}
+  #lvPanelEdicao[data-modo="folha"] > .lv-barra{grid-column:1;grid-row:4;position:sticky;top:8px;flex-direction:column;align-items:flex-end;margin:8px 0 0}
+  #lvPanelEdicao[data-modo="folha"] > .lv-barra .lv-barra-dir{margin-left:0}
+  #lvPanelEdicao[data-modo="folha"] > .lv-config{grid-column:1 / -1;grid-row:3}
+  #lvPanelEdicao[data-modo="folha"] > .lv-pdf-wrap{grid-column:2;grid-row:4;margin-top:8px}
+  #lvPanelEdicao[data-modo="folha"] > .lv-page-sheet{grid-column:3;grid-row:4;position:sticky;top:8px;margin-top:8px;padding:0}
+  #lvPanelEdicao[data-modo="folha"] .lv-page-top{flex-direction:column;align-items:flex-start;gap:14px;margin:0;padding:0;border-bottom:none}
+  #lvPanelEdicao[data-modo="folha"] .lv-page-top-text{flex:none}
+  #lvPanelEdicao[data-modo="folha"] .lv-categoria-mini{flex-wrap:wrap;margin:0}
+  #lvPanelEdicao[data-modo="folha"] .lv-topo-dir{align-items:flex-start;gap:10px}
+  #lvPanelEdicao[data-modo="folha"] .lv-topo-acoes{flex-wrap:wrap}
+}

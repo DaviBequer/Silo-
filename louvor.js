@@ -67,6 +67,39 @@ function onLouvorSearchInput(v){
   renderLouvorLista();
   lvSelPodar();
 }
+/* músicas novas de um arquivo (Ajustes → Importar, { siloeLouvoresNovos:[{titulo, artista, categoria, tomOriginal, tomModoMenor, conteudo}] }):
+   acrescenta só as que ainda não existem com o mesmo nome; entram como Pronto (não enchem o "Atual"). Dá para desfazer */
+function lvImportarNovos(lista){
+  const nome = t=>vozSemAcento(String(t || '')).replace(/[^a-z0-9]+/g, ' ').trim();
+  const tem = new Set(state.louvores.map(l=>nome(l.titulo)));
+  const novas = [];
+  lista.forEach(d=>{
+    const k = nome(d && d.titulo);
+    if(!k || tem.has(k) || !String(d.conteudo || '').trim()) return;
+    tem.add(k);
+    novas.push({ id: 'lv_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      titulo: String(d.titulo), artista: String(d.artista || ''), categoria: LOUVOR_CATEGORIAS.includes(d.categoria) ? d.categoria : 'Louvor',
+      tom: '', tomOriginal: String(d.tomOriginal || ''), tomModoMenor: !!d.tomModoMenor, transpose: 0, capo: 0,
+      dataAgendamento: '', status: 'finalizada', colunas: 'auto', conteudo: String(d.conteudo), criadoEm: Date.now() });
+  });
+  const ja = lista.length - novas.length;
+  if(!novas.length){ showToast(ja ? 'Todas essas músicas já estão no app' : 'Nenhuma música nesse arquivo'); return; }
+  iosConfirm(`Adicionar ${novas.length} ${novas.length === 1 ? 'música' : 'músicas'} no Louvor?${ja ? ` (${ja} já ${ja === 1 ? 'estava' : 'estavam'} no app e fica${ja === 1 ? '' : 'm'} como está${ja === 1 ? '' : 'o'})` : ''}`).then(ok=>{
+    if(!ok) return;
+    comDesfazer(`✓ ${novas.length} ${novas.length === 1 ? 'música adicionada' : 'músicas adicionadas'}`, ()=>{ state.louvores.push(...novas); persist(); }, ()=>renderLouvor());
+    switchAba('louvor');
+    if(novas.every(l=>l.categoria === novas[0].categoria)) setLouvorFiltro(novas[0].categoria);
+    renderLouvor();
+  });
+}
+/* Enter ou a lupa (pedido do Davi, 22/11): só aí busca fora do app (Drive, Cifra Club); "110; 2" = vários */
+function lvBuscarDaLupa(){
+  const inp = document.getElementById('louvorSearchInput');
+  const q = (inp && inp.value || '').trim();
+  if(!q){ inp && inp.focus(); return; }
+  inp.blur();
+  lvBuscarFora(q);
+}
 function limparLouvorSearch(){
   louvorSearchTerm = '';
   document.getElementById('louvorSearchInput').value = '';
@@ -111,17 +144,10 @@ function lvRenderLista(){
     });
   } else items.sort(porNome);
   if(items.length===0){
-    /* pesquisou e não achou: oferece buscar como o Colar do WhatsApp (Drive → Cifra Club), sem agendar */
+    /* pesquisou e não achou: só avisa (pedido do Davi, 22/11). Buscar fora = Enter ou a lupa (lvBuscarDaLupa) */
     const termo = (document.getElementById('louvorSearchInput')?.value || '').trim();
     el.innerHTML = termo
-      ? `<div class="lv-cifraclub">
-          <div class="lv-cc-titulo">“${lvEsc(termo)}” não está no app</div>
-          <button type="button" class="lv-cc-btn" onclick="lvBuscarFora(document.getElementById('louvorSearchInput').value)">
-            <img class="cc-logo-mini" src="logo-cifraclub.png" alt="" width="22" height="22">
-            <span>Buscar</span>
-          </button>
-          <div class="lv-cc-dica">Igual ao Colar do WhatsApp: procura no Drive, depois no Cifra Club (número sozinho = Harpa)</div>
-        </div>`
+      ? `<div class="lv-nao-tem">“${lvEsc(termo)}” não está no app.</div>`
       : `<div class="empty-state"><div class="title">Nenhum louvor encontrado</div><div class="desc">Toque no + para adicionar</div></div>`;
     return;
   }
@@ -542,7 +568,7 @@ function switchLouvorSubtab(tab){
 /* ---------- Configurações padrão (PDF e Slides) ---------- */
 function ensureLouvorConfig(l){
   if(!l.colunas) l.colunas = 2;
-  if(l.pdfTamanhoTexto === undefined) l.pdfTamanhoTexto = 11;
+  if(l.pdfTamanhoTexto === undefined) l.pdfTamanhoTexto = 12;
   if(l.pdfTamanhoTitulo === undefined) l.pdfTamanhoTitulo = 20;
   if(l.pdfOrientacao === undefined) l.pdfOrientacao = 'retrato';
   if(l.pdfAlturaLinha === undefined) l.pdfAlturaLinha = 1.5;
@@ -557,6 +583,8 @@ function ensureLouvorConfig(l){
     Object.assign(l, { slideTituloTamanho:90, slideTextoTamanho:45, slideAlturaLinha:1.7, slideEspacamento:0.5,
       pdfTamanhoTitulo:20, pdfAlturaLinha:1.5, pdfEspacamento:0, pdfMargem:28, colunas:'auto', padraoV:203 });
   }
+  /* Nº 256 (pedido do Davi): letra do PDF 12 por padrão (11 ficava pequena); muda uma vez as que estavam no 11 */
+  if((l.padraoV||0) < 256){ if(Number(l.pdfTamanhoTexto) === 11) l.pdfTamanhoTexto = 12; l.padraoV = 256; }
   if(l.pdfOrientacao !== 'paisagem' && Number(l.colunas) === 3) l.colunas = 'auto';
   if(l.transpose === undefined) l.transpose = 0;
   if(l.tomOriginal === undefined){

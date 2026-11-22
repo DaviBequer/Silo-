@@ -223,36 +223,46 @@ function lmTomEscolhido(nota, menor){
   lmRender();
 }
 
-/* escolher música para o medley */
+/* escolher música para o medley (pedido do Davi, 22/11): TODAS as músicas do app (não só as do culto), filtro por tipo
+   (Todos, Louvor, Harpa, Corinho; fica guardado no aparelho) e a janela fica aberta para ir tocando em várias */
+const LM_TIPOS = [['', 'Todos'], ['Louvor', 'Louvor'], ['Harpa Cristã', 'Harpa'], ['Corinhos', 'Corinho']];
+function lmTipo(){ try{ return localStorage.getItem('siloe-lm-tipo') || ''; }catch(e){ return ''; } }
+function lmEscolherTipo(t){
+  try{ t ? localStorage.setItem('siloe-lm-tipo', t) : localStorage.removeItem('siloe-lm-tipo'); }catch(e){}
+  lmRenderEscolher(document.getElementById('lmBusca').value);
+}
 function lmAbrirEscolher(){
   document.getElementById('lmBusca').value = '';
   lmRenderEscolher('');
   document.getElementById('modalLmEscolher').classList.add('active');
 }
 function lmRenderEscolher(termo){
-  termo = String(termo||'').trim().toLowerCase();
+  termo = vozSemAcento(String(termo||'').trim());
+  const tipo = lmTipo();
   const ja = new Set(lmEdit.musicas.map(m=>m.id));
+  const n = lmEdit.musicas.length;
+  document.getElementById('lmEscTitulo').textContent = n ? `Adicionar música · ${n} no medley` : 'Adicionar música';
+  document.getElementById('lmEscTipos').innerHTML = LM_TIPOS.map(([v, nome])=>`<button type="button" class="dif-chip${tipo===v?' active':''}" onclick="lmEscolherTipo('${v}')">${nome}</button>`).join('');
   const lista = state.louvores
-    .filter(l=>!l.medley && !ja.has(l.id) && (l.conteudo||'').trim())
-    .filter(l=>!termo || (l.titulo||'').toLowerCase().includes(termo) || (l.artista||'').toLowerCase().includes(termo))
+    .filter(l=>!l.medley && !ja.has(l.id) && (l.conteudo||'').trim() && (!tipo || l.categoria === tipo))
+    .filter(l=>!termo || vozSemAcento((l.titulo||'') + ' ' + (l.artista||'')).includes(termo))
     .sort((a,b)=>(a.titulo||'').localeCompare(b.titulo||''));
   document.getElementById('lmEscolherLista').innerHTML = lista.map(l=>{
     ensureLouvorConfig(l);
     const tom = lvTomAtual(l);
-    return `<button type="button" class="lm-esc-item" onclick="lmEscolher('${l.id}')"><span><b>${lvEsc(l.titulo||'Sem título')}</b><small>${lvEsc(l.artista||'')}${l.artista?' · ':''}${lmPartes(l).length} partes</small></span>${tom?`<em>${tom}</em>`:''}</button>`;
-  }).join('') || (termo
-    ? `<div class="lv-cifraclub"><div class="lv-cc-titulo">Não está no app</div><a class="lv-cc-btn" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(document.getElementById('lmBusca').value.trim())}" target="_blank" rel="noopener"><span>Pesquisar no Cifra Club</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a></div>`
-    : '<div class="lm-vazio">Nenhuma música encontrada.</div>');
+    const quem = l.artista || (l.categoria === 'Corinhos' ? 'Corinho' : l.categoria === 'Harpa Cristã' ? 'Harpa Cristã' : '');
+    const np = lmPartes(l).length;
+    return `<button type="button" class="lm-esc-item" onclick="lmEscolher('${l.id}')">${lvCapaHtml(l.categoria, '')}<span><b>${lvEsc(l.titulo||'Sem título')}</b><small>${lvEsc(quem)}${quem?' · ':''}${np} ${np === 1 ? 'parte' : 'partes'}</small></span>${tom?`<em>${tom}</em>`:''}</button>`;
+  }).join('') || `<div class="lm-vazio">${termo ? 'Não está no app.' : 'Nenhuma música desse tipo.'}</div>`;
 }
 function lmEscolher(id){
   const src = lmLouvor(id); if(!src) return;
   ensureLouvorConfig(src);
   lmEdit.musicas.push({ id, tom: lvTomMaiorAtual(src) || '', menor: !!src.tomModoMenor });
   lmEdit.mexeu = true;
-  closeModal('modalLmEscolher');
   lmRender();
-  const ultima = document.querySelector('#lmMusicas .lm-musica:last-child');
-  if(ultima){ ultima.classList.add('lm-chegou'); ultima.scrollIntoView({ block:'nearest', behavior:'smooth' }); }
+  lmRenderEscolher(document.getElementById('lmBusca').value);   // a janela fica aberta: toca na próxima
+  showToast('✓ ' + (src.titulo || 'Música') + ' no medley');
 }
 
 async function lmSalvar(){

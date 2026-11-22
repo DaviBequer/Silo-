@@ -228,6 +228,8 @@ async function rodarTestes(){
         const d = prDia('2026-11-22'); state.pressao = antes;
         igual('pressão: o dia em manhã, tarde e noite', [d.manha.id, d.tarde.id, d.noite.id], ['a', 'b', 'c']); }
       igual('gestação: 109 dias = 3 meses e 18 dias', gestMesesTxt(109), '3 meses e 18 dias');
+      { const a = { pdfTamanhoTexto: 11, padraoV: 203 }, b = { pdfTamanhoTexto: 14, padraoV: 203 }, c = {}; ensureLouvorConfig(a); ensureLouvorConfig(b); ensureLouvorConfig(c);
+        igual('PDF: letra 12 por padrão (11 vira 12, outro tamanho fica)', [a.pdfTamanhoTexto, b.pdfTamanhoTexto, c.pdfTamanhoTexto], [12, 14, 12]); }
       igual('harpa: só partitura não conta como letra', [cultoTemLetra({ dados:{ conteudo:'[Intro]\nC  G\nE|--3--|' } }), cultoTemLetra({ dados:{ conteudo:'C  G\nClama Jesus\nC  G\nNo teu poder\nG\nJesus salva' } })], [false, true]);
       { const id0 = louvorAtualId, l = { id:'tmz', titulo:'M', conteudo:'[♪ A — Tom C]\nC   G\nlá\n[♪ B — Tom Em]\nEm  D\nlá' };
         state.louvores.push(l); louvorAtualId = 'tmz'; const dt = window.driveTomMudou; window.driveTomMudou = ()=>{};

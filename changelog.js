@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v25.6', itens: [
+    'Louvor: pesquisa só avisa quando não acha; Enter ou a lupa buscam fora do app',
+    'Medley: escolher entre todas as músicas, por tipo (Louvor, Harpa, Corinho), várias de uma vez',
+    'Visualizar no computador com os botões nas laterais; letra do PDF 12 por padrão; botão de seleção não corta mais'
+  ] },
   { versao: 'v25.5', itens: [
     'Pressão por dia: manhã, tarde e noite (o app já escolhe o período da hora e passa para o próximo que falta)',
     'Botão da gestação mostra 1/3, 2/3 e 3/3',
