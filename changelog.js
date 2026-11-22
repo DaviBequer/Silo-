@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v26.0', itens: [
+    'Pressão no computador: a lista não aparece mais por cima do cabeçalho ao rolar'
+  ] },
   { versao: 'v25.9', itens: [
     'Pressão em tela cheia: a máxima, a mínima e os batimentos mudam arrastando o dedo no número, sem teclado',
     'Sintomas no período: quantas vezes, em que período do dia, quantos dias fica sem aparecer e se tem padrão',
