@@ -651,7 +651,8 @@ if(typeof aoMudarEstado === 'function') aoMudarEstado(renderGestacao);
    (uma por período no dia: medir de novo troca a do período). state.pressaoSintomas = os do "+ Outro". Nome do PDF em state.gestacao.nome (só no banco). */
 const PR_SINTOMAS = ['Bem', 'Dor de cabeça', 'Pontada no coração', 'Falta de ar', 'Queimação no peito', 'Dor no peito', 'Cólica', 'Inchaço', 'Tontura', 'Vista embaçada'];
 const PR_PERS = [['manha', 'Manhã'], ['tarde', 'Tarde'], ['noite', 'Noite']];
-let prAba = 'hoje', prSel = [], prPerSel = '';
+let prAba = 'hoje', prSel = [], prPerSel = '', prVal = { max: 110, min: 70, bpm: 80 };   // prVal = os números de arrastar
+const PR_LIM = { max: [70, 220], min: [40, 140], bpm: [40, 180] };
 const prHoje = ()=>calISO(new Date());
 const prPerDaHora = h=>h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
 const prPer = p=>p.per || prPerDaHora(Number(p.em.slice(11, 13)));
@@ -676,10 +677,11 @@ function prAbrir(aba){
   prAba = aba || 'hoje'; prSel = [];
   const hoje = prDia(prHoje()), agora = prPerDaHora(new Date().getHours());
   prPerSel = !hoje[agora] ? agora : (PR_PERS.map(x=>x[0]).find(k=>!hoje[k]) || agora);   // o período de agora; se já mediu, o que falta
+  const u = prLista()[0]; prVal = { max: u ? u.max : 110, min: u ? u.min : 70, bpm: (u && u.bpm) || 80 };   // começa na última medida
   let m = document.getElementById('modalPressao');
   if(!m){
     m = document.createElement('div'); m.className = 'modal-overlay'; m.id = 'modalPressao';
-    m.innerHTML = `<div class="modal pr-modal"><div class="modal-header"><h3>Pressão</h3><button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPressao')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button></div>
+    m.innerHTML = `<div class="modal pr-modal"><div class="modal-header"><button class="modal-close" title="Voltar" aria-label="Voltar" onclick="closeModal('modalPressao')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><h3>Pressão</h3></div>
       <div class="dash-tabs pr-abas"><button type="button" class="dash-tab" data-a="hoje" onclick="prTrocar('hoje')">Hoje</button><button type="button" class="dash-tab" data-a="hist" onclick="prTrocar('hist')">Histórico</button></div><div id="prCorpo"></div></div>`;
     document.body.appendChild(m);
   }
@@ -705,13 +707,17 @@ function prRender(){
     el.innerHTML = `<div class="pr-quando">Hoje · ${feitos === 3 ? 'as 3 medidas feitas ✓' : feitos + ' de 3 medidas'}</div>
       ${prTresHtml(prHoje(), true)}
       <div class="pr-form-tit">${ja ? `${nomePer}: medir de novo (troca a de ${ja.em.slice(11, 16)})` : `Medida da ${nomePer.toLowerCase()}`}</div>
-      <div class="pr-dois"><label>Máxima<input id="prMax" type="text" inputmode="numeric" placeholder="110" oninput="prPrevia()"></label><label>Mínima<input id="prMin" type="text" inputmode="numeric" placeholder="70" oninput="prPrevia()"></label></div>
-      <label class="pr-bpm">Batimentos<input id="prBpm" type="text" inputmode="numeric" placeholder="80"></label>
-      <div class="pr-nivel" id="prNivel" hidden></div>
+      <div class="pr-medir">${prNumHtml('max', 'Máxima')}<span class="pr-barra" aria-hidden="true">/</span>${prNumHtml('min', 'Mínima')}</div>
+      <div class="pr-bpm-linha"><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg>Batimentos</span>${prNumHtml('bpm', 'Batimentos', true)}</div>
+      <p class="pr-dica">Encoste no número e arraste para cima ou para baixo</p>
+      <div class="pr-nivel" id="prNivel"></div>
       <div class="pr-pergunta">Como ela está?</div>
       <div class="pr-sint">${sint.map(s=>`<button type="button" class="pr-chip${prSel.includes(s) ? ' on' : ''}" data-s="${escBanco(s)}" onclick="prSintoma(this.dataset.s)">${escBanco(s)}</button>`).join('')}<button type="button" class="pr-chip pr-outro" onclick="prOutro()">+ Outro</button></div>
       <label class="pr-nota">Anotação<input id="prNota" type="text" placeholder="ex.: depois do almoço, braço esquerdo"></label>
+      ${(()=>{ const desde = calISO(new Date(Date.now() - 6 * 864e5)), ps = prLista().filter(p=>p.em.slice(0, 10) >= desde).reverse();
+        return ps.length ? `<div class="pr-graf-hoje"><div>Últimos 7 dias</div>${prGrafico(ps, 322, 120, false)}</div>` : ''; })()}
       <button type="button" class="btn btn-block pr-guardar" onclick="prGuardar()">Guardar a da ${nomePer.toLowerCase()}</button>`;
+    prNumLigar(); prPrevia();
     return;
   }
   const L = prLista();
@@ -721,6 +727,10 @@ function prRender(){
   const nome = (state.gestacao && state.gestacao.nome) || '';
   el.innerHTML = `<div class="pr-placa"><div class="pr-placa-topo"><span>Últimas ${ult.length} medidas</span><b>${prPor(media('max'), media('min'))}</b></div>${prGrafico(ult, 322, 150, true)}
       <div class="pr-legenda"><span><i class="max"></i>máxima</span><span><i class="min"></i>mínima</span>${media('bpm') ? `<span class="pr-bpm-media">batimentos ${media('bpm')} em média</span>` : ''}</div></div>
+    ${(()=>{ const res = prSintomasResumo(L); if(!res.length) return '';
+      return `<div class="pr-sint-res"><div class="pr-sec-tit">Sintomas no período</div>${res.map(r=>`<div class="pr-sr"><div class="pr-sr-topo"><b>${escBanco(r.nome)}</b><span>${r.vezes}x em ${r.dias} ${r.dias === 1 ? 'dia' : 'dias'}</span></div>
+        <div class="pr-sr-per">${PR_PERS.map(([k, n])=>`<span class="${r.maisEm === k ? 'mais' : ''}"><i style="--p:${Math.round(r.per[k] / r.vezes * 100)}%"></i>${n} · ${r.per[k]}</span>`).join('')}</div>
+        <div class="pr-sr-txt">${prSintTxt(r)}</div></div>`).join('')}</div>`; })()}
     <div class="pr-lista">${prDias().map(dia=>{ const d = prDia(dia), todos = Object.values(d);
       const sint = [...new Set(todos.flatMap(p=>(p.sint || []).filter(s=>s !== 'Bem')))], notas = todos.map(p=>p.nota).filter(Boolean);
       return `<div class="pr-dia-bloco"><div class="pr-dia-topo"><b>${dia === prHoje() ? 'Hoje' : prDdMm(dia)}</b><span>${todos.length}/3</span></div>${prTresHtml(dia, false)}
@@ -741,12 +751,69 @@ function prGrafico(ps, W, H, escuro){
     ${ps.map((p, i)=>prNivel(p.max, p.min) !== 'ok' ? `<circle cx="${x(i)}" cy="${y(p.max)}" r="4.5" fill="#e2b45a"/>` : '').join('')}
     <text x="4" y="${H - 6}" font-size="10" fill="${cTx}" font-family="Outfit">${prDdMm(ps[0].em)}</text><text x="${W - 4}" y="${H - 6}" text-anchor="end" font-size="10" fill="${cTx}" font-family="Outfit">${prDdMm(ps[ps.length - 1].em)}</text></svg>`;
 }
+/* número de arrastar (pedido do Davi, 22/11): encostou e arrastou para cima sobe, para baixo desce; mais rápido = muda mais rápido.
+   Só o próprio número aparece (sem lista, sem setas, sem teclado). Seta do teclado e rodinha do mouse também mudam */
+function prNumHtml(k, rot, semRot){
+  return `<div class="pr-num" data-k="${k}" tabindex="0" role="spinbutton" aria-label="${rot}" aria-valuemin="${PR_LIM[k][0]}" aria-valuemax="${PR_LIM[k][1]}" aria-valuenow="${prVal[k]}">${semRot ? '' : `<small>${rot}</small>`}<output>${prVal[k]}</output></div>`;
+}
+function prNumMudar(el, d){
+  const k = el.dataset.k, [a, b] = PR_LIM[k], v = Math.max(a, Math.min(b, prVal[k] + d));
+  if(v === prVal[k]) return;
+  prVal[k] = v; el.querySelector('output').textContent = v; el.setAttribute('aria-valuenow', v);
+  if(k !== 'bpm') prPrevia();
+  if(navigator.vibrate) try{ navigator.vibrate(4); }catch(e){}
+}
+function prNumLigar(){
+  document.querySelectorAll('#prCorpo .pr-num').forEach(el=>{
+    let y0 = null, sobra = 0, t = 0;
+    el.addEventListener('pointerdown', e=>{ y0 = e.clientY; sobra = 0; t = performance.now(); el.classList.add('arrastando'); try{ el.setPointerCapture(e.pointerId); }catch(_){} e.preventDefault(); });
+    el.addEventListener('pointermove', e=>{
+      if(y0 === null) return;
+      const dy = y0 - e.clientY, agora = performance.now(), vel = Math.abs(dy) / Math.max(1, agora - t);   // px por ms
+      const passo = vel > 1.2 ? 4 : vel > .6 ? 7 : 11;
+      sobra += dy; y0 = e.clientY; t = agora;
+      while(Math.abs(sobra) >= passo){ prNumMudar(el, sobra > 0 ? 1 : -1); sobra -= Math.sign(sobra) * passo; }
+    });
+    const solta = ()=>{ y0 = null; el.classList.remove('arrastando'); };
+    el.addEventListener('pointerup', solta); el.addEventListener('pointercancel', solta);
+    el.addEventListener('keydown', e=>{ const d = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0; if(d){ prNumMudar(el, d); e.preventDefault(); } });
+    el.addEventListener('wheel', e=>{ e.preventDefault(); prNumMudar(el, e.deltaY < 0 ? 1 : -1); }, { passive: false });
+  });
+}
 function prPrevia(){
-  const max = Number(document.getElementById('prMax').value), min = Number(document.getElementById('prMin').value), el = document.getElementById('prNivel');
-  const mx = max > 0 && max < 30 ? max * 10 : max, mn = min > 0 && min < 20 ? min * 10 : min;
-  if(!(mx > 50 && mn > 30)){ el.hidden = true; return; }
-  const n = prNivel(mx, mn); el.hidden = false; el.className = 'pr-nivel ' + n;
-  el.innerHTML = `<i class="pr-bola ${n}"></i>${prPor(mx, mn)} · ${PR_NIVEL_TXT[n]}`;
+  const el = document.getElementById('prNivel'); if(!el) return;
+  const n = prNivel(prVal.max, prVal.min); el.className = 'pr-nivel ' + n;
+  el.innerHTML = `<i class="pr-bola ${n}"></i>${prPor(prVal.max, prVal.min)} · ${PR_NIVEL_TXT[n]}`;
+}
+/* sintomas no período (pedido do Davi, 22/11: ela tem problema no coração): quantas vezes, em que período do dia
+   e quantos dias fica sem aparecer até voltar; "padrão" = pelo menos 2 voltas com intervalos parecidos */
+function prSintomasResumo(L){
+  const dd = iso=>Math.round(Date.parse(iso.slice(0, 10) + 'T12:00:00Z') / 864e5), por = {};
+  (L || prLista()).forEach(p=>(p.sint || []).filter(s=>s !== 'Bem').forEach(s=>{
+    const r = por[s] = por[s] || { nome: s, vezes: 0, per: { manha: 0, tarde: 0, noite: 0 }, dias: new Set(), ult: '' };
+    r.vezes++; r.per[prPer(p)]++; r.dias.add(dd(p.em)); if(p.em > r.ult) r.ult = p.em.slice(0, 10); }));
+  const hoje = dd(prHoje());
+  return Object.values(por).map(r=>{
+    const dias = [...r.dias].sort((a, b)=>a - b), sem = [];
+    for(let i = 1; i < dias.length; i++) if(dias[i] - dias[i - 1] > 1) sem.push(dias[i] - dias[i - 1] - 1);
+    const media = sem.length ? sem.reduce((s, v)=>s + v, 0) / sem.length : null;
+    const desvio = sem.length ? Math.sqrt(sem.reduce((s, v)=>s + (v - media) ** 2, 0) / sem.length) : 0;
+    const top = PR_PERS.map(x=>x[0]).sort((a, b)=>r.per[b] - r.per[a])[0];
+    return { nome: r.nome, vezes: r.vezes, per: r.per, dias: dias.length, ult: r.ult, semDesde: hoje - dias[dias.length - 1], voltas: sem.length, semMedia: media,
+      padrao: sem.length >= 2 && desvio <= Math.max(1, media * .35), maisEm: r.vezes >= 3 && r.per[top] / r.vezes >= .6 ? top : '' };
+  }).sort((a, b)=>b.vezes - a.vezes);
+}
+const prNum1 = v=>String(Math.round(v * 10) / 10).replace('.', ',');
+function prSintPadrao(r){
+  if(r.dias < 2) return 'apareceu em 1 dia só';
+  if(!r.voltas) return 'em dias seguidos';
+  return r.voltas < 2 ? 'ainda pouco para saber' : r.padrao ? 'parece ter padrão' : 'sem padrão claro';
+}
+function prSintTxt(r){
+  const sem = r.semMedia === null ? '' : `Fica em média ${prNum1(r.semMedia)} ${r.semMedia === 1 ? 'dia' : 'dias'} sem e volta`;
+  const mais = r.maisEm ? 'mais ' + { manha: 'de manhã', tarde: 'à tarde', noite: 'à noite' }[r.maisEm] : '';
+  const ult = r.semDesde <= 0 ? 'apareceu hoje' : r.semDesde === 1 ? 'última ontem' : `há ${r.semDesde} dias sem`;
+  return [sem, prSintPadrao(r), mais, ult].filter(Boolean).join(' · ');
 }
 function prSintoma(s){
   if(s === 'Bem') prSel = prSel.includes('Bem') ? [] : ['Bem'];
@@ -757,16 +824,13 @@ function prOutro(){
   const s = (prompt('Qual sintoma? (fica guardado para as próximas vezes)') || '').trim();
   if(!s) return;
   if(![...PR_SINTOMAS, ...(state.pressaoSintomas || [])].some(x=>vozSemAcento(x) === vozSemAcento(s))) state.pressaoSintomas = [...(state.pressaoSintomas || []), s];
-  const vals = ['prMax', 'prMin', 'prBpm', 'prNota'].map(id=>document.getElementById(id).value);
+  const nota = document.getElementById('prNota').value;
   prSel = [...prSel.filter(x=>x !== 'Bem'), s]; persist(); prRender();
-  ['prMax', 'prMin', 'prBpm', 'prNota'].forEach((id, i)=>{ document.getElementById(id).value = vals[i]; }); prPrevia();
+  document.getElementById('prNota').value = nota;
 }
 function prGuardar(){
-  const n = id=>Math.round(Number(String(document.getElementById(id).value).replace(',', '.')) || 0);
-  let max = n('prMax'), min = n('prMin'); const bpm = n('prBpm');
-  if(max > 0 && max < 30) max *= 10;   // "11 por 7" → 110 / 70
-  if(min > 0 && min < 20) min *= 10;
-  if(!(max >= 60 && max <= 250 && min >= 30 && min <= 160 && max > min)){ showToast('Confira a máxima e a mínima (ex.: 110 e 70)'); return; }
+  const { max, min, bpm } = prVal;
+  if(!(max > min)){ showToast('A máxima tem que ser maior que a mínima'); return; }
   const d = new Date(), dia = calISO(d), em = dia + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   const p = { id: 'pr' + Date.now().toString(36), em, per: prPerSel || prPerDaHora(d.getHours()), max, min, sint: prSel.slice(), nota: document.getElementById('prNota').value.trim() };
   if(bpm >= 30 && bpm <= 220) p.bpm = bpm;
@@ -838,14 +902,18 @@ async function prPdf(){
     headStyles: { fillColor: [255, 255, 255], textColor: cinza, fontStyle: 'normal', lineColor: [211, 217, 227], lineWidth: { bottom: .8 } },
     columnStyles: { 0: { cellWidth: 44 }, 1: { cellWidth: 78 }, 2: { cellWidth: 78 }, 3: { cellWidth: 78 } },
     didParseCell: c=>{ if(c.section === 'body' && c.column.index >= 1 && c.column.index <= 3){ const p = linhas[c.row.index].d[PR_PERS[c.column.index - 1][0]]; if(p && prNivel(p.max, p.min) !== 'ok'){ c.cell.styles.textColor = ouro; c.cell.styles.fontStyle = 'bold'; } } } });
-  const conta = {}; L.forEach(p=>(p.sint || []).filter(s=>s !== 'Bem').forEach(s=>{ conta[s] = (conta[s] || 0) + 1; }));
+  /* sintomas: vezes, em que período e quanto tempo fica sem aparecer (pedido do Davi, 22/11) */
+  const res = prSintomasResumo(L);
   let y = doc.lastAutoTable.finalY + 24;
-  const itens = Object.entries(conta).sort((a, b)=>b[1] - a[1]);
-  if(itens.length){
-    if(y > 760){ doc.addPage(); y = 60; }
-    doc.setFontSize(10.5); doc.setTextColor(...azul); doc.text('Sintomas no período', M, y); y += 12;
-    let x = M; doc.setFontSize(9);
-    itens.forEach(([s, n])=>{ const t = `${s} · ${n}x`, w = doc.getTextWidth(t) + 18; if(x + w > W - M){ x = M; y += 24; } doc.setFillColor(...claro); doc.roundedRect(x, y, w, 18, 9, 9, 'F'); doc.setTextColor(...azul); doc.text(t, x + 9, y + 12.5); x += w + 6; });
+  if(res.length){
+    if(y > 720){ doc.addPage(); y = 60; }
+    doc.setFontSize(10.5); doc.setTextColor(...azul); doc.text('Sintomas no período', M, y);
+    doc.autoTable({ startY: y + 8, margin: { left: M, right: M, bottom: 50 }, head: [['Sintoma', 'Vezes', 'Manhã', 'Tarde', 'Noite', 'Fica sem (média)', 'Última vez', 'Padrão']],
+      body: res.map(r=>[r.nome, `${r.vezes}x em ${r.dias} ${r.dias === 1 ? 'dia' : 'dias'}`, r.per.manha, r.per.tarde, r.per.noite, r.semMedia === null ? '—' : `${prNum1(r.semMedia)} ${r.semMedia === 1 ? 'dia' : 'dias'}`, prDdMm(r.ult), prSintPadrao(r) + (r.maisEm ? ', mais ' + { manha: 'de manhã', tarde: 'à tarde', noite: 'à noite' }[r.maisEm] : '')]),
+      styles: { font: 'helvetica', fontSize: 8.5, textColor: azul, cellPadding: { top: 5, bottom: 5, left: 4, right: 4 }, lineColor: [238, 241, 245], lineWidth: { bottom: .6 }, valign: 'middle' },
+      headStyles: { fillColor: [255, 255, 255], textColor: cinza, fontStyle: 'normal', lineColor: [211, 217, 227], lineWidth: { bottom: .8 } },
+      columnStyles: { 0: { cellWidth: 92, fontStyle: 'bold' }, 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' } },
+      didParseCell: c=>{ if(c.section === 'body' && c.column.index >= 2 && c.column.index <= 4){ const r = res[c.row.index]; if(r.maisEm === PR_PERS[c.column.index - 2][0]){ c.cell.styles.textColor = ouro; c.cell.styles.fontStyle = 'bold'; } } } });
   }
   const paginas = doc.getNumberOfPages();
   for(let i = 1; i <= paginas; i++){ doc.setPage(i); doc.setDrawColor(211, 217, 227); doc.setLineWidth(.6); doc.line(M, 800, W - M, 800); doc.setFontSize(8); doc.setTextColor(...cinza);

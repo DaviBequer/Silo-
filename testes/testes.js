@@ -227,6 +227,11 @@ async function rodarTestes(){
       { const antes = state.pressao; state.pressao = [{ id:'a', em:'2026-11-22T08:00', max:110, min:70 }, { id:'b', em:'2026-11-22T14:00', per:'tarde', max:120, min:80 }, { id:'c', em:'2026-11-22T21:00', max:115, min:75 }];
         const d = prDia('2026-11-22'); state.pressao = antes;
         igual('pressão: o dia em manhã, tarde e noite', [d.manha.id, d.tarde.id, d.noite.id], ['a', 'b', 'c']); }
+      { const S = (em, per, sint)=>({ id: em, em, per, max: 110, min: 70, sint });
+        // dor no peito nos dias 1, 4, 7 e 10 (3 dias sem entre cada) sempre à noite; tontura 2 dias seguidos
+        const r = prSintomasResumo([S('2026-11-01T21:00', 'noite', ['Dor no peito']), S('2026-11-04T21:00', 'noite', ['Dor no peito', 'Tontura']), S('2026-11-05T08:00', 'manha', ['Tontura', 'Bem']), S('2026-11-07T21:00', 'noite', ['Dor no peito']), S('2026-11-10T20:00', 'noite', ['Dor no peito'])]);
+        const dor = r.find(x=>x.nome === 'Dor no peito'), ton = r.find(x=>x.nome === 'Tontura');
+        igual('pressão: sintomas por período, dias sem e padrão', [r.length, dor.vezes, dor.per.noite, dor.semMedia, dor.padrao, dor.maisEm, prSintPadrao(ton), ton.semMedia], [2, 4, 4, 2, true, 'noite', 'em dias seguidos', null]); }
       igual('gestação: 109 dias = 3 meses e 18 dias', gestMesesTxt(109), '3 meses e 18 dias');
       { const a = { pdfTamanhoTexto: 11, padraoV: 203 }, b = { pdfTamanhoTexto: 14, padraoV: 203 }, c = {}; ensureLouvorConfig(a); ensureLouvorConfig(b); ensureLouvorConfig(c);
         igual('PDF: letra 12 por padrão (11 vira 12, outro tamanho fica)', [a.pdfTamanhoTexto, b.pdfTamanhoTexto, c.pdfTamanhoTexto], [12, 14, 12]); }

@@ -3357,11 +3357,8 @@ body{font-weight:400;letter-spacing:.005em}
 .pr-modal{max-width:460px}
 .pr-abas{margin-bottom:14px}
 .pr-quando{font-size:13px;color:var(--text-faint);margin-bottom:10px}
-.pr-dois{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.pr-dois label,.pr-bpm,.pr-nota{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--text-dim)}
-.pr-dois input{height:64px;border:1px solid var(--fio);border-radius:16px;background:#fff;font:200 34px 'Outfit',sans-serif;text-align:center;color:var(--text)}
-.pr-bpm{margin-top:12px}
-.pr-bpm input,.pr-nota input{height:46px;border:1px solid var(--fio);border-radius:14px;background:#fff;font:300 16px 'Outfit',sans-serif;padding:0 14px;color:var(--text)}
+.pr-nota{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--text-dim)}
+.pr-nota input{height:46px;border:1px solid var(--fio);border-radius:14px;background:#fff;font:300 16px 'Outfit',sans-serif;padding:0 14px;color:var(--text)}
 .pr-nivel{display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 14px;border-radius:14px;font-size:14px}
 .pr-nivel[hidden]{display:none}
 .pr-nivel.ok{background:#e7f3ee;color:#1f5a47}.pr-nivel.atencao{background:#fbf1dc;color:#7a5200}.pr-nivel.alta{background:#f8e3e0;color:#8a2c20}
@@ -3458,3 +3455,33 @@ button.pr-per{cursor:pointer}
   .lv-rel-item b{overflow:hidden;font-size:13px;font-weight:500;white-space:nowrap;text-overflow:ellipsis}
   .lv-rel-item small{overflow:hidden;font-size:11.5px;color:var(--text-faint);white-space:nowrap;text-overflow:ellipsis}
 }
+/* Nº 259 (pedido do Davi, 22/11): pressão em tela cheia, números de arrastar (sem setas, sem teclado) e resumo dos sintomas */
+#modalPressao{align-items:stretch}
+#modalPressao .pr-modal{max-width:none;width:100%;height:100%;max-height:none;border-radius:0}
+#modalPressao .pr-modal>:not(.modal-header){width:100%;max-width:640px;margin-left:auto;margin-right:auto}
+#modalPressao .modal-header{justify-content:flex-start;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.pr-medir{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:6px;padding:16px 12px 12px;border-radius:20px;background:#fff;border:1px solid var(--fio)}
+.pr-num{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0 8px;border-radius:16px;cursor:ns-resize;touch-action:none;user-select:none;-webkit-user-select:none;outline:none;transition:background .15s}
+.pr-num:focus-visible{box-shadow:0 0 0 2px var(--latao)}
+.pr-num.arrastando{background:rgba(159,193,230,.28)}
+.pr-num small{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;color:var(--text-faint)}
+.pr-num output{font-size:64px;line-height:1;font-weight:200;font-variant-numeric:tabular-nums;color:var(--text)}
+.pr-barra{align-self:center;padding-top:18px;font-size:44px;font-weight:200;color:var(--text-faint)}
+.pr-bpm-linha{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:6px 8px 6px 18px;border-radius:20px;background:#fff;border:1px solid var(--fio)}
+.pr-bpm-linha>span{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-dim)}
+.pr-bpm-linha .pr-num{padding:6px 20px}
+.pr-bpm-linha .pr-num output{font-size:40px}
+.pr-dica{margin:10px 0 0;font-size:12.5px;text-align:center;color:var(--text-faint)}
+.pr-graf-hoje{margin-top:16px;padding:14px;border-radius:20px;background:#fff;border:1px solid var(--fio)}
+.pr-graf-hoje>div,.pr-sec-tit{margin-bottom:6px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;color:var(--text-faint)}
+.pr-sint-res{margin-top:14px;padding:14px 16px;border-radius:18px;background:#fff;border:1px solid var(--fio)}
+.pr-sr{padding:10px 0;border-bottom:1px solid var(--fio)}
+.pr-sr:last-child{padding-bottom:0;border-bottom:none}
+.pr-sr-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pr-sr-topo b{font-size:15px;font-weight:500}
+.pr-sr-topo span{flex:none;font-size:12.5px;color:var(--text-faint)}
+.pr-sr-per{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:8px}
+.pr-sr-per span{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-dim)}
+.pr-sr-per span.mais{font-weight:500;color:var(--text)}
+.pr-sr-per i{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--graf) var(--p),#e9eef5 var(--p))}
+.pr-sr-txt{margin-top:8px;font-size:12.5px;line-height:1.45;color:var(--text-dim)}
