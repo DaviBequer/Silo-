@@ -1,6 +1,11 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v25.5', itens: [
+    'Pressão por dia: manhã, tarde e noite (o app já escolhe o período da hora e passa para o próximo que falta)',
+    'Botão da gestação mostra 1/3, 2/3 e 3/3',
+    'Histórico, PDF e WhatsApp com um dia por linha: manhã, tarde e noite'
+  ] },
   { versao: 'v25.4', itens: [
     'Gestação: o botão da pressão fica na linha de baixo do bloco (não cobre mais o texto) e no computador o bloco usa a largura toda'
   ] },

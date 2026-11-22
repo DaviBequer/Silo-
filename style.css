@@ -3395,3 +3395,21 @@ body{font-weight:400;letter-spacing:.005em}
 .gest-rodape{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
 .gest-rodape .gest-pressao{position:static;flex:none}
 .gest-info{padding-right:0}
+/* pressão por dia: manhã, tarde e noite (pedido do Davi, 22/11/2026) */
+.pr-tres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pr-per{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:72px;padding:10px 12px;border:1px solid var(--fio);border-radius:14px;background:#fff;color:var(--text);font:400 13px 'Outfit',sans-serif;text-align:left}
+button.pr-per{cursor:pointer}
+.pr-per-nome{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}
+.pr-per b{font-size:19px;font-weight:300}
+.pr-per b.vazio{color:var(--text-faint)}
+.pr-per small{font-size:11.5px;color:var(--text-faint)}
+.pr-per.sel{border:2px solid var(--graf);padding:9px 11px}
+.pr-per.feito.ok{background:#eef7f2}.pr-per.feito.atencao{background:#fbf3e2}.pr-per.feito.alta{background:#f8e6e3}
+.pr-form-tit{margin:16px 0 10px;font-size:15px;color:var(--text)}
+.gest-pressao.feito.completo{border-color:#2f7a63}
+.pr-dia-bloco{padding:12px 0;border-bottom:1px solid var(--fio)}
+.pr-dia-topo{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.pr-dia-topo b{font-size:15px;font-weight:500}.pr-dia-topo span{font-size:12px;color:var(--text-faint)}
+.pr-dia-obs{margin-top:8px;font-size:12.5px;color:var(--text-dim)}
+.pr-dia-apagar{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:12px}
+.pr-dia-apagar .link-txt{color:var(--text-faint)}

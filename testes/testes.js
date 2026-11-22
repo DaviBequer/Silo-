@@ -224,6 +224,9 @@ async function rodarTestes(){
         igual('gestação: DUM 01/01 em 20/04 = 15 sem 4 d, parto 08/10', [g.sem, g.d, g.tri, dpp.getDate(), dpp.getMonth(), dpp.getFullYear(), gestCalc('2026-01-01', new Date(2025, 11, 1))], [15, 4, 2, 8, 9, 2026, null]); }
       igual('histórico: ordenar valor ↓ e depois categoria ↑', hgOrdenar([{valor:10,cat:'b'},{valor:20,cat:'z'},{valor:10,cat:'a'}], [['valor','desc'],['cat','asc']]).map(i=>i.valor + i.cat), ['20z', '10a', '10b']);
       igual('pressão: cor e "11 por 7"', [prNivel(120, 80), prNivel(135, 80), prNivel(140, 85), prNivel(120, 92), prPor(110, 70), prPor(115, 75)], ['ok', 'atencao', 'alta', 'alta', '11 por 7', '11,5 por 7,5']);
+      { const antes = state.pressao; state.pressao = [{ id:'a', em:'2026-11-22T08:00', max:110, min:70 }, { id:'b', em:'2026-11-22T14:00', per:'tarde', max:120, min:80 }, { id:'c', em:'2026-11-22T21:00', max:115, min:75 }];
+        const d = prDia('2026-11-22'); state.pressao = antes;
+        igual('pressão: o dia em manhã, tarde e noite', [d.manha.id, d.tarde.id, d.noite.id], ['a', 'b', 'c']); }
       igual('gestação: 109 dias = 3 meses e 18 dias', gestMesesTxt(109), '3 meses e 18 dias');
       igual('harpa: só partitura não conta como letra', [cultoTemLetra({ dados:{ conteudo:'[Intro]\nC  G\nE|--3--|' } }), cultoTemLetra({ dados:{ conteudo:'C  G\nClama Jesus\nC  G\nNo teu poder\nG\nJesus salva' } })], [false, true]);
       { const id0 = louvorAtualId, l = { id:'tmz', titulo:'M', conteudo:'[♪ A — Tom C]\nC   G\nlá\n[♪ B — Tom Em]\nEm  D\nlá' };

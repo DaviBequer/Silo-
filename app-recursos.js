@@ -646,84 +646,107 @@ function gestMudarDum(iso){
 }
 if(typeof aoMudarEstado === 'function') aoMudarEstado(renderGestacao);
 
-/* ---------- pressão da gestação (pedido do Davi, 21/11/2026; modelo aprovado no artefato) ----------
-   state.pressao = [{ id, em:'AAAA-MM-DDTHH:MM', max, min, bpm, sint:[], nota }], state.pressaoSintomas = sintomas criados no "+ Outro".
-   O nome que vai no PDF fica em state.gestacao.nome (no banco, nunca no código). */
+/* ---------- pressão da gestação (pedido do Davi, 21–22/11/2026) ----------
+   O médico pediu 3 medidas por dia: manhã, tarde e noite. state.pressao = [{ id, em:'AAAA-MM-DDTHH:MM', per:'manha'|'tarde'|'noite', max, min, bpm, sint:[], nota }]
+   (uma por período no dia: medir de novo troca a do período). state.pressaoSintomas = os do "+ Outro". Nome do PDF em state.gestacao.nome (só no banco). */
 const PR_SINTOMAS = ['Bem', 'Dor de cabeça', 'Pontada no coração', 'Falta de ar', 'Queimação no peito', 'Dor no peito', 'Cólica', 'Inchaço', 'Tontura', 'Vista embaçada'];
-let prAba = 'nova', prSel = [];
+const PR_PERS = [['manha', 'Manhã'], ['tarde', 'Tarde'], ['noite', 'Noite']];
+let prAba = 'hoje', prSel = [], prPerSel = '';
 const prHoje = ()=>calISO(new Date());
+const prPerDaHora = h=>h < 12 ? 'manha' : h < 18 ? 'tarde' : 'noite';
+const prPer = p=>p.per || prPerDaHora(Number(p.em.slice(11, 13)));
 function prLista(){ return (state.pressao || []).slice().sort((a, b)=>b.em.localeCompare(a.em)); }
-function prHojeMedida(){ return prLista().find(p=>p.em.slice(0, 10) === prHoje()) || null; }
+/* o dia em 3 partes: { manha, tarde, noite } (a última de cada período) */
+function prDia(dia){ const d = {}; prLista().filter(p=>p.em.slice(0, 10) === dia).forEach(p=>{ const k = prPer(p); if(!d[k]) d[k] = p; }); return d; }
+function prDias(){ return [...new Set(prLista().map(p=>p.em.slice(0, 10)))]; }
 /* referência para gestantes: verde até 130/80, amarela até 139/89, vermelha a partir de 140/90 */
 function prNivel(max, min){ return max >= 140 || min >= 90 ? 'alta' : max > 130 || min > 80 ? 'atencao' : 'ok'; }
 const PR_NIVEL_TXT = { ok: 'dentro do esperado', atencao: 'um pouco alta: meça de novo daqui a pouco', alta: 'alta: fale com o médico' };
 const prPor = (max, min)=>{ const f = v=>String(Math.round(v) / 10).replace('.', ','); return `${f(max)} por ${f(min)}`; };   // 110/70 → "11 por 7"
+const prDdMm = iso=>iso.slice(8, 10) + '/' + iso.slice(5, 7);
+/* botão do bloco da gestação: escuro sem medida hoje; azul-claro com "1/3", "2/3"; completo com ✓ */
 function prBotaoHtml(){
-  const h = prHojeMedida();
+  const n = Object.keys(prDia(prHoje())).length;
   const coracao = `<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>`;
-  return h
-    ? `<button type="button" class="gest-pressao feito" onclick="prAbrir('hist')" aria-label="Pressão de hoje: ${prPor(h.max, h.min)}. Abrir o registro"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coracao}<path d="m8.5 12 2.5 2.5 4.5-5"/></svg>${prPor(h.max, h.min)}</button>`
-    : `<button type="button" class="gest-pressao" onclick="prAbrir('nova')" title="Medir a pressão" aria-label="Medir a pressão"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coracao}<path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg></button>`;
+  return n
+    ? `<button type="button" class="gest-pressao feito${n === 3 ? ' completo' : ''}" onclick="prAbrir()" aria-label="Pressão de hoje: ${n} de 3 medidas. Abrir"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coracao}${n === 3 ? '<path d="m8.5 12 2.5 2.5 4.5-5"/>' : ''}</svg>${n}/3</button>`
+    : `<button type="button" class="gest-pressao" onclick="prAbrir()" title="Medir a pressão" aria-label="Medir a pressão"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coracao}<path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg></button>`;
 }
 function prAbrir(aba){
-  prAba = aba || 'nova'; prSel = [];
+  prAba = aba || 'hoje'; prSel = [];
+  const hoje = prDia(prHoje()), agora = prPerDaHora(new Date().getHours());
+  prPerSel = !hoje[agora] ? agora : (PR_PERS.map(x=>x[0]).find(k=>!hoje[k]) || agora);   // o período de agora; se já mediu, o que falta
   let m = document.getElementById('modalPressao');
   if(!m){
     m = document.createElement('div'); m.className = 'modal-overlay'; m.id = 'modalPressao';
     m.innerHTML = `<div class="modal pr-modal"><div class="modal-header"><h3>Pressão</h3><button class="modal-close" aria-label="Fechar" onclick="closeModal('modalPressao')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button></div>
-      <div class="dash-tabs pr-abas"><button type="button" class="dash-tab" data-a="nova" onclick="prTrocar('nova')">Medir agora</button><button type="button" class="dash-tab" data-a="hist" onclick="prTrocar('hist')">Histórico</button></div><div id="prCorpo"></div></div>`;
+      <div class="dash-tabs pr-abas"><button type="button" class="dash-tab" data-a="hoje" onclick="prTrocar('hoje')">Hoje</button><button type="button" class="dash-tab" data-a="hist" onclick="prTrocar('hist')">Histórico</button></div><div id="prCorpo"></div></div>`;
     document.body.appendChild(m);
   }
   m.classList.add('active'); document.body.style.overflow = 'hidden';
   prRender();
 }
 function prTrocar(a){ prAba = a; prRender(); }
+function prPeriodo(k){ prPerSel = k; prSel = []; prRender(); }
+/* três quadrinhos do dia (manhã, tarde, noite): o valor com a cor, ou "Medir" */
+function prTresHtml(dia, clicavel){
+  const d = prDia(dia);
+  return `<div class="pr-tres">${PR_PERS.map(([k, n])=>{ const p = d[k];
+    return `<${clicavel ? `button type="button" onclick="prPeriodo('${k}')"` : 'div'} class="pr-per${clicavel && prPerSel === k ? ' sel' : ''}${p ? ' feito ' + prNivel(p.max, p.min) : ''}">
+      <span class="pr-per-nome">${n}</span>${p ? `<b>${p.max}/${p.min}</b><small>${p.em.slice(11, 16)}${p.bpm ? ' · ' + p.bpm + ' bpm' : ''}</small>` : `<b class="vazio">—</b><small>${clicavel ? 'medir' : ''}</small>`}</${clicavel ? 'button' : 'div'}>`; }).join('')}</div>`;
+}
 function prRender(){
   document.querySelectorAll('#modalPressao .pr-abas .dash-tab').forEach(b=>b.classList.toggle('active', b.dataset.a === prAba));
   const el = document.getElementById('prCorpo'); if(!el) return;
-  if(prAba === 'nova'){
-    const agora = new Date(), hora = String(agora.getHours()).padStart(2, '0') + ':' + String(agora.getMinutes()).padStart(2, '0');
+  if(prAba === 'hoje'){
+    const hoje = prDia(prHoje()), ja = hoje[prPerSel], nomePer = (PR_PERS.find(x=>x[0] === prPerSel) || [])[1] || '';
     const sint = [...PR_SINTOMAS, ...(state.pressaoSintomas || [])];
-    el.innerHTML = `<div class="pr-quando">hoje · ${hora}</div>
+    const feitos = Object.keys(hoje).length;
+    el.innerHTML = `<div class="pr-quando">Hoje · ${feitos === 3 ? 'as 3 medidas feitas ✓' : feitos + ' de 3 medidas'}</div>
+      ${prTresHtml(prHoje(), true)}
+      <div class="pr-form-tit">${ja ? `${nomePer}: medir de novo (troca a de ${ja.em.slice(11, 16)})` : `Medida da ${nomePer.toLowerCase()}`}</div>
       <div class="pr-dois"><label>Máxima<input id="prMax" type="text" inputmode="numeric" placeholder="110" oninput="prPrevia()"></label><label>Mínima<input id="prMin" type="text" inputmode="numeric" placeholder="70" oninput="prPrevia()"></label></div>
       <label class="pr-bpm">Batimentos<input id="prBpm" type="text" inputmode="numeric" placeholder="80"></label>
       <div class="pr-nivel" id="prNivel" hidden></div>
       <div class="pr-pergunta">Como ela está?</div>
       <div class="pr-sint">${sint.map(s=>`<button type="button" class="pr-chip${prSel.includes(s) ? ' on' : ''}" data-s="${escBanco(s)}" onclick="prSintoma(this.dataset.s)">${escBanco(s)}</button>`).join('')}<button type="button" class="pr-chip pr-outro" onclick="prOutro()">+ Outro</button></div>
       <label class="pr-nota">Anotação<input id="prNota" type="text" placeholder="ex.: depois do almoço, braço esquerdo"></label>
-      <button type="button" class="btn btn-block pr-guardar" onclick="prGuardar()">Guardar</button>`;
+      <button type="button" class="btn btn-block pr-guardar" onclick="prGuardar()">Guardar a da ${nomePer.toLowerCase()}</button>`;
     return;
   }
   const L = prLista();
-  if(!L.length){ el.innerHTML = '<div class="gm-vazio">Nenhuma medida ainda. Toque em "Medir agora".</div>'; return; }
-  const ult = L.slice(0, 14).reverse(), media = k=>Math.round(L.slice(0, 14).reduce((s, p)=>s + (Number(p[k]) || 0), 0) / Math.max(1, L.slice(0, 14).filter(p=>p[k]).length));
+  if(!L.length){ el.innerHTML = '<div class="gm-vazio">Nenhuma medida ainda. Toque em "Hoje".</div>'; return; }
+  const ult = L.slice(0, 21).reverse(), r = L.slice(0, 21);
+  const media = k=>{ const v = r.filter(p=>p[k]); return v.length ? Math.round(v.reduce((s, p)=>s + p[k], 0) / v.length) : 0; };
   const nome = (state.gestacao && state.gestacao.nome) || '';
   el.innerHTML = `<div class="pr-placa"><div class="pr-placa-topo"><span>Últimas ${ult.length} medidas</span><b>${prPor(media('max'), media('min'))}</b></div>${prGrafico(ult, 322, 150, true)}
       <div class="pr-legenda"><span><i class="max"></i>máxima</span><span><i class="min"></i>mínima</span>${media('bpm') ? `<span class="pr-bpm-media">batimentos ${media('bpm')} em média</span>` : ''}</div></div>
-    <div class="pr-lista">${L.map(p=>{ const d = calParse(p.em.slice(0, 10)), dia = p.em.slice(0, 10) === prHoje() ? 'hoje' : String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
-      const extra = [p.bpm ? p.bpm + ' bpm' : '', (p.sint || []).join(', ').toLowerCase(), p.nota].filter(Boolean).join(' · ');
-      return `<div class="pr-item"><span class="pr-dia">${dia}<br>${p.em.slice(11, 16)}</span><span class="pr-val">${p.max} / ${p.min}${extra ? `<small>${escBanco(extra)}</small>` : ''}</span><i class="pr-bola ${prNivel(p.max, p.min)}"></i><button type="button" class="pr-x" aria-label="Apagar esta medida" title="Apagar" data-id="${p.id}" onclick="prApagar(this.dataset.id)">×</button></div>`; }).join('')}</div>
+    <div class="pr-lista">${prDias().map(dia=>{ const d = prDia(dia), todos = Object.values(d);
+      const sint = [...new Set(todos.flatMap(p=>(p.sint || []).filter(s=>s !== 'Bem')))], notas = todos.map(p=>p.nota).filter(Boolean);
+      return `<div class="pr-dia-bloco"><div class="pr-dia-topo"><b>${dia === prHoje() ? 'Hoje' : prDdMm(dia)}</b><span>${todos.length}/3</span></div>${prTresHtml(dia, false)}
+        ${sint.length || notas.length ? `<div class="pr-dia-obs">${escBanco([sint.join(', ').toLowerCase(), ...notas].filter(Boolean).join(' · '))}</div>` : ''}
+        <div class="pr-dia-apagar">${PR_PERS.map(([k])=>d[k]).filter(Boolean).map(p=>`<button type="button" class="link-txt" data-id="${p.id}" onclick="prApagar(this.dataset.id)">apagar ${(PR_PERS.find(x=>x[0] === prPer(p)) || [])[1].toLowerCase()}</button>`).join('')}</div></div>`; }).join('')}</div>
     <label class="pr-nota">Nome no relatório<input type="text" value="${escBanco(nome)}" placeholder="nome da gestante" onchange="prNome(this.value)"></label>
     <div class="pr-acoes"><button type="button" class="btn btn-outline" onclick="prPdf()">PDF para o médico</button><button type="button" class="btn btn-outline" onclick="prWhats()">WhatsApp</button></div>`;
 }
-/* gráfico: máxima e mínima; faixa tranquila clarinha e 140/90 pontilhada; o ponto acima de 140/90 em amarelo */
+/* gráfico: máxima e mínima; faixa tranquila clarinha e 140/90 pontilhada; o ponto acima de 130/80 em amarelo */
 function prGrafico(ps, W, H, escuro){
   const top = 8, base = H - 22, y = v=>top + (160 - Math.max(50, Math.min(160, v))) / 110 * (base - top);
   const x = i=>ps.length < 2 ? W / 2 : 8 + i * (W - 16) / (ps.length - 1);
   const linha = k=>ps.map((p, i)=>`${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
   const cMax = escuro ? '#9fc1e6' : '#1b2638', cMin = escuro ? 'rgba(255,255,255,.6)' : '#9fc1e6', cTx = escuro ? 'rgba(255,255,255,.55)' : '#5f6983';
-  const dd = p=>p.em.slice(8, 10) + '/' + p.em.slice(5, 7);
   return `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico da máxima e da mínima"><rect x="0" y="${y(140)}" width="${W}" height="${y(80) - y(140)}" rx="8" fill="${escuro ? 'rgba(159,193,230,.10)' : '#eef4fb'}"/>
     <line x1="0" y1="${y(140)}" x2="${W}" y2="${y(140)}" stroke="#c98a1e" stroke-dasharray="3 4"/><line x1="0" y1="${y(90)}" x2="${W}" y2="${y(90)}" stroke="#c98a1e" stroke-opacity=".5" stroke-dasharray="3 4"/>
     <polyline points="${linha('max')}" fill="none" stroke="${cMax}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${linha('min')}" fill="none" stroke="${cMin}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
     ${ps.map((p, i)=>prNivel(p.max, p.min) !== 'ok' ? `<circle cx="${x(i)}" cy="${y(p.max)}" r="4.5" fill="#e2b45a"/>` : '').join('')}
-    <text x="4" y="${H - 6}" font-size="10" fill="${cTx}" font-family="Outfit">${dd(ps[0])}</text><text x="${W - 4}" y="${H - 6}" text-anchor="end" font-size="10" fill="${cTx}" font-family="Outfit">${dd(ps[ps.length - 1])}</text></svg>`;
+    <text x="4" y="${H - 6}" font-size="10" fill="${cTx}" font-family="Outfit">${prDdMm(ps[0].em)}</text><text x="${W - 4}" y="${H - 6}" text-anchor="end" font-size="10" fill="${cTx}" font-family="Outfit">${prDdMm(ps[ps.length - 1].em)}</text></svg>`;
 }
 function prPrevia(){
   const max = Number(document.getElementById('prMax').value), min = Number(document.getElementById('prMin').value), el = document.getElementById('prNivel');
-  if(!(max > 50 && min > 30)){ el.hidden = true; return; }
-  const n = prNivel(max, min); el.hidden = false; el.className = 'pr-nivel ' + n;
-  el.innerHTML = `<i class="pr-bola ${n}"></i>${prPor(max, min)} · ${PR_NIVEL_TXT[n]}`;
+  const mx = max > 0 && max < 30 ? max * 10 : max, mn = min > 0 && min < 20 ? min * 10 : min;
+  if(!(mx > 50 && mn > 30)){ el.hidden = true; return; }
+  const n = prNivel(mx, mn); el.hidden = false; el.className = 'pr-nivel ' + n;
+  el.innerHTML = `<i class="pr-bola ${n}"></i>${prPor(mx, mn)} · ${PR_NIVEL_TXT[n]}`;
 }
 function prSintoma(s){
   if(s === 'Bem') prSel = prSel.includes('Bem') ? [] : ['Bem'];
@@ -744,32 +767,35 @@ function prGuardar(){
   if(max > 0 && max < 30) max *= 10;   // "11 por 7" → 110 / 70
   if(min > 0 && min < 20) min *= 10;
   if(!(max >= 60 && max <= 250 && min >= 30 && min <= 160 && max > min)){ showToast('Confira a máxima e a mínima (ex.: 110 e 70)'); return; }
-  const d = new Date(), em = calISO(d) + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-  const p = { id: 'pr' + Date.now().toString(36), em, max, min, sint: prSel.slice(), nota: document.getElementById('prNota').value.trim() };
+  const d = new Date(), dia = calISO(d), em = dia + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const p = { id: 'pr' + Date.now().toString(36), em, per: prPerSel || prPerDaHora(d.getHours()), max, min, sint: prSel.slice(), nota: document.getElementById('prNota').value.trim() };
   if(bpm >= 30 && bpm <= 220) p.bpm = bpm;
-  state.pressao = [...(state.pressao || []), p];
+  state.pressao = [...(state.pressao || []).filter(x=>!(x.em.slice(0, 10) === dia && prPer(x) === p.per)), p];   // um por período no dia
   persist(); renderGestacao();
-  showToast(`✓ ${prPor(max, min)} guardado`);
-  if(prNivel(max, min) === 'alta') showToast('Pressão alta (14 por 9 ou mais): fale com o médico');
-  prSel = []; prTrocar('hist');
+  showToast(prNivel(max, min) === 'alta' ? 'Pressão alta (14 por 9 ou mais): fale com o médico' : `✓ ${(PR_PERS.find(x=>x[0] === p.per) || [])[1]}: ${prPor(max, min)}`);
+  const falta = PR_PERS.map(x=>x[0]).find(k=>!prDia(dia)[k]);
+  prSel = []; if(falta){ prPerSel = falta; prRender(); } else prTrocar('hist');
 }
 function prApagar(id){
-  const p = (state.pressao || []).find(x=>x.id === id); if(!p) return;
+  if(!(state.pressao || []).some(x=>x.id === id)) return;
   comDesfazer('Medida apagada', ()=>{ state.pressao = state.pressao.filter(x=>x.id !== id); persist(); }, ()=>{ prRender(); renderGestacao(); });
 }
 function prNome(v){ state.gestacao = { ...(state.gestacao || {}), nome: String(v || '').trim() }; persist(); }
-/* texto para o WhatsApp: as medidas das últimas 2 semanas */
+/* texto para o WhatsApp: um dia por linha, manhã/tarde/noite (últimas 2 semanas) */
 function prTexto(){
-  const L = prLista().filter(p=>p.em >= calISO(new Date(Date.now() - 14 * 864e5)));
-  const nome = (state.gestacao && state.gestacao.nome) || '';
-  return `*Pressão${nome ? ' · ' + nome : ''}*\n` + L.map(p=>`${p.em.slice(8, 10)}/${p.em.slice(5, 7)} ${p.em.slice(11, 16)} · ${p.max}/${p.min}${p.bpm ? ' · ' + p.bpm + ' bpm' : ''}${(p.sint || []).length ? ' · ' + p.sint.join(', ').toLowerCase() : ''}${p.nota ? ' · ' + p.nota : ''}`).join('\n');
+  const desde = calISO(new Date(Date.now() - 14 * 864e5)), nome = (state.gestacao && state.gestacao.nome) || '';
+  const linhas = prDias().filter(d=>d >= desde).map(dia=>{ const d = prDia(dia), todos = Object.values(d);
+    const v = PR_PERS.map(([k, n])=>d[k] ? `${n.slice(0, 1)} ${d[k].max}/${d[k].min}${d[k].bpm ? ' (' + d[k].bpm + ')' : ''}` : `${n.slice(0, 1)} —`).join(' · ');
+    const obs = [...new Set(todos.flatMap(p=>(p.sint || []).filter(s=>s !== 'Bem')))].join(', ').toLowerCase();
+    return `${prDdMm(dia)}: ${v}${obs ? ' · ' + obs : ''}`; });
+  return `*Pressão${nome ? ' · ' + nome : ''}* (M manhã, T tarde, N noite)\n` + linhas.join('\n');
 }
 async function prWhats(){
   const t = prTexto();
   if(navigator.share){ try{ await navigator.share({ text: t }); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
   window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank');
 }
-/* PDF para o médico: cabeçalho, 4 quadros, gráfico, tabela e sintomas do período (modelo aprovado) */
+/* PDF para o médico: cabeçalho, 4 quadros, gráfico, tabela por dia (manhã, tarde, noite) e sintomas do período */
 async function prPdf(){
   const L = prLista(); if(!L.length) return;
   await garantirJsPDF();
@@ -778,22 +804,22 @@ async function prPdf(){
   const W = 595, M = 40, azul = [27, 38, 56], cinza = [95, 105, 131], claro = [244, 246, 251], ouro = [138, 90, 0];
   const g = state.gestacao && gestCalc(state.gestacao.dum), nome = (state.gestacao && state.gestacao.nome) || '';
   const fmt = iso=>iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
-  const asc = L.slice().reverse(), de = asc[0].em, ate = asc[asc.length - 1].em;
+  const asc = L.slice().reverse(), de = asc[0].em, ate = asc[asc.length - 1].em, dias = prDias();
   doc.setFont('helvetica', 'normal'); doc.setTextColor(63, 110, 163); doc.setFontSize(8.5); doc.text('ACOMPANHAMENTO DA PRESSÃO', M, 52);
   doc.setTextColor(...azul); doc.setFontSize(20); doc.text(nome || 'Gestante', M, 76);
   doc.setFontSize(10); doc.setTextColor(...cinza);
   if(g) doc.text(`Gestação de ${g.sem} semanas${g.d ? ' e ' + g.d + ' dia' + (g.d > 1 ? 's' : '') : ''} · previsão do parto ${fmt(calISO(g.dpp))}`, M, 92);
   doc.text('Período', W - M, 60, { align: 'right' }); doc.setTextColor(...azul); doc.setFontSize(11.5); doc.text(`${fmt(de)} a ${fmt(ate)}`, W - M, 75, { align: 'right' });
-  doc.setFontSize(9.5); doc.setTextColor(...cinza); doc.text(`${L.length} ${L.length === 1 ? 'medida' : 'medidas'}`, W - M, 89, { align: 'right' });
+  doc.setFontSize(9.5); doc.setTextColor(...cinza); doc.text(`${dias.length} ${dias.length === 1 ? 'dia' : 'dias'} · ${L.length} medidas (manhã, tarde e noite)`, W - M, 89, { align: 'right' });
   doc.setDrawColor(...azul); doc.setLineWidth(1.4); doc.line(M, 102, W - M, 102);
   const media = k=>{ const v = L.filter(p=>p[k]); return v.length ? Math.round(v.reduce((s, p)=>s + p[k], 0) / v.length) : 0; };
   const maior = L.reduce((a, p)=>p.max > a.max ? p : a, L[0]), menor = L.reduce((a, p)=>p.max < a.max ? p : a, L[0]);
-  const quadros = [['MÉDIA', `${media('max')} / ${media('min')}`, 'mmHg'], ['MAIOR', `${maior.max} / ${maior.min}`, fmt(maior.em).slice(0, 5) + ' · ' + maior.em.slice(11, 16)], ['MENOR', `${menor.max} / ${menor.min}`, fmt(menor.em).slice(0, 5) + ' · ' + menor.em.slice(11, 16)], ['BATIMENTOS', media('bpm') ? String(media('bpm')) : '—', 'por minuto, em média']];
+  const perNome = p=>(PR_PERS.find(x=>x[0] === prPer(p)) || [])[1].toLowerCase();
+  const quadros = [['MÉDIA', `${media('max')} / ${media('min')}`, 'mmHg'], ['MAIOR', `${maior.max} / ${maior.min}`, prDdMm(maior.em) + ' · ' + perNome(maior)], ['MENOR', `${menor.max} / ${menor.min}`, prDdMm(menor.em) + ' · ' + perNome(menor)], ['BATIMENTOS', media('bpm') ? String(media('bpm')) : '—', 'por minuto, em média']];
   const qw = (W - 2 * M - 30) / 4;
   quadros.forEach(([t, v, s], i)=>{ const x = M + i * (qw + 10); doc.setFillColor(...claro); doc.roundedRect(x, 118, qw, 62, 8, 8, 'F');
     doc.setFontSize(7.5); doc.setTextColor(...cinza); doc.text(t, x + 10, 134); doc.setFontSize(17); doc.setTextColor(...(i === 1 && prNivel(maior.max, maior.min) !== 'ok' ? ouro : azul)); doc.text(v, x + 10, 156); doc.setFontSize(8); doc.setTextColor(...cinza); doc.text(s, x + 10, 171); });
-  /* gráfico */
-  doc.setFontSize(10.5); doc.setTextColor(...azul); doc.text('Pressão dia a dia', M, 206);
+  doc.setFontSize(10.5); doc.setTextColor(...azul); doc.text('Pressão em cada medida', M, 206);
   const gx = M + 22, gw = W - 2 * M - 22, gt = 216, gb = 336, gy = v=>gt + (160 - Math.max(50, Math.min(160, v))) / 110 * (gb - gt);
   doc.setFillColor(238, 244, 251); doc.rect(gx, gy(140), gw, gy(80) - gy(140), 'F');
   doc.setFontSize(7.5); doc.setTextColor(...cinza); [140, 110, 80, 60].forEach(v=>doc.text(String(v), gx - 4, gy(v) + 3, { align: 'right' }));
@@ -802,15 +828,16 @@ async function prPdf(){
   const traco = (k, cor)=>{ doc.setDrawColor(...cor); doc.setLineWidth(1.6); for(let i = 1; i < asc.length; i++) doc.line(px(i - 1), gy(asc[i - 1][k]), px(i), gy(asc[i][k])); };
   traco('max', azul); traco('min', [159, 193, 230]);
   asc.forEach((p, i)=>{ if(prNivel(p.max, p.min) !== 'ok'){ doc.setFillColor(201, 138, 30); doc.circle(px(i), gy(p.max), 3.2, 'F'); } });
-  doc.setFontSize(7.5); doc.setTextColor(...cinza); doc.text(fmt(de).slice(0, 5), gx, gb + 12); doc.text(fmt(ate).slice(0, 5), gx + gw, gb + 12, { align: 'right' });
-  /* tabela */
-  doc.autoTable({ startY: gb + 28, margin: { left: M, right: M }, head: [['Data', 'Pressão', 'Batim.', 'Como estava · anotação']],
-    body: L.map(p=>[fmt(p.em).slice(0, 5) + ' ' + p.em.slice(11, 16), `${p.max} / ${p.min}`, p.bpm || '', [(p.sint || []).join(', ').toLowerCase(), p.nota].filter(Boolean).join(' · ')]),
-    styles: { font: 'helvetica', fontSize: 9, textColor: azul, cellPadding: { top: 5, bottom: 5, left: 4, right: 4 }, lineColor: [238, 241, 245], lineWidth: { bottom: .6 } },
+  doc.setFontSize(7.5); doc.setTextColor(...cinza); doc.text(prDdMm(de), gx, gb + 12); doc.text(prDdMm(ate), gx + gw, gb + 12, { align: 'right' });
+  /* tabela: um dia por linha */
+  const celula = p=>p ? `${p.max}/${p.min}${p.bpm ? '  ·  ' + p.bpm : ''}\n${p.em.slice(11, 16)}` : '—';
+  const linhas = dias.map(dia=>{ const d = prDia(dia), todos = Object.values(d);
+    return { d, row: [prDdMm(dia), celula(d.manha), celula(d.tarde), celula(d.noite), [[...new Set(todos.flatMap(p=>(p.sint || []).filter(s=>s !== 'Bem')))].join(', ').toLowerCase(), ...todos.map(p=>p.nota).filter(Boolean)].filter(Boolean).join(' · ')] }; });
+  doc.autoTable({ startY: gb + 28, margin: { left: M, right: M }, head: [['Dia', 'Manhã', 'Tarde', 'Noite', 'Como estava · anotação']], body: linhas.map(x=>x.row),
+    styles: { font: 'helvetica', fontSize: 9, textColor: azul, cellPadding: { top: 5, bottom: 5, left: 4, right: 4 }, lineColor: [238, 241, 245], lineWidth: { bottom: .6 }, valign: 'middle' },
     headStyles: { fillColor: [255, 255, 255], textColor: cinza, fontStyle: 'normal', lineColor: [211, 217, 227], lineWidth: { bottom: .8 } },
-    columnStyles: { 0: { cellWidth: 72 }, 1: { cellWidth: 62 }, 2: { cellWidth: 44 } },
-    didParseCell: d=>{ if(d.section === 'body'){ const p = L[d.row.index]; if(p && prNivel(p.max, p.min) !== 'ok' && d.column.index < 2){ d.cell.styles.textColor = ouro; d.cell.styles.fontStyle = 'bold'; } } } });
-  /* sintomas do período */
+    columnStyles: { 0: { cellWidth: 44 }, 1: { cellWidth: 78 }, 2: { cellWidth: 78 }, 3: { cellWidth: 78 } },
+    didParseCell: c=>{ if(c.section === 'body' && c.column.index >= 1 && c.column.index <= 3){ const p = linhas[c.row.index].d[PR_PERS[c.column.index - 1][0]]; if(p && prNivel(p.max, p.min) !== 'ok'){ c.cell.styles.textColor = ouro; c.cell.styles.fontStyle = 'bold'; } } } });
   const conta = {}; L.forEach(p=>(p.sint || []).filter(s=>s !== 'Bem').forEach(s=>{ conta[s] = (conta[s] || 0) + 1; }));
   let y = doc.lastAutoTable.finalY + 24;
   const itens = Object.entries(conta).sort((a, b)=>b[1] - a[1]);
@@ -822,10 +849,9 @@ async function prPdf(){
   }
   const paginas = doc.getNumberOfPages();
   for(let i = 1; i <= paginas; i++){ doc.setPage(i); doc.setDrawColor(211, 217, 227); doc.setLineWidth(.6); doc.line(M, 800, W - M, 800); doc.setFontSize(8); doc.setTextColor(...cinza);
-    doc.text('Medidas feitas em casa', M, 812); doc.text(`Gerado pelo Siloé em ${fmt(prHoje())}`, W - M, 812, { align: 'right' }); }
+    doc.text('Medidas feitas em casa · manhã, tarde e noite', M, 812); doc.text(`Gerado pelo Siloé em ${fmt(prHoje())}`, W - M, 812, { align: 'right' }); }
   doc.save(`pressao-${prHoje()}.pdf`);
 }
-
 /* ---------- nome do ícone ao segurar o dedo (botões só com ícone) ----------
    Vale para todo botão com desenho e sem texto que tenha title/aria-label. Segurou → mostra o nome e não aperta. */
 let icoSegurar = null;   // { el, timer, x, y, mostrou }
