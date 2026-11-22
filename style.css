@@ -3485,3 +3485,12 @@ button.pr-per{cursor:pointer}
 .pr-sr-per span.mais{font-weight:500;color:var(--text)}
 .pr-sr-per i{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--graf) var(--p),#e9eef5 var(--p))}
 .pr-sr-txt{margin-top:8px;font-size:12.5px;line-height:1.45;color:var(--text-dim)}
+/* Nº 261 (pedido do Davi): pressão no computador usa a largura toda, em duas colunas (celular igual) */
+@media (min-width:1024px){
+  #modalPressao .pr-modal>:not(.modal-header){max-width:1280px}
+  #prCorpo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px 40px;align-items:start;padding-bottom:24px}
+  #prCorpo>.gm-vazio{grid-column:1/-1}
+  #prCorpo .pr-col>.pr-pergunta:first-child{margin-top:0}
+  #prCorpo .pr-col>.pr-lista:first-child{margin-top:0}
+  #prCorpo .pr-placa svg,#prCorpo .pr-graf-hoje svg{display:block;max-height:240px}
+}

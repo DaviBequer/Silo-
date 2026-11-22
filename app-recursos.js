@@ -704,19 +704,19 @@ function prRender(){
     const hoje = prDia(prHoje()), ja = hoje[prPerSel], nomePer = (PR_PERS.find(x=>x[0] === prPerSel) || [])[1] || '';
     const sint = [...PR_SINTOMAS, ...(state.pressaoSintomas || [])];
     const feitos = Object.keys(hoje).length;
-    el.innerHTML = `<div class="pr-quando">Hoje · ${feitos === 3 ? 'as 3 medidas feitas ✓' : feitos + ' de 3 medidas'}</div>
+    el.innerHTML = `<div class="pr-col"><div class="pr-quando">Hoje · ${feitos === 3 ? 'as 3 medidas feitas ✓' : feitos + ' de 3 medidas'}</div>
       ${prTresHtml(prHoje(), true)}
       <div class="pr-form-tit">${ja ? `${nomePer}: medir de novo (troca a de ${ja.em.slice(11, 16)})` : `Medida da ${nomePer.toLowerCase()}`}</div>
       <div class="pr-medir">${prNumHtml('max', 'Máxima')}<span class="pr-barra" aria-hidden="true">/</span>${prNumHtml('min', 'Mínima')}</div>
       <div class="pr-bpm-linha"><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg>Batimentos</span>${prNumHtml('bpm', 'Batimentos', true)}</div>
       <p class="pr-dica">Encoste no número e arraste para cima ou para baixo</p>
-      <div class="pr-nivel" id="prNivel"></div>
-      <div class="pr-pergunta">Como ela está?</div>
+      <div class="pr-nivel" id="prNivel"></div></div>
+      <div class="pr-col"><div class="pr-pergunta">Como ela está?</div>
       <div class="pr-sint">${sint.map(s=>`<button type="button" class="pr-chip${prSel.includes(s) ? ' on' : ''}" data-s="${escBanco(s)}" onclick="prSintoma(this.dataset.s)">${escBanco(s)}</button>`).join('')}<button type="button" class="pr-chip pr-outro" onclick="prOutro()">+ Outro</button></div>
       <label class="pr-nota">Anotação<input id="prNota" type="text" placeholder="ex.: depois do almoço, braço esquerdo"></label>
       ${(()=>{ const desde = calISO(new Date(Date.now() - 6 * 864e5)), ps = prLista().filter(p=>p.em.slice(0, 10) >= desde).reverse();
         return ps.length ? `<div class="pr-graf-hoje"><div>Últimos 7 dias</div>${prGrafico(ps, 322, 120, false)}</div>` : ''; })()}
-      <button type="button" class="btn btn-block pr-guardar" onclick="prGuardar()">Guardar a da ${nomePer.toLowerCase()}</button>`;
+      <button type="button" class="btn btn-block pr-guardar" onclick="prGuardar()">Guardar a da ${nomePer.toLowerCase()}</button></div>`;
     prNumLigar(); prPrevia();
     return;
   }
@@ -725,19 +725,19 @@ function prRender(){
   const ult = L.slice(0, 21).reverse(), r = L.slice(0, 21);
   const media = k=>{ const v = r.filter(p=>p[k]); return v.length ? Math.round(v.reduce((s, p)=>s + p[k], 0) / v.length) : 0; };
   const nome = (state.gestacao && state.gestacao.nome) || '';
-  el.innerHTML = `<div class="pr-placa"><div class="pr-placa-topo"><span>Últimas ${ult.length} medidas</span><b>${prPor(media('max'), media('min'))}</b></div>${prGrafico(ult, 322, 150, true)}
+  el.innerHTML = `<div class="pr-col"><div class="pr-placa"><div class="pr-placa-topo"><span>Últimas ${ult.length} medidas</span><b>${prPor(media('max'), media('min'))}</b></div>${prGrafico(ult, 322, 150, true)}
       <div class="pr-legenda"><span><i class="max"></i>máxima</span><span><i class="min"></i>mínima</span>${media('bpm') ? `<span class="pr-bpm-media">batimentos ${media('bpm')} em média</span>` : ''}</div></div>
     ${(()=>{ const res = prSintomasResumo(L); if(!res.length) return '';
       return `<div class="pr-sint-res"><div class="pr-sec-tit">Sintomas no período</div>${res.map(r=>`<div class="pr-sr"><div class="pr-sr-topo"><b>${escBanco(r.nome)}</b><span>${r.vezes}x em ${r.dias} ${r.dias === 1 ? 'dia' : 'dias'}</span></div>
         <div class="pr-sr-per">${PR_PERS.map(([k, n])=>`<span class="${r.maisEm === k ? 'mais' : ''}"><i style="--p:${Math.round(r.per[k] / r.vezes * 100)}%"></i>${n} · ${r.per[k]}</span>`).join('')}</div>
-        <div class="pr-sr-txt">${prSintTxt(r)}</div></div>`).join('')}</div>`; })()}
-    <div class="pr-lista">${prDias().map(dia=>{ const d = prDia(dia), todos = Object.values(d);
+        <div class="pr-sr-txt">${prSintTxt(r)}</div></div>`).join('')}</div>`; })()}</div>
+    <div class="pr-col"><div class="pr-lista">${prDias().map(dia=>{ const d = prDia(dia), todos = Object.values(d);
       const sint = [...new Set(todos.flatMap(p=>(p.sint || []).filter(s=>s !== 'Bem')))], notas = todos.map(p=>p.nota).filter(Boolean);
       return `<div class="pr-dia-bloco"><div class="pr-dia-topo"><b>${dia === prHoje() ? 'Hoje' : prDdMm(dia)}</b><span>${todos.length}/3</span></div>${prTresHtml(dia, false)}
         ${sint.length || notas.length ? `<div class="pr-dia-obs">${escBanco([sint.join(', ').toLowerCase(), ...notas].filter(Boolean).join(' · '))}</div>` : ''}
         <div class="pr-dia-apagar">${PR_PERS.map(([k])=>d[k]).filter(Boolean).map(p=>`<button type="button" class="link-txt" data-id="${p.id}" onclick="prApagar(this.dataset.id)">apagar ${(PR_PERS.find(x=>x[0] === prPer(p)) || [])[1].toLowerCase()}</button>`).join('')}</div></div>`; }).join('')}</div>
     <label class="pr-nota">Nome no relatório<input type="text" value="${escBanco(nome)}" placeholder="nome da gestante" onchange="prNome(this.value)"></label>
-    <div class="pr-acoes"><button type="button" class="btn btn-outline" onclick="prPdf()">PDF para o médico</button><button type="button" class="btn btn-outline" onclick="prWhats()">WhatsApp</button></div>`;
+    <div class="pr-acoes"><button type="button" class="btn btn-outline" onclick="prPdf()">PDF para o médico</button><button type="button" class="btn btn-outline" onclick="prWhats()">WhatsApp</button></div></div>`;
 }
 /* gráfico: máxima e mínima; faixa tranquila clarinha e 140/90 pontilhada; o ponto acima de 130/80 em amarelo */
 function prGrafico(ps, W, H, escuro){

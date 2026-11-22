@@ -1,6 +1,9 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v26.1', itens: [
+    'Pressão no computador: usa a largura toda, em duas colunas'
+  ] },
   { versao: 'v26.0', itens: [
     'Pressão no computador: a lista não aparece mais por cima do cabeçalho ao rolar'
   ] },
