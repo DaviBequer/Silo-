@@ -3443,3 +3443,18 @@ button.pr-per{cursor:pointer}
   #lvPanelEdicao[data-modo="folha"] .lv-topo-acoes{flex-wrap:wrap}
 }
 .lv-pdf-preview .lv-sheet-title{overflow-wrap:anywhere}   /* Nº 257: nome comprido de medley quebra a linha */
+/* Nº 258 (pedido do Davi): acesso rápido na lateral esquerda do Visualizar (computador): medleys, versões e o mesmo cantor */
+.lv-relacionadas{display:none}
+@media(min-width:1024px){
+  #lvPanelEdicao[data-modo="folha"] > .lv-barra{min-width:0;max-height:calc(100vh - 24px)}
+  #lvPanelEdicao[data-modo="folha"] .lv-relacionadas{width:100%;min-width:0}
+  #lvPanelEdicao[data-modo="folha"] .lv-relacionadas:not(:empty){display:flex;flex-direction:column;gap:14px;align-self:stretch;min-height:0;margin-top:14px;overflow-y:auto}
+  .lv-rel-tit{margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+  .lv-rel-item{display:flex;align-items:center;gap:8px;width:100%;padding:6px;border:none;border-radius:10px;background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+  .lv-rel-item:hover{background:var(--card-2)}
+  .lv-rel-item>.lv-capa{flex:0 0 28px;width:28px;height:28px;border-radius:8px}
+  .lv-rel-item .lv-capa svg{width:15px;height:15px;animation:none!important}
+  .lv-rel-item>span{flex:1;min-width:0;display:flex;flex-direction:column}
+  .lv-rel-item b{overflow:hidden;font-size:13px;font-weight:500;white-space:nowrap;text-overflow:ellipsis}
+  .lv-rel-item small{overflow:hidden;font-size:11.5px;color:var(--text-faint);white-space:nowrap;text-overflow:ellipsis}
+}

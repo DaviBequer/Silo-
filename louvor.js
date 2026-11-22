@@ -709,7 +709,7 @@ const LV_GRAUS_MENOR = [
 ];
 /* graus do campo do tom da música: { grau, nome (acorde), pc, letra (índice em LV_LETRAS), q (qualidade) } */
 function lvCampoGraus(l){
-  const tom = lvTomMaiorAtual(l), esc = lvEscalaDoTom(tom);
+  const tom = lvFormaMaior(l), esc = lvEscalaDoTom(tom);
   if(!esc) return null;
   const graus = l.tomModoMenor ? LV_GRAUS_MENOR : LV_GRAUS_MAIOR.map((g,i)=>({ grau:g.grau, idx:i, qualidade:g.qualidade }));
   return graus.map(g=>{ const nota = esc[g.idx]; return { grau: g.grau, nota, nome: nota + g.qualidade, pc: lvPc(nota), letra: LV_LETRAS.indexOf(nota[0]), q: g.qualidade }; });
@@ -781,7 +781,7 @@ function renderLvHarmonicBar(l, alvo = 'lvHarmonicBar'){
   let det = document.getElementById(detId);
   if(!det){ det = document.createElement('div'); det.id = detId; det.className = 'lv-campo-det'; el.after(det); }
   if(lvCampoDe !== l.id){ lvCampoSel = null; lvCampoEsc = null; lvCampoDe = l.id; }   // outra música: começa fechado
-  const G = lvCampoGraus(l), tom = lvTomMaiorAtual(l);
+  const G = lvCampoGraus(l), tom = lvFormaMaior(l);   // com capo: o campo do que a mão toca (Eb com capo 3 = campo de C), igual à cifra (pedido do Davi, 22/11)
   if(!G){ el.innerHTML = ''; det.hidden = true; return; }
   const maior = !l.tomModoMenor, ab = lvCampoSel != null;
   const domIdx = maior ? 4 : -1;

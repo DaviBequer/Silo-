@@ -230,6 +230,7 @@ async function rodarTestes(){
       igual('gestação: 109 dias = 3 meses e 18 dias', gestMesesTxt(109), '3 meses e 18 dias');
       { const a = { pdfTamanhoTexto: 11, padraoV: 203 }, b = { pdfTamanhoTexto: 14, padraoV: 203 }, c = {}; ensureLouvorConfig(a); ensureLouvorConfig(b); ensureLouvorConfig(c);
         igual('PDF: letra 12 por padrão (11 vira 12, outro tamanho fica)', [a.pdfTamanhoTexto, b.pdfTamanhoTexto, c.pdfTamanhoTexto], [12, 14, 12]); }
+      igual('campo harmônico com capo: Eb na 3ª casa = campo de C', lvCampoGraus({ tomOriginal:'Eb', tomModoMenor:false, transpose:0, capo:3 }).map(g=>g.nome).slice(0, 2), ['C', 'Dm']);
       igual('harpa: só partitura não conta como letra', [cultoTemLetra({ dados:{ conteudo:'[Intro]\nC  G\nE|--3--|' } }), cultoTemLetra({ dados:{ conteudo:'C  G\nClama Jesus\nC  G\nNo teu poder\nG\nJesus salva' } })], [false, true]);
       { const id0 = louvorAtualId, l = { id:'tmz', titulo:'M', conteudo:'[♪ A — Tom C]\nC   G\nlá\n[♪ B — Tom Em]\nEm  D\nlá' };
         state.louvores.push(l); louvorAtualId = 'tmz'; const dt = window.driveTomMudou; window.driveTomMudou = ()=>{};

@@ -84,6 +84,24 @@ function lvAoAbrirDetalhe(l){
     if(novo !== l.conteudo){ l.conteudo = novo; persist(); }
   }
   lvMostrarRevisar(l);
+  lvRelacionadas(l);
+}
+/* acesso rápido na lateral (pedido do Davi, 22/11; só no computador, no Visualizar): as músicas deste medley,
+   os medleys/outras versões que têm esta música e mais músicas do mesmo cantor. Toque = abre a música */
+function lvRelacionadas(l){
+  const el = document.getElementById('lvRelacionadas'); if(!el) return;
+  const nome = t=>vozSemAcento(String(t || '')).replace(/[^a-z0-9]+/g, ' ').trim();
+  const outras = state.louvores.filter(x=>x.id !== l.id);
+  const tit = nome(l.titulo);
+  const ehMedley = x=>!!x.medley || x.artista === 'Medley';
+  const doMedley = l.medley ? l.medley.musicas.map(m=>lmLouvor(m.id)).filter(Boolean) : [];
+  const comEla = tit.length >= 4 ? outras.filter(x=>!doMedley.includes(x) && ((x.medley && x.medley.musicas.some(m=>m.id === l.id)) || (nome(x.titulo).includes(tit) && (ehMedley(x) || nome(x.titulo) === tit)))) : [];
+  const art = nome(l.artista);
+  const cantor = art && !ehMedley(l) && !/^harpa/.test(art) ? outras.filter(x=>nome(x.artista) === art && !comEla.includes(x)) : [];
+  const item = x=>`<button type="button" class="lv-rel-item" data-id="${lvEsc(x.id)}" onclick="abrirLouvorDetalhe(this.dataset.id)">${lvCapaHtml(x.categoria, '')}<span><b>${lvEsc(x.titulo || 'Sem título')}</b><small>${lvEsc(ehMedley(x) ? 'Medley' : x.artista || x.categoria)}${lvTomAtual(x) ? ' · ' + lvEsc(lvTomAtual(x)) : ''}</small></span></button>`;
+  const porNome = lista=>lista.slice().sort((a, b)=>(a.titulo || '').localeCompare(b.titulo || ''));
+  const grupo = (titulo, lista)=>lista.length ? `<div class="lv-rel-grupo"><div class="lv-rel-tit">${titulo}</div>${lista.slice(0, 12).map(item).join('')}</div>` : '';
+  el.innerHTML = grupo('Neste medley', doMedley) + grupo('Medleys e versões', porNome(comEla)) + grupo('Mais de ' + lvEsc(l.artista || ''), porNome(cantor));
 }
 /* linhas que a conferência não confirmou ficam amarelas no editor até tocar em "Já conferi" */
 function lvMostrarRevisar(l){

@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v25.8', itens: [
+    'Campo harmônico segue o capotraste (Mi bemol com capo na 3ª casa mostra o campo de Dó)',
+    'Visualizar no computador: na lateral, acesso rápido aos medleys e versões da música e a mais músicas do mesmo cantor'
+  ] },
   { versao: 'v25.7', itens: [
     'PDF: nome comprido (medley) quebra a linha antes do Tom',
     'Medley: ícone de cada música alinhado na lista de escolher'
