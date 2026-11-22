@@ -1809,26 +1809,29 @@ function lvMontarPdf(l){
     doc.setFont(...sans.medio); doc.setFontSize(9); doc.setTextColor(...azulCantor);   // pedido do Davi: cantor um pouco maior
     espacado(String(l.artista).toUpperCase(), marginX, cantorY, 1.6);
   }
-  doc.setFont(...sans.leve); doc.setFontSize(l.pdfTamanhoTitulo); doc.setTextColor(20,20,22);
-  doc.text(l.titulo||'Sem título', marginX, tituloY);
+  /* TOM e CAPO à direita; o título quebra a linha antes deles (pedido do Davi, 22/11: medley com nome comprido passava por cima do tom) */
+  let xTom = pageW - marginX;
   if(tomAtual){
     const valY = tituloY, rotY = tituloY - 21;
-    let x = pageW - marginX;
     const coluna = (rot, val)=>{
       doc.setFont(...sans.leve); doc.setFontSize(21); doc.setTextColor(20,20,22);
       const wv = doc.getTextWidth(val);
       doc.setFont(...sans.normal); doc.setFontSize(6.8); doc.setTextColor(150,150,154);
       const wr = doc.getTextWidth(rot) + rot.length * 1.2;
-      const w = Math.max(wv, wr), cx = x - w/2;   // rótulo e número centralizados um em cima do outro (pedido do Davi: o tom ficava à direita do rótulo)
+      const w = Math.max(wv, wr), cx = xTom - w/2;   // rótulo e número centralizados um em cima do outro (pedido do Davi: o tom ficava à direita do rótulo)
       espacado(rot, cx - (wr - 1.2)/2, rotY, 1.2);
       doc.setFont(...sans.leve); doc.setFontSize(21); doc.setTextColor(20,20,22);
       doc.text(val, cx, valY, { align:'center' });
-      x -= w + 16;
+      xTom -= w + 16;
     };
     if(lvCapo(l)) coluna('CAPO', String(lvCapo(l)));
     coluna('TOM', tomAtual);
   }
-  const linhaY = Math.max(70, tituloY + 14);
+  doc.setFont(...sans.leve); doc.setFontSize(l.pdfTamanhoTitulo); doc.setTextColor(20,20,22);
+  const linhasTitulo = doc.splitTextToSize(l.titulo||'Sem título', Math.max(120, xTom - marginX - (tomAtual ? 8 : 0)));
+  const passoTitulo = l.pdfTamanhoTitulo * 1.15;
+  linhasTitulo.forEach((t, i)=>doc.text(t, marginX, tituloY + i * passoTitulo));
+  const linhaY = Math.max(70, tituloY + (linhasTitulo.length - 1) * passoTitulo + 14);
   doc.setDrawColor(230,230,233);
   doc.setLineWidth(1);
   doc.line(marginX, linhaY, pageW-marginX, linhaY);

@@ -1,6 +1,10 @@
 /* ========== CHANGELOG ========== */
 /* Cada edição feita: adicionar um item novo no topo da versão atual (ou uma versão nova no topo do array). Textos curtos e gerais. */
 const CHANGELOG = [
+  { versao: 'v25.7', itens: [
+    'PDF: nome comprido (medley) quebra a linha antes do Tom',
+    'Medley: ícone de cada música alinhado na lista de escolher'
+  ] },
   { versao: 'v25.6', itens: [
     'Louvor: pesquisa só avisa quando não acha; Enter ou a lupa buscam fora do app',
     'Medley: escolher entre todas as músicas, por tipo (Louvor, Harpa, Corinho), várias de uma vez',

@@ -3423,8 +3423,8 @@ button.pr-per{cursor:pointer}
 .lv-nao-tem{padding:32px 16px;text-align:center;font-size:15px;color:var(--text-dim);animation:surgir .4s var(--mola) both}
 /* Nº 256: escolher música do medley com o tipo e várias de uma vez */
 .lm-esc-tipos{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
-.lm-esc-item>.lv-capa{flex:0 0 34px;width:34px;height:34px;border-radius:9px}
-.lm-esc-item .lv-capa svg{width:18px;height:18px}
+.lm-esc-item>.lv-capa{flex:0 0 34px;align-self:center;width:34px;height:34px;margin:0;border-radius:9px}
+.lm-esc-item .lv-capa svg{width:18px;height:18px;animation:none!important;transform:none!important}
 .lm-esc-pronto{width:100%;margin-top:10px}
 /* Nº 256 (pedido do Davi): Visualizar no computador = PDF no meio, mais para cima; nas laterais (que sobravam)
    à esquerda Configurações e Tela cheia, à direita tipo, Tom, Capo, data e Pronto. Celular continua igual */
@@ -3442,3 +3442,4 @@ button.pr-per{cursor:pointer}
   #lvPanelEdicao[data-modo="folha"] .lv-topo-dir{align-items:flex-start;gap:10px}
   #lvPanelEdicao[data-modo="folha"] .lv-topo-acoes{flex-wrap:wrap}
 }
+.lv-pdf-preview .lv-sheet-title{overflow-wrap:anywhere}   /* Nº 257: nome comprido de medley quebra a linha */
